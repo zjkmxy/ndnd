@@ -6,6 +6,8 @@ require (
 	github.com/apex/log v1.9.0
 	github.com/cespare/xxhash v1.1.0
 	github.com/cornelk/hashmap v1.0.1
+	github.com/dchest/siphash v1.2.2 // indirect
+	github.com/gizak/termui/v3 v3.1.0
 	github.com/google/gopacket v1.1.19
 	github.com/gorilla/websocket v1.4.2
 	github.com/pelletier/go-toml v1.9.4

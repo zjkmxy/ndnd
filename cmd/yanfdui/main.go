@@ -10,11 +10,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
+	"log"
 
-	"github.com/named-data/YaNFD/core"
+	ui "github.com/gizak/termui/v3"
+	"github.com/gizak/termui/v3/widgets"
 	"github.com/named-data/YaNFD/executor"
 )
 
@@ -31,14 +30,6 @@ func main() {
 	flag.BoolVar(&disableEthernet, "disable-ethernet", false, "Disable Ethernet transports")
 	var disableUnix bool
 	flag.BoolVar(&disableUnix, "disable-unix", false, "Disable Unix stream transports")
-	var cpuProfile string
-	flag.StringVar(&cpuProfile, "cpu-profile", "", "Enable CPU profiling (output to specified file)")
-	var memProfile string
-	flag.StringVar(&memProfile, "mem-profile", "", "Enable memory profiling (output to specified file)")
-	var blockProfile string
-	flag.StringVar(&blockProfile, "block-profile", "", "Enable block profiling (output to specified file")
-	var memoryBallastSize int
-	flag.IntVar(&memoryBallastSize, "memory-ballast", 0, "Enable memory ballast of specified size (in GB) to avoid frequent garbage collection")
 	flag.Parse()
 
 	if shouldPrintVersion {
@@ -49,26 +40,39 @@ func main() {
 		return
 	}
 
+	if err := ui.Init(); err != nil {
+		log.Fatalf("failed to initialize termui: %v", err)
+	}
+	defer ui.Close()
+
+	p := widgets.NewParagraph()
+	p.Text = "YaNFD is starting."
+	p.SetRect(0, 0, 25, 5)
+
+	ui.Render(p)
+
 	config := executor.YaNFDConfig{
 		Version:           Version,
 		ConfigFileName:    configFileName,
 		DisableEthernet:   disableEthernet,
 		DisableUnix:       disableUnix,
-		LogFile:           "",
-		CpuProfile:        cpuProfile,
-		MemProfile:        memProfile,
-		BlockProfile:      blockProfile,
-		MemoryBallastSize: memoryBallastSize,
+		LogFile:           "/var/log/YaNFD.log",
+		CpuProfile:        "",
+		MemProfile:        "",
+		BlockProfile:      "",
+		MemoryBallastSize: 0,
 	}
-
 	yanfd := executor.NewYaNFD(&config)
 	yanfd.Start()
 
-	// Set up signal handler channel and wait for interrupt
-	sigChannel := make(chan os.Signal, 1)
-	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
-	receivedSig := <-sigChannel
-	core.LogInfo("Main", "Received signal ", receivedSig, " - exiting")
+	p.Text = "YaNFD is running."
+	ui.Render(p)
+
+	for e := range ui.PollEvents() {
+		if e.Type == ui.KeyboardEvent {
+			break
+		}
+	}
 
 	yanfd.Stop()
 }
