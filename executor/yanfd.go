@@ -306,15 +306,21 @@ func (y *YaNFD) Stop() {
 	}
 
 	// Shutdown Profilers
-	blockProfileFile, err := os.Create(y.config.BlockProfile)
-	if err != nil {
-		core.LogFatal("Main", "Unable to open output file for block profile: ", err)
+	if y.config.BlockProfile != "" {
+		blockProfileFile, err := os.Create(y.config.BlockProfile)
+		if err != nil {
+			core.LogFatal("Main", "Unable to open output file for block profile: ", err)
+		}
+		if err := y.blockProfiler.WriteTo(blockProfileFile, 0); err != nil {
+			core.LogFatal("Main", "Unable to write block profile: ", err)
+		}
+		blockProfileFile.Close()
 	}
-	if err := y.blockProfiler.WriteTo(blockProfileFile, 0); err != nil {
-		core.LogFatal("Main", "Unable to write block profile: ", err)
+	if y.config.MemProfile != "" {
+		y.memProfileFile.Close()
 	}
-	blockProfileFile.Close()
-	y.memProfileFile.Close()
-	pprof.StopCPUProfile()
-	y.cpuProfileFile.Close()
+	if y.config.CpuProfile != "" {
+		pprof.StopCPUProfile()
+		y.cpuProfileFile.Close()
+	}
 }

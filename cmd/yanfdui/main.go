@@ -14,6 +14,7 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/named-data/YaNFD/cmd/yanfdui/forms"
 	"github.com/named-data/YaNFD/executor"
 )
 
@@ -45,12 +46,6 @@ func main() {
 	}
 	defer ui.Close()
 
-	p := widgets.NewParagraph()
-	p.Text = "YaNFD is starting."
-	p.SetRect(0, 0, 25, 5)
-
-	ui.Render(p)
-
 	config := executor.YaNFDConfig{
 		Version:           Version,
 		ConfigFileName:    configFileName,
@@ -65,13 +60,58 @@ func main() {
 	yanfd := executor.NewYaNFD(&config)
 	yanfd.Start()
 
-	p.Text = "YaNFD is running."
-	ui.Render(p)
+	// Create UI
+	header := widgets.NewParagraph()
+	header.Text = "Press q to quit, Press h or l to switch tabs"
+	header.SetRect(0, 0, 50, 1)
 
-	for e := range ui.PollEvents() {
-		if e.Type == ui.KeyboardEvent {
-			break
+	tabpane := widgets.NewTabPane("status", "faces", "log")
+	tabpane.SetRect(0, 1, 50, 4)
+
+	status := forms.NewStatusForm()
+	notImplemented := forms.NewNotImplementedForm()
+
+	var current forms.Form
+	var refresh <-chan uint
+
+	switchTab := func() {
+		switch tabpane.ActiveTabIndex {
+		case 0:
+			current = status
+		case 1:
+			current = notImplemented
+		case 2:
+			current = notImplemented
 		}
+		refresh = current.RefreshSignal()
+	}
+
+	switchTab()
+	ui.Render(header, tabpane)
+	current.Render()
+
+	uiEvents := ui.PollEvents()
+	running := true
+	for running {
+		select {
+		case e := <-uiEvents:
+			if e.Type == ui.KeyboardEvent {
+				switch e.ID {
+				case "q", "<C-c>":
+					running = false
+				case "h":
+					tabpane.FocusLeft()
+					switchTab()
+				case "l":
+					tabpane.FocusRight()
+					switchTab()
+				}
+			}
+		case <-refresh:
+		}
+		ui.Clear()
+		ui.Render(header, tabpane)
+		current.Render()
 	}
 
 	yanfd.Stop()
