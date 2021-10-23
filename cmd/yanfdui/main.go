@@ -51,7 +51,7 @@ func main() {
 		ConfigFileName:    configFileName,
 		DisableEthernet:   disableEthernet,
 		DisableUnix:       disableUnix,
-		LogFile:           "/var/log/YaNFD.log",
+		LogFile:           "./YaNFD.log",
 		CpuProfile:        "",
 		MemProfile:        "",
 		BlockProfile:      "",
