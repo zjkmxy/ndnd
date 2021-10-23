@@ -69,6 +69,7 @@ func main() {
 	tabpane.SetRect(0, 1, 50, 4)
 
 	status := forms.NewStatusForm()
+	faces := forms.NewFacesForm()
 	notImplemented := forms.NewNotImplementedForm()
 
 	var current forms.Form
@@ -79,7 +80,7 @@ func main() {
 		case 0:
 			current = status
 		case 1:
-			current = notImplemented
+			current = faces
 		case 2:
 			current = notImplemented
 		}
