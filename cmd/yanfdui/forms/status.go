@@ -19,12 +19,12 @@ import (
 
 type StatusForm struct {
 	refresh chan uint
-	timer   *time.Timer
+	ticker  *time.Ticker
 	table   *widgets.Table
 }
 
 func NewStatusForm() *StatusForm {
-	timer := time.NewTimer(5 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	refresh := make(chan uint)
 	tab := widgets.NewTable()
 
@@ -38,12 +38,14 @@ func NewStatusForm() *StatusForm {
 	tab.SetRect(0, 5, 70, 20)
 
 	go func() {
-		<-timer.C
-		refresh <- 1
+		for {
+			<-ticker.C
+			refresh <- 1
+		}
 	}()
 	return &StatusForm{
 		refresh: refresh,
-		timer:   timer,
+		ticker:  ticker,
 		table:   tab,
 	}
 }
