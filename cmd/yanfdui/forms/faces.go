@@ -21,6 +21,7 @@ type FacesForm struct {
 	refresh chan uint
 	ticker  *time.Ticker
 	tab     *widgets.Table
+	yindex  int
 }
 
 func NewFacesForm() *FacesForm {
@@ -32,7 +33,6 @@ func NewFacesForm() *FacesForm {
 	tab.Rows = [][]string{}
 	tab.TextAlignment = ui.AlignCenter
 	tab.TextStyle = ui.NewStyle(ui.ColorWhite)
-	tab.SetRect(0, 5, 70, 30)
 
 	go func() {
 		for {
@@ -45,6 +45,7 @@ func NewFacesForm() *FacesForm {
 		refresh: refresh,
 		ticker:  ticker,
 		tab:     tab,
+		yindex:  0,
 	}
 }
 
@@ -53,21 +54,45 @@ func (f *FacesForm) RefreshSignal() <-chan uint {
 }
 
 func (f *FacesForm) Render() {
+	dx, _ := ui.TerminalDimensions()
+	f.tab.SetRect(0, 5, dx, 24)
+
 	// Face list table
 	f.tab.Rows = [][]string{}
-	for _, face := range face.FaceTable.GetAll() {
-		f.tab.Rows = append(f.tab.Rows,
-			[]string{fmt.Sprint(face.FaceID()), face.LocalURI().String()},
-		)
-	}
+	faces := face.FaceTable.GetAll()
 
 	// Sort by face ID
-	sort.Slice(f.tab.Rows, func(i, j int) bool {
-		return f.tab.Rows[i][0] < f.tab.Rows[j][0]
+	sort.Slice(faces, func(i, j int) bool {
+		return faces[i].FaceID() < faces[j].FaceID()
 	})
 
+	if f.yindex >= len(faces) {
+		f.yindex = len(faces) - 1
+	}
+
+	for i, face := range faces {
+		if i >= f.yindex && i < f.yindex+8 {
+			f.tab.Rows = append(f.tab.Rows,
+				[]string{fmt.Sprint(face.FaceID()), face.LocalURI().String(), face.RemoteURI().String()},
+			)
+		}
+	}
+
 	// Add header row
-	f.tab.Rows = append([][]string{{"ID", "Local URI"}}, f.tab.Rows...)
+	f.tab.Rows = append([][]string{{"ID", "Local", "Remote"}}, f.tab.Rows...)
 
 	ui.Render(f.tab)
+}
+
+func (f *FacesForm) KeyboardEvent(e ui.Event) {
+	switch e.ID {
+	case "<Down>":
+		f.yindex += 1
+		f.Render()
+	case "<Up>":
+		if f.yindex > 0 {
+			f.yindex -= 1
+			f.Render()
+		}
+	}
 }

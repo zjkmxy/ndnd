@@ -107,6 +107,8 @@ func main() {
 					tabpane.FocusRight()
 					switchTab()
 				}
+
+				current.KeyboardEvent(e)
 			}
 		case <-refresh:
 		}

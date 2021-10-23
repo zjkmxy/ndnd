@@ -34,3 +34,7 @@ func (f *NotImplementedForm) RefreshSignal() <-chan uint {
 func (f *NotImplementedForm) Render() {
 	ui.Render(f.msg)
 }
+
+func (f *NotImplementedForm) KeyboardEvent(ui.Event) {
+
+}

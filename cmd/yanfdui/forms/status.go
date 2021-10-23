@@ -35,7 +35,6 @@ func NewStatusForm() *StatusForm {
 		{"nFibEntries", ""},
 	}
 	tab.TextStyle = ui.NewStyle(ui.ColorWhite)
-	tab.SetRect(0, 5, 70, 14)
 
 	go func() {
 		for {
@@ -55,6 +54,9 @@ func (f *StatusForm) RefreshSignal() <-chan uint {
 }
 
 func (f *StatusForm) Render() {
+	dx, _ := ui.TerminalDimensions()
+	f.tab.SetRect(0, 5, dx, 24)
+
 	// Don't set NNameTreeEntries because we don't use a NameTree
 	nFibEntries := uint64(len(table.FibStrategyTable.GetAllFIBEntries()))
 
@@ -64,4 +66,8 @@ func (f *StatusForm) Render() {
 	f.tab.Rows[3][1] = fmt.Sprint(nFibEntries)
 
 	ui.Render(f.tab)
+}
+
+func (f *StatusForm) KeyboardEvent(ui.Event) {
+
 }
