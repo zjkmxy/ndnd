@@ -10,10 +10,12 @@ package forms
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/named-data/YaNFD/core"
 	"github.com/named-data/YaNFD/face"
 )
 
@@ -22,7 +24,15 @@ type FacesForm struct {
 	ticker  *time.Ticker
 	tab     *widgets.Table
 	yindex  int
+	input   *widgets.Paragraph
+	state   uint
 }
+
+const (
+	FacesStateNone uint = iota
+	FacesStateAdd
+	FacesStateRemove
+)
 
 func NewFacesForm() *FacesForm {
 	ticker := time.NewTicker(1 * time.Second)
@@ -33,6 +43,11 @@ func NewFacesForm() *FacesForm {
 	tab.Rows = [][]string{}
 	tab.TextAlignment = ui.AlignCenter
 	tab.TextStyle = ui.NewStyle(ui.ColorWhite)
+
+	input := widgets.NewParagraph()
+	input.Title = "Input"
+	input.Text = ""
+	input.SetRect(0, 1, 70, 4)
 
 	go func() {
 		for {
@@ -46,7 +61,18 @@ func NewFacesForm() *FacesForm {
 		ticker:  ticker,
 		tab:     tab,
 		yindex:  0,
+		input:   input,
+		state:   FacesStateNone,
 	}
+}
+
+func (f *FacesForm) Reset() {
+	f.state = FacesStateNone
+	f.yindex = 0
+}
+
+func (f *FacesForm) IsPopup() bool {
+	return f.state != FacesStateNone
 }
 
 func (f *FacesForm) RefreshSignal() <-chan uint {
@@ -82,17 +108,62 @@ func (f *FacesForm) Render() {
 	f.tab.Rows = append([][]string{{"ID", "Local", "Remote"}}, f.tab.Rows...)
 
 	ui.Render(f.tab)
+	if f.IsPopup() {
+		ui.Render(f.input)
+	}
 }
 
 func (f *FacesForm) KeyboardEvent(e ui.Event) {
-	switch e.ID {
-	case "<Down>":
-		f.yindex += 1
-		f.Render()
-	case "<Up>":
-		if f.yindex > 0 {
-			f.yindex -= 1
+	switch f.state {
+	case FacesStateNone:
+		switch e.ID {
+		case "<Down>":
+			f.yindex += 1
 			f.Render()
+		case "<Up>":
+			if f.yindex > 0 {
+				f.yindex -= 1
+				f.Render()
+			}
+		case "d":
+			f.state = FacesStateRemove
+			f.input.Title = "Face ID to delete"
+			f.input.Text = ""
+		case "a":
+			f.state = FacesStateAdd
+			f.input.Text = ""
+		}
+	case FacesStateAdd, FacesStateRemove:
+		switch e.ID {
+		case "<Enter>":
+			if f.input.Text != "" {
+				switch f.state {
+				case FacesStateRemove:
+					faceId, err := strconv.ParseUint(f.input.Text, 10, 64)
+					if err != nil {
+						core.LogError(f, "Failed to parse input {", faceId, "} to face ID: ", err.Error())
+					} else {
+						if face.FaceTable.Get(faceId) != nil {
+							// Does not really destroy the face, just removes it from the table
+							face.FaceTable.Remove(faceId)
+							core.LogInfo(f, "Destroyed face with FaceID=", faceId)
+						} else {
+							core.LogInfo(f, "Ignoring attempt to delete non-existent face with FaceID=", faceId)
+						}
+					}
+				}
+			}
+			f.state = FacesStateNone
+		case "<Escape>":
+			f.state = FacesStateNone
+		case "<Backspace>":
+			if f.input.Text != "" {
+				f.input.Text = f.input.Text[:len(f.input.Text)-1]
+			}
+		default:
+			if e.ID != "" && e.ID[0] != '<' {
+				f.input.Text += e.ID
+			}
 		}
 	}
 }

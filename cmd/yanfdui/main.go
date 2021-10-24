@@ -62,7 +62,7 @@ func main() {
 
 	// Create UI
 	header := widgets.NewParagraph()
-	header.Text = "Press q to quit, Press h or l to switch tabs"
+	header.Text = "Press <C-c> to quit, Press <F1> or <F2> to switch tabs"
 	header.SetRect(0, 0, 50, 1)
 
 	tabpane := widgets.NewTabPane("status", "faces", "log")
@@ -98,12 +98,12 @@ func main() {
 		case e := <-uiEvents:
 			if e.Type == ui.KeyboardEvent {
 				switch e.ID {
-				case "q", "<C-c>":
+				case "<C-c>":
 					running = false
-				case "h":
+				case "<F1>":
 					tabpane.FocusLeft()
 					switchTab()
-				case "l":
+				case "<F2>":
 					tabpane.FocusRight()
 					switchTab()
 				}
