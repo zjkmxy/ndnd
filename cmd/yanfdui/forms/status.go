@@ -19,32 +19,33 @@ import (
 
 type StatusForm struct {
 	refresh chan uint
-	timer   *time.Timer
-	table   *widgets.Table
+	ticker  *time.Ticker
+	tab     *widgets.Table
 }
 
 func NewStatusForm() *StatusForm {
-	timer := time.NewTimer(5 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	refresh := make(chan uint)
-	tab := widgets.NewTable()
 
+	tab := widgets.NewTable()
 	tab.Rows = [][]string{
 		{"version", ""},
 		{"startTime", ""},
 		{"currentTime", ""},
-		{"upTime", ""},
+		{"nFibEntries", ""},
 	}
 	tab.TextStyle = ui.NewStyle(ui.ColorWhite)
-	tab.SetRect(0, 5, 70, 20)
 
 	go func() {
-		<-timer.C
-		refresh <- 1
+		for {
+			<-ticker.C
+			refresh <- 1
+		}
 	}()
 	return &StatusForm{
 		refresh: refresh,
-		timer:   timer,
-		table:   tab,
+		ticker:  ticker,
+		tab:     tab,
 	}
 }
 
@@ -53,13 +54,20 @@ func (f *StatusForm) RefreshSignal() <-chan uint {
 }
 
 func (f *StatusForm) Render() {
+	dx, _ := ui.TerminalDimensions()
+	f.tab.SetRect(0, 5, dx, 24)
+
 	// Don't set NNameTreeEntries because we don't use a NameTree
 	nFibEntries := uint64(len(table.FibStrategyTable.GetAllFIBEntries()))
 
-	f.table.Rows[0][1] = core.Version
-	f.table.Rows[1][1] = core.StartTimestamp.Local().String()
-	f.table.Rows[2][1] = time.Now().Local().String()
-	f.table.Rows[3][1] = fmt.Sprint(nFibEntries)
+	f.tab.Rows[0][1] = core.Version
+	f.tab.Rows[1][1] = core.StartTimestamp.Local().String()
+	f.tab.Rows[2][1] = time.Now().Local().String()
+	f.tab.Rows[3][1] = fmt.Sprint(nFibEntries)
 
-	ui.Render(f.table)
+	ui.Render(f.tab)
+}
+
+func (f *StatusForm) KeyboardEvent(ui.Event) {
+
 }

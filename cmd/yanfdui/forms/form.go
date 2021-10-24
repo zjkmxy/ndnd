@@ -7,7 +7,10 @@
 
 package forms
 
+import "github.com/gizak/termui/v3"
+
 type Form interface {
 	Render()
 	RefreshSignal() <-chan uint
+	KeyboardEvent(termui.Event)
 }
