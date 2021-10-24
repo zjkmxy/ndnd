@@ -49,6 +49,10 @@ func NewStatusForm() *StatusForm {
 	}
 }
 
+func (f *StatusForm) GetName() string {
+	return "Status"
+}
+
 func (f *StatusForm) RefreshSignal() <-chan uint {
 	return f.refresh
 }

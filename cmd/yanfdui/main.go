@@ -66,25 +66,25 @@ func main() {
 	header.Text = "Press <C-c> to quit, Press <F1> or <F2> to switch tabs"
 	header.SetRect(0, 0, dx, 1)
 
-	tabpane := widgets.NewTabPane("status", "faces", "log")
-	tabpane.SetRect(0, 1, dx, 4)
-
 	status := forms.NewStatusForm()
 	faces := forms.NewFacesForm()
+	routes := forms.NewRoutesForm()
 	notImplemented := forms.NewNotImplementedForm()
 
 	var current forms.Form
 	var refresh <-chan uint
 
+	tabs := []forms.Form{status, faces, routes, notImplemented}
+	tabNames := []string{}
+	for _, tab := range tabs {
+		tabNames = append(tabNames, tab.GetName())
+	}
+
+	tabpane := widgets.NewTabPane(tabNames...)
+	tabpane.SetRect(0, 1, dx, 4)
+
 	switchTab := func() {
-		switch tabpane.ActiveTabIndex {
-		case 0:
-			current = status
-		case 1:
-			current = faces
-		case 2:
-			current = notImplemented
-		}
+		current = tabs[tabpane.ActiveTabIndex]
 		refresh = current.RefreshSignal()
 	}
 

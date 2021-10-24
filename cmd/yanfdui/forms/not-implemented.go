@@ -27,6 +27,10 @@ func NewNotImplementedForm() *NotImplementedForm {
 	}
 }
 
+func (f *NotImplementedForm) GetName() string {
+	return "N/A"
+}
+
 func (f *NotImplementedForm) RefreshSignal() <-chan uint {
 	return f.refresh
 }

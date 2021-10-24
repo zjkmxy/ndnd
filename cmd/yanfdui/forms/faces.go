@@ -66,6 +66,10 @@ func NewFacesForm() *FacesForm {
 	}
 }
 
+func (f *FacesForm) GetName() string {
+	return "Faces"
+}
+
 func (f *FacesForm) Reset() {
 	f.state = FacesStateNone
 	f.yindex = 0

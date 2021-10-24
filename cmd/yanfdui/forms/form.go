@@ -13,4 +13,5 @@ type Form interface {
 	Render()
 	RefreshSignal() <-chan uint
 	KeyboardEvent(termui.Event)
+	GetName() string
 }
