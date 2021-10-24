@@ -69,12 +69,12 @@ func main() {
 	status := forms.NewStatusForm()
 	faces := forms.NewFacesForm()
 	routes := forms.NewRoutesForm()
-	notImplemented := forms.NewNotImplementedForm()
+	fib := forms.NewFibForm()
 
 	var current forms.Form
 	var refresh <-chan uint
 
-	tabs := []forms.Form{status, faces, routes, notImplemented}
+	tabs := []forms.Form{status, faces, routes, fib}
 	tabNames := []string{}
 	for _, tab := range tabs {
 		tabNames = append(tabNames, tab.GetName())

@@ -170,7 +170,7 @@ func (f *FIBModule) list(interest *ndn.Interest, pitToken []byte, inFace uint64)
 	}
 
 	// Generate new dataset
-	// TODO: For thread safety, we should lock the FIB from writes until we are done
+	// Thread safety does not apply here due to no cross-row query consistency required
 	entries := table.FibStrategyTable.GetAllFIBEntries()
 	dataset := make([]byte, 0)
 	for _, fsEntry := range entries {
