@@ -65,12 +65,13 @@ func main() {
 	header.Text = "Press <C-c> to quit, Press <F1> or <F2> to switch tabs"
 	header.SetRect(0, 0, 50, 1)
 
-	tabpane := widgets.NewTabPane("status", "faces", "log")
+	tabpane := widgets.NewTabPane("status", "faces", "fib")
 	tabpane.SetRect(0, 1, 50, 4)
 
 	status := forms.NewStatusForm()
 	faces := forms.NewFacesForm()
-	notImplemented := forms.NewNotImplementedForm()
+	fib := forms.NewFibForm()
+	// notImplemented := forms.NewNotImplementedForm()
 
 	var current forms.Form
 	var refresh <-chan uint
@@ -82,7 +83,7 @@ func main() {
 		case 1:
 			current = faces
 		case 2:
-			current = notImplemented
+			current = fib
 		}
 		refresh = current.RefreshSignal()
 	}
