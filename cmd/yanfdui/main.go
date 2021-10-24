@@ -61,12 +61,13 @@ func main() {
 	yanfd.Start()
 
 	// Create UI
+	dx, _ := ui.TerminalDimensions()
 	header := widgets.NewParagraph()
 	header.Text = "Press <C-c> to quit, Press <F1> or <F2> to switch tabs"
-	header.SetRect(0, 0, 50, 1)
+	header.SetRect(0, 0, dx, 1)
 
 	tabpane := widgets.NewTabPane("status", "faces", "fib")
-	tabpane.SetRect(0, 1, 50, 4)
+	tabpane.SetRect(0, 1, dx, 4)
 
 	status := forms.NewStatusForm()
 	faces := forms.NewFacesForm()
