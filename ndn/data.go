@@ -267,6 +267,7 @@ func (d *Data) computeSignatureValue() error {
 
 // Encode encodes the Data into a block.
 func (d *Data) Encode() (*tlv.Block, error) {
+	// this is the area that is a little bit suspect as well. d.wire.Wire()? creates a new block from data??? Read into this to understand
 	if d.wire == nil {
 		d.wire = tlv.NewEmptyBlock(tlv.Data)
 		d.wire.Append(d.name.Encode())

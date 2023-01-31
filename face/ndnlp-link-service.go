@@ -9,6 +9,7 @@ package face
 
 import (
 	"container/list"
+	"fmt"
 	"math"
 	"runtime"
 	"strconv"
@@ -19,6 +20,8 @@ import (
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/ndn/lpv2"
 	"github.com/named-data/YaNFD/ndn/tlv"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
+	spec "github.com/zjkmxy/go-ndn/pkg/ndn/spec_2022"
 	"github.com/zjkmxy/stealthpool"
 )
 
@@ -390,9 +393,9 @@ func (l *NDNLPLinkService) handleIncomingFrame(rawFrame []byte) {
 }
 
 func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
+	//this seems to be where we process incoming frames for the fw threads, the other is for mgmt thread
 	// Free up memory
 	defer l.stealthPool.Return(wire)
-
 	// Attempt to decode buffer into TLV block
 	block, _, err := tlv.DecodeBlock(wire)
 	if err != nil {
@@ -479,10 +482,24 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 		return
 	}
 
+	//this looks like the bulk of the copying/ where we are doing big things
 	netPacket := new(ndn.PendingPacket)
 	netPacket.IncomingFaceID = new(uint64)
 	*netPacket.IncomingFaceID = l.faceID
 	netPacket.Wire, _, err = tlv.DecodeBlock(netPkt)
+	//var ctx *spec.PacketParsingContext
+	var e error
+	netPacket.TestPktStruct, _, e = spec.ReadPacket(enc.NewBufferReader(enc.Buffer(netPkt)))
+	if e != nil {
+		core.LogWarn("Failed to parse packet in LpPacket: %v", e)
+	}
+	if netPacket.TestPktStruct.Interest != nil {
+		fmt.Println("Interest")
+		fmt.Println(netPacket.TestPktStruct.Interest.NameV.String())
+	} else if netPacket.TestPktStruct.Data != nil {
+		fmt.Println("Data")
+		fmt.Println(netPacket.TestPktStruct.Data.NameV.String())
+	}
 	if err != nil {
 		core.LogWarn(l, "Unable to decode network-layer packet: ", err, " - DROP")
 		return

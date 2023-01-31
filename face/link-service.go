@@ -16,7 +16,6 @@ import (
 	"github.com/named-data/YaNFD/dispatch"
 	"github.com/named-data/YaNFD/fw"
 	"github.com/named-data/YaNFD/ndn"
-	"github.com/named-data/YaNFD/ndn/tlv"
 )
 
 // LinkService is an interface for link service implementations
@@ -233,8 +232,8 @@ func (l *linkServiceBase) SendPacket(packet *ndn.PendingPacket) {
 func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 	// Hand off to network layer by dispatching to appropriate forwarding thread(s)
 	var err error
-	switch netPacket.Wire.Type() {
-	case tlv.Interest:
+	switch {
+	case netPacket.TestPktStruct.Interest != nil:
 		netPacket.NetPacket, err = ndn.DecodeInterest(netPacket.Wire)
 		if err != nil {
 			core.LogError(l, "Unable to decode Interest (", err, ") - DROP")
@@ -243,7 +242,7 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 		thread := fw.HashNameToFwThread(netPacket.NetPacket.(*ndn.Interest).Name())
 		core.LogTrace(l, "Dispatched Interest to thread ", thread)
 		dispatch.GetFWThread(thread).QueueInterest(netPacket)
-	case tlv.Data:
+	case netPacket.TestPktStruct.Data != nil:
 		if len(netPacket.PitToken) == 6 {
 			// Decode PitToken. If it's for us, it's a uint16 + uint32.
 			pitTokenThread := binary.BigEndian.Uint16(netPacket.PitToken)

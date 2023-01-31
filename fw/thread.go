@@ -18,6 +18,7 @@ import (
 	"github.com/named-data/YaNFD/dispatch"
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/table"
+	_ "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // MaxFwThreads Maximum number of forwarding threads
@@ -170,15 +171,18 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	}
 
 	// Already asserted that this is an Interest in link service
+	// this is where we convert it into yanfd interest
+	// now, we have go-ndn interest spec 2022 struct in pending packet, which is better/less copying
 	interest := pendingPacket.NetPacket.(*ndn.Interest)
-
+	//fmt.Println(interest.Name())
+	//some testing shows this is the exact same as the interest name in go-ndn
 	// Get incoming face
 	incomingFace := dispatch.GetFace(*pendingPacket.IncomingFaceID)
 	if incomingFace == nil {
 		core.LogError(t, "Non-existent incoming FaceID=", *pendingPacket.IncomingFaceID, " for Interest=", interest.Name(), " - DROP")
 		return
 	}
-
+	//this part is tricky, will need looking into
 	// Drop if HopLimit present and is 0. Else, decrement by 1
 	if interest.HopLimit() != nil && *interest.HopLimit() == 0 {
 		core.LogDebug(t, "Received Interest=", interest.Name(), " with HopLimit=0 - DROP")
@@ -206,6 +210,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	t.NInInterests++
 
 	// Detect duplicate nonce by comparing against Dead Nonce List
+	//also needs changing from []byte to value
 	if exists := t.deadNonceList.Find(interest.Name(), interest.Nonce()); exists {
 		core.LogTrace(t, "Interest ", interest.Name(), " matches Dead Nonce List - DROP")
 		return
@@ -214,6 +219,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	// Check for forwarding hint and, if present, determine if reaching producer region (and then strip forwarding hint)
 	isReachingProducerRegion := true
 	var fhName *ndn.Name
+	//slice of names vs slice of go-ndn names
 	if len(interest.ForwardingHint()) > 0 {
 		isReachingProducerRegion = false
 		for _, fh := range interest.ForwardingHint() {
@@ -232,6 +238,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	}
 
 	// Check if any matching PIT entries (and if duplicate)
+	//read into this, looks like this one will have to be manually changed
 	pitEntry, isDuplicate := t.pitCS.InsertInterest(interest, fhName, incomingFace.FaceID())
 	if isDuplicate {
 		// Interest loop - since we don't use Nacks, just drop
@@ -241,16 +248,19 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	core.LogDebug(t, "Found or updated PIT entry for Interest=", interest.Name(), ", PitToken=", uint64(pitEntry.Token()))
 
 	// Get strategy for name
+	// getting strategy for name seems generic enough that it will be easy
 	strategyName := table.FibStrategyTable.FindStrategy(interest.Name())
 	strategy := t.strategies[strategyName.String()]
 	core.LogDebug(t, "Using Strategy=", strategyName, " for Interest=", interest.Name())
 
 	// Add in-record and determine if already pending
+	// this looks like custom interest again, but again can be changed without much issue?
 	_, isAlreadyPending := pitEntry.InsertInRecord(interest, incomingFace.FaceID(), incomingPitToken)
 	if !isAlreadyPending {
 		core.LogTrace(t, "Interest ", interest.Name(), " is not pending")
 
 		// Check CS for matching entry
+		//need to change this as well
 		if t.pitCS.IsCsServing() {
 			csEntry := t.pitCS.FindMatchingDataFromCS(interest)
 			if csEntry != nil {
@@ -494,9 +504,11 @@ func (t *Thread) processOutgoingData(data *ndn.Data, nexthop uint64, pitToken []
 	pendingPacket.IncomingFaceID = new(uint64)
 	*pendingPacket.IncomingFaceID = uint64(inFace)
 	pendingPacket.Wire, err = data.Encode()
+	//here the wire is a literal array, that we then send over the encapsulating packet
 	if err != nil {
 		core.LogWarn(t, "Unable to encode Data ", data.Name(), " (", err, " ) - DROP")
 		return
 	}
+	//fmt.Println("sent packet")
 	outgoingFace.SendPacket(pendingPacket)
 }
