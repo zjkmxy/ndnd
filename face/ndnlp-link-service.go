@@ -9,7 +9,6 @@ package face
 
 import (
 	"container/list"
-	"fmt"
 	"math"
 	"runtime"
 	"strconv"
@@ -101,7 +100,8 @@ type NDNLPLinkService struct {
 	nextTxSequence           uint64
 	lastTimeCongestionMarked time.Time
 
-	stealthPool *stealthpool.Pool
+	stealthPool  *stealthpool.Pool
+	bufferReader enc.BufferReader
 }
 
 // MakeNDNLPLinkService creates a new NDNLPv2 link service
@@ -121,7 +121,7 @@ func MakeNDNLPLinkService(transport transport, options NDNLPLinkServiceOptions) 
 	l.retransmitQueue = make(chan uint64, faceQueueSize)
 	l.rto = 0
 	l.nextTxSequence = 0
-
+	l.bufferReader = *enc.NewBufferReader([]byte{})
 	return l
 }
 
@@ -220,22 +220,17 @@ func (l *NDNLPLinkService) runSend() {
 		select {
 		case netPacket := <-l.sendQueue:
 			go func(netPacket *ndn.PendingPacket) {
-				wire, err := netPacket.Wire.Wire()
-				if err != nil {
-					core.LogWarn(l, "Unable to encode outgoing packet for queueing in link service - DROP")
-					return
-				}
+				wire := netPacket.RawBytes
 
 				if l.transport.State() != ndn.Up {
 					core.LogWarn(l, "Attempted to send frame on down face - DROP and stop LinkService")
 					l.hasImplQuit <- true
 					return
 				}
-
 				// Counters
-				if netPacket.Wire.Type() == tlv.Interest {
+				if netPacket.TestPktStruct.Interest != nil {
 					l.nOutInterests++
-				} else if netPacket.Wire.Type() == tlv.Data {
+				} else if netPacket.TestPktStruct.Data != nil {
 					l.nOutData++
 				}
 
@@ -251,6 +246,7 @@ func (l *NDNLPLinkService) runSend() {
 
 				// Fragmentation
 				var fragments []*lpv2.Packet
+				//fmt.Println(len(wire), effectiveMtu)
 				if len(wire) > effectiveMtu {
 					if !l.options.IsFragmentationEnabled {
 						core.LogInfo(l, "Attempted to send frame over MTU on link without fragmentation - DROP")
@@ -489,16 +485,10 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	netPacket.Wire, _, err = tlv.DecodeBlock(netPkt)
 	//var ctx *spec.PacketParsingContext
 	var e error
-	netPacket.TestPktStruct, _, e = spec.ReadPacket(enc.NewBufferReader(enc.Buffer(netPkt)))
+	netPacket.TestPktStruct, _, e = spec.ReadPacket(enc.NewBufferReader(netPkt))
+	netPacket.RawBytes = netPkt
 	if e != nil {
 		core.LogWarn("Failed to parse packet in LpPacket: %v", e)
-	}
-	if netPacket.TestPktStruct.Interest != nil {
-		fmt.Println("Interest")
-		fmt.Println(netPacket.TestPktStruct.Interest.NameV.String())
-	} else if netPacket.TestPktStruct.Data != nil {
-		fmt.Println("Data")
-		fmt.Println(netPacket.TestPktStruct.Data.NameV.String())
 	}
 	if err != nil {
 		core.LogWarn(l, "Unable to decode network-layer packet: ", err, " - DROP")
@@ -525,9 +515,9 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	}
 
 	// Counters
-	if netPacket.Wire.Type() == tlv.Interest {
+	if netPacket.TestPktStruct.Interest != nil {
 		l.nInInterests++
-	} else if netPacket.Wire.Type() == tlv.Data {
+	} else if netPacket.TestPktStruct.Data != nil {
 		l.nInData++
 	}
 

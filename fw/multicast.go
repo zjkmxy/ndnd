@@ -31,23 +31,23 @@ func (s *Multicast) Instantiate(fwThread *Thread) {
 }
 
 // AfterContentStoreHit ...
-func (s *Multicast) AfterContentStoreHit(pitEntry table.PitEntry, inFace uint64, data *ndn.Data) {
+func (s *Multicast) AfterContentStoreHit(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, data *ndn.Data) {
 	// Send downstream
 	core.LogTrace(s, "AfterContentStoreHit: Forwarding content store hit Data=", data.Name(), " to FaceID=", inFace)
-	s.SendData(data, pitEntry, inFace, 0) // 0 indicates ContentStore is source
+	s.SendData(pp, data, pitEntry, inFace, 0) // 0 indicates ContentStore is source
 }
 
 // AfterReceiveData ...
-func (s *Multicast) AfterReceiveData(pitEntry table.PitEntry, inFace uint64, data *ndn.Data) {
+func (s *Multicast) AfterReceiveData(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, data *ndn.Data) {
 	core.LogTrace(s, "AfterReceiveData: Data=", data.Name(), ", ", len(pitEntry.InRecords()), " In-Records")
 	for faceID := range pitEntry.InRecords() {
 		core.LogTrace(s, "AfterReceiveData: Forwarding Data=", data.Name(), " to FaceID=", faceID)
-		s.SendData(data, pitEntry, faceID, inFace)
+		s.SendData(pp, data, pitEntry, faceID, inFace)
 	}
 }
 
 // AfterReceiveInterest ...
-func (s *Multicast) AfterReceiveInterest(pitEntry table.PitEntry, inFace uint64, interest *ndn.Interest, nexthops []*table.FibNextHopEntry) {
+func (s *Multicast) AfterReceiveInterest(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, interest *ndn.Interest, nexthops []*table.FibNextHopEntry) {
 	if len(nexthops) == 0 {
 		core.LogDebug(s, "AfterReceiveInterest: No nexthop for Interest=", interest.Name(), " - DROP")
 		return
@@ -55,7 +55,7 @@ func (s *Multicast) AfterReceiveInterest(pitEntry table.PitEntry, inFace uint64,
 
 	for _, nexthop := range nexthops {
 		core.LogTrace(s, "AfterReceiveInterest: Forwarding Interest=", interest.Name(), " to FaceID=", nexthop.Nexthop)
-		s.SendInterest(interest, pitEntry, nexthop.Nexthop, inFace)
+		s.SendInterest(pp, interest, pitEntry, nexthop.Nexthop, inFace)
 	}
 }
 

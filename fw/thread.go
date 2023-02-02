@@ -18,7 +18,7 @@ import (
 	"github.com/named-data/YaNFD/dispatch"
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/table"
-	_ "github.com/zjkmxy/go-ndn/pkg/encoding"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // MaxFwThreads Maximum number of forwarding threads
@@ -28,9 +28,9 @@ const MaxFwThreads = 32
 var Threads map[int]*Thread
 
 // HashNameToFwThread hashes an NDN name to a forwarding thread.
-func HashNameToFwThread(name *ndn.Name) int {
+func HashNameToFwThread(name *enc.Name) int {
 	// Dispatch all management requests to thread 0
-	if name.Size() > 0 && name.At(0).String() == "localhost" {
+	if len(*name) > 0 && (*name)[0].String() == "localhost" {
 		return 0
 	}
 
@@ -38,9 +38,9 @@ func HashNameToFwThread(name *ndn.Name) int {
 }
 
 // HashNameToAllPrefixFwThreads hahes an NDN name to all forwarding threads for all prefixes of the name.
-func HashNameToAllPrefixFwThreads(name *ndn.Name) []int {
+func HashNameToAllPrefixFwThreads(name *enc.Name) []int {
 	// Dispatch all management requests to thread 0
-	if name.Size() > 0 && name.At(0).String() == "localhost" {
+	if len(*name) > 0 && (*name)[0].String() == "localhost" {
 		return []int{0}
 	}
 
@@ -179,13 +179,13 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	// Get incoming face
 	incomingFace := dispatch.GetFace(*pendingPacket.IncomingFaceID)
 	if incomingFace == nil {
-		core.LogError(t, "Non-existent incoming FaceID=", *pendingPacket.IncomingFaceID, " for Interest=", interest.Name(), " - DROP")
+		core.LogError(t, "Non-existent incoming FaceID=", *pendingPacket.IncomingFaceID, " for Interest=", pendingPacket.TestPktStruct.Interest.NameV, " - DROP")
 		return
 	}
 	//this part is tricky, will need looking into
 	// Drop if HopLimit present and is 0. Else, decrement by 1
 	if interest.HopLimit() != nil && *interest.HopLimit() == 0 {
-		core.LogDebug(t, "Received Interest=", interest.Name(), " with HopLimit=0 - DROP")
+		core.LogDebug(t, "Received Interest=", pendingPacket.TestPktStruct.Interest.NameV, " with HopLimit=0 - DROP")
 		return
 	} else if interest.HopLimit() != nil {
 		interest.SetHopLimit(*interest.HopLimit() - 1)
@@ -232,6 +232,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 		}
 
 		if isReachingProducerRegion {
+			//another area where we modify the decoded data?
 			interest.SetForwardingHint(nil)
 			fhName = nil
 		}
@@ -265,7 +266,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 			csEntry := t.pitCS.FindMatchingDataFromCS(interest)
 			if csEntry != nil {
 				// Pass to strategy AfterContentStoreHit pipeline
-				strategy.AfterContentStoreHit(pitEntry, incomingFace.FaceID(), csEntry.Data())
+				strategy.AfterContentStoreHit(pendingPacket, pitEntry, incomingFace.FaceID(), csEntry.Data())
 				return
 			}
 		}
@@ -295,10 +296,10 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	} else {
 		nexthops = table.FibStrategyTable.FindNextHops(fhName)
 	}
-	strategy.AfterReceiveInterest(pitEntry, incomingFace.FaceID(), interest, nexthops)
+	strategy.AfterReceiveInterest(pendingPacket, pitEntry, incomingFace.FaceID(), interest, nexthops)
 }
 
-func (t *Thread) processOutgoingInterest(interest *ndn.Interest, pitEntry table.PitEntry, nexthop uint64, inFace uint64) bool {
+func (t *Thread) processOutgoingInterest(pp *ndn.PendingPacket, interest *ndn.Interest, pitEntry table.PitEntry, nexthop uint64, inFace uint64) bool {
 	core.LogTrace(t, "OnOutgoingInterest: ", interest.Name(), ", FaceID=", nexthop)
 
 	// Get outgoing face
@@ -324,19 +325,12 @@ func (t *Thread) processOutgoingInterest(interest *ndn.Interest, pitEntry table.
 	t.NOutInterests++
 
 	// Send on outgoing face
-	pendingPacket := new(ndn.PendingPacket)
-	pendingPacket.IncomingFaceID = new(uint64)
-	*pendingPacket.IncomingFaceID = uint64(inFace)
-	pendingPacket.PitToken = make([]byte, 6)
-	binary.BigEndian.PutUint16(pendingPacket.PitToken, uint16(t.threadID))
-	binary.BigEndian.PutUint32(pendingPacket.PitToken[2:], pitEntry.Token())
-	var err error
-	pendingPacket.Wire, err = interest.Encode()
-	if err != nil {
-		core.LogWarn(t, "Unable to encode Interest ", interest.Name(), " (", err, " ) - DROP")
-		return false
-	}
-	outgoingFace.SendPacket(pendingPacket)
+	pp.IncomingFaceID = new(uint64)
+	*pp.IncomingFaceID = uint64(inFace)
+	pp.PitToken = make([]byte, 6)
+	binary.BigEndian.PutUint16(pp.PitToken, uint16(t.threadID))
+	binary.BigEndian.PutUint32(pp.PitToken[2:], pitEntry.Token())
+	outgoingFace.SendPacket(pp)
 	return true
 }
 
@@ -423,7 +417,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 
 		// Invoke strategy's AfterReceiveData
 		core.LogTrace(t, "Sending Data=", data.Name(), " to strategy=", strategyName)
-		strategy.AfterReceiveData(pitEntries[0], *pendingPacket.IncomingFaceID, data)
+		strategy.AfterReceiveData(pendingPacket, pitEntries[0], *pendingPacket.IncomingFaceID, data)
 
 		// Mark PIT entry as satisfied
 		pitEntries[0].SetSatisfied(true)
@@ -469,13 +463,13 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 			// Call outoing Data pipeline for each pending downstream
 			for downstreamFaceID, downstreamPITToken := range downstreams {
 				core.LogTrace(t, "Multiple matching PIT entries for ", data.Name(), ": sending to OnOutgoingData pipeline")
-				t.processOutgoingData(data, downstreamFaceID, downstreamPITToken, *pendingPacket.IncomingFaceID)
+				t.processOutgoingData(pendingPacket, data, downstreamFaceID, downstreamPITToken, *pendingPacket.IncomingFaceID)
 			}
 		}
 	}
 }
 
-func (t *Thread) processOutgoingData(data *ndn.Data, nexthop uint64, pitToken []byte, inFace uint64) {
+func (t *Thread) processOutgoingData(pp *ndn.PendingPacket, data *ndn.Data, nexthop uint64, pitToken []byte, inFace uint64) {
 	core.LogTrace(t, "OnOutgoingData: ", data.Name(), ", FaceID=", nexthop)
 
 	// Get outgoing face
@@ -495,20 +489,12 @@ func (t *Thread) processOutgoingData(data *ndn.Data, nexthop uint64, pitToken []
 	t.NSatisfiedInterests++
 
 	// Send on outgoing face
-	pendingPacket := new(ndn.PendingPacket)
-	var err error
 	if len(pitToken) > 0 {
-		pendingPacket.PitToken = make([]byte, len(pitToken))
-		copy(pendingPacket.PitToken, pitToken)
+		pp.PitToken = make([]byte, len(pitToken))
+		copy(pp.PitToken, pitToken)
 	}
-	pendingPacket.IncomingFaceID = new(uint64)
-	*pendingPacket.IncomingFaceID = uint64(inFace)
-	pendingPacket.Wire, err = data.Encode()
-	//here the wire is a literal array, that we then send over the encapsulating packet
-	if err != nil {
-		core.LogWarn(t, "Unable to encode Data ", data.Name(), " (", err, " ) - DROP")
-		return
-	}
+	pp.IncomingFaceID = new(uint64)
+	*pp.IncomingFaceID = uint64(inFace)
 	//fmt.Println("sent packet")
-	outgoingFace.SendPacket(pendingPacket)
+	outgoingFace.SendPacket(pp)
 }
