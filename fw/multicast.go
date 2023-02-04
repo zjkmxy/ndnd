@@ -39,9 +39,9 @@ func (s *Multicast) AfterContentStoreHit(pp *ndn.PendingPacket, pitEntry table.P
 
 // AfterReceiveData ...
 func (s *Multicast) AfterReceiveData(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, data *ndn.Data) {
-	core.LogTrace(s, "AfterReceiveData: Data=", data.Name(), ", ", len(pitEntry.InRecords()), " In-Records")
+	core.LogTrace(s, "AfterReceiveData: Data=", pp.TestPktStruct.Data.NameV, ", ", len(pitEntry.InRecords()), " In-Records")
 	for faceID := range pitEntry.InRecords() {
-		core.LogTrace(s, "AfterReceiveData: Forwarding Data=", data.Name(), " to FaceID=", faceID)
+		core.LogTrace(s, "AfterReceiveData: Forwarding Data=", pp.TestPktStruct.Data.NameV, " to FaceID=", faceID)
 		s.SendData(pp, data, pitEntry, faceID, inFace)
 	}
 }

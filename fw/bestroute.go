@@ -34,15 +34,15 @@ func (s *BestRoute) Instantiate(fwThread *Thread) {
 // AfterContentStoreHit ...
 func (s *BestRoute) AfterContentStoreHit(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, data *ndn.Data) {
 	// Send downstream
-	core.LogTrace(s, "AfterContentStoreHit: Forwarding content store hit Data=", data.Name(), " to FaceID=", inFace)
+	core.LogTrace(s, "AfterContentStoreHit: Forwarding content store hit Data=", pp.NameCache, " to FaceID=", inFace)
 	s.SendData(pp, data, pitEntry, inFace, 0) // 0 indicates ContentStore is source
 }
 
 // AfterReceiveData ...
 func (s *BestRoute) AfterReceiveData(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, data *ndn.Data) {
-	core.LogTrace(s, "AfterReceiveData: Data=", data.Name(), ", ", len(pitEntry.InRecords()), " In-Records")
+	core.LogTrace(s, "AfterReceiveData: Data=", pp.NameCache, ", ", len(pitEntry.InRecords()), " In-Records")
 	for faceID := range pitEntry.InRecords() {
-		core.LogTrace(s, "AfterReceiveData: Forwarding Data=", data.Name(), " to FaceID=", faceID)
+		core.LogTrace(s, "AfterReceiveData: Forwarding Data=", pp.NameCache, " to FaceID=", faceID)
 		s.SendData(pp, data, pitEntry, faceID, inFace)
 	}
 }
@@ -51,13 +51,13 @@ func (s *BestRoute) AfterReceiveData(pp *ndn.PendingPacket, pitEntry table.PitEn
 func (s *BestRoute) AfterReceiveInterest(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, interest *ndn.Interest, nexthops []*table.FibNextHopEntry) {
 	sort.Slice(nexthops, func(i, j int) bool { return nexthops[i].Cost < nexthops[j].Cost })
 	for _, nh := range nexthops {
-		core.LogTrace(s, "AfterReceiveInterest: Forwarding Interest=", interest.Name(), " to FaceID=", nh.Nexthop)
+		core.LogTrace(s, "AfterReceiveInterest: Forwarding Interest=", pp.NameCache, " to FaceID=", nh.Nexthop)
 		if sent := s.SendInterest(pp, interest, pitEntry, nh.Nexthop, inFace); sent {
 			return
 		}
 	}
 
-	core.LogDebug(s, "AfterReceiveInterest: No usable nexthop for Interest=", interest.Name(), " - DROP")
+	core.LogDebug(s, "AfterReceiveInterest: No usable nexthop for Interest=", pp.NameCache, " - DROP")
 }
 
 // BeforeSatisfyInterest ...

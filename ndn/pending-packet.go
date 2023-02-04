@@ -24,6 +24,7 @@ type PendingPacket struct {
 	CachePolicy    *uint64
 	TestPktStruct  *spec.Packet
 	RawBytes       []byte
+	NameCache      string
 }
 
 // DeepCopy creates a deep copy of a pending packet.

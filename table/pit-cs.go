@@ -11,19 +11,21 @@ import (
 	"time"
 
 	"github.com/named-data/YaNFD/ndn"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // PitCsTable dictates what functionality a Pit-Cs table should implement
 // Warning: All functions must be called in the same forwarding goroutine as the creation of the table.
 type PitCsTable interface {
-	InsertInterest(interest *ndn.Interest, hint *ndn.Name, inFace uint64) (PitEntry, bool)
+	InsertInterest(pp *ndn.PendingPacket, interest *ndn.Interest, hint *ndn.Name, inFace uint64) (PitEntry, bool)
 	RemoveInterest(pitEntry PitEntry) bool
-	FindInterestExactMatch(interest *ndn.Interest) PitEntry
-	FindInterestPrefixMatchByData(data *ndn.Data, token *uint32) []PitEntry
+	FindInterestExactMatch(pp *ndn.PendingPacket, interest *ndn.Interest) PitEntry
+	FindInterestPrefixMatchByData(pp *ndn.PendingPacket, data *ndn.Data, token *uint32) []PitEntry
+	FindInterestPrefixMatchByData1(pp *ndn.PendingPacket, data *ndn.Data, token *uint32) []PitEntry
 	PitSize() int
 
-	InsertData(data *ndn.Data)
-	FindMatchingDataFromCS(interest *ndn.Interest) CsEntry
+	InsertData(pp *ndn.PendingPacket, data *ndn.Data)
+	FindMatchingDataFromCS(pp *ndn.PendingPacket, interest *ndn.Interest) CsEntry
 	CsSize() int
 	IsCsAdmitting() bool
 	IsCsServing() bool
@@ -59,8 +61,8 @@ type PitEntry interface {
 
 	Token() uint32
 
-	InsertInRecord(interest *ndn.Interest, face uint64, incomingPitToken []byte) (*PitInRecord, bool)
-	InsertOutRecord(interest *ndn.Interest, face uint64) *PitOutRecord
+	InsertInRecord(pp *ndn.PendingPacket, interest *ndn.Interest, face uint64, incomingPitToken []byte) (*PitInRecord, bool)
+	InsertOutRecord(pp *ndn.PendingPacket, interest *ndn.Interest, face uint64) *PitOutRecord
 
 	GetOutRecords() []*PitOutRecord
 	ClearOutRecords()
@@ -71,6 +73,7 @@ type PitEntry interface {
 type basePitEntry struct {
 	// lowercase fields so that they aren't exported
 	name           *ndn.Name
+	ppname         *enc.Name
 	canBePrefix    bool
 	mustBeFresh    bool
 	forwardingHint *ndn.Name
@@ -90,6 +93,8 @@ type PitInRecord struct {
 	LatestNonce     []byte
 	LatestTimestamp time.Time
 	LatestInterest  *ndn.Interest
+	LatestPacket    *ndn.PendingPacket
+	PacketNonce     uint32
 	ExpirationTime  time.Time
 	PitToken        []byte
 }
@@ -100,6 +105,8 @@ type PitOutRecord struct {
 	LatestNonce     []byte
 	LatestTimestamp time.Time
 	LatestInterest  *ndn.Interest
+	LatestPacket    *ndn.PendingPacket
+	PacketNonce     uint32
 	ExpirationTime  time.Time
 }
 
@@ -114,20 +121,23 @@ type baseCsEntry struct {
 	index     uint64
 	staleTime time.Time
 	data      *ndn.Data
+	ppdata    *ndn.PendingPacket
 }
 
 // InsertInRecord finds or inserts an InRecord for the face, updating the
 // metadata and returning whether there was already an in-record in the entry.
-func (bpe *basePitEntry) InsertInRecord(interest *ndn.Interest, face uint64, incomingPitToken []byte) (*PitInRecord, bool) {
+func (bpe *basePitEntry) InsertInRecord(pp *ndn.PendingPacket, interest *ndn.Interest, face uint64, incomingPitToken []byte) (*PitInRecord, bool) {
 	var record *PitInRecord
 	var ok bool
 	if record, ok = bpe.inRecords[face]; !ok {
 		record := new(PitInRecord)
 		record.Face = face
 		record.LatestNonce = interest.Nonce()
+		record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
 		record.LatestTimestamp = time.Now()
 		record.LatestInterest = interest
-		record.ExpirationTime = time.Now().Add(interest.Lifetime())
+		record.LatestPacket = pp
+		record.ExpirationTime = time.Now().Add(time.Millisecond * 4000)
 		record.PitToken = incomingPitToken
 		bpe.inRecords[face] = record
 		return record, false
@@ -135,9 +145,11 @@ func (bpe *basePitEntry) InsertInRecord(interest *ndn.Interest, face uint64, inc
 
 	// Existing record
 	record.LatestNonce = interest.Nonce()
+	record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
 	record.LatestTimestamp = time.Now()
 	record.LatestInterest = interest
-	record.ExpirationTime = time.Now().Add(interest.Lifetime())
+	record.LatestPacket = pp
+	record.ExpirationTime = time.Now().Add(time.Millisecond * 4000)
 	return record, true
 }
 

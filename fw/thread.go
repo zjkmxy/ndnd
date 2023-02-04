@@ -174,23 +174,17 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	// this is where we convert it into yanfd interest
 	// now, we have go-ndn interest spec 2022 struct in pending packet, which is better/less copying
 	interest := pendingPacket.NetPacket.(*ndn.Interest)
+	// fmt.Printf("%+v\n", pendingPacket.TestPktStruct.Interest)
+	// fmt.Printf("%+v\n", interest)
+	// fmt.Println("----")
 	//fmt.Println(interest.Name())
 	//some testing shows this is the exact same as the interest name in go-ndn
 	// Get incoming face
 	incomingFace := dispatch.GetFace(*pendingPacket.IncomingFaceID)
 	if incomingFace == nil {
-		core.LogError(t, "Non-existent incoming FaceID=", *pendingPacket.IncomingFaceID, " for Interest=", pendingPacket.TestPktStruct.Interest.NameV, " - DROP")
+		core.LogError(t, "Non-existent incoming FaceID=", *pendingPacket.IncomingFaceID, " for Interest=", pendingPacket.NameCache, " - DROP")
 		return
 	}
-	//this part is tricky, will need looking into
-	// Drop if HopLimit present and is 0. Else, decrement by 1
-	if interest.HopLimit() != nil && *interest.HopLimit() == 0 {
-		core.LogDebug(t, "Received Interest=", pendingPacket.TestPktStruct.Interest.NameV, " with HopLimit=0 - DROP")
-		return
-	} else if interest.HopLimit() != nil {
-		interest.SetHopLimit(*interest.HopLimit() - 1)
-	}
-
 	// Get PIT token (if any)
 	incomingPitToken := make([]byte, 0)
 	if len(pendingPacket.PitToken) > 0 {
@@ -209,38 +203,13 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 
 	t.NInInterests++
 
-	// Detect duplicate nonce by comparing against Dead Nonce List
-	//also needs changing from []byte to value
-	if exists := t.deadNonceList.Find(interest.Name(), interest.Nonce()); exists {
-		core.LogTrace(t, "Interest ", interest.Name(), " matches Dead Nonce List - DROP")
-		return
-	}
-
 	// Check for forwarding hint and, if present, determine if reaching producer region (and then strip forwarding hint)
-	isReachingProducerRegion := true
 	var fhName *ndn.Name
-	//slice of names vs slice of go-ndn names
-	if len(interest.ForwardingHint()) > 0 {
-		isReachingProducerRegion = false
-		for _, fh := range interest.ForwardingHint() {
-			if table.NetworkRegion.IsProducer(fh) {
-				isReachingProducerRegion = true
-				break
-			} else if fhName == nil {
-				fhName = fh
-			}
-		}
-
-		if isReachingProducerRegion {
-			//another area where we modify the decoded data?
-			interest.SetForwardingHint(nil)
-			fhName = nil
-		}
-	}
+	fhName = nil
 
 	// Check if any matching PIT entries (and if duplicate)
 	//read into this, looks like this one will have to be manually changed
-	pitEntry, isDuplicate := t.pitCS.InsertInterest(interest, fhName, incomingFace.FaceID())
+	pitEntry, isDuplicate := t.pitCS.InsertInterest(pendingPacket, interest, fhName, incomingFace.FaceID())
 	if isDuplicate {
 		// Interest loop - since we don't use Nacks, just drop
 		core.LogInfo(t, "Interest ", interest.Name(), " is looping - DROP")
@@ -250,20 +219,21 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 
 	// Get strategy for name
 	// getting strategy for name seems generic enough that it will be easy
-	strategyName := table.FibStrategyTable.FindStrategy(interest.Name())
+	//strategyName := table.FibStrategyTable.FindStrategy(interest.Name())
+	strategyName, _ := ndn.NameFromString("/localhost/nfd/strategy/best-route/v=1")
 	strategy := t.strategies[strategyName.String()]
 	core.LogDebug(t, "Using Strategy=", strategyName, " for Interest=", interest.Name())
 
 	// Add in-record and determine if already pending
 	// this looks like custom interest again, but again can be changed without much issue?
-	_, isAlreadyPending := pitEntry.InsertInRecord(interest, incomingFace.FaceID(), incomingPitToken)
+	_, isAlreadyPending := pitEntry.InsertInRecord(pendingPacket, interest, incomingFace.FaceID(), incomingPitToken)
 	if !isAlreadyPending {
 		core.LogTrace(t, "Interest ", interest.Name(), " is not pending")
 
 		// Check CS for matching entry
 		//need to change this as well
 		if t.pitCS.IsCsServing() {
-			csEntry := t.pitCS.FindMatchingDataFromCS(interest)
+			csEntry := t.pitCS.FindMatchingDataFromCS(pendingPacket, interest)
 			if csEntry != nil {
 				// Pass to strategy AfterContentStoreHit pipeline
 				strategy.AfterContentStoreHit(pendingPacket, pitEntry, incomingFace.FaceID(), csEntry.Data())
@@ -320,7 +290,7 @@ func (t *Thread) processOutgoingInterest(pp *ndn.PendingPacket, interest *ndn.In
 	}
 
 	// Create or update out-record
-	pitEntry.InsertOutRecord(interest, nexthop)
+	pitEntry.InsertOutRecord(pp, interest, nexthop)
 
 	t.NOutInterests++
 
@@ -364,17 +334,6 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 	}
 
 	var data *ndn.Data
-	if pendingPacket.NetPacket == nil {
-		var err error
-		data, err = ndn.DecodeData(pendingPacket.Wire, false)
-		if err != nil {
-			core.LogError(t, "Unable to decode Data (", err, ") - DROP")
-			return
-		}
-	} else {
-		// Already decoded in face thread and already asserted that this is a Data packet in link service
-		data = pendingPacket.NetPacket.(*ndn.Data)
-	}
 
 	// Get incoming face
 	incomingFace := dispatch.GetFace(*pendingPacket.IncomingFaceID)
@@ -383,31 +342,30 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 		return
 	}
 
-	core.LogTrace(t, "OnIncomingData: ", data.Name(), ", FaceID=", incomingFace.FaceID())
-
 	t.NInData++
 
 	// Check if violates /localhost
-	if incomingFace.Scope() == ndn.NonLocal && data.Name().Size() > 0 && data.Name().At(0).String() == "localhost" {
-		core.LogWarn(t, "Data ", data.Name(), " from non-local FaceID=", *pendingPacket.IncomingFaceID, " violates /localhost scope - DROP")
+	if incomingFace.Scope() == ndn.NonLocal && len(pendingPacket.NameCache) > 0 && pendingPacket.TestPktStruct.Data.NameV[0].String() == "localhost" {
+		core.LogWarn(t, "Data ", pendingPacket.NameCache, " from non-local FaceID=", *pendingPacket.IncomingFaceID, " violates /localhost scope - DROP")
 		return
 	}
 
 	// Add to Content Store
 	if t.pitCS.IsCsAdmitting() {
-		t.pitCS.InsertData(data)
+		t.pitCS.InsertData(pendingPacket, data)
 	}
 
 	// Check for matching PIT entries
-	pitEntries := t.pitCS.FindInterestPrefixMatchByData(data, pitToken)
+	pitEntries := t.pitCS.FindInterestPrefixMatchByData1(pendingPacket, data, pitToken)
 	if len(pitEntries) == 0 {
 		// Unsolicated Data - nothing more to do
-		core.LogDebug(t, "Unsolicited data ", data.Name(), " - DROP")
+		core.LogDebug(t, "Unsolicited data ", pendingPacket.NameCache, " - DROP")
 		return
 	}
-
 	// Get strategy for name
-	strategyName := table.FibStrategyTable.FindStrategy(data.Name())
+
+	//strategyName := table.FibStrategyTable.FindStrategy(data.Name())
+	strategyName, _ := ndn.NameFromString("/localhost/nfd/strategy/best-route/v=1")
 	strategy := t.strategies[strategyName.String()]
 
 	if len(pitEntries) == 1 {
@@ -416,7 +374,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 		// pitEntries[0].SetExpirationTimerToNow()
 
 		// Invoke strategy's AfterReceiveData
-		core.LogTrace(t, "Sending Data=", data.Name(), " to strategy=", strategyName)
+		core.LogTrace(t, "Sending Data=", pendingPacket.NameCache, " to strategy=", strategyName)
 		strategy.AfterReceiveData(pendingPacket, pitEntries[0], *pendingPacket.IncomingFaceID, data)
 
 		// Mark PIT entry as satisfied
@@ -462,7 +420,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 
 			// Call outoing Data pipeline for each pending downstream
 			for downstreamFaceID, downstreamPITToken := range downstreams {
-				core.LogTrace(t, "Multiple matching PIT entries for ", data.Name(), ": sending to OnOutgoingData pipeline")
+				core.LogTrace(t, "Multiple matching PIT entries for ", pendingPacket.NameCache, ": sending to OnOutgoingData pipeline")
 				t.processOutgoingData(pendingPacket, data, downstreamFaceID, downstreamPITToken, *pendingPacket.IncomingFaceID)
 			}
 		}
@@ -470,18 +428,18 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 }
 
 func (t *Thread) processOutgoingData(pp *ndn.PendingPacket, data *ndn.Data, nexthop uint64, pitToken []byte, inFace uint64) {
-	core.LogTrace(t, "OnOutgoingData: ", data.Name(), ", FaceID=", nexthop)
+	core.LogTrace(t, "OnOutgoingData: ", pp.NameCache, ", FaceID=", nexthop)
 
 	// Get outgoing face
 	outgoingFace := dispatch.GetFace(nexthop)
 	if outgoingFace == nil {
-		core.LogError(t, "Non-existent nexthop FaceID=", nexthop, " for Data=", data.Name(), " - DROP")
+		core.LogError(t, "Non-existent nexthop FaceID=", nexthop, " for Data=", pp, " - DROP")
 		return
 	}
 
 	// Check if violates /localhost
-	if outgoingFace.Scope() == ndn.NonLocal && data.Name().Size() > 0 && data.Name().At(0).String() == "localhost" {
-		core.LogWarn(t, "Data ", data.Name(), " cannot be sent to non-local FaceID=", nexthop, " since violates /localhost scope - DROP")
+	if outgoingFace.Scope() == ndn.NonLocal && len(pp.NameCache) > 0 && pp.TestPktStruct.Data.NameV[0].String() == "localhost" {
+		core.LogWarn(t, "Data ", pp.NameCache, " cannot be sent to non-local FaceID=", nexthop, " since violates /localhost scope - DROP")
 		return
 	}
 

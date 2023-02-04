@@ -234,6 +234,7 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 	var err error
 	switch {
 	case netPacket.TestPktStruct.Interest != nil:
+		netPacket.NameCache = netPacket.TestPktStruct.Interest.NameV.String()
 		netPacket.NetPacket, err = ndn.DecodeInterest(netPacket.Wire)
 		if err != nil {
 			core.LogError(l, "Unable to decode Interest (", err, ") - DROP")
@@ -243,6 +244,7 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 		core.LogTrace(l, "Dispatched Interest to thread ", thread)
 		dispatch.GetFWThread(thread).QueueInterest(netPacket)
 	case netPacket.TestPktStruct.Data != nil:
+		netPacket.NameCache = netPacket.TestPktStruct.Data.NameV.String()
 		if len(netPacket.PitToken) == 6 {
 			// Decode PitToken. If it's for us, it's a uint16 + uint32.
 			pitTokenThread := binary.BigEndian.Uint16(netPacket.PitToken)
@@ -261,7 +263,6 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 			// Only if from a local face (and therefore from a producer), dispatch to threads matching every prefix.
 			// We need to do this because producers do not attach PIT tokens to their data packets.
 			core.LogDebug(l, "Missing PIT token from local origin Data packet - performing prefix dispatching")
-			netPacket.NetPacket, err = ndn.DecodeData(netPacket.Wire, false)
 			if err != nil {
 				core.LogError(l, "Unable to decode Data (", err, ") - DROP")
 				break

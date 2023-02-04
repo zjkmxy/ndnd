@@ -1,7 +1,7 @@
 package table
 
 import (
-	"bytes"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/YaNFD/core"
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/utils/priority_queue"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 const expiredPitTickerInterval = 100 * time.Millisecond
@@ -47,8 +48,9 @@ type nameTreeCsEntry struct {
 
 // pitCsTreeNode represents an entry in a PIT-CS tree.
 type pitCsTreeNode struct {
-	component ndn.NameComponent
-	depth     int
+	component   ndn.NameComponent
+	ppcomponent enc.Component
+	depth       int
 
 	parent   *pitCsTreeNode
 	children map[string]*pitCsTreeNode
@@ -131,12 +133,12 @@ func (e *nameTreePitEntry) PitCs() PitCsTable {
 
 // InsertInterest inserts an entry in the PIT upon receipt of an Interest.
 // Returns tuple of PIT entry and whether the Nonce is a duplicate.
-func (p *PitCsTree) InsertInterest(interest *ndn.Interest, hint *ndn.Name, inFace uint64) (PitEntry, bool) {
-	node := p.root.fillTreeToPrefix(interest.Name())
-
+func (p *PitCsTree) InsertInterest(pp *ndn.PendingPacket, interest *ndn.Interest, hint *ndn.Name, inFace uint64) (PitEntry, bool) {
+	//node := p.root.fillTreeToPrefix(interest.Name())
+	node := p.root.fillTreeToPrefix1(&pp.TestPktStruct.Interest.NameV)
 	var entry *nameTreePitEntry
 	for _, curEntry := range node.pitEntries {
-		if curEntry.CanBePrefix() == interest.CanBePrefix() && curEntry.MustBeFresh() == interest.MustBeFresh() && ((hint == nil && curEntry.ForwardingHint() == nil) || hint.Equals(curEntry.ForwardingHint())) {
+		if curEntry.CanBePrefix() == pp.TestPktStruct.Interest.CanBePrefixV && curEntry.MustBeFresh() == pp.TestPktStruct.Interest.MustBeFreshV && ((hint == nil && curEntry.ForwardingHint() == nil) || hint.Equals(curEntry.ForwardingHint())) {
 			entry = curEntry
 			break
 		}
@@ -148,8 +150,9 @@ func (p *PitCsTree) InsertInterest(interest *ndn.Interest, hint *ndn.Name, inFac
 		entry.node = node
 		entry.pitCsTable = p
 		entry.name = interest.Name()
-		entry.canBePrefix = interest.CanBePrefix()
-		entry.mustBeFresh = interest.MustBeFresh()
+		entry.ppname = &pp.TestPktStruct.Interest.NameV
+		entry.canBePrefix = pp.TestPktStruct.Interest.CanBePrefixV
+		entry.mustBeFresh = pp.TestPktStruct.Interest.MustBeFreshV
 		entry.forwardingHint = hint
 		entry.inRecords = make(map[uint64]*PitInRecord)
 		entry.outRecords = make(map[uint64]*PitOutRecord)
@@ -162,7 +165,7 @@ func (p *PitCsTree) InsertInterest(interest *ndn.Interest, hint *ndn.Name, inFac
 
 	for face, inRecord := range entry.inRecords {
 		// Only considered a duplicate (loop) if from different face since is just retransmission and not loop if same face
-		if face != inFace && bytes.Equal(inRecord.LatestNonce, interest.Nonce()) {
+		if face != inFace && inRecord.PacketNonce == *pp.TestPktStruct.Interest.NonceV {
 			return entry, true
 		}
 	}
@@ -196,11 +199,11 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 
 // FindInterestExactMatch returns the PIT entry for an exact match of the
 // given interest.
-func (p *PitCsTree) FindInterestExactMatch(interest *ndn.Interest) PitEntry {
+func (p *PitCsTree) FindInterestExactMatch(pp *ndn.PendingPacket, interest *ndn.Interest) PitEntry {
 	node := p.root.findExactMatchEntry(interest.Name())
 	if node != nil {
 		for _, curEntry := range node.pitEntries {
-			if curEntry.CanBePrefix() == interest.CanBePrefix() && curEntry.MustBeFresh() == interest.MustBeFresh() {
+			if curEntry.CanBePrefix() == pp.TestPktStruct.Interest.CanBePrefixV && curEntry.MustBeFresh() == pp.TestPktStruct.Interest.MustBeFreshV {
 				return curEntry
 			}
 		}
@@ -212,7 +215,7 @@ func (p *PitCsTree) FindInterestExactMatch(interest *ndn.Interest) PitEntry {
 // by the given data.
 // Example: If we have interests /a and /a/b, a prefix search for data with name /a/b
 // will return PitEntries for both /a and /a/b
-func (p *PitCsTree) FindInterestPrefixMatchByData(data *ndn.Data, token *uint32) []PitEntry {
+func (p *PitCsTree) FindInterestPrefixMatchByData(pp *ndn.PendingPacket, data *ndn.Data, token *uint32) []PitEntry {
 	if token != nil {
 		if entry, ok := p.pitTokenMap[*token]; ok && entry.Token() == *token {
 			return []PitEntry{entry}
@@ -227,6 +230,46 @@ func (p *PitCsTree) findInterestPrefixMatchByName(name *ndn.Name) []PitEntry {
 	matching := make([]PitEntry, 0)
 	dataNameLen := name.Size()
 	for curNode := p.root.findLongestPrefixEntry(name); curNode != nil; curNode = curNode.parent {
+		for _, entry := range curNode.pitEntries {
+			if entry.canBePrefix || curNode.depth == dataNameLen {
+				matching = append(matching, entry)
+			}
+		}
+	}
+	return matching
+}
+
+func (p *PitCsTree) FindInterestExactMatch1(pp *ndn.PendingPacket, interest *ndn.Interest) PitEntry {
+	node := p.root.findExactMatchEntry1(&pp.TestPktStruct.Interest.NameV)
+	if node != nil {
+		for _, curEntry := range node.pitEntries {
+			if curEntry.CanBePrefix() == pp.TestPktStruct.Interest.CanBePrefixV && curEntry.MustBeFresh() == pp.TestPktStruct.Interest.MustBeFreshV {
+				return curEntry
+			}
+		}
+	}
+	return nil
+}
+
+// FindInterestPrefixMatchByData returns all interests that could be satisfied
+// by the given data.
+// Example: If we have interests /a and /a/b, a prefix search for data with name /a/b
+// will return PitEntries for both /a and /a/b
+func (p *PitCsTree) FindInterestPrefixMatchByData1(pp *ndn.PendingPacket, data *ndn.Data, token *uint32) []PitEntry {
+	if token != nil {
+		if entry, ok := p.pitTokenMap[*token]; ok && entry.Token() == *token {
+			return []PitEntry{entry}
+		}
+		return nil
+	}
+	return p.findInterestPrefixMatchByName1(&pp.TestPktStruct.Data.NameV)
+}
+
+func (p *PitCsTree) findInterestPrefixMatchByName1(name *enc.Name) []PitEntry {
+	matching := make([]PitEntry, 0)
+	dataNameLen := len(*name)
+	//fmt.Println(name.String())
+	for curNode := p.root.findLongestPrefixEntry1(name); curNode != nil; curNode = curNode.parent {
 		for _, entry := range curNode.pitEntries {
 			if entry.canBePrefix || curNode.depth == dataNameLen {
 				matching = append(matching, entry)
@@ -258,25 +301,29 @@ func (p *PitCsTree) IsCsServing() bool {
 
 // InsertOutRecord inserts an outrecord for the given interest, updating the
 // preexisting one if it already occcurs.
-func (e *nameTreePitEntry) InsertOutRecord(interest *ndn.Interest, face uint64) *PitOutRecord {
+func (e *nameTreePitEntry) InsertOutRecord(pp *ndn.PendingPacket, interest *ndn.Interest, face uint64) *PitOutRecord {
 	var record *PitOutRecord
 	var ok bool
 	if record, ok = e.outRecords[face]; !ok {
 		record := new(PitOutRecord)
 		record.Face = face
 		record.LatestNonce = interest.Nonce()
+		record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
 		record.LatestTimestamp = time.Now()
 		record.LatestInterest = interest
-		record.ExpirationTime = time.Now().Add(interest.Lifetime())
+		record.LatestPacket = pp
+		record.ExpirationTime = time.Now().Add(time.Millisecond * 4000)
 		e.outRecords[face] = record
 		return record
 	}
 
 	// Existing record
 	record.LatestNonce = interest.Nonce()
+	record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
 	record.LatestTimestamp = time.Now()
 	record.LatestInterest = interest
-	record.ExpirationTime = time.Now().Add(interest.Lifetime())
+	record.LatestPacket = pp
+	record.ExpirationTime = time.Now().Add(time.Millisecond * 4000)
 	return record
 }
 
@@ -303,6 +350,7 @@ func (p *pitCsTreeNode) findExactMatchEntry(name *ndn.Name) *pitCsTreeNode {
 func (p *pitCsTreeNode) findLongestPrefixEntry(name *ndn.Name) *pitCsTreeNode {
 	if name.Size() > p.depth {
 		if child, ok := p.children[name.At(p.depth).String()]; ok {
+			//fmt.Println(child.component)
 			return child.findLongestPrefixEntry(name)
 		}
 	}
@@ -317,8 +365,60 @@ func (p *pitCsTreeNode) fillTreeToPrefix(name *ndn.Name) *pitCsTreeNode {
 		newNode.depth = depth
 		newNode.parent = curNode
 		newNode.children = make(map[string]*pitCsTreeNode)
-
+		fmt.Println(newNode.component)
 		curNode.children[newNode.component.String()] = newNode
+		curNode = newNode
+	}
+	return curNode
+}
+
+func At(n *enc.Name, index int) enc.Component {
+	if index < -len(*n) || index >= len(*n) {
+		return enc.Component{}
+	}
+
+	if index < 0 {
+		return (*n)[len(*n)+index]
+	}
+	return (*n)[index]
+}
+
+func (p *pitCsTreeNode) findExactMatchEntry1(name *enc.Name) *pitCsTreeNode {
+	if len(*name) > p.depth {
+		if child, ok := p.children[At(name, p.depth).String()]; ok {
+			return child.findExactMatchEntry1(name)
+		}
+	} else if len(*name) == p.depth {
+		return p
+	}
+	return nil
+}
+
+func (p *pitCsTreeNode) findLongestPrefixEntry1(name *enc.Name) *pitCsTreeNode {
+	if len(*name) > p.depth {
+		if child, ok := p.children[At(name, p.depth).String()]; ok {
+			//fmt.Println(child.ppcomponent)
+			return child.findLongestPrefixEntry1(name)
+		}
+	}
+	return p
+}
+
+func (p *pitCsTreeNode) fillTreeToPrefix1(name *enc.Name) *pitCsTreeNode {
+	curNode := p.findLongestPrefixEntry1(name)
+	for depth := curNode.depth + 1; depth <= len(*name); depth++ {
+		newNode := new(pitCsTreeNode)
+		var temp = enc.Component{
+			Typ: At(name, depth-1).Typ,
+			Val: make([]byte, len(At(name, depth-1).Val)),
+		}
+		copy(temp.Val, At(name, depth-1).Val)
+		newNode.ppcomponent = temp
+		newNode.depth = depth
+		newNode.parent = curNode
+		newNode.children = make(map[string]*pitCsTreeNode)
+
+		curNode.children[newNode.ppcomponent.String()] = newNode
 		curNode = newNode
 	}
 	return curNode
@@ -330,7 +430,7 @@ func (p *pitCsTreeNode) getChildrenCount() int {
 
 func (p *pitCsTreeNode) pruneIfEmpty() {
 	for curNode := p; curNode.parent != nil && curNode.getChildrenCount() == 0 && len(curNode.pitEntries) == 0 && curNode.csEntry == nil; curNode = curNode.parent {
-		delete(curNode.parent.children, curNode.component.String())
+		delete(curNode.parent.children, curNode.ppcomponent.String())
 	}
 }
 
@@ -343,15 +443,15 @@ func (p *PitCsTree) generateNewPitToken() uint32 {
 	}
 }
 
-func (p *PitCsTree) hashCsName(name *ndn.Name) uint64 {
+func (p *PitCsTree) hashCsName(name enc.Name) uint64 {
 	return xxhash.Sum64String(name.String())
 }
 
 // FindMatchingDataFromCS finds the best matching entry in the CS (if any).
 // If MustBeFresh is set to true in the Interest, only non-stale CS entries
 // will be returned.
-func (p *PitCsTree) FindMatchingDataFromCS(interest *ndn.Interest) CsEntry {
-	node := p.root.findExactMatchEntry(interest.Name())
+func (p *PitCsTree) FindMatchingDataFromCS(pp *ndn.PendingPacket, interest *ndn.Interest) CsEntry {
+	node := p.root.findExactMatchEntry1(&pp.TestPktStruct.Interest.NameV)
 	if node != nil {
 		if !interest.CanBePrefix() {
 			if node.csEntry != nil && (!interest.MustBeFresh() || time.Now().Before(node.csEntry.staleTime)) {
@@ -362,41 +462,47 @@ func (p *PitCsTree) FindMatchingDataFromCS(interest *ndn.Interest) CsEntry {
 			// the return type is nil rather than CSEntry{nil}
 			return nil
 		}
-		return node.findMatchingDataCSPrefix(interest)
+		return node.findMatchingDataCSPrefix(pp, interest)
 	}
 	return nil
 }
 
 // InsertData inserts a Data packet into the Content Store.
-func (p *PitCsTree) InsertData(data *ndn.Data) {
-	index := p.hashCsName(data.Name())
-
+func (p *PitCsTree) InsertData(pp *ndn.PendingPacket, data *ndn.Data) {
+	index := p.hashCsName(pp.TestPktStruct.Data.NameV)
 	staleTime := time.Now()
-	if data.MetaInfo() != nil && data.MetaInfo().FreshnessPeriod() != nil {
-		staleTime = staleTime.Add(*data.MetaInfo().FreshnessPeriod())
+	if pp.TestPktStruct.Data.MetaInfo != nil && pp.TestPktStruct.Data.MetaInfo.FreshnessPeriod != nil {
+		staleTime = staleTime.Add(*pp.TestPktStruct.Data.MetaInfo.FreshnessPeriod)
 	}
 
 	if entry, ok := p.csMap[index]; ok {
 		// Replace existing entry
 		entry.data = data
+		entry.ppdata = pp
 		entry.staleTime = staleTime
 
 		p.csReplacement.AfterRefresh(index, data)
 	} else {
 		// New entry
 		p.nCsEntries++
-		node := p.root.fillTreeToPrefix(data.Name())
+		// fmt.Println(&pp.TestPktStruct.Data.NameV)
+		// fmt.Println(data.Name())
+		node := p.root.fillTreeToPrefix1(&pp.TestPktStruct.Data.NameV)
+		//fmt.Println(data.Name().Size(), len(pp.TestPktStruct.Data.NameV))
+		//node := p.root.fillTreeToPrefix(data.Name())
 		node.csEntry = &nameTreeCsEntry{
 			node: node,
 			baseCsEntry: baseCsEntry{
 				index:     index,
 				data:      data,
+				ppdata:    pp,
 				staleTime: staleTime,
 			},
 		}
 		node.csEntry.node = node
 		node.csEntry.index = index
 		node.csEntry.data = data
+		node.csEntry.ppdata = pp
 
 		p.csMap[index] = node.csEntry
 		p.csReplacement.AfterInsert(index, data)
@@ -421,17 +527,17 @@ func (p *PitCsTree) eraseCsDataFromReplacementStrategy(index uint64) {
 // the interest as far as possible with the nodes components in the PitCSTree.
 // For example, if we have data for /a/b/v=10 and the interest is /a/b,
 // p should be the `b` node, not the root node.
-func (p *pitCsTreeNode) findMatchingDataCSPrefix(interest *ndn.Interest) CsEntry {
-	if p.csEntry != nil && (!interest.MustBeFresh() || time.Now().Before(p.csEntry.staleTime)) {
+func (p *pitCsTreeNode) findMatchingDataCSPrefix(pp *ndn.PendingPacket, interest *ndn.Interest) CsEntry {
+	if p.csEntry != nil && (pp.TestPktStruct.Interest.MustBeFreshV || time.Now().Before(p.csEntry.staleTime)) {
 		// A csEntry exists at this node and is acceptable to satisfy the interest
 		return p.csEntry
 	}
 
 	// No csEntry at current node, look farther down the tree
 	// We must have already matched the entire interest name
-	if p.depth >= interest.Name().Size() {
+	if p.depth >= len(pp.TestPktStruct.Interest.NameV) {
 		for _, child := range p.children {
-			potentialMatch := child.findMatchingDataCSPrefix(interest)
+			potentialMatch := child.findMatchingDataCSPrefix(pp, interest)
 			if potentialMatch != nil {
 				return potentialMatch
 			}
