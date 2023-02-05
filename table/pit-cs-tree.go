@@ -1,7 +1,6 @@
 package table
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -149,7 +148,7 @@ func (p *PitCsTree) InsertInterest(pp *ndn.PendingPacket, interest *ndn.Interest
 		entry = new(nameTreePitEntry)
 		entry.node = node
 		entry.pitCsTable = p
-		entry.name = interest.Name()
+		//entry.name = interest.Name()
 		entry.ppname = &pp.TestPktStruct.Interest.NameV
 		entry.canBePrefix = pp.TestPktStruct.Interest.CanBePrefixV
 		entry.mustBeFresh = pp.TestPktStruct.Interest.MustBeFreshV
@@ -365,7 +364,6 @@ func (p *pitCsTreeNode) fillTreeToPrefix(name *ndn.Name) *pitCsTreeNode {
 		newNode.depth = depth
 		newNode.parent = curNode
 		newNode.children = make(map[string]*pitCsTreeNode)
-		fmt.Println(newNode.component)
 		curNode.children[newNode.component.String()] = newNode
 		curNode = newNode
 	}
@@ -381,6 +379,14 @@ func At(n *enc.Name, index int) enc.Component {
 		return (*n)[len(*n)+index]
 	}
 	return (*n)[index]
+}
+
+func deepCopy(n enc.Component) enc.Component {
+	temp := new(enc.Component)
+	temp.Typ = n.Typ
+	temp.Val = make([]byte, len(n.Val))
+	copy(temp.Val, n.Val)
+	return *temp
 }
 
 func (p *pitCsTreeNode) findExactMatchEntry1(name *enc.Name) *pitCsTreeNode {

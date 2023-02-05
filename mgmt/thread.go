@@ -14,6 +14,8 @@ import (
 	"github.com/named-data/YaNFD/ndn/mgmt"
 	"github.com/named-data/YaNFD/ndn/tlv"
 	"github.com/named-data/YaNFD/table"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
+	spec "github.com/zjkmxy/go-ndn/pkg/ndn/spec_2022"
 )
 
 // Thread Represents the management thread
@@ -90,6 +92,8 @@ func (m *Thread) Run() {
 	// Create and register Internal transport
 	m.face, m.transport = face.RegisterInternalTransport()
 	table.FibStrategyTable.InsertNextHop(m.localPrefix, m.face.FaceID(), 0)
+	add, _ := enc.NameFromStr("/localhost/nfd")
+	table.FibStrategyTable.InsertNextHop1(&add, m.face.FaceID(), 0)
 	if enableLocalhopManagement {
 		table.FibStrategyTable.InsertNextHop(m.nonLocalPrefix, m.face.FaceID(), 0)
 	}
@@ -125,7 +129,18 @@ func (m *Thread) Run() {
 		}
 
 		core.LogTrace(m, "Received management Interest ", interest.Name())
-
+		b, _ := interest.Encode()
+		raw, err := b.Wire()
+		var e error
+		var temp *spec.Packet
+		temp, _, e = spec.ReadPacket(enc.NewBufferReader(raw))
+		if e != nil {
+			core.LogWarn("Failed to parse packet in LpPacket: %v", e)
+		}
+		//fmt.Println(temp.Interest.NameV)
+		//fmt.Println(interest.Name())
+		//this is where we insert the mole!!
+		interest.Mole = temp
 		// Dispatch interest based on name
 		moduleName := interest.Name().At(m.localPrefix.Size()).String()
 		if module, ok := m.modules[moduleName]; ok {

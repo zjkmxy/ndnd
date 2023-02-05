@@ -9,9 +9,11 @@ package table
 
 import (
 	"container/list"
+	"fmt"
 	"time"
 
 	"github.com/named-data/YaNFD/ndn"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // RibTable represents the Routing Information Base (RIB).
@@ -21,9 +23,11 @@ type RibTable struct {
 
 // RibEntry represents an entry in the RIB table.
 type RibEntry struct {
-	component ndn.NameComponent
-	Name      *ndn.Name
-	depth     int
+	component   ndn.NameComponent
+	ppcomponent enc.Component
+	Name        *ndn.Name
+	BetterName  *enc.Name
+	depth       int
 
 	parent   *RibEntry
 	children map[*RibEntry]bool
@@ -102,6 +106,43 @@ func (r *RibTable) fillTreeToPrefix(name *ndn.Name) *RibEntry {
 	}
 	return entry
 }
+func (r *RibTable) fillTreeToPrefix1(name *enc.Name) *RibEntry {
+	entry := r.findLongestPrefixEntry1(name)
+	for depth := entry.depth + 1; depth <= len(*name); depth++ {
+		child := &RibEntry{
+			depth:       depth,
+			ppcomponent: deepCopy(At(name, depth-1)),
+			parent:      entry,
+			children:    map[*RibEntry]bool{},
+		}
+		entry.children[child] = true
+		entry = child
+	}
+	return entry
+}
+func (r *RibEntry) findExactMatchEntry1(name *enc.Name) *RibEntry {
+	if len(*name) > r.depth {
+		for child := range r.children {
+			if At(name, child.depth-1).Equal(child.ppcomponent) {
+				return child.findExactMatchEntry1(name)
+			}
+		}
+	} else if len(*name) == r.depth {
+		return r
+	}
+	return nil
+}
+
+func (r *RibEntry) findLongestPrefixEntry1(name *enc.Name) *RibEntry {
+	if len(*name) > r.depth {
+		for child := range r.children {
+			if At(name, child.depth-1).Equal(child.ppcomponent) {
+				return child.findLongestPrefixEntry1(name)
+			}
+		}
+	}
+	return r
+}
 
 func (r *RibEntry) pruneIfEmpty() {
 	for entry := r; entry.parent != nil && len(entry.children) == 0 && len(entry.routes) == 0; entry = entry.parent {
@@ -127,6 +168,23 @@ func (r *RibEntry) updateNexthops() {
 		FibStrategyTable.InsertNextHop(r.Name, nexthop, cost)
 	}
 }
+func (r *RibEntry) updateNexthops1() {
+	FibStrategyTable.ClearNextHops1(r.BetterName)
+
+	// Find minimum cost route per nexthop
+	minCostRoutes := make(map[uint64]uint64) // FaceID -> Cost
+	for _, route := range r.routes {
+		cost, ok := minCostRoutes[route.FaceID]
+		if !ok || route.Cost < cost {
+			minCostRoutes[route.FaceID] = route.Cost
+		}
+	}
+
+	// Add "flattened" set of nexthops
+	for nexthop, cost := range minCostRoutes {
+		FibStrategyTable.InsertNextHop1(r.BetterName, nexthop, cost)
+	}
+}
 
 // AddRoute adds or updates a RIB entry for the specified prefix.
 func (r *RibTable) AddRoute(name *ndn.Name, faceID uint64, origin uint64, cost uint64, flags uint64, expirationPeriod *time.Duration) {
@@ -136,6 +194,33 @@ func (r *RibTable) AddRoute(name *ndn.Name, faceID uint64, origin uint64, cost u
 	}
 
 	defer node.updateNexthops()
+
+	for _, existingRoute := range node.routes {
+		if existingRoute.FaceID == faceID && existingRoute.Origin == origin {
+			existingRoute.Cost = cost
+			existingRoute.Flags = flags
+			existingRoute.ExpirationPeriod = expirationPeriod
+			return
+		}
+	}
+
+	node.routes = append(node.routes, &Route{
+		FaceID:           faceID,
+		Origin:           origin,
+		Cost:             cost,
+		Flags:            flags,
+		ExpirationPeriod: expirationPeriod,
+	})
+}
+
+func (r *RibTable) AddBetterRoute(name *enc.Name, faceID uint64, origin uint64, cost uint64, flags uint64, expirationPeriod *time.Duration) {
+	fmt.Println("got to better route")
+	node := r.fillTreeToPrefix1(name)
+	if node.BetterName == nil {
+		node.BetterName = name
+	}
+
+	defer node.updateNexthops1()
 
 	for _, existingRoute := range node.routes {
 		if existingRoute.FaceID == faceID && existingRoute.Origin == origin {

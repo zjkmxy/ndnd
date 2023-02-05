@@ -164,7 +164,8 @@ func (t *InternalTransport) runReceive() {
 			}
 
 			t.nInBytes += uint64(len(frame))
-
+			//fmt.Println("this came from the manager yuck")
+			//figure out what this message is later i don't care right now
 			t.linkService.handleIncomingFrame(frame)
 		}
 	}

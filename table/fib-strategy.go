@@ -9,6 +9,7 @@ package table
 
 import (
 	"github.com/named-data/YaNFD/ndn"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // FibStrategyEntry represents an entry in the FIB-Strategy table.
@@ -21,10 +22,12 @@ type FibStrategyEntry interface {
 // baseFibStrategyEntry represents information that all
 // FibStrategyEntry implementations should include.
 type baseFibStrategyEntry struct {
-	component ndn.NameComponent
-	name      *ndn.Name
-	nexthops  []*FibNextHopEntry
-	strategy  *ndn.Name
+	component   ndn.NameComponent
+	ppcomponent enc.Component
+	name        *ndn.Name
+	ppname      *enc.Name
+	nexthops    []*FibNextHopEntry
+	strategy    *ndn.Name
 }
 
 // FibNextHopEntry represents a nexthop in a FIB entry.
@@ -36,10 +39,14 @@ type FibNextHopEntry struct {
 // FibStrategy represents the functionality that a FIB-strategy table should implement.
 type FibStrategy interface {
 	FindNextHops(name *ndn.Name) []*FibNextHopEntry
+	FindNextHops1(name *enc.Name) []*FibNextHopEntry
 	FindStrategy(name *ndn.Name) *ndn.Name
 	InsertNextHop(name *ndn.Name, nextHop uint64, cost uint64)
+	InsertNextHop1(name *enc.Name, nextHop uint64, cost uint64)
 	ClearNextHops(name *ndn.Name)
+	ClearNextHops1(name *enc.Name)
 	RemoveNextHop(name *ndn.Name, nextHop uint64)
+	RemoveNextHop1(name *enc.Name, nextHop uint64)
 
 	GetAllFIBEntries() []FibStrategyEntry
 

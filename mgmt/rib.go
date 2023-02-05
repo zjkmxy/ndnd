@@ -8,6 +8,7 @@
 package mgmt
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/named-data/YaNFD/ndn/mgmt"
 	"github.com/named-data/YaNFD/ndn/tlv"
 	"github.com/named-data/YaNFD/table"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // RIBModule is the module that handles RIB Management.
@@ -42,12 +44,16 @@ func (r *RIBModule) handleIncomingInterest(interest *ndn.Interest, pitToken []by
 	verb := interest.Name().At(r.manager.prefixLength() + 1).String()
 	switch verb {
 	case "register":
+		fmt.Println("r")
 		r.register(interest, pitToken, inFace)
 	case "unregister":
+		fmt.Println("ur")
 		r.unregister(interest, pitToken, inFace)
 	case "announce":
+		fmt.Println("a")
 		r.announce(interest, pitToken, inFace)
 	case "list":
+		fmt.Println("l")
 		r.list(interest, pitToken, inFace)
 	default:
 		core.LogWarn(r, "Received Interest for non-existent verb '", verb, "'")
@@ -112,9 +118,11 @@ func (r *RIBModule) register(interest *ndn.Interest, pitToken []byte, inFace uin
 		expirationPeriod = new(time.Duration)
 		*expirationPeriod = time.Duration(*params.ExpirationPeriod) * time.Millisecond
 	}
-
+	cheat, _ := enc.NameFromStr(params.Name.String())
 	table.Rib.AddRoute(params.Name, faceID, origin, cost, flags, expirationPeriod)
-
+	table.Rib.AddBetterRoute(&cheat, faceID, origin, cost, flags, expirationPeriod)
+	//fmt.Printf("%+v\n", table.Rib.GetAllEntries()[0].GetRoutes()[0].FaceID)
+	//fmt.Printf("%+v\n", table.Rib.GetAllEntries()[1].GetRoutes()[0].FaceID)
 	if expirationPeriod != nil {
 		core.LogInfo(r, "Created route for Prefix=", params.Name, ", FaceID=", faceID, ", Origin=", origin, ", Cost=", cost, ", Flags=0x", strconv.FormatUint(flags, 16), ", ExpirationPeriod=", expirationPeriod)
 	} else {
@@ -200,7 +208,7 @@ func (r *RIBModule) unregister(interest *ndn.Interest, pitToken []byte, inFace u
 
 func (r *RIBModule) announce(interest *ndn.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
-
+	//fmt.Println("WEW EIWNIENWIN NEANNOUCNE")
 	if interest.Name().Size() != r.manager.prefixLength()+3 || interest.Name().At(r.manager.prefixLength()+2).Type() != tlv.ParametersSha256DigestComponent {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(r, "Name of Interest=", interest.Name(), " is either too short or incorrectly formatted to be rib/announce")
