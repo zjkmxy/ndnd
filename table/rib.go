@@ -269,6 +269,7 @@ func (r *RibEntry) GetRoutes() []*Route {
 
 // RemoveRoute removes the specified route from the specified prefix.
 func (r *RibTable) RemoveRoute(name *ndn.Name, faceID uint64, origin uint64) {
+	fmt.Println("test")
 	entry := r.findExactMatchEntry(name)
 	if entry != nil {
 		for i, existingRoute := range entry.routes {
@@ -287,13 +288,17 @@ func (r *RibTable) RemoveRoute(name *ndn.Name, faceID uint64, origin uint64) {
 
 // CleanUpFace removes the specified face from all entries. Used for clean-up after a face is destroyed.
 func (r *RibEntry) CleanUpFace(faceId uint64) {
+	fmt.Println("cleanup")
 	// Recursively clean children
 	for child := range r.children {
 		child.CleanUpFace(faceId)
 	}
 
 	// Remove next hop
-	if r.Name == nil {
+	// if r.Name == nil {
+	// 	return
+	// }
+	if r.BetterName == nil {
 		return
 	}
 	for i, existingNexthop := range r.routes {
@@ -305,6 +310,7 @@ func (r *RibEntry) CleanUpFace(faceId uint64) {
 			break
 		}
 	}
-	r.updateNexthops()
+	//r.updateNexthops()
+	r.updateNexthops1()
 	r.pruneIfEmpty()
 }

@@ -256,6 +256,7 @@ func (f *FibStrategyTree) InsertNextHop1(name *enc.Name, nexthop uint64, cost ui
 
 // ClearNextHops clears all nexthops for the specified prefix.
 func (f *FibStrategyTree) ClearNextHops(name *ndn.Name) {
+	fmt.Println("clearnexthops")
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 
@@ -268,6 +269,7 @@ func (f *FibStrategyTree) ClearNextHops(name *ndn.Name) {
 	}
 }
 func (f *FibStrategyTree) ClearNextHops1(name *enc.Name) {
+	fmt.Println("clearnexthops1111")
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 

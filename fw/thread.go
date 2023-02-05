@@ -170,6 +170,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 		core.LogError(t, "Interest missing IncomingFaceId - DROP")
 		return
 	}
+	fmt.Println(pendingPacket.NameCache)
 
 	// Already asserted that this is an Interest in link service
 	// this is where we convert it into yanfd interest
@@ -228,12 +229,14 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	// Add in-record and determine if already pending
 	// this looks like custom interest again, but again can be changed without much issue?
 	_, isAlreadyPending := pitEntry.InsertInRecord(pendingPacket, interest, incomingFace.FaceID(), incomingPitToken)
+
 	if !isAlreadyPending {
 		core.LogTrace(t, "Interest ", pendingPacket.NameCache, " is not pending")
 
 		// Check CS for matching entry
 		//need to change this as well
-		if t.pitCS.IsCsServing() {
+		//if t.pitCS.IsCsServing() {
+		if !true {
 			csEntry := t.pitCS.FindMatchingDataFromCS(pendingPacket, interest)
 			if csEntry != nil {
 				// Pass to strategy AfterContentStoreHit pipeline
@@ -262,8 +265,8 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 
 	// Pass to strategy AfterReceiveInterest pipeline
 	var trash []*table.FibNextHopEntry
+	var nexthop []*table.FibNextHopEntry
 	if fhName == nil {
-		fmt.Println(pendingPacket.TestPktStruct.Interest.NameV)
 		// for _, name := range pendingPacket.TestPktStruct.Interest.NameV {
 		// 	fmt.Println(name)
 		// }
@@ -273,13 +276,18 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 		// }
 
 		trash = table.FibStrategyTable.FindNextHops1(&pendingPacket.TestPktStruct.Interest.NameV)
+		//nexthop = table.FibStrategyTable.FindNextHops(interest.Name())
+		if len(nexthop) > 0 {
+			fmt.Println(nexthop[0])
+		}
 		if len(trash) > 0 {
 			fmt.Println(trash[0])
 		}
 	} else {
-		trash = table.FibStrategyTable.FindNextHops(fhName)
+		//trash = table.FibStrategyTable.FindNextHops(fhName)
 	}
 	strategy.AfterReceiveInterest(pendingPacket, pitEntry, incomingFace.FaceID(), interest, trash)
+	//strategy.AfterReceiveInterest(pendingPacket, pitEntry, incomingFace.FaceID(), interest, nexthop)
 }
 
 func (t *Thread) processOutgoingInterest(pp *ndn.PendingPacket, interest *ndn.Interest, pitEntry table.PitEntry, nexthop uint64, inFace uint64) bool {
