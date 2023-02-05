@@ -306,7 +306,7 @@ func (e *nameTreePitEntry) InsertOutRecord(pp *ndn.PendingPacket, interest *ndn.
 	if record, ok = e.outRecords[face]; !ok {
 		record := new(PitOutRecord)
 		record.Face = face
-		record.LatestNonce = interest.Nonce()
+		//record.LatestNonce = interest.Nonce()
 		record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
 		record.LatestTimestamp = time.Now()
 		record.LatestInterest = interest
@@ -317,7 +317,7 @@ func (e *nameTreePitEntry) InsertOutRecord(pp *ndn.PendingPacket, interest *ndn.
 	}
 
 	// Existing record
-	record.LatestNonce = interest.Nonce()
+	//record.LatestNonce = interest.Nonce()
 	record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
 	record.LatestTimestamp = time.Now()
 	record.LatestInterest = interest

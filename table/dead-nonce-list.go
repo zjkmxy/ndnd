@@ -43,6 +43,12 @@ func (d *DeadNonceList) Find(name *ndn.Name, nonce []byte) bool {
 	return ok
 }
 
+func (d *DeadNonceList) Find1(name string, nonce uint32) bool {
+	hash := xxhash.Sum64String(name) + uint64(nonce)
+	_, ok := d.list[hash]
+	return ok
+}
+
 // Insert inserts an entry in the Dead Nonce List with the specified name and nonce. Returns whether nonce already present.
 func (d *DeadNonceList) Insert(name *ndn.Name, nonce []byte) bool {
 	wire, err := name.Encode().Wire()
@@ -50,6 +56,17 @@ func (d *DeadNonceList) Insert(name *ndn.Name, nonce []byte) bool {
 		return false
 	}
 	hash := xxhash.Sum64(wire) + uint64(binary.BigEndian.Uint32(nonce))
+	_, exists := d.list[hash]
+
+	if !exists {
+		d.list[hash] = true
+		d.expirationQueue.Push(hash, time.Now().Add(deadNonceListLifetime).UnixNano())
+	}
+	return exists
+}
+
+func (d *DeadNonceList) Insert1(name string, nonce uint32) bool {
+	hash := xxhash.Sum64String(name) + uint64(nonce)
 	_, exists := d.list[hash]
 
 	if !exists {

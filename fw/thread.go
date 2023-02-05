@@ -175,7 +175,9 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	// Already asserted that this is an Interest in link service
 	// this is where we convert it into yanfd interest
 	// now, we have go-ndn interest spec 2022 struct in pending packet, which is better/less copying
-	interest := pendingPacket.NetPacket.(*ndn.Interest)
+	var interest *ndn.Interest
+	//interest = pendingPacket.NetPacket.(*ndn.Interest)
+	interest = nil
 	// fmt.Printf("%+v\n", pendingPacket.TestPktStruct.Interest)
 	// fmt.Printf("%+v\n", interest)
 	// fmt.Println("----")
@@ -305,7 +307,7 @@ func (t *Thread) processOutgoingInterest(pp *ndn.PendingPacket, interest *ndn.In
 	}
 
 	// Drop if HopLimit (if present) on Interest going to non-local face is 0. If so, drop
-	if interest.HopLimit() != nil && *interest.HopLimit() == 0 && outgoingFace.Scope() == ndn.NonLocal {
+	if pp.TestPktStruct.Interest.HopLimitV != nil && int(*pp.TestPktStruct.Interest.HopLimitV) == 0 && outgoingFace.Scope() == ndn.NonLocal {
 		core.LogDebug(t, "Attempting to send Interest=", pp.NameCache, " with HopLimit=0 to non-local face - DROP")
 		return false
 	}
@@ -330,7 +332,7 @@ func (t *Thread) finalizeInterest(pitEntry table.PitEntry) {
 
 	// Check for nonces to insert into dead nonce list
 	for _, outRecord := range pitEntry.OutRecords() {
-		t.deadNonceList.Insert(outRecord.LatestInterest.Name(), outRecord.LatestNonce)
+		t.deadNonceList.Insert1(outRecord.LatestPacket.NameCache, outRecord.PacketNonce)
 	}
 
 	// Counters
@@ -403,7 +405,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 
 		// Insert into dead nonce list
 		for _, outRecord := range pitEntries[0].OutRecords() {
-			t.deadNonceList.Insert(outRecord.LatestInterest.Name(), outRecord.LatestNonce)
+			t.deadNonceList.Insert1(pendingPacket.NameCache, outRecord.PacketNonce)
 		}
 
 		// Clear out records from PIT entry
@@ -432,7 +434,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 
 			// Insert into dead nonce list
 			for _, outRecord := range pitEntries[0].GetOutRecords() {
-				t.deadNonceList.Insert(outRecord.LatestInterest.Name(), outRecord.LatestNonce)
+				t.deadNonceList.Insert1(pendingPacket.NameCache, outRecord.PacketNonce)
 			}
 
 			// Clear PIT entry's in- and out-records

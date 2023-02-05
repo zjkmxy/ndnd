@@ -132,7 +132,7 @@ func (bpe *basePitEntry) InsertInRecord(pp *ndn.PendingPacket, interest *ndn.Int
 	if record, ok = bpe.inRecords[face]; !ok {
 		record := new(PitInRecord)
 		record.Face = face
-		record.LatestNonce = interest.Nonce()
+		//record.LatestNonce = interest.Nonce()
 		record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
 		record.LatestTimestamp = time.Now()
 		record.LatestInterest = interest
@@ -144,7 +144,7 @@ func (bpe *basePitEntry) InsertInRecord(pp *ndn.PendingPacket, interest *ndn.Int
 	}
 
 	// Existing record
-	record.LatestNonce = interest.Nonce()
+	//record.LatestNonce = interest.Nonce()
 	record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
 	record.LatestTimestamp = time.Now()
 	record.LatestInterest = interest
