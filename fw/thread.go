@@ -9,7 +9,6 @@ package fw
 
 import (
 	"encoding/binary"
-	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
@@ -170,7 +169,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 		core.LogError(t, "Interest missing IncomingFaceId - DROP")
 		return
 	}
-	fmt.Println(pendingPacket.NameCache)
+	//fmt.Println(pendingPacket.NameCache)
 
 	// Already asserted that this is an Interest in link service
 	// this is where we convert it into yanfd interest
@@ -208,8 +207,23 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	t.NInInterests++
 
 	// Check for forwarding hint and, if present, determine if reaching producer region (and then strip forwarding hint)
-	var fhName *ndn.Name
-	fhName = nil
+	// isReachingProducerRegion := true
+	var fhName *ndn.Name = nil
+	// if len(interest.ForwardingHint()) > 0 {
+	// 	isReachingProducerRegion = false
+	// 	for _, fh := range interest.ForwardingHint() {
+	// 		if table.NetworkRegion.IsProducer(fh) {
+	// 			isReachingProducerRegion = true
+	// 			break
+	// 		} else if fhName == nil {
+	// 			fhName = fh
+	// 		}
+	// 	}
+	// 	if isReachingProducerRegion {
+	// 		interest.SetForwardingHint(nil)
+	// 		fhName = nil
+	// 	}
+	// }
 
 	// Check if any matching PIT entries (and if duplicate)
 	//read into this, looks like this one will have to be manually changed
@@ -267,7 +281,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 
 	// Pass to strategy AfterReceiveInterest pipeline
 	var trash []*table.FibNextHopEntry
-	var nexthop []*table.FibNextHopEntry
+	//var nexthop []*table.FibNextHopEntry
 	if fhName == nil {
 		// for _, name := range pendingPacket.TestPktStruct.Interest.NameV {
 		// 	fmt.Println(name)
@@ -279,12 +293,12 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 
 		trash = table.FibStrategyTable.FindNextHops1(&pendingPacket.TestPktStruct.Interest.NameV)
 		//nexthop = table.FibStrategyTable.FindNextHops(interest.Name())
-		if len(nexthop) > 0 {
-			fmt.Println(nexthop[0])
-		}
-		if len(trash) > 0 {
-			fmt.Println(trash[0])
-		}
+		// if len(nexthop) > 0 {
+		// 	fmt.Println(nexthop[0])
+		// }
+		// if len(trash) > 0 {
+		// 	fmt.Println(trash[0])
+		// }
 	} else {
 		//trash = table.FibStrategyTable.FindNextHops(fhName)
 	}

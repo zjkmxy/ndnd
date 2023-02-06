@@ -459,7 +459,7 @@ func (p *PitCsTree) hashCsName(name enc.Name) uint64 {
 func (p *PitCsTree) FindMatchingDataFromCS(pp *ndn.PendingPacket, interest *ndn.Interest) CsEntry {
 	node := p.root.findExactMatchEntry1(&pp.TestPktStruct.Interest.NameV)
 	if node != nil {
-		if !interest.CanBePrefix() {
+		if !pp.TestPktStruct.Interest.CanBePrefixV {
 			if node.csEntry != nil && (!interest.MustBeFresh() || time.Now().Before(node.csEntry.staleTime)) {
 				p.csReplacement.BeforeUse(node.csEntry.index, node.csEntry.data)
 				return node.csEntry

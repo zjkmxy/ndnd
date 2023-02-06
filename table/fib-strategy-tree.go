@@ -9,7 +9,6 @@ package table
 
 import (
 	"container/list"
-	"fmt"
 	"sync"
 
 	"github.com/named-data/YaNFD/ndn"
@@ -76,7 +75,7 @@ func (f *fibStrategyTreeEntry) findExactMatchEntry1(name *enc.Name) *fibStrategy
 // prefix match of the given name. It returns nil if no exact match was found.
 func (f *fibStrategyTreeEntry) findLongestPrefixEntry(name *ndn.Name) *fibStrategyTreeEntry {
 	if name.Size() > f.depth {
-		fmt.Println("fib yanfd", name.At(f.depth))
+		//fmt.Println("fib yanfd", name.At(f.depth))
 		for _, child := range f.children {
 			if name.At(child.depth - 1).Equals(child.component) {
 				return child.findLongestPrefixEntry(name)
@@ -88,7 +87,7 @@ func (f *fibStrategyTreeEntry) findLongestPrefixEntry(name *ndn.Name) *fibStrate
 
 func (f *fibStrategyTreeEntry) findLongestPrefixEntry1(name *enc.Name) *fibStrategyTreeEntry {
 	if len(*name) > f.depth {
-		fmt.Println("fib gondn", (*name)[f.depth])
+		//fmt.Println("fib gondn", (*name)[f.depth])
 		for _, child := range f.children {
 			if At(name, child.depth-1).Equal(child.ppcomponent) {
 				return child.findLongestPrefixEntry1(name)
@@ -209,7 +208,7 @@ func (f *FibStrategyTree) FindStrategy(name *ndn.Name) *ndn.Name {
 
 // InsertNextHop adds or updates a nexthop entry for the specified prefix.
 func (f *FibStrategyTree) InsertNextHop(name *ndn.Name, nexthop uint64, cost uint64) {
-	fmt.Println("this has been called for ", name)
+	//fmt.Println("this has been called for ", name)
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 
@@ -228,7 +227,7 @@ func (f *FibStrategyTree) InsertNextHop(name *ndn.Name, nexthop uint64, cost uin
 	newEntry.Nexthop = nexthop
 	newEntry.Cost = cost
 	entry.nexthops = append(entry.nexthops, newEntry)
-	fmt.Println("yanfd fib nexthop", entry.name, nexthop)
+	//fmt.Println("yanfd fib nexthop", entry.name, nexthop)
 	f.fibPrefixes[name.String()] = entry
 }
 
@@ -250,13 +249,13 @@ func (f *FibStrategyTree) InsertNextHop1(name *enc.Name, nexthop uint64, cost ui
 	newEntry.Nexthop = nexthop
 	newEntry.Cost = cost
 	entry.nexthops = append(entry.nexthops, newEntry)
-	fmt.Println("gondn fib nexthop", entry.ppname, nexthop)
+	//fmt.Println("gondn fib nexthop", entry.ppname, nexthop)
 	f.fibPrefixes[name.String()] = entry
 }
 
 // ClearNextHops clears all nexthops for the specified prefix.
 func (f *FibStrategyTree) ClearNextHops(name *ndn.Name) {
-	fmt.Println("clearnexthops")
+	//fmt.Println("clearnexthops")
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 
@@ -269,7 +268,7 @@ func (f *FibStrategyTree) ClearNextHops(name *ndn.Name) {
 	}
 }
 func (f *FibStrategyTree) ClearNextHops1(name *enc.Name) {
-	fmt.Println("clearnexthops1111")
+	//fmt.Println("clearnexthops1111")
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 

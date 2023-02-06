@@ -482,7 +482,6 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	netPacket := new(ndn.PendingPacket)
 	netPacket.IncomingFaceID = new(uint64)
 	*netPacket.IncomingFaceID = l.faceID
-	netPacket.Wire, _, err = tlv.DecodeBlock(netPkt)
 	//var ctx *spec.PacketParsingContext
 	var e error
 	netPacket.TestPktStruct, _, e = spec.ReadPacket(enc.NewBufferReader(netPkt))

@@ -8,7 +8,6 @@
 package mgmt
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -44,16 +43,16 @@ func (r *RIBModule) handleIncomingInterest(interest *ndn.Interest, pitToken []by
 	verb := interest.Name().At(r.manager.prefixLength() + 1).String()
 	switch verb {
 	case "register":
-		fmt.Println("r")
+		//fmt.Println("r")
 		r.register(interest, pitToken, inFace)
 	case "unregister":
-		fmt.Println("ur")
+		//fmt.Println("ur")
 		r.unregister(interest, pitToken, inFace)
 	case "announce":
-		fmt.Println("a")
+		//fmt.Println("a")
 		r.announce(interest, pitToken, inFace)
 	case "list":
-		fmt.Println("l")
+		//fmt.Println("l")
 		r.list(interest, pitToken, inFace)
 	default:
 		core.LogWarn(r, "Received Interest for non-existent verb '", verb, "'")

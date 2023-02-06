@@ -235,7 +235,6 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 	switch {
 	case netPacket.TestPktStruct.Interest != nil:
 		netPacket.NameCache = netPacket.TestPktStruct.Interest.NameV.String()
-		netPacket.NetPacket, err = ndn.DecodeInterest(netPacket.Wire)
 		if err != nil {
 			core.LogError(l, "Unable to decode Interest (", err, ") - DROP")
 			break

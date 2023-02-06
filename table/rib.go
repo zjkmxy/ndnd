@@ -9,7 +9,6 @@ package table
 
 import (
 	"container/list"
-	"fmt"
 	"time"
 
 	"github.com/named-data/YaNFD/ndn"
@@ -214,7 +213,7 @@ func (r *RibTable) AddRoute(name *ndn.Name, faceID uint64, origin uint64, cost u
 }
 
 func (r *RibTable) AddBetterRoute(name *enc.Name, faceID uint64, origin uint64, cost uint64, flags uint64, expirationPeriod *time.Duration) {
-	fmt.Println("got to better route")
+	//fmt.Println("got to better route")
 	node := r.fillTreeToPrefix1(name)
 	if node.BetterName == nil {
 		node.BetterName = name
@@ -269,7 +268,7 @@ func (r *RibEntry) GetRoutes() []*Route {
 
 // RemoveRoute removes the specified route from the specified prefix.
 func (r *RibTable) RemoveRoute(name *ndn.Name, faceID uint64, origin uint64) {
-	fmt.Println("test")
+	//fmt.Println("test")
 	entry := r.findExactMatchEntry(name)
 	if entry != nil {
 		for i, existingRoute := range entry.routes {
@@ -288,7 +287,7 @@ func (r *RibTable) RemoveRoute(name *ndn.Name, faceID uint64, origin uint64) {
 
 // CleanUpFace removes the specified face from all entries. Used for clean-up after a face is destroyed.
 func (r *RibEntry) CleanUpFace(faceId uint64) {
-	fmt.Println("cleanup")
+	//fmt.Println("cleanup")
 	// Recursively clean children
 	for child := range r.children {
 		child.CleanUpFace(faceId)
