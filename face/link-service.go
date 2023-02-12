@@ -234,7 +234,7 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 	var err error
 	switch {
 	case netPacket.TestPktStruct.Interest != nil:
-		netPacket.NameCache = netPacket.TestPktStruct.Interest.NameV.String()
+		//netPacket.NameCache = netPacket.TestPktStruct.Interest.NameV.String()
 		if err != nil {
 			core.LogError(l, "Unable to decode Interest (", err, ") - DROP")
 			break
@@ -243,7 +243,7 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 		core.LogTrace(l, "Dispatched Interest to thread ", thread)
 		dispatch.GetFWThread(thread).QueueInterest(netPacket)
 	case netPacket.TestPktStruct.Data != nil:
-		netPacket.NameCache = netPacket.TestPktStruct.Data.NameV.String()
+		//netPacket.NameCache = netPacket.TestPktStruct.Data.NameV.String()
 		if len(netPacket.PitToken) == 6 {
 			// Decode PitToken. If it's for us, it's a uint16 + uint32.
 			pitTokenThread := binary.BigEndian.Uint16(netPacket.PitToken)
@@ -272,7 +272,8 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 			}
 		}
 	default:
-		core.LogError(l, "Cannot dispatch packet of unknown type ", netPacket.Wire.Type())
+		//change this
+		core.LogError(l, "Cannot dispatch packet of unknown type ")
 	}
 }
 

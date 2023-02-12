@@ -14,6 +14,7 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/utils/priority_queue"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // DeadNonceList represents the Dead Nonce List for a forwarding thread.
@@ -65,8 +66,8 @@ func (d *DeadNonceList) Insert(name *ndn.Name, nonce []byte) bool {
 	return exists
 }
 
-func (d *DeadNonceList) Insert1(name string, nonce uint32) bool {
-	hash := xxhash.Sum64String(name) + uint64(nonce)
+func (d *DeadNonceList) Insert1(name *enc.Name, nonce uint32) bool {
+	hash := xxhash.Sum64(name.Bytes()) + uint64(nonce)
 	_, exists := d.list[hash]
 
 	if !exists {

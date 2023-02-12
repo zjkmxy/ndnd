@@ -11,6 +11,7 @@ import (
 	"container/list"
 	"sync"
 
+	"github.com/cespare/xxhash"
 	"github.com/named-data/YaNFD/ndn"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
@@ -30,7 +31,7 @@ type FibStrategyTree struct {
 	// which is shared across all the forwarding threads.
 	fibStrategyRWMutex sync.RWMutex
 
-	fibPrefixes map[string]*fibStrategyTreeEntry
+	fibPrefixes map[uint64]*fibStrategyTreeEntry
 }
 
 func newFibStrategyTableTree() {
@@ -40,7 +41,7 @@ func newFibStrategyTableTree() {
 	fibStrategyTableTree.root.component = nil // Root component will be nil since it represents zero components
 	fibStrategyTableTree.root.strategy, _ = ndn.NameFromString("/localhost/nfd/strategy/best-route/v=1")
 	fibStrategyTableTree.root.name = ndn.NewName()
-	fibStrategyTableTree.fibPrefixes = make(map[string]*fibStrategyTreeEntry)
+	fibStrategyTableTree.fibPrefixes = make(map[uint64]*fibStrategyTreeEntry)
 }
 
 // findExactMatchEntry returns the entry corresponding to the exact match of
@@ -228,7 +229,7 @@ func (f *FibStrategyTree) InsertNextHop(name *ndn.Name, nexthop uint64, cost uin
 	newEntry.Cost = cost
 	entry.nexthops = append(entry.nexthops, newEntry)
 	//fmt.Println("yanfd fib nexthop", entry.name, nexthop)
-	f.fibPrefixes[name.String()] = entry
+	f.fibPrefixes[xxhash.Sum64String(name.String())] = entry
 }
 
 func (f *FibStrategyTree) InsertNextHop1(name *enc.Name, nexthop uint64, cost uint64) {
@@ -250,7 +251,7 @@ func (f *FibStrategyTree) InsertNextHop1(name *enc.Name, nexthop uint64, cost ui
 	newEntry.Cost = cost
 	entry.nexthops = append(entry.nexthops, newEntry)
 	//fmt.Println("gondn fib nexthop", entry.ppname, nexthop)
-	f.fibPrefixes[name.String()] = entry
+	f.fibPrefixes[xxhash.Sum64(name.Bytes())] = entry
 }
 
 // ClearNextHops clears all nexthops for the specified prefix.
@@ -297,7 +298,7 @@ func (f *FibStrategyTree) RemoveNextHop(name *ndn.Name, nexthop uint64) {
 			}
 		}
 		if len(entry.nexthops) == 0 {
-			delete(f.fibPrefixes, name.String())
+			delete(f.fibPrefixes, xxhash.Sum64String(name.String()))
 		}
 		entry.pruneIfEmpty()
 	}
@@ -318,7 +319,7 @@ func (f *FibStrategyTree) RemoveNextHop1(name *enc.Name, nexthop uint64) {
 			}
 		}
 		if len(entry.nexthops) == 0 {
-			delete(f.fibPrefixes, name.String())
+			delete(f.fibPrefixes, xxhash.Sum64(name.Bytes()))
 		}
 		entry.pruneIfEmpty()
 	}

@@ -99,9 +99,8 @@ type NDNLPLinkService struct {
 	rto                      time.Duration
 	nextTxSequence           uint64
 	lastTimeCongestionMarked time.Time
-
-	stealthPool  *stealthpool.Pool
-	bufferReader enc.BufferReader
+	workQueue                chan *ndn.PendingPacket
+	stealthPool              *stealthpool.Pool
 }
 
 // MakeNDNLPLinkService creates a new NDNLPv2 link service
@@ -119,9 +118,9 @@ func MakeNDNLPLinkService(transport transport, options NDNLPLinkServiceOptions) 
 
 	l.nextSequence = 0
 	l.retransmitQueue = make(chan uint64, faceQueueSize)
+	l.workQueue = make(chan *ndn.PendingPacket, faceQueueSize)
 	l.rto = 0
 	l.nextTxSequence = 0
-	l.bufferReader = *enc.NewBufferReader([]byte{})
 	return l
 }
 
@@ -194,7 +193,6 @@ func (l *NDNLPLinkService) Run(optNewFrame []byte) {
 	// Start transport goroutines
 	go l.transport.runReceive()
 	go l.runSend()
-
 	// Wait for link service send goroutine to quit
 	<-l.hasImplQuit
 
@@ -203,7 +201,128 @@ func (l *NDNLPLinkService) Run(optNewFrame []byte) {
 
 	l.HasQuit <- true
 }
+func sendPacket(l *NDNLPLinkService, netPacket *ndn.PendingPacket) {
+	wire := netPacket.RawBytes
 
+	if l.transport.State() != ndn.Up {
+		core.LogWarn(l, "Attempted to send frame on down face - DROP and stop LinkService")
+		l.hasImplQuit <- true
+		return
+	}
+	// Counters
+	if netPacket.TestPktStruct.Interest != nil {
+		l.nOutInterests++
+	} else if netPacket.TestPktStruct.Data != nil {
+		l.nOutData++
+	}
+
+	now := time.Now()
+
+	effectiveMtu := l.transport.MTU() - l.headerOverhead
+	if netPacket.PitToken != nil {
+		effectiveMtu -= pitTokenOverhead
+	}
+	if netPacket.CongestionMark != nil {
+		effectiveMtu -= congestionMarkOverhead
+	}
+
+	// Fragmentation
+	var fragments []*lpv2.Packet
+	//fmt.Println(len(wire), effectiveMtu)
+	if len(wire) > effectiveMtu {
+		if !l.options.IsFragmentationEnabled {
+			core.LogInfo(l, "Attempted to send frame over MTU on link without fragmentation - DROP")
+			return
+		}
+
+		// Split up fragment
+		nFragments := int(math.Ceil(float64(len(wire)) / float64(effectiveMtu)))
+		fragments = make([]*lpv2.Packet, nFragments)
+		for i := 0; i < nFragments; i++ {
+			if i < nFragments-1 {
+				fragments[i] = lpv2.NewPacket(wire[effectiveMtu*i : effectiveMtu*(i+1)])
+			} else {
+				fragments[i] = lpv2.NewPacket(wire[effectiveMtu*i:])
+			}
+		}
+	} else {
+		fragments = make([]*lpv2.Packet, 1)
+		fragments[0] = lpv2.NewPacket(wire)
+	}
+
+	// Sequence
+	if len(fragments) > 1 || l.options.IsReliabilityEnabled {
+		for _, fragment := range fragments {
+			fragment.SetSequence(l.nextSequence)
+			l.nextSequence++
+		}
+	}
+
+	// Congestion marking
+	if congestionMarking && l.transport.GetSendQueueSize() > l.options.DefaultCongestionThresholdBytes && now.After(l.lastTimeCongestionMarked.Add(l.options.BaseCongestionMarkingInterval)) {
+		// Mark congestion
+		core.LogWarn(l, "Marking congestion")
+		fragments[0].SetCongestionMark(1)
+		l.lastTimeCongestionMarked = now
+	}
+
+	// Reliability
+	if l.options.IsReliabilityEnabled {
+		firstSequence := *fragments[0].Sequence()
+		unacknowledgedPacket := new(ndnlpUnacknowledgedPacket)
+		unacknowledgedPacket.lock.Lock()
+
+		for _, fragment := range fragments {
+			fragment.SetTxSequence(l.nextTxSequence)
+			unacknowledgedFrame := new(ndnlpUnacknowledgedFrame)
+			unacknowledgedFrame.frame = fragment
+			unacknowledgedFrame.netPacket = firstSequence
+			unacknowledgedFrame.sentTime = now
+			l.unacknowledgedFrames.Store(l.nextTxSequence, unacknowledgedFrame)
+
+			unacknowledgedPacket.unacknowledgedFragments[l.nextTxSequence] = new(interface{})
+			l.nextTxSequence++
+		}
+
+		unacknowledgedPacket.lock.Unlock()
+		l.unacknowledgedPackets.Store(firstSequence, unacknowledgedPacket)
+	}
+
+	// PIT tokens
+	if len(netPacket.PitToken) > 0 {
+		fragments[0].SetPitToken(netPacket.PitToken)
+	}
+
+	// Incoming face indication
+	if l.options.IsIncomingFaceIndicationEnabled && netPacket.IncomingFaceID != nil {
+		fragments[0].SetIncomingFaceID(*netPacket.IncomingFaceID)
+	}
+
+	// Congestion marking
+	if netPacket.CongestionMark != nil {
+		fragments[0].SetCongestionMark(*netPacket.CongestionMark)
+	}
+
+	// Fill up remaining space with Acks if Reliability enabled
+	/*if l.options.IsReliabilityEnabled {
+		// TODO
+	}*/
+
+	// Send fragment(s)
+	for _, fragment := range fragments {
+		encodedFragment, err := fragment.Encode()
+		if err != nil {
+			core.LogError(l, "Unable to encode fragment - DROP")
+			break
+		}
+		fragmentWire, err := encodedFragment.Wire()
+		if err != nil {
+			core.LogError(l, "Unable to encode fragment - DROP")
+			break
+		}
+		l.transport.sendFrame(fragmentWire)
+	}
+}
 func (l *NDNLPLinkService) runSend() {
 	core.LogTrace(l, "Starting send thread")
 
@@ -219,128 +338,7 @@ func (l *NDNLPLinkService) runSend() {
 	for {
 		select {
 		case netPacket := <-l.sendQueue:
-			go func(netPacket *ndn.PendingPacket) {
-				wire := netPacket.RawBytes
-
-				if l.transport.State() != ndn.Up {
-					core.LogWarn(l, "Attempted to send frame on down face - DROP and stop LinkService")
-					l.hasImplQuit <- true
-					return
-				}
-				// Counters
-				if netPacket.TestPktStruct.Interest != nil {
-					l.nOutInterests++
-				} else if netPacket.TestPktStruct.Data != nil {
-					l.nOutData++
-				}
-
-				now := time.Now()
-
-				effectiveMtu := l.transport.MTU() - l.headerOverhead
-				if netPacket.PitToken != nil {
-					effectiveMtu -= pitTokenOverhead
-				}
-				if netPacket.CongestionMark != nil {
-					effectiveMtu -= congestionMarkOverhead
-				}
-
-				// Fragmentation
-				var fragments []*lpv2.Packet
-				//fmt.Println(len(wire), effectiveMtu)
-				if len(wire) > effectiveMtu {
-					if !l.options.IsFragmentationEnabled {
-						core.LogInfo(l, "Attempted to send frame over MTU on link without fragmentation - DROP")
-						return
-					}
-
-					// Split up fragment
-					nFragments := int(math.Ceil(float64(len(wire)) / float64(effectiveMtu)))
-					fragments = make([]*lpv2.Packet, nFragments)
-					for i := 0; i < nFragments; i++ {
-						if i < nFragments-1 {
-							fragments[i] = lpv2.NewPacket(wire[effectiveMtu*i : effectiveMtu*(i+1)])
-						} else {
-							fragments[i] = lpv2.NewPacket(wire[effectiveMtu*i:])
-						}
-					}
-				} else {
-					fragments = make([]*lpv2.Packet, 1)
-					fragments[0] = lpv2.NewPacket(wire)
-				}
-
-				// Sequence
-				if len(fragments) > 1 || l.options.IsReliabilityEnabled {
-					for _, fragment := range fragments {
-						fragment.SetSequence(l.nextSequence)
-						l.nextSequence++
-					}
-				}
-
-				// Congestion marking
-				if congestionMarking && l.transport.GetSendQueueSize() > l.options.DefaultCongestionThresholdBytes && now.After(l.lastTimeCongestionMarked.Add(l.options.BaseCongestionMarkingInterval)) {
-					// Mark congestion
-					core.LogWarn(l, "Marking congestion")
-					fragments[0].SetCongestionMark(1)
-					l.lastTimeCongestionMarked = now
-				}
-
-				// Reliability
-				if l.options.IsReliabilityEnabled {
-					firstSequence := *fragments[0].Sequence()
-					unacknowledgedPacket := new(ndnlpUnacknowledgedPacket)
-					unacknowledgedPacket.lock.Lock()
-
-					for _, fragment := range fragments {
-						fragment.SetTxSequence(l.nextTxSequence)
-						unacknowledgedFrame := new(ndnlpUnacknowledgedFrame)
-						unacknowledgedFrame.frame = fragment
-						unacknowledgedFrame.netPacket = firstSequence
-						unacknowledgedFrame.sentTime = now
-						l.unacknowledgedFrames.Store(l.nextTxSequence, unacknowledgedFrame)
-
-						unacknowledgedPacket.unacknowledgedFragments[l.nextTxSequence] = new(interface{})
-						l.nextTxSequence++
-					}
-
-					unacknowledgedPacket.lock.Unlock()
-					l.unacknowledgedPackets.Store(firstSequence, unacknowledgedPacket)
-				}
-
-				// PIT tokens
-				if len(netPacket.PitToken) > 0 {
-					fragments[0].SetPitToken(netPacket.PitToken)
-				}
-
-				// Incoming face indication
-				if l.options.IsIncomingFaceIndicationEnabled && netPacket.IncomingFaceID != nil {
-					fragments[0].SetIncomingFaceID(*netPacket.IncomingFaceID)
-				}
-
-				// Congestion marking
-				if netPacket.CongestionMark != nil {
-					fragments[0].SetCongestionMark(*netPacket.CongestionMark)
-				}
-
-				// Fill up remaining space with Acks if Reliability enabled
-				/*if l.options.IsReliabilityEnabled {
-					// TODO
-				}*/
-
-				// Send fragment(s)
-				for _, fragment := range fragments {
-					encodedFragment, err := fragment.Encode()
-					if err != nil {
-						core.LogError(l, "Unable to encode fragment - DROP")
-						break
-					}
-					fragmentWire, err := encodedFragment.Wire()
-					if err != nil {
-						core.LogError(l, "Unable to encode fragment - DROP")
-						break
-					}
-					l.transport.sendFrame(fragmentWire)
-				}
-			}(netPacket)
+			go sendPacket(l, netPacket)
 		case oldTxSequence := <-l.retransmitQueue:
 			loadedFrame, ok := l.unacknowledgedFrames.Load(oldTxSequence)
 			if !ok {
@@ -389,10 +387,11 @@ func (l *NDNLPLinkService) handleIncomingFrame(rawFrame []byte) {
 }
 
 func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
-	//this seems to be where we process incoming frames for the fw threads, the other is for mgmt thread
+	// all incoming frames come through a link service
 	// Free up memory
 	defer l.stealthPool.Return(wire)
 	// Attempt to decode buffer into TLV block
+
 	block, _, err := tlv.DecodeBlock(wire)
 	if err != nil {
 		core.LogWarn(l, "Received invalid frame - DROP")
@@ -406,43 +405,43 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 		return
 	}
 
-	core.LogDebug(l, "Received NDNLPv2 frame of size ", block.Size())
+	// core.LogDebug(l, "Received NDNLPv2 frame of size ", block.Size())
 
-	// Reliability
-	if l.options.IsReliabilityEnabled {
-		// Process Acks
-		for _, ack := range frame.Acks() {
-			if loadedAcknowledgedFrame, ok := l.unacknowledgedFrames.Load(ack); ok {
-				core.LogTrace(l, "Received acknowledgement for TxSequence=", ack)
-				acknowledgedFrame := loadedAcknowledgedFrame.(*ndnlpUnacknowledgedFrame)
-				sequence := acknowledgedFrame.netPacket
-				loadedAcknowledgedPacket, _ := l.unacknowledgedPackets.Load(sequence)
-				l.unacknowledgedFrames.Delete(ack)
-				acknowledgedPacket := loadedAcknowledgedPacket.(*ndnlpUnacknowledgedPacket)
-				acknowledgedPacket.lock.Lock()
-				delete(acknowledgedPacket.unacknowledgedFragments, ack)
-				remainingFragments := len(acknowledgedPacket.unacknowledgedFragments)
-				acknowledgedPacket.lock.Unlock()
-				if remainingFragments == 0 {
-					core.LogTrace(l, "Completely transmitted reliable packet with Sequence=", sequence)
-					l.unacknowledgedPackets.Delete(sequence)
-				}
-			} else {
-				core.LogDebug(l, "Received Ack for unknown TxSequence ", ack)
-			}
-		}
+	// // Reliability
+	// if l.options.IsReliabilityEnabled {
+	// 	// Process Acks
+	// 	for _, ack := range frame.Acks() {
+	// 		if loadedAcknowledgedFrame, ok := l.unacknowledgedFrames.Load(ack); ok {
+	// 			core.LogTrace(l, "Received acknowledgement for TxSequence=", ack)
+	// 			acknowledgedFrame := loadedAcknowledgedFrame.(*ndnlpUnacknowledgedFrame)
+	// 			sequence := acknowledgedFrame.netPacket
+	// 			loadedAcknowledgedPacket, _ := l.unacknowledgedPackets.Load(sequence)
+	// 			l.unacknowledgedFrames.Delete(ack)
+	// 			acknowledgedPacket := loadedAcknowledgedPacket.(*ndnlpUnacknowledgedPacket)
+	// 			acknowledgedPacket.lock.Lock()
+	// 			delete(acknowledgedPacket.unacknowledgedFragments, ack)
+	// 			remainingFragments := len(acknowledgedPacket.unacknowledgedFragments)
+	// 			acknowledgedPacket.lock.Unlock()
+	// 			if remainingFragments == 0 {
+	// 				core.LogTrace(l, "Completely transmitted reliable packet with Sequence=", sequence)
+	// 				l.unacknowledgedPackets.Delete(sequence)
+	// 			}
+	// 		} else {
+	// 			core.LogDebug(l, "Received Ack for unknown TxSequence ", ack)
+	// 		}
+	// 	}
 
-		// Add TxSequence to Ack queue
-		if frame.TxSequence() != nil {
-			l.pendingAcksToSend.PushBack(*frame.TxSequence())
-		}
-	}
+	// 	// Add TxSequence to Ack queue
+	// 	if frame.TxSequence() != nil {
+	// 		l.pendingAcksToSend.PushBack(*frame.TxSequence())
+	// 	}
+	// }
 
-	// If no fragment, then IDLE frame, so DROP
-	if frame.IsIdle() {
-		core.LogTrace(l, "IDLE frame - DROP")
-		return
-	}
+	// // If no fragment, then IDLE frame, so DROP
+	// if frame.IsIdle() {
+	// 	core.LogTrace(l, "IDLE frame - DROP")
+	// 	return
+	// }
 
 	// Reassembly
 	netPkt := frame.Fragment()
@@ -482,7 +481,6 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	netPacket := new(ndn.PendingPacket)
 	netPacket.IncomingFaceID = new(uint64)
 	*netPacket.IncomingFaceID = l.faceID
-	//var ctx *spec.PacketParsingContext
 	var e error
 	netPacket.TestPktStruct, _, e = spec.ReadPacket(enc.NewBufferReader(netPkt))
 	netPacket.RawBytes = netPkt

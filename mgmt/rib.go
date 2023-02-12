@@ -43,16 +43,12 @@ func (r *RIBModule) handleIncomingInterest(interest *ndn.Interest, pitToken []by
 	verb := interest.Name().At(r.manager.prefixLength() + 1).String()
 	switch verb {
 	case "register":
-		//fmt.Println("r")
 		r.register(interest, pitToken, inFace)
 	case "unregister":
-		//fmt.Println("ur")
 		r.unregister(interest, pitToken, inFace)
 	case "announce":
-		//fmt.Println("a")
 		r.announce(interest, pitToken, inFace)
 	case "list":
-		//fmt.Println("l")
 		r.list(interest, pitToken, inFace)
 	default:
 		core.LogWarn(r, "Received Interest for non-existent verb '", verb, "'")
@@ -208,7 +204,6 @@ func (r *RIBModule) unregister(interest *ndn.Interest, pitToken []byte, inFace u
 
 func (r *RIBModule) announce(interest *ndn.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
-	//fmt.Println("WEW EIWNIENWIN NEANNOUCNE")
 	if interest.Name().Size() != r.manager.prefixLength()+3 || interest.Name().At(r.manager.prefixLength()+2).Type() != tlv.ParametersSha256DigestComponent {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(r, "Name of Interest=", interest.Name(), " is either too short or incorrectly formatted to be rib/announce")

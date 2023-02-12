@@ -34,7 +34,6 @@ func (f *FIBModule) getManager() *Thread {
 }
 
 func (f *FIBModule) handleIncomingInterest(interest *ndn.Interest, pitToken []byte, inFace uint64) {
-	//fmt.Println("handling oh my god im handling so much right now")
 	// Only allow from /localhost
 	if !f.manager.localPrefix.PrefixOf(interest.Name()) {
 		core.LogWarn(f, "Received FIB management Interest from non-local source - DROP")
