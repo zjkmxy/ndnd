@@ -91,13 +91,10 @@ func (m *Thread) Run() {
 	// Create and register Internal transport
 	m.face, m.transport = face.RegisterInternalTransport()
 	//table.FibStrategyTable.InsertNextHop(m.localPrefix, m.face.FaceID(), 0)
-	add, _ := enc.NameFromStr("/localhost/nfd")
-	table.FibStrategyTable.InsertNextHop1(&add, m.face.FaceID(), 0)
 	if enableLocalhopManagement {
 		add1, _ := enc.NameFromStr("/localhop/nfd")
 		table.FibStrategyTable.InsertNextHop1(&add1, m.face.FaceID(), 0)
 	}
-
 	for {
 		block, pitToken, inFace := m.transport.Receive()
 		if block == nil {

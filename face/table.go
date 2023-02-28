@@ -8,12 +8,13 @@
 package face
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/named-data/YaNFD/core"
 	"github.com/named-data/YaNFD/dispatch"
+	"github.com/named-data/YaNFD/mgmtconn"
 	"github.com/named-data/YaNFD/ndn"
-	"github.com/named-data/YaNFD/table"
 )
 
 // FaceTable is the global face table for this forwarder
@@ -39,6 +40,7 @@ func (t *Table) Add(face LinkService) {
 	isExistingFaceID := true
 	for isExistingFaceID {
 		faceID = t.nextFaceID
+		fmt.Println(t.nextFaceID, face)
 		t.nextFaceID++
 		_, isExistingFaceID = t.Faces[faceID]
 	}
@@ -101,7 +103,20 @@ func (t *Table) Remove(id uint64) {
 	// Remove this face in RIB
 	// Referential:
 	// https://github.com/named-data/NFD/blob/7249fb4d5225cbe99a3901f9485a8ad99a7abceb/daemon/table/cleanup.cpp#L36-L40
-	table.Rib.CleanUpFace(id)
+	//table.Rib.CleanUpFace(id)
+	// udpServer, err := net.ResolveUDPAddr("udp", ":2000")
+	// if err != nil {
+	// 	fmt.Println("ResolveUDPAddr failed:", err.Error())
+	// }
 
-	core.LogDebug("FaceTable", "Unregistered FaceID=", id)
+	// conn, err := net.DialUDP("udp", nil, udpServer)
+	// if err != nil {
+	// 	fmt.Println("Listen failed:", err.Error())
+	// }
+	// //close the connection
+	// defer conn.Close()
+	// msg := fmt.Sprintf("clean,%d", id)
+	// conn.Write([]byte(msg))
+	// core.LogDebug("FaceTable", "Unregistered FaceID=", id)
+	mgmtconn.Channel.Send(id)
 }

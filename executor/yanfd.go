@@ -18,8 +18,10 @@ import (
 	"github.com/named-data/YaNFD/face"
 	"github.com/named-data/YaNFD/fw"
 	"github.com/named-data/YaNFD/mgmt"
+	"github.com/named-data/YaNFD/mgmtconn"
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/table"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // YaNFDConfig is the configuration of YaNFD.
@@ -98,6 +100,61 @@ func NewYaNFD(config *YaNFDConfig) *YaNFD {
 	}
 }
 
+// func mgmtConn() {
+// 	// listen to incoming unix packets
+// 	socketFile := "/tmp/mgmt.sock"
+// 	os.Remove(socketFile)
+// 	listener, err := net.Listen("unixpacket", socketFile)
+// 	if err := os.Chmod(socketFile, 0777); err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	if err != nil {
+// 		return
+// 	}
+// 	defer listener.Close()
+// 	conn, _ := listener.Accept()
+// 	for {
+// 		buf := make([]byte, 1024)
+// 		size, err := conn.Read(buf)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		response(conn, size, buf)
+// 	}
+// }
+
+// func response(udpServer net.Conn, size int, buf []byte) {
+// 	//var response string = "test"
+// 	buf = bytes.Trim(buf, "\x00")
+// 	fibcommand := string(buf)
+// 	fmt.Println(fibcommand)
+// 	command := strings.Split(fibcommand, ",")
+// 	switch command[0] {
+// 	case "insert":
+// 		hard, _ := enc.NameFromStr(command[1])
+// 		table.FibStrategyTable.ClearNextHops1(&hard)
+// 		faceID, _ := strconv.Atoi(command[2])
+// 		cost, _ := strconv.Atoi(command[3])
+// 		table.FibStrategyTable.InsertNextHop1(&hard, uint64(faceID), uint64(cost))
+// 		log := fmt.Sprintf("inserted %s, %s, %s", command[1], command[2], command[3])
+// 		fmt.Println(log)
+// 	case "remove":
+// 		hard, _ := enc.NameFromStr(command[1])
+// 		faceID, _ := strconv.Atoi(command[2])
+// 		table.FibStrategyTable.RemoveNextHop1(&hard, uint64(faceID))
+// 		log := fmt.Sprintf("removed %s, %s", command[1], command[2])
+// 		fmt.Println(log)
+// 	case "clear":
+// 		hard, _ := enc.NameFromStr(command[1])
+// 		table.FibStrategyTable.ClearNextHops1(&hard)
+// 		log := fmt.Sprintf("cleared %s", command[1])
+// 		fmt.Println(log)
+// 	default:
+// 		//response = "NACK"
+// 	}
+// 	//udpServer.Write([]byte(response))
+// }
+
 // Start runs YaNFD. Note: this function may exit the program when there is error.
 // This function is non-blocking.
 func (y *YaNFD) Start() {
@@ -110,16 +167,16 @@ func (y *YaNFD) Start() {
 	// Initialize FIB table
 	fibTableAlgorithm := core.GetConfigStringDefault("tables.fib.algorithm", "nametree")
 	table.CreateFIBTable(fibTableAlgorithm)
-
 	// Create null face
 	nullFace := face.MakeNullLinkService(face.MakeNullTransport())
 	face.FaceTable.Add(nullFace)
 	go nullFace.Run(nil)
 
-	// Start management thread
-	management := mgmt.MakeMgmtThread()
-	go management.Run()
+	go mgmtconn.Channel.RunReceive()
 
+	// Start management thread
+	// management := mgmt.MakeMgmtThread()
+	// go management.Run()
 	// Create forwarding threads
 	if fw.NumFwThreads < 1 || fw.NumFwThreads > fw.MaxFwThreads {
 		core.LogFatal("Main", "Number of forwarding threads must be in range [1, ", fw.MaxFwThreads, "]")
@@ -133,7 +190,9 @@ func (y *YaNFD) Start() {
 		go fw.Threads[i].Run()
 	}
 	dispatch.InitializeFWThreads(fwForDispatch)
-
+	//hard code in face to mgmt thread outside of mgmt thread (is dubious at best to do this)
+	add, _ := enc.NameFromStr("/localhost/nfd")
+	table.FibStrategyTable.InsertNextHop1(&add, 2, 0)
 	// Perform setup operations for each network interface
 	faceCnt := 0
 	//ifaces, err := net.Interfaces()

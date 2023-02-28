@@ -8,6 +8,7 @@
 package face
 
 import (
+	"fmt"
 	"runtime"
 	"strconv"
 
@@ -72,6 +73,7 @@ func (t *InternalTransport) GetSendQueueSize() uint64 {
 // Send sends a packet from the perspective of the internal component.
 func (t *InternalTransport) Send(block *tlv.Block, pitToken []byte, nextHopFaceID *uint64) {
 	netWire, err := block.Wire()
+	// fmt.Println(netWire)
 	if err != nil {
 		core.LogWarn(t, "Unable to decode net packet to send - DROP")
 		return
@@ -93,6 +95,7 @@ func (t *InternalTransport) Send(block *tlv.Block, pitToken []byte, nextHopFaceI
 		core.LogWarn(t, "Unable to encode block to send - DROP")
 		return
 	}
+	fmt.Println("this is the control frame, ", frame)
 	t.sendQueue <- frame
 }
 
