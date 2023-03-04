@@ -166,104 +166,6 @@ func (t *Thread) QueueData(data *ndn.PendingPacket) {
 }
 
 func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
-	if len(pendingPacket.TestPktStruct.Interest.NameV) > 3 && pendingPacket.TestPktStruct.Interest.NameV[2].String() == "rib" {
-		// paramsRaw, _, err := tlv.DecodeBlock(pendingPacket.TestPktStruct.Interest.NameV[4].Val)
-		// if err != nil {
-		// 	return
-		// }
-		// params, err := mgmt.DecodeControlParameters(paramsRaw)
-
-		// if err != nil {
-		// 	return
-		// }
-		// if params == nil {
-		// 	return
-		// }
-
-		// if params.Name == nil {
-		// 	return
-		// }
-		// faceID := *pendingPacket.IncomingFaceID
-		// if params.FaceID != nil && *params.FaceID != 0 {
-		// 	faceID = *params.FaceID
-		// }
-
-		// origin := table.RouteOriginApp
-		// if params.Origin != nil {
-		// 	origin = *params.Origin
-		// }
-
-		// cost := uint64(0)
-		// if params.Cost != nil {
-		// 	cost = *params.Cost
-		// }
-
-		// flags := table.RouteFlagChildInherit
-		// if params.Flags != nil {
-		// 	flags = *params.Flags
-		// }
-		// expirationPeriod := (*time.Duration)(nil)
-		// if params.ExpirationPeriod != nil {
-		// 	expirationPeriod = new(time.Duration)
-		// 	*expirationPeriod = time.Duration(*params.ExpirationPeriod) * time.Millisecond
-		// }
-		// responseParams := mgmt.MakeControlParameters()
-		// responseParams.Name = params.Name
-		// responseParams.FaceID = new(uint64)
-		// *responseParams.FaceID = faceID
-		// responseParams.Origin = new(uint64)
-		// *responseParams.Origin = origin
-		// responseParams.Cost = new(uint64)
-		// *responseParams.Cost = cost
-		// responseParams.Flags = new(uint64)
-		// *responseParams.Flags = flags
-		// responseParamsWire, err := responseParams.Encode()
-		// var response *mgmt.ControlResponse
-		// response = mgmt.MakeControlResponse(200, "OK", responseParamsWire)
-		// encodedResponse, err := response.Encode()
-		// if err != nil {
-		// 	return
-		// }
-		// encodedWire, err := encodedResponse.Wire()
-		// if err != nil {
-		// 	return
-		// }
-		// name, _ := ndn.NameFromString(pendingPacket.TestPktStruct.Interest.NameV.String())
-		// data := ndn.NewData(name, encodedWire)
-		// //up to here is encoded the same.
-		// encodedData, err := data.Encode()
-		// netWire, err := encodedData.Wire()
-		// if err != nil {
-		// 	core.LogWarn(t, "Unable to decode net packet to send - DROP")
-		// 	return
-		// }
-		// fmt.Println("netwire")
-		// fmt.Println(netWire)
-		// lpPacket := lpv2.NewPacket(netWire)
-		// if len(pendingPacket.PitToken) > 0 {
-		// 	lpPacket.SetPitToken(pendingPacket.PitToken)
-		// }
-		// if pendingPacket.IncomingFaceID != nil {
-		// 	lpPacket.SetNextHopFaceID(*pendingPacket.IncomingFaceID)
-		// }
-		// lpPacketWire, err := lpPacket.Encode()
-		// if err != nil {
-		// 	core.LogWarn(t, "Unable to encode block to send - DROP")
-		// 	return
-		// }
-		// frame, err := lpPacketWire.Wire()
-		// if err != nil {
-		// 	core.LogWarn(t, "Unable to encode block to send - DROP")
-		// 	return
-		// }
-
-		// pendingPacket.RawBytes = frame
-		// fmt.Println(pendingPacket.RawBytes)
-		// outgoingFace := dispatch.GetFace(*pendingPacket.IncomingFaceID)
-		// fmt.Println("this has sent back the control packet", outgoingFace)
-		// outgoingFace.SendPacket(pendingPacket)
-		// return
-	}
 	// Ensure incoming face is indicated
 	if pendingPacket.IncomingFaceID == nil {
 		core.LogError(t, "Interest missing IncomingFaceId - DROP")
@@ -438,12 +340,6 @@ func (t *Thread) processOutgoingInterest(pp *ndn.PendingPacket, pitEntry table.P
 	pp.PitToken = make([]byte, 6)
 	binary.BigEndian.PutUint16(pp.PitToken, uint16(t.threadID))
 	binary.BigEndian.PutUint32(pp.PitToken[2:], pitEntry.Token())
-	// if nexthop == 2 {
-	// 	mgmtFace := dispatch.GetFace(3)
-	// 	mgmtFace.SendPacket(pp)
-	// } else {
-	// 	outgoingFace.SendPacket(pp)
-	// }
 	outgoingFace.SendPacket(pp)
 	return true
 }

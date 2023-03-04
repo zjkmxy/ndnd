@@ -13,6 +13,7 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/named-data/YaNFD/ackconn"
 	"github.com/named-data/YaNFD/core"
 	"github.com/named-data/YaNFD/dispatch"
 	"github.com/named-data/YaNFD/face"
@@ -172,11 +173,15 @@ func (y *YaNFD) Start() {
 	face.FaceTable.Add(nullFace)
 	go nullFace.Run(nil)
 
+	mgmtconn.Channel.Make("/tmp/mgmt.sock")
 	go mgmtconn.Channel.RunReceive()
-
+	ackconn.AckChannel.Make("/tmp/ackmgmt.sock")
+	go ackconn.AckChannel.RunReceive()
+	add, _ := enc.NameFromStr("/localhost/nfd")
+	table.FibStrategyTable.InsertNextHop1(&add, 3, 0)
 	// Start management thread
-	// management := mgmt.MakeMgmtThread()
-	// go management.Run()
+	management := mgmt.MakeMgmtThread()
+	go management.Run()
 	// Create forwarding threads
 	if fw.NumFwThreads < 1 || fw.NumFwThreads > fw.MaxFwThreads {
 		core.LogFatal("Main", "Number of forwarding threads must be in range [1, ", fw.MaxFwThreads, "]")
@@ -191,8 +196,7 @@ func (y *YaNFD) Start() {
 	}
 	dispatch.InitializeFWThreads(fwForDispatch)
 	//hard code in face to mgmt thread outside of mgmt thread (is dubious at best to do this)
-	add, _ := enc.NameFromStr("/localhost/nfd")
-	table.FibStrategyTable.InsertNextHop1(&add, 2, 0)
+
 	// Perform setup operations for each network interface
 	faceCnt := 0
 	//ifaces, err := net.Interfaces()

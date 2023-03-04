@@ -8,8 +8,10 @@
 package face
 
 import (
+	"math"
 	"net"
 	"os"
+	"time"
 
 	"github.com/named-data/YaNFD/core"
 	"github.com/named-data/YaNFD/ndn"
@@ -86,6 +88,8 @@ func (l *UnixStreamListener) Run() {
 		}
 		newLinkService := MakeNDNLPLinkService(newTransport, NDNLPLinkServiceOptions{
 			IsIncomingFaceIndicationEnabled: true,
+			BaseCongestionMarkingInterval:   time.Duration(100) * time.Millisecond,
+			DefaultCongestionThresholdBytes: uint64(math.Pow(2, 16)),
 		})
 		if err != nil {
 			core.LogError(l, "Failed to create new NDNLPv2 transport: ", err)

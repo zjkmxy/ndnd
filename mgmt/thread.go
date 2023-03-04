@@ -39,12 +39,7 @@ func MakeMgmtThread() *Thread {
 		core.LogFatal(m, "Unable to create name for management prefix: ", err)
 	}
 	m.modules = make(map[string]Module)
-	m.registerModule("cs", new(ContentStoreModule))
 	m.registerModule("faces", new(FaceModule))
-	m.registerModule("fib", new(FIBModule))
-	m.registerModule("rib", new(RIBModule))
-	m.registerModule("status", new(ForwarderStatusModule))
-	m.registerModule("strategy-choice", new(StrategyChoiceModule))
 	return m
 }
 
@@ -90,9 +85,13 @@ func (m *Thread) Run() {
 
 	// Create and register Internal transport
 	m.face, m.transport = face.RegisterInternalTransport()
-	//table.FibStrategyTable.InsertNextHop(m.localPrefix, m.face.FaceID(), 0)
+	faces, err := enc.NameFromStr("/localhost/nfd/faces")
+	if err != nil {
+		core.LogFatal(m, "Unable to create name for management prefix: ", err)
+	}
+	table.FibStrategyTable.InsertNextHop1(&faces, m.face.FaceID(), 0)
 	if enableLocalhopManagement {
-		add1, _ := enc.NameFromStr("/localhop/nfd")
+		add1, _ := enc.NameFromStr("/localhop/nfd/faces")
 		table.FibStrategyTable.InsertNextHop1(&add1, m.face.FaceID(), 0)
 	}
 	for {
@@ -134,10 +133,6 @@ func (m *Thread) Run() {
 		moduleName := interest.Name().At(m.localPrefix.Size()).String()
 		if module, ok := m.modules[moduleName]; ok {
 			module.handleIncomingInterest(interest, pitToken, inFace)
-		} else {
-			core.LogWarn(m, "Received management Interest for unknown module ", moduleName)
-			response := mgmt.MakeControlResponse(501, "Unknown module", nil)
-			m.sendResponse(response, interest, pitToken, inFace)
 		}
 	}
 }

@@ -273,6 +273,7 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 		}
 	default:
 		//change this
+		//fmt.Println(netPacket.TestPktStruct.LpPacket)
 		core.LogError(l, "Cannot dispatch packet of unknown type ")
 	}
 }
