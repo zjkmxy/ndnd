@@ -39,8 +39,9 @@ func newFibStrategyTableTree() {
 	fibStrategyTableTree := FibStrategyTable.(*FibStrategyTree)
 	fibStrategyTableTree.root = new(fibStrategyTreeEntry)
 	fibStrategyTableTree.root.component = nil // Root component will be nil since it represents zero components
-	fibStrategyTableTree.root.strategy, _ = ndn.NameFromString("/localhost/nfd/strategy/best-route/v=1")
-	fibStrategyTableTree.root.name = ndn.NewName()
+	base, _ := enc.NameFromStr("/localhost/nfd/strategy/best-route/v=1")
+	fibStrategyTableTree.root.ppstrategy = &base
+	fibStrategyTableTree.root.ppname = &enc.Name{}
 	fibStrategyTableTree.fibPrefixes = make(map[uint64]*fibStrategyTreeEntry)
 }
 
@@ -142,6 +143,20 @@ func (f *fibStrategyTreeEntry) pruneIfEmpty() {
 		}
 	}
 }
+func (f *fibStrategyTreeEntry) pruneIfEmpty1() {
+	for curNode := f; curNode.parent != nil && len(curNode.children) == 0 && len(curNode.nexthops) == 0 && curNode.ppstrategy == nil; curNode = curNode.parent {
+		// Remove from parent's children
+		for i, child := range curNode.parent.children {
+			if child == f {
+				if i < len(curNode.parent.children)-1 {
+					copy(curNode.parent.children[i:], curNode.parent.children[i+1:])
+				}
+				curNode.parent.children = curNode.parent.children[:len(curNode.parent.children)-1]
+				break
+			}
+		}
+	}
+}
 
 // FindNextHops returns the longest-prefix matching nexthop(s) matching the specified name.
 func (f *FibStrategyTree) FindNextHops(name *ndn.Name) []*FibNextHopEntry {
@@ -200,6 +215,26 @@ func (f *FibStrategyTree) FindStrategy(name *ndn.Name) *ndn.Name {
 	for ; curNode != nil; curNode = curNode.parent {
 		if curNode.strategy != nil {
 			strategy = curNode.strategy
+			break
+		}
+	}
+
+	return strategy
+}
+
+func (f *FibStrategyTree) FindStrategy1(name *enc.Name) *enc.Name {
+	f.fibStrategyRWMutex.RLock()
+	defer f.fibStrategyRWMutex.RUnlock()
+
+	// Find longest prefix matching entry
+	curNode := f.root.findLongestPrefixEntry1(name)
+
+	// Now step back up until we find a strategy entry
+	// since some might only have a nexthops but no strategy
+	var strategy *enc.Name
+	for ; curNode != nil; curNode = curNode.parent {
+		if curNode.ppstrategy != nil {
+			strategy = curNode.ppstrategy
 			break
 		}
 	}
@@ -369,6 +404,26 @@ func (f *FibStrategyTree) UnsetStrategy(name *ndn.Name) {
 	if entry != nil {
 		entry.strategy = nil
 		entry.pruneIfEmpty()
+	}
+}
+func (f *FibStrategyTree) SetStrategy1(name *enc.Name, strategy *enc.Name) {
+	f.fibStrategyRWMutex.Lock()
+	defer f.fibStrategyRWMutex.Unlock()
+	entry := f.fillTreeToPrefix1(name)
+	if entry.name == nil {
+		entry.ppname = name
+	}
+	entry.ppstrategy = strategy
+}
+
+// UnsetStrategy unsets the strategy for the specified prefix.
+func (f *FibStrategyTree) UnsetStrategy1(name *enc.Name) {
+	f.fibStrategyRWMutex.Lock()
+	defer f.fibStrategyRWMutex.Unlock()
+	entry := f.root.findExactMatchEntry1(name)
+	if entry != nil {
+		entry.ppstrategy = nil
+		entry.pruneIfEmpty1()
 	}
 }
 

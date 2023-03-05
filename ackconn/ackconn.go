@@ -2,11 +2,10 @@ package ackconn
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/named-data/YaNFD/core"
@@ -22,6 +21,18 @@ var AckChannel AckConn
 type AckConn struct {
 	conn       net.Conn
 	socketFile string
+}
+type Message struct {
+	Command   string   `json:"command"`
+	Name      string   `json:"name"`
+	ParamName string   `json:"paramname"`
+	FaceID    uint64   `json:"faceid"`
+	Cost      uint64   `json:"cost"`
+	Strategy  string   `json:"strategy"`
+	Capacity  int      `json:"capacity"`
+	Versions  []uint64 `json:"versions"`
+	Dataset   []byte   `json:"dataset"`
+	Valid     bool     `json:"valid"`
 }
 
 func (a *AckConn) Make(socketFile string) {
@@ -57,10 +68,12 @@ func (a *AckConn) RunReceive() {
 func (a *AckConn) process(size int, buf []byte) {
 	//var response string = "test"
 	buf = bytes.Trim(buf, "\x00")
-	fibcommand := string(buf)
-	fmt.Println(fibcommand)
-	command := strings.Split(fibcommand, ",")
-	switch command[0] {
+	var commands Message
+	err := json.Unmarshal(buf, &commands)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	switch commands.Command {
 	case "list":
 		entries := table.FibStrategyTable.GetAllFIBEntries()
 		dataset := make([]byte, 0)
@@ -83,7 +96,14 @@ func (a *AckConn) process(size int, buf []byte) {
 			}
 			dataset = append(dataset, encoded...)
 		}
-		a.conn.Write(dataset)
+		msg := Message{
+			Dataset: dataset,
+		}
+		b, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+		a.conn.Write(b)
 	case "forwarderstatus":
 		status := mgmt.MakeGeneralStatus()
 		status.NfdVersion = core.Version
@@ -108,12 +128,66 @@ func (a *AckConn) process(size int, buf []byte) {
 		dataset := wire.Value()
 		a.conn.Write(dataset)
 	case "faceid":
-		faceID, _ := strconv.Atoi(string(command[1]))
+		faceID := commands.FaceID
 		if face.FaceTable.Get(uint64(faceID)) != nil {
-			a.conn.Write([]byte("ack"))
+			b, err := json.Marshal(true)
+			if err != nil {
+				fmt.Println("error:", err)
+			}
+			a.conn.Write(b)
 		} else {
-			a.conn.Write([]byte("nack"))
+			b, err := json.Marshal(false)
+			if err != nil {
+				fmt.Println("error:", err)
+			}
+			a.conn.Write(b)
 		}
+	case "liststrategy":
+		entries := table.FibStrategyTable.GetAllForwardingStrategies()
+		dataset := make([]byte, 0)
+		strategyChoiceList := mgmt.MakeStrategyChoiceList()
+		for _, fsEntry := range entries {
+			strategyChoiceList = append(strategyChoiceList, mgmt.MakeStrategyChoice(fsEntry.Name(), fsEntry.GetStrategy()))
+		}
+
+		wires, err := strategyChoiceList.Encode()
+		if err != nil {
+			return
+		}
+		for _, strategyChoice := range wires {
+			encoded, err := strategyChoice.Wire()
+			if err != nil {
+				continue
+			}
+			dataset = append(dataset, encoded...)
+		}
+		msg := Message{
+			Dataset: dataset,
+		}
+		b, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+		a.conn.Write(b)
+	case "versions":
+		availableVersions, ok := fw.StrategyVersions[commands.Strategy]
+		var msg Message
+		if !ok {
+			msg = Message{
+				Valid: ok,
+			}
+
+		} else {
+			msg = Message{
+				Valid:    ok,
+				Versions: availableVersions,
+			}
+		}
+		b, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+		a.conn.Write(b)
 	default:
 		//response = "NACK"
 	}

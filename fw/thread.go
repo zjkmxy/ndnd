@@ -237,7 +237,7 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 
 	// Get strategy for name
 	// getting strategy for name seems generic enough that it will be easy
-	//strategyName := table.FibStrategyTable.FindStrategy(interest.Name())
+	//strategyName := table.FibStrategyTable.FindStrategy1(&pendingPacket.TestPktStruct.Interest.NameV)
 	strategyName, _ := ndn.NameFromString("/localhost/nfd/strategy/best-route/v=1")
 	strategy := t.strategies[strategyName.String()]
 	core.LogDebug(t, "Using Strategy=", strategyName, " for Interest=", pendingPacket.NameCache)
@@ -403,7 +403,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 	}
 	// Get strategy for name
 
-	//strategyName := table.FibStrategyTable.FindStrategy(data.Name())
+	//strategyName := table.FibStrategyTable.FindStrategy1(&pendingPacket.TestPktStruct.Data.NameV)
 	strategyName, _ := ndn.NameFromString("/localhost/nfd/strategy/best-route/v=1")
 	strategy := t.strategies[strategyName.String()]
 

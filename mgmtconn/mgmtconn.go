@@ -2,11 +2,10 @@ package mgmtconn
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/named-data/YaNFD/table"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
@@ -17,6 +16,16 @@ type MgmtConn struct {
 	socketFile string
 }
 
+type Message struct {
+	Command   string `json:"command"`
+	Name      string `json:"name"`
+	ParamName string `json:"paramname"`
+	FaceID    uint64 `json:"faceid"`
+	Cost      uint64 `json:"cost"`
+	Strategy  string `json:"strategy"`
+	Capacity  int    `json:"capacity"`
+}
+
 var Channel MgmtConn
 
 func (m *MgmtConn) Make(socketFile string) {
@@ -24,8 +33,14 @@ func (m *MgmtConn) Make(socketFile string) {
 }
 
 func (m *MgmtConn) Send(face uint64) {
-	msg := fmt.Sprintf("%d", face)
-	m.conn.Write([]byte(msg))
+	msg := Message{
+		FaceID: face,
+	}
+	b, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	m.conn.Write(b)
 }
 
 func (m *MgmtConn) RunReceive() {
@@ -53,34 +68,35 @@ func (m *MgmtConn) RunReceive() {
 func (m *MgmtConn) process(size int, buf []byte) {
 	//var response string = "test"
 	buf = bytes.Trim(buf, "\x00")
-	fibcommand := string(buf)
-	fmt.Println(fibcommand)
-	command := strings.Split(fibcommand, ",")
-	switch command[0] {
+	var commands Message
+	err := json.Unmarshal(buf, &commands)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	switch commands.Command {
 	case "insert":
-		hard, _ := enc.NameFromStr(command[1])
+		hard, _ := enc.NameFromStr(commands.Name)
 		table.FibStrategyTable.ClearNextHops1(&hard)
-		faceID, _ := strconv.Atoi(command[2])
-		cost, _ := strconv.Atoi(command[3])
-		table.FibStrategyTable.InsertNextHop1(&hard, uint64(faceID), uint64(cost))
-		// log := fmt.Sprintf("inserted %s, %s, %s", command[1], command[2], command[3])
-		// fmt.Println(log)
+		faceID := commands.FaceID
+		cost := commands.Cost
+		table.FibStrategyTable.InsertNextHop1(&hard, faceID, cost)
 	case "remove":
-		hard, _ := enc.NameFromStr(command[1])
-		faceID, _ := strconv.Atoi(command[2])
-		table.FibStrategyTable.RemoveNextHop1(&hard, uint64(faceID))
-		// log := fmt.Sprintf("removed %s, %s", command[1], command[2])
-		// fmt.Println(log)
+		hard, _ := enc.NameFromStr(commands.Name)
+		faceID := commands.FaceID
+		table.FibStrategyTable.RemoveNextHop1(&hard, faceID)
 	case "clear":
-		hard, _ := enc.NameFromStr(command[1])
+		hard, _ := enc.NameFromStr(commands.Name)
 		table.FibStrategyTable.ClearNextHops1(&hard)
-		// log := fmt.Sprintf("cleared %s", command[1])
-		// fmt.Println(log)
 	case "set":
-		cap, _ := strconv.Atoi(command[1])
+		cap := commands.Capacity
 		table.SetCsCapacity(cap)
 	case "setstrategy":
+		paramName, _ := enc.NameFromStr(commands.ParamName)
+		strategy, _ := enc.NameFromStr(commands.Strategy)
+		table.FibStrategyTable.SetStrategy1(&paramName, &strategy)
 	case "unsetstrategy":
+		paramName, _ := enc.NameFromStr(commands.ParamName)
+		table.FibStrategyTable.UnsetStrategy1(&paramName)
 	default:
 		//response = "NACK"
 	}

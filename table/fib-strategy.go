@@ -28,6 +28,7 @@ type baseFibStrategyEntry struct {
 	ppname      *enc.Name
 	nexthops    []*FibNextHopEntry
 	strategy    *ndn.Name
+	ppstrategy  *enc.Name
 }
 
 // FibNextHopEntry represents a nexthop in a FIB entry.
@@ -41,6 +42,7 @@ type FibStrategy interface {
 	FindNextHops(name *ndn.Name) []*FibNextHopEntry
 	FindNextHops1(name *enc.Name) []*FibNextHopEntry
 	FindStrategy(name *ndn.Name) *ndn.Name
+	FindStrategy1(name *enc.Name) *enc.Name
 	InsertNextHop(name *ndn.Name, nextHop uint64, cost uint64)
 	InsertNextHop1(name *enc.Name, nextHop uint64, cost uint64)
 	ClearNextHops(name *ndn.Name)
@@ -52,6 +54,8 @@ type FibStrategy interface {
 
 	SetStrategy(name *ndn.Name, strategy *ndn.Name)
 	UnsetStrategy(name *ndn.Name)
+	SetStrategy1(name *enc.Name, strategy *enc.Name)
+	UnsetStrategy1(name *enc.Name)
 	GetAllForwardingStrategies() []FibStrategyEntry
 }
 
