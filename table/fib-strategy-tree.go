@@ -445,7 +445,7 @@ func (f *FibStrategyTree) GetAllForwardingStrategies() []FibStrategyEntry {
 		}
 
 		// If has any nexthop entries, add to list
-		if fsEntry.strategy != nil {
+		if fsEntry.ppstrategy != nil {
 			entries = append(entries, fsEntry)
 		}
 	}

@@ -536,7 +536,7 @@ func (p *PitCsTree) eraseCsDataFromReplacementStrategy(index uint64) {
 // For example, if we have data for /a/b/v=10 and the interest is /a/b,
 // p should be the `b` node, not the root node.
 func (p *pitCsTreeNode) findMatchingDataCSPrefix(pp *ndn.PendingPacket) CsEntry {
-	if p.csEntry != nil && (pp.TestPktStruct.Interest.MustBeFreshV || time.Now().Before(p.csEntry.staleTime)) {
+	if p.csEntry != nil && (!pp.TestPktStruct.Interest.MustBeFreshV || time.Now().Before(p.csEntry.staleTime)) {
 		// A csEntry exists at this node and is acceptable to satisfy the interest
 		return p.csEntry
 	}

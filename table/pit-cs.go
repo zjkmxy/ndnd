@@ -48,9 +48,11 @@ type basePitCsTable struct{}
 type PitEntry interface {
 	PitCs() PitCsTable
 	Name() *ndn.Name
+	EncName() *enc.Name
 	CanBePrefix() bool
 	MustBeFresh() bool
 	ForwardingHint() *ndn.Name
+	ForwardingHintNew() *enc.Name
 	// Interests must match in terms of Forwarding Hint to be aggregated in PIT.
 	InRecords() map[uint64]*PitInRecord   // Key is face ID
 	OutRecords() map[uint64]*PitOutRecord // Key is face ID
@@ -185,6 +187,10 @@ func UpdateExpirationTimer(e PitEntry) {
 
 func (bpe *basePitEntry) Name() *ndn.Name {
 	return bpe.name
+}
+
+func (bpe *basePitEntry) EncName() *enc.Name {
+	return bpe.ppname
 }
 
 func (bpe *basePitEntry) CanBePrefix() bool {

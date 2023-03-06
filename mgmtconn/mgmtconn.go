@@ -36,11 +36,7 @@ func (m *MgmtConn) Send(face uint64) {
 	msg := Message{
 		FaceID: face,
 	}
-	b, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-	m.conn.Write(b)
+	m.sendMessage(msg)
 }
 
 func (m *MgmtConn) RunReceive() {
@@ -100,4 +96,12 @@ func (m *MgmtConn) process(size int, buf []byte) {
 	default:
 		//response = "NACK"
 	}
+}
+
+func (m *MgmtConn) sendMessage(msg Message) {
+	b, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	m.conn.Write(b)
 }

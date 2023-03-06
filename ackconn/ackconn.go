@@ -38,12 +38,6 @@ type Message struct {
 func (a *AckConn) Make(socketFile string) {
 	a.socketFile = socketFile
 }
-
-func (a *AckConn) SendFace(face uint64) {
-	msg := fmt.Sprintf("%d", face)
-	a.conn.Write([]byte(msg))
-}
-
 func (a *AckConn) RunReceive() {
 	// listen to incoming unix packets
 	os.Remove(a.socketFile)
@@ -99,11 +93,7 @@ func (a *AckConn) process(size int, buf []byte) {
 		msg := Message{
 			Dataset: dataset,
 		}
-		b, err := json.Marshal(msg)
-		if err != nil {
-			fmt.Println("error:", err)
-		}
-		a.conn.Write(b)
+		a.sendMessage(msg)
 	case "forwarderstatus":
 		status := mgmt.MakeGeneralStatus()
 		status.NfdVersion = core.Version
@@ -126,22 +116,24 @@ func (a *AckConn) process(size int, buf []byte) {
 			return
 		}
 		dataset := wire.Value()
-		a.conn.Write(dataset)
+		msg := Message{
+			Dataset: dataset,
+		}
+		a.sendMessage(msg)
 	case "faceid":
 		faceID := commands.FaceID
+		var msg Message
 		if face.FaceTable.Get(uint64(faceID)) != nil {
-			b, err := json.Marshal(true)
-			if err != nil {
-				fmt.Println("error:", err)
+			msg = Message{
+				Valid: true,
 			}
-			a.conn.Write(b)
+
 		} else {
-			b, err := json.Marshal(false)
-			if err != nil {
-				fmt.Println("error:", err)
+			msg = Message{
+				Valid: false,
 			}
-			a.conn.Write(b)
 		}
+		a.sendMessage(msg)
 	case "liststrategy":
 		entries := table.FibStrategyTable.GetAllForwardingStrategies()
 		dataset := make([]byte, 0)
@@ -164,11 +156,7 @@ func (a *AckConn) process(size int, buf []byte) {
 		msg := Message{
 			Dataset: dataset,
 		}
-		b, err := json.Marshal(msg)
-		if err != nil {
-			fmt.Println("error:", err)
-		}
-		a.conn.Write(b)
+		a.sendMessage(msg)
 	case "versions":
 		availableVersions, ok := fw.StrategyVersions[commands.Strategy]
 		var msg Message
@@ -183,12 +171,16 @@ func (a *AckConn) process(size int, buf []byte) {
 				Versions: availableVersions,
 			}
 		}
-		b, err := json.Marshal(msg)
-		if err != nil {
-			fmt.Println("error:", err)
-		}
-		a.conn.Write(b)
+		a.sendMessage(msg)
 	default:
 		//response = "NACK"
 	}
+}
+
+func (a *AckConn) sendMessage(msg Message) {
+	b, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	a.conn.Write(b)
 }

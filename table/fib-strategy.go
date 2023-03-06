@@ -15,7 +15,9 @@ import (
 // FibStrategyEntry represents an entry in the FIB-Strategy table.
 type FibStrategyEntry interface {
 	Name() *ndn.Name
+	EncName() *enc.Name
 	GetStrategy() *ndn.Name
+	GetEncStrategy() *enc.Name
 	GetNextHops() []*FibNextHopEntry
 }
 
@@ -67,9 +69,17 @@ func (e *baseFibStrategyEntry) Name() *ndn.Name {
 	return e.name
 }
 
+func (e *baseFibStrategyEntry) EncName() *enc.Name {
+	return e.ppname
+}
+
 // GetStrategy returns the strategy associated with the baseFibStrategyEntry.
 func (e *baseFibStrategyEntry) GetStrategy() *ndn.Name {
 	return e.strategy
+}
+
+func (e *baseFibStrategyEntry) GetEncStrategy() *enc.Name {
+	return e.ppstrategy
 }
 
 // GetNexthops gets the nexthops of the specified entry.
