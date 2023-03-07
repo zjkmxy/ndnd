@@ -24,13 +24,13 @@ type FibStrategyEntry interface {
 // baseFibStrategyEntry represents information that all
 // FibStrategyEntry implementations should include.
 type baseFibStrategyEntry struct {
-	component   ndn.NameComponent
-	ppcomponent enc.Component
-	name        *ndn.Name
-	ppname      *enc.Name
-	nexthops    []*FibNextHopEntry
-	strategy    *ndn.Name
-	ppstrategy  *enc.Name
+	component    ndn.NameComponent
+	encComponent enc.Component
+	name         *ndn.Name
+	encname      *enc.Name
+	nexthops     []*FibNextHopEntry
+	strategy     *ndn.Name
+	ppstrategy   *enc.Name
 }
 
 // FibNextHopEntry represents a nexthop in a FIB entry.
@@ -42,22 +42,22 @@ type FibNextHopEntry struct {
 // FibStrategy represents the functionality that a FIB-strategy table should implement.
 type FibStrategy interface {
 	FindNextHops(name *ndn.Name) []*FibNextHopEntry
-	FindNextHops1(name *enc.Name) []*FibNextHopEntry
+	FindNextHopsEnc(name *enc.Name) []*FibNextHopEntry
 	FindStrategy(name *ndn.Name) *ndn.Name
-	FindStrategy1(name *enc.Name) *enc.Name
+	FindStrategyEnc(name *enc.Name) *enc.Name
 	InsertNextHop(name *ndn.Name, nextHop uint64, cost uint64)
-	InsertNextHop1(name *enc.Name, nextHop uint64, cost uint64)
+	InsertNextHopEnc(name *enc.Name, nextHop uint64, cost uint64)
 	ClearNextHops(name *ndn.Name)
-	ClearNextHops1(name *enc.Name)
+	ClearNextHopsEnc(name *enc.Name)
 	RemoveNextHop(name *ndn.Name, nextHop uint64)
-	RemoveNextHop1(name *enc.Name, nextHop uint64)
+	RemoveNextHopEnc(name *enc.Name, nextHop uint64)
 
 	GetAllFIBEntries() []FibStrategyEntry
 
 	SetStrategy(name *ndn.Name, strategy *ndn.Name)
 	UnsetStrategy(name *ndn.Name)
-	SetStrategy1(name *enc.Name, strategy *enc.Name)
-	UnsetStrategy1(name *enc.Name)
+	SetStrategyEnc(name *enc.Name, strategy *enc.Name)
+	UnSetStrategyEnc(name *enc.Name)
 	GetAllForwardingStrategies() []FibStrategyEntry
 }
 
@@ -70,7 +70,7 @@ func (e *baseFibStrategyEntry) Name() *ndn.Name {
 }
 
 func (e *baseFibStrategyEntry) EncName() *enc.Name {
-	return e.ppname
+	return e.encname
 }
 
 // GetStrategy returns the strategy associated with the baseFibStrategyEntry.

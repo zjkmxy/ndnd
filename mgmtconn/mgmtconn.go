@@ -72,27 +72,27 @@ func (m *MgmtConn) process(size int, buf []byte) {
 	switch commands.Command {
 	case "insert":
 		hard, _ := enc.NameFromStr(commands.Name)
-		table.FibStrategyTable.ClearNextHops1(&hard)
+		table.FibStrategyTable.ClearNextHopsEnc(&hard)
 		faceID := commands.FaceID
 		cost := commands.Cost
-		table.FibStrategyTable.InsertNextHop1(&hard, faceID, cost)
+		table.FibStrategyTable.InsertNextHopEnc(&hard, faceID, cost)
 	case "remove":
 		hard, _ := enc.NameFromStr(commands.Name)
 		faceID := commands.FaceID
-		table.FibStrategyTable.RemoveNextHop1(&hard, faceID)
+		table.FibStrategyTable.RemoveNextHopEnc(&hard, faceID)
 	case "clear":
 		hard, _ := enc.NameFromStr(commands.Name)
-		table.FibStrategyTable.ClearNextHops1(&hard)
+		table.FibStrategyTable.ClearNextHopsEnc(&hard)
 	case "set":
 		cap := commands.Capacity
 		table.SetCsCapacity(cap)
 	case "setstrategy":
 		paramName, _ := enc.NameFromStr(commands.ParamName)
 		strategy, _ := enc.NameFromStr(commands.Strategy)
-		table.FibStrategyTable.SetStrategy1(&paramName, &strategy)
+		table.FibStrategyTable.SetStrategyEnc(&paramName, &strategy)
 	case "unsetstrategy":
 		paramName, _ := enc.NameFromStr(commands.ParamName)
-		table.FibStrategyTable.UnsetStrategy1(&paramName)
+		table.FibStrategyTable.UnSetStrategyEnc(&paramName)
 	default:
 		//response = "NACK"
 	}

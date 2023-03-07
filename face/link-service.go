@@ -233,17 +233,17 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 	// Hand off to network layer by dispatching to appropriate forwarding thread(s)
 	var err error
 	switch {
-	case netPacket.TestPktStruct.Interest != nil:
-		//netPacket.NameCache = netPacket.TestPktStruct.Interest.NameV.String()
+	case netPacket.EncPacket.Interest != nil:
+		//netPacket.NameCache = netPacket.EncPacket.Interest.NameV.String()
 		if err != nil {
 			core.LogError(l, "Unable to decode Interest (", err, ") - DROP")
 			break
 		}
-		thread := fw.HashNameToFwThread(&netPacket.TestPktStruct.Interest.NameV)
+		thread := fw.HashNameToFwThread(&netPacket.EncPacket.Interest.NameV)
 		core.LogTrace(l, "Dispatched Interest to thread ", thread)
 		dispatch.GetFWThread(thread).QueueInterest(netPacket)
-	case netPacket.TestPktStruct.Data != nil:
-		//netPacket.NameCache = netPacket.TestPktStruct.Data.NameV.String()
+	case netPacket.EncPacket.Data != nil:
+		//netPacket.NameCache = netPacket.EncPacket.Data.NameV.String()
 		if len(netPacket.PitToken) == 6 {
 			// Decode PitToken. If it's for us, it's a uint16 + uint32.
 			pitTokenThread := binary.BigEndian.Uint16(netPacket.PitToken)
@@ -266,14 +266,13 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 				core.LogError(l, "Unable to decode Data (", err, ") - DROP")
 				break
 			}
-			for _, thread := range fw.HashNameToAllPrefixFwThreads(&netPacket.TestPktStruct.Data.NameV) {
+			for _, thread := range fw.HashNameToAllPrefixFwThreads(&netPacket.EncPacket.Data.NameV) {
 				core.LogTrace(l, "Prefix dispatched local-origin Data packet to thread ", thread)
 				dispatch.GetFWThread(thread).QueueData(netPacket)
 			}
 		}
 	default:
 		//change this
-		//fmt.Println(netPacket.TestPktStruct.LpPacket)
 		core.LogError(l, "Cannot dispatch packet of unknown type ")
 	}
 }

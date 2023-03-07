@@ -107,7 +107,6 @@ func (t *UnixStreamTransport) runReceive() {
 			t.changeState(ndn.Down)
 			break
 		}
-		//fmt.Println(recvBuf)
 		core.LogTrace(t, "Receive of size ", readSize)
 		t.nInBytes += uint64(readSize)
 		if startPos > tlv.MaxNDNPacketSize {

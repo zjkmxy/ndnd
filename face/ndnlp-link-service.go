@@ -210,9 +210,9 @@ func sendPacket(l *NDNLPLinkService, netPacket *ndn.PendingPacket) {
 		return
 	}
 	// Counters
-	if netPacket.TestPktStruct.Interest != nil {
+	if netPacket.EncPacket.Interest != nil {
 		l.nOutInterests++
-	} else if netPacket.TestPktStruct.Data != nil {
+	} else if netPacket.EncPacket.Data != nil {
 		l.nOutData++
 	}
 
@@ -228,7 +228,6 @@ func sendPacket(l *NDNLPLinkService, netPacket *ndn.PendingPacket) {
 
 	// Fragmentation
 	var fragments []*lpv2.Packet
-	//fmt.Println(len(wire), effectiveMtu)
 	if len(wire) > effectiveMtu {
 		if !l.options.IsFragmentationEnabled {
 			core.LogInfo(l, "Attempted to send frame over MTU on link without fragmentation - DROP")
@@ -261,7 +260,6 @@ func sendPacket(l *NDNLPLinkService, netPacket *ndn.PendingPacket) {
 	// Congestion marking
 	if congestionMarking && l.transport.GetSendQueueSize() > l.options.DefaultCongestionThresholdBytes && now.After(l.lastTimeCongestionMarked.Add(l.options.BaseCongestionMarkingInterval)) {
 		// Mark congestion
-		//fmt.Println(l.transport)
 		//fmt.Println(l.transport.GetSendQueueSize(), l.options.DefaultCongestionThresholdBytes)
 		core.LogWarn(l, "Marking congestion")
 		fragments[0].SetCongestionMark(1)
@@ -394,9 +392,6 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	defer l.stealthPool.Return(wire)
 	// Attempt to decode buffer into TLV block
 
-	// if test.LpPacket != nil {
-	// 	fmt.Println(test.LpPacket)
-	// }
 	block, _, err := tlv.DecodeBlock(wire)
 
 	if err != nil {
@@ -410,37 +405,7 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 		core.LogWarn(l, "Received invalid frame - DROP")
 		return
 	}
-	//w, _ := block.Wire()
-	//fmt.Println(cap(frame.Fragment()), cap(w))
-	//fmt.Println(cap(b), cap(netPkt))
-	// test, _, er := spec.ReadPacket(enc.NewBufferReader(b))
-	// if er != nil {
-	// 	fmt.Println(er)
-	// 	fmt.Println(b)
-	// }
-	// if test.Interest != nil {
-	// 	//fmt.Println("base int", test.Interest.NameV)
-	// } else if test.Data != nil {
-	// 	//fmt.Println("base data", test.Data.NameV)
-	// } else if test.LpPacket != nil {
-	// 	fmt.Println("base lp")
-	// 	netPacket.CongestionMark = test.LpPacket.CongestionMark
-	// 	// Consumer-controlled forwarding (NextHopFaceId)
-	// 	if l.options.IsConsumerControlledForwardingEnabled && test.LpPacket.NextHopFaceId != nil {
-	// 		netPacket.NextHopFaceID = test.LpPacket.NextHopFaceId
-	// 	}
-	// 	// Local cache policy
-	// 	if l.options.IsLocalCachePolicyEnabled && &test.LpPacket.CachePolicy.CachePolicyType != nil {
-	// 		netPacket.CachePolicy = &test.LpPacket.CachePolicy.CachePolicyType
-	// 	}
-	// 	// PIT Token
-	// 	if len(test.LpPacket.PitToken) > 0 {
-	// 		netPacket.PitToken = make([]byte, len(test.LpPacket.PitToken))
-	// 		copy(netPacket.PitToken, test.LpPacket.PitToken)
-	// 	}
-	// 	b = test.LpPacket.Fragment.Join()
-	// 	test, _, _ = spec.ReadPacket(enc.NewBufferReader(b))
-	// }
+
 	if err != nil {
 		core.LogWarn(l, "Received invalid frame - DROP")
 		return
@@ -524,44 +489,32 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	netPacket.IncomingFaceID = new(uint64)
 	*netPacket.IncomingFaceID = l.faceID
 	test, _, _ := spec.ReadPacket(enc.NewBufferReader(netPkt))
-	netPacket.TestPktStruct = test
+	netPacket.EncPacket = test
 	netPacket.RawBytes = netPkt
-	//copy(netPacket.RawBytes, b)
-	//fmt.Println(len(b))
-	// copy(netPkt, b)
-	// fmt.Println(cap(netPkt))
-	// netPacket.RawBytes = netPkt
-	// if e != nil {
-	// 	core.LogWarn("Failed to parse packet in LpPacket: %v", e)
-	// }
-	// if err != nil {
-	// 	core.LogWarn(l, "Unable to decode network-layer packet: ", err, " - DROP")
-	// 	return
-	// }
 
-	// // Congestion marking
-	// netPacket.CongestionMark = frame.CongestionMark()
+	// Congestion marking
+	netPacket.CongestionMark = frame.CongestionMark()
 
-	// // Consumer-controlled forwarding (NextHopFaceId)
-	// if l.options.IsConsumerControlledForwardingEnabled && frame.NextHopFaceID() != nil {
-	// 	netPacket.NextHopFaceID = frame.NextHopFaceID()
-	// }
+	// Consumer-controlled forwarding (NextHopFaceId)
+	if l.options.IsConsumerControlledForwardingEnabled && frame.NextHopFaceID() != nil {
+		netPacket.NextHopFaceID = frame.NextHopFaceID()
+	}
 
-	// // Local cache policy
-	// if l.options.IsLocalCachePolicyEnabled && frame.CachePolicyType() != nil {
-	// 	netPacket.CachePolicy = frame.CachePolicyType()
-	// }
+	// Local cache policy
+	if l.options.IsLocalCachePolicyEnabled && frame.CachePolicyType() != nil {
+		netPacket.CachePolicy = frame.CachePolicyType()
+	}
 
-	// // PIT Token
-	// if len(frame.PitToken()) > 0 {
-	// 	netPacket.PitToken = make([]byte, len(frame.PitToken()))
-	// 	copy(netPacket.PitToken, frame.PitToken())
-	// }
+	// PIT Token
+	if len(frame.PitToken()) > 0 {
+		netPacket.PitToken = make([]byte, len(frame.PitToken()))
+		copy(netPacket.PitToken, frame.PitToken())
+	}
 
 	// Counters
-	if netPacket.TestPktStruct.Interest != nil {
+	if netPacket.EncPacket.Interest != nil {
 		l.nInInterests++
-	} else if netPacket.TestPktStruct.Data != nil {
+	} else if netPacket.EncPacket.Data != nil {
 		l.nInData++
 	}
 	l.dispatchIncomingPacket(netPacket)

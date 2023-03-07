@@ -32,27 +32,27 @@ func (s *BestRoute) Instantiate(fwThread *Thread) {
 }
 
 // AfterContentStoreHit ...
-func (s *BestRoute) AfterContentStoreHit(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64) {
+func (s *BestRoute) AfterContentStoreHit(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64) {
 	// Send downstream
 	core.LogTrace(s, "AfterContentStoreHit: Forwarding content store hit Data=", " to FaceID=", inFace)
-	s.SendData(pp, pitEntry, inFace, 0) // 0 indicates ContentStore is source
+	s.SendData(pendingPacket, pitEntry, inFace, 0) // 0 indicates ContentStore is source
 }
 
 // AfterReceiveData ...
-func (s *BestRoute) AfterReceiveData(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64) {
+func (s *BestRoute) AfterReceiveData(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64) {
 	core.LogTrace(s, "AfterReceiveData: Data=", ", ", len(pitEntry.InRecords()), " In-Records")
 	for faceID := range pitEntry.InRecords() {
 		core.LogTrace(s, "AfterReceiveData: Forwarding Data=", " to FaceID=", faceID)
-		s.SendData(pp, pitEntry, faceID, inFace)
+		s.SendData(pendingPacket, pitEntry, faceID, inFace)
 	}
 }
 
 // AfterReceiveInterest ...
-func (s *BestRoute) AfterReceiveInterest(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, nexthops []*table.FibNextHopEntry) {
+func (s *BestRoute) AfterReceiveInterest(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, nexthops []*table.FibNextHopEntry) {
 	sort.Slice(nexthops, func(i, j int) bool { return nexthops[i].Cost < nexthops[j].Cost })
 	for _, nh := range nexthops {
 		core.LogTrace(s, "AfterReceiveInterest: Forwarding Interest=", " to FaceID=", nh.Nexthop)
-		if sent := s.SendInterest(pp, pitEntry, nh.Nexthop, inFace); sent {
+		if sent := s.SendInterest(pendingPacket, pitEntry, nh.Nexthop, inFace); sent {
 			return
 		}
 	}

@@ -116,7 +116,7 @@ func (r *RIBModule) register(interest *ndn.Interest, pitToken []byte, inFace uin
 
 	//table.Rib.AddRoute(params.Name, faceID, origin, cost, flags, expirationPeriod)
 	cheat, _ := enc.NameFromStr(params.Name.String())
-	table.Rib.AddBetterRoute(&cheat, faceID, origin, cost, flags, expirationPeriod)
+	table.Rib.AddEncRoute(&cheat, faceID, origin, cost, flags, expirationPeriod)
 	//fmt.Printf("%+v\n", table.Rib.GetAllEntries()[0].GetRoutes()[0].FaceID)
 	//fmt.Printf("%+v\n", table.Rib.GetAllEntries()[1].GetRoutes()[0].FaceID)
 	if expirationPeriod != nil {

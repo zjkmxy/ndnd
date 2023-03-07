@@ -22,11 +22,11 @@ type RibTable struct {
 
 // RibEntry represents an entry in the RIB table.
 type RibEntry struct {
-	component   ndn.NameComponent
-	ppcomponent enc.Component
-	Name        *ndn.Name
-	BetterName  *enc.Name
-	depth       int
+	component    ndn.NameComponent
+	encComponent enc.Component
+	Name         *ndn.Name
+	EncName      *enc.Name
+	depth        int
 
 	parent   *RibEntry
 	children map[*RibEntry]bool
@@ -105,25 +105,25 @@ func (r *RibTable) fillTreeToPrefix(name *ndn.Name) *RibEntry {
 	}
 	return entry
 }
-func (r *RibTable) fillTreeToPrefix1(name *enc.Name) *RibEntry {
-	entry := r.findLongestPrefixEntry1(name)
+func (r *RibTable) fillTreeToPrefixEnc(name *enc.Name) *RibEntry {
+	entry := r.findLongestPrefixEntryEnc(name)
 	for depth := entry.depth + 1; depth <= len(*name); depth++ {
 		child := &RibEntry{
-			depth:       depth,
-			ppcomponent: deepCopy(At(name, depth-1)),
-			parent:      entry,
-			children:    map[*RibEntry]bool{},
+			depth:        depth,
+			encComponent: deepCopy(At(name, depth-1)),
+			parent:       entry,
+			children:     map[*RibEntry]bool{},
 		}
 		entry.children[child] = true
 		entry = child
 	}
 	return entry
 }
-func (r *RibEntry) findExactMatchEntry1(name *enc.Name) *RibEntry {
+func (r *RibEntry) findExactMatchEntryEnc(name *enc.Name) *RibEntry {
 	if len(*name) > r.depth {
 		for child := range r.children {
-			if At(name, child.depth-1).Equal(child.ppcomponent) {
-				return child.findExactMatchEntry1(name)
+			if At(name, child.depth-1).Equal(child.encComponent) {
+				return child.findExactMatchEntryEnc(name)
 			}
 		}
 	} else if len(*name) == r.depth {
@@ -132,11 +132,11 @@ func (r *RibEntry) findExactMatchEntry1(name *enc.Name) *RibEntry {
 	return nil
 }
 
-func (r *RibEntry) findLongestPrefixEntry1(name *enc.Name) *RibEntry {
+func (r *RibEntry) findLongestPrefixEntryEnc(name *enc.Name) *RibEntry {
 	if len(*name) > r.depth {
 		for child := range r.children {
-			if At(name, child.depth-1).Equal(child.ppcomponent) {
-				return child.findLongestPrefixEntry1(name)
+			if At(name, child.depth-1).Equal(child.encComponent) {
+				return child.findLongestPrefixEntryEnc(name)
 			}
 		}
 	}
@@ -167,8 +167,8 @@ func (r *RibEntry) updateNexthops() {
 		FibStrategyTable.InsertNextHop(r.Name, nexthop, cost)
 	}
 }
-func (r *RibEntry) updateNexthops1() {
-	FibStrategyTable.ClearNextHops1(r.BetterName)
+func (r *RibEntry) updateNexthopsEnc() {
+	FibStrategyTable.ClearNextHopsEnc(r.EncName)
 
 	// Find minimum cost route per nexthop
 	minCostRoutes := make(map[uint64]uint64) // FaceID -> Cost
@@ -181,7 +181,7 @@ func (r *RibEntry) updateNexthops1() {
 
 	// Add "flattened" set of nexthops
 	for nexthop, cost := range minCostRoutes {
-		FibStrategyTable.InsertNextHop1(r.BetterName, nexthop, cost)
+		FibStrategyTable.InsertNextHopEnc(r.EncName, nexthop, cost)
 	}
 }
 
@@ -212,14 +212,13 @@ func (r *RibTable) AddRoute(name *ndn.Name, faceID uint64, origin uint64, cost u
 	})
 }
 
-func (r *RibTable) AddBetterRoute(name *enc.Name, faceID uint64, origin uint64, cost uint64, flags uint64, expirationPeriod *time.Duration) {
-	//fmt.Println("got to better route")
-	node := r.fillTreeToPrefix1(name)
-	if node.BetterName == nil {
-		node.BetterName = name
+func (r *RibTable) AddEncRoute(name *enc.Name, faceID uint64, origin uint64, cost uint64, flags uint64, expirationPeriod *time.Duration) {
+	node := r.fillTreeToPrefixEnc(name)
+	if node.EncName == nil {
+		node.EncName = name
 	}
 
-	defer node.updateNexthops1()
+	defer node.updateNexthopsEnc()
 
 	for _, existingRoute := range node.routes {
 		if existingRoute.FaceID == faceID && existingRoute.Origin == origin {
@@ -268,7 +267,6 @@ func (r *RibEntry) GetRoutes() []*Route {
 
 // RemoveRoute removes the specified route from the specified prefix.
 func (r *RibTable) RemoveRoute(name *ndn.Name, faceID uint64, origin uint64) {
-	//fmt.Println("test")
 	entry := r.findExactMatchEntry(name)
 	if entry != nil {
 		for i, existingRoute := range entry.routes {
@@ -287,7 +285,6 @@ func (r *RibTable) RemoveRoute(name *ndn.Name, faceID uint64, origin uint64) {
 
 // CleanUpFace removes the specified face from all entries. Used for clean-up after a face is destroyed.
 func (r *RibEntry) CleanUpFace(faceId uint64) {
-	//fmt.Println("cleanup")
 	// Recursively clean children
 	for child := range r.children {
 		child.CleanUpFace(faceId)
@@ -297,7 +294,7 @@ func (r *RibEntry) CleanUpFace(faceId uint64) {
 	// if r.Name == nil {
 	// 	return
 	// }
-	if r.BetterName == nil {
+	if r.EncName == nil {
 		return
 	}
 	for i, existingNexthop := range r.routes {
@@ -310,6 +307,6 @@ func (r *RibEntry) CleanUpFace(faceId uint64) {
 		}
 	}
 	//r.updateNexthops()
-	r.updateNexthops1()
+	r.updateNexthopsEnc()
 	r.pruneIfEmpty()
 }

@@ -15,11 +15,7 @@ import (
 )
 
 func decodeControlParameters(m Module, interest *ndn.Interest) *mgmt.ControlParameters {
-	//fmt.Println("test")
-	//fmt.Println(interest.Name().At(m.getManager().prefixLength() + 2))
 	paramsRaw, _, err := tlv.DecodeBlock(interest.Name().At(m.getManager().prefixLength() + 2).Value())
-	// fmt.Println("this is ndn style params raw")
-	// fmt.Println(paramsRaw)
 	if err != nil {
 		core.LogWarn(m, "Could not decode ControlParameters in ", interest.Name(), ": ", err)
 		return nil

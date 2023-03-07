@@ -100,64 +100,6 @@ func NewYaNFD(config *YaNFDConfig) *YaNFD {
 		blockProfiler:  blockProfiler,
 	}
 }
-
-// func mgmtConn() {
-// 	// listen to incoming unix packets
-// 	socketFile := "/tmp/mgmt.sock"
-// 	os.Remove(socketFile)
-// 	listener, err := net.Listen("unixpacket", socketFile)
-// 	if err := os.Chmod(socketFile, 0777); err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	if err != nil {
-// 		return
-// 	}
-// 	defer listener.Close()
-// 	conn, _ := listener.Accept()
-// 	for {
-// 		buf := make([]byte, 1024)
-// 		size, err := conn.Read(buf)
-// 		if err != nil {
-// 			continue
-// 		}
-// 		response(conn, size, buf)
-// 	}
-// }
-
-// func response(udpServer net.Conn, size int, buf []byte) {
-// 	//var response string = "test"
-// 	buf = bytes.Trim(buf, "\x00")
-// 	fibcommand := string(buf)
-// 	fmt.Println(fibcommand)
-// 	command := strings.Split(fibcommand, ",")
-// 	switch command[0] {
-// 	case "insert":
-// 		hard, _ := enc.NameFromStr(command[1])
-// 		table.FibStrategyTable.ClearNextHops1(&hard)
-// 		faceID, _ := strconv.Atoi(command[2])
-// 		cost, _ := strconv.Atoi(command[3])
-// 		table.FibStrategyTable.InsertNextHop1(&hard, uint64(faceID), uint64(cost))
-// 		log := fmt.Sprintf("inserted %s, %s, %s", command[1], command[2], command[3])
-// 		fmt.Println(log)
-// 	case "remove":
-// 		hard, _ := enc.NameFromStr(command[1])
-// 		faceID, _ := strconv.Atoi(command[2])
-// 		table.FibStrategyTable.RemoveNextHop1(&hard, uint64(faceID))
-// 		log := fmt.Sprintf("removed %s, %s", command[1], command[2])
-// 		fmt.Println(log)
-// 	case "clear":
-// 		hard, _ := enc.NameFromStr(command[1])
-// 		table.FibStrategyTable.ClearNextHops1(&hard)
-// 		log := fmt.Sprintf("cleared %s", command[1])
-// 		fmt.Println(log)
-// 	default:
-// 		//response = "NACK"
-// 	}
-// 	//udpServer.Write([]byte(response))
-// }
-
-// Start runs YaNFD. Note: this function may exit the program when there is error.
-// This function is non-blocking.
 func (y *YaNFD) Start() {
 	core.LogInfo("Main", "Starting YaNFD")
 
@@ -178,7 +120,7 @@ func (y *YaNFD) Start() {
 	ackconn.AckChannel.Make("/tmp/ackmgmt.sock")
 	go ackconn.AckChannel.RunReceive()
 	add, _ := enc.NameFromStr("/localhost/nfd")
-	table.FibStrategyTable.InsertNextHop1(&add, 3, 0)
+	table.FibStrategyTable.InsertNextHopEnc(&add, 3, 0)
 	// Start management thread
 	management := mgmt.MakeMgmtThread()
 	go management.Run()

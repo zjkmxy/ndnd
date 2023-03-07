@@ -22,7 +22,7 @@ type PendingPacket struct {
 	IncomingFaceID *uint64
 	NextHopFaceID  *uint64
 	CachePolicy    *uint64
-	TestPktStruct  *spec.Packet
+	EncPacket      *spec.Packet
 	RawBytes       []byte
 	NameCache      string
 }

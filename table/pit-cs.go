@@ -17,15 +17,15 @@ import (
 // PitCsTable dictates what functionality a Pit-Cs table should implement
 // Warning: All functions must be called in the same forwarding goroutine as the creation of the table.
 type PitCsTable interface {
-	InsertInterest(pp *ndn.PendingPacket, hint *enc.Name, inFace uint64) (PitEntry, bool)
+	InsertInterest(pendingPacket *ndn.PendingPacket, hint *enc.Name, inFace uint64) (PitEntry, bool)
 	RemoveInterest(pitEntry PitEntry) bool
-	FindInterestExactMatch(pp *ndn.PendingPacket, interest *ndn.Interest) PitEntry
-	FindInterestPrefixMatchByData(pp *ndn.PendingPacket, data *ndn.Data, token *uint32) []PitEntry
-	FindInterestPrefixMatchByData1(pp *ndn.PendingPacket, token *uint32) []PitEntry
+	FindInterestExactMatch(pendingPacket *ndn.PendingPacket, interest *ndn.Interest) PitEntry
+	FindInterestPrefixMatchByData(pendingPacket *ndn.PendingPacket, data *ndn.Data, token *uint32) []PitEntry
+	FindInterestPrefixMatchByDataEnc(pendingPacket *ndn.PendingPacket, token *uint32) []PitEntry
 	PitSize() int
 
-	InsertData(pp *ndn.PendingPacket)
-	FindMatchingDataFromCS(pp *ndn.PendingPacket) CsEntry
+	InsertData(pendingPacket *ndn.PendingPacket)
+	FindMatchingDataFromCS(pendingPacket *ndn.PendingPacket) CsEntry
 	CsSize() int
 	IsCsAdmitting() bool
 	IsCsServing() bool
@@ -63,8 +63,8 @@ type PitEntry interface {
 
 	Token() uint32
 
-	InsertInRecord(pp *ndn.PendingPacket, face uint64, incomingPitToken []byte) (*PitInRecord, bool)
-	InsertOutRecord(pp *ndn.PendingPacket, face uint64) *PitOutRecord
+	InsertInRecord(pendingPacket *ndn.PendingPacket, face uint64, incomingPitToken []byte) (*PitInRecord, bool)
+	InsertOutRecord(pendingPacket *ndn.PendingPacket, face uint64) *PitOutRecord
 
 	GetOutRecords() []*PitOutRecord
 	ClearOutRecords()
@@ -75,7 +75,7 @@ type PitEntry interface {
 type basePitEntry struct {
 	// lowercase fields so that they aren't exported
 	name              *ndn.Name
-	ppname            *enc.Name
+	encname           *enc.Name
 	canBePrefix       bool
 	mustBeFresh       bool
 	forwardingHint    *ndn.Name
@@ -92,25 +92,25 @@ type basePitEntry struct {
 
 // PitInRecord records an incoming Interest on a given face.
 type PitInRecord struct {
-	Face            uint64
-	LatestNonce     []byte
-	LatestTimestamp time.Time
-	LatestInterest  *ndn.Interest
-	LatestPacket    *ndn.PendingPacket
-	PacketNonce     uint32
-	ExpirationTime  time.Time
-	PitToken        []byte
+	Face              uint64
+	LatestNonce       []byte
+	LatestTimestamp   time.Time
+	LatestInterest    *ndn.Interest
+	LatestEncInterest *ndn.PendingPacket
+	LatestEncNonce    uint32
+	ExpirationTime    time.Time
+	PitToken          []byte
 }
 
 // PitOutRecord records an outgoing Interest on a given face.
 type PitOutRecord struct {
-	Face            uint64
-	LatestNonce     []byte
-	LatestTimestamp time.Time
-	LatestInterest  *ndn.Interest
-	LatestPacket    *ndn.PendingPacket
-	PacketNonce     uint32
-	ExpirationTime  time.Time
+	Face              uint64
+	LatestNonce       []byte
+	LatestTimestamp   time.Time
+	LatestInterest    *ndn.Interest
+	LatestEncInterest *ndn.PendingPacket
+	LatestEncNonce    uint32
+	ExpirationTime    time.Time
 }
 
 // CsEntry is an entry in a thread's CS.
@@ -118,29 +118,29 @@ type CsEntry interface {
 	Index() uint64 // the hash of the entry, for fast lookup
 	StaleTime() time.Time
 	Data() *ndn.Data
-	PPData() *ndn.PendingPacket
+	EncData() *ndn.PendingPacket
 }
 
 type baseCsEntry struct {
 	index     uint64
 	staleTime time.Time
 	data      *ndn.Data
-	ppdata    *ndn.PendingPacket
+	encData   *ndn.PendingPacket
 }
 
 // InsertInRecord finds or inserts an InRecord for the face, updating the
 // metadata and returning whether there was already an in-record in the entry.
-func (bpe *basePitEntry) InsertInRecord(pp *ndn.PendingPacket, face uint64, incomingPitToken []byte) (*PitInRecord, bool) {
+func (bpe *basePitEntry) InsertInRecord(pendingPacket *ndn.PendingPacket, face uint64, incomingPitToken []byte) (*PitInRecord, bool) {
 	var record *PitInRecord
 	var ok bool
 	if record, ok = bpe.inRecords[face]; !ok {
 		record := new(PitInRecord)
 		record.Face = face
 		//record.LatestNonce = interest.Nonce()
-		record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
+		record.LatestEncNonce = *pendingPacket.EncPacket.Interest.NonceV
 		record.LatestTimestamp = time.Now()
 		//record.LatestInterest = interest
-		record.LatestPacket = pp
+		record.LatestEncInterest = pendingPacket
 		record.ExpirationTime = time.Now().Add(time.Millisecond * 4000)
 		record.PitToken = incomingPitToken
 		bpe.inRecords[face] = record
@@ -149,10 +149,10 @@ func (bpe *basePitEntry) InsertInRecord(pp *ndn.PendingPacket, face uint64, inco
 
 	// Existing record
 	//record.LatestNonce = interest.Nonce()
-	record.PacketNonce = *pp.TestPktStruct.Interest.NonceV
+	record.LatestEncNonce = *pendingPacket.EncPacket.Interest.NonceV
 	record.LatestTimestamp = time.Now()
 	//record.LatestInterest = interest
-	record.LatestPacket = pp
+	record.LatestEncInterest = pendingPacket
 	record.ExpirationTime = time.Now().Add(time.Millisecond * 4000)
 	return record, true
 }
@@ -190,7 +190,7 @@ func (bpe *basePitEntry) Name() *ndn.Name {
 }
 
 func (bpe *basePitEntry) EncName() *enc.Name {
-	return bpe.ppname
+	return bpe.encname
 }
 
 func (bpe *basePitEntry) CanBePrefix() bool {
@@ -259,6 +259,6 @@ func (bce *baseCsEntry) Data() *ndn.Data {
 	return bce.data
 }
 
-func (bce *baseCsEntry) PPData() *ndn.PendingPacket {
-	return bce.ppdata
+func (bce *baseCsEntry) EncData() *ndn.PendingPacket {
+	return bce.encData
 }

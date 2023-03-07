@@ -23,9 +23,9 @@ type Strategy interface {
 	String() string
 	GetName() *ndn.Name
 
-	AfterContentStoreHit(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64)
-	AfterReceiveData(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64)
-	AfterReceiveInterest(pp *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, nexthops []*table.FibNextHopEntry)
+	AfterContentStoreHit(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64)
+	AfterReceiveData(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64)
+	AfterReceiveInterest(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64, nexthops []*table.FibNextHopEntry)
 	BeforeSatisfyInterest(pitEntry table.PitEntry, inFace uint64)
 }
 
@@ -60,16 +60,16 @@ func (s *StrategyBase) GetName() *ndn.Name {
 }
 
 // SendInterest sends an Interest on the specified face.
-func (s *StrategyBase) SendInterest(pp *ndn.PendingPacket, pitEntry table.PitEntry, nexthop uint64, inFace uint64) bool {
-	return s.thread.processOutgoingInterest(pp, pitEntry, nexthop, inFace)
+func (s *StrategyBase) SendInterest(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, nexthop uint64, inFace uint64) bool {
+	return s.thread.processOutgoingInterest(pendingPacket, pitEntry, nexthop, inFace)
 }
 
 // SendData sends a Data packet on the specified face.
-func (s *StrategyBase) SendData(pp *ndn.PendingPacket, pitEntry table.PitEntry, nexthop uint64, inFace uint64) {
+func (s *StrategyBase) SendData(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, nexthop uint64, inFace uint64) {
 	var pitToken []byte
 	if inRecord, ok := pitEntry.InRecords()[nexthop]; ok {
 		pitToken = inRecord.PitToken
 		delete(pitEntry.InRecords(), nexthop)
 	}
-	s.thread.processOutgoingData(pp, nexthop, pitToken, inFace)
+	s.thread.processOutgoingData(pendingPacket, nexthop, pitToken, inFace)
 }

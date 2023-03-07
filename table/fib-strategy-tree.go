@@ -41,7 +41,7 @@ func newFibStrategyTableTree() {
 	fibStrategyTableTree.root.component = nil // Root component will be nil since it represents zero components
 	base, _ := enc.NameFromStr("/localhost/nfd/strategy/best-route/v=1")
 	fibStrategyTableTree.root.ppstrategy = &base
-	fibStrategyTableTree.root.ppname = &enc.Name{}
+	fibStrategyTableTree.root.encname = &enc.Name{}
 	fibStrategyTableTree.fibPrefixes = make(map[uint64]*fibStrategyTreeEntry)
 }
 
@@ -60,11 +60,11 @@ func (f *fibStrategyTreeEntry) findExactMatchEntry(name *ndn.Name) *fibStrategyT
 	return nil
 }
 
-func (f *fibStrategyTreeEntry) findExactMatchEntry1(name *enc.Name) *fibStrategyTreeEntry {
+func (f *fibStrategyTreeEntry) findExactMatchEntryEnc(name *enc.Name) *fibStrategyTreeEntry {
 	if len(*name) > f.depth {
 		for _, child := range f.children {
-			if At(name, child.depth-1).Equal(child.ppcomponent) {
-				return child.findExactMatchEntry1(name)
+			if At(name, child.depth-1).Equal(child.encComponent) {
+				return child.findExactMatchEntryEnc(name)
 			}
 		}
 	} else if len(*name) == f.depth {
@@ -77,7 +77,6 @@ func (f *fibStrategyTreeEntry) findExactMatchEntry1(name *enc.Name) *fibStrategy
 // prefix match of the given name. It returns nil if no exact match was found.
 func (f *fibStrategyTreeEntry) findLongestPrefixEntry(name *ndn.Name) *fibStrategyTreeEntry {
 	if name.Size() > f.depth {
-		//fmt.Println("fib yanfd", name.At(f.depth))
 		for _, child := range f.children {
 			if name.At(child.depth - 1).Equals(child.component) {
 				return child.findLongestPrefixEntry(name)
@@ -87,12 +86,11 @@ func (f *fibStrategyTreeEntry) findLongestPrefixEntry(name *ndn.Name) *fibStrate
 	return f
 }
 
-func (f *fibStrategyTreeEntry) findLongestPrefixEntry1(name *enc.Name) *fibStrategyTreeEntry {
+func (f *fibStrategyTreeEntry) findLongestPrefixEntryEnc(name *enc.Name) *fibStrategyTreeEntry {
 	if len(*name) > f.depth {
-		//fmt.Println("fib gondn", (*name)[f.depth])
 		for _, child := range f.children {
-			if At(name, child.depth-1).Equal(child.ppcomponent) {
-				return child.findLongestPrefixEntry1(name)
+			if At(name, child.depth-1).Equal(child.encComponent) {
+				return child.findLongestPrefixEntryEnc(name)
 			}
 		}
 	}
@@ -114,11 +112,11 @@ func (f *FibStrategyTree) fillTreeToPrefix(name *ndn.Name) *fibStrategyTreeEntry
 	return curNode
 }
 
-func (f *FibStrategyTree) fillTreeToPrefix1(name *enc.Name) *fibStrategyTreeEntry {
-	curNode := f.root.findLongestPrefixEntry1(name)
+func (f *FibStrategyTree) fillTreeToPrefixEnc(name *enc.Name) *fibStrategyTreeEntry {
+	curNode := f.root.findLongestPrefixEntryEnc(name)
 	for depth := curNode.depth + 1; depth <= len(*name); depth++ {
 		newNode := new(fibStrategyTreeEntry)
-		newNode.ppcomponent = deepCopy(At(name, depth-1))
+		newNode.encComponent = deepCopy(At(name, depth-1))
 		newNode.depth = depth
 		newNode.parent = curNode
 		curNode.children = append(curNode.children, newNode)
@@ -143,7 +141,7 @@ func (f *fibStrategyTreeEntry) pruneIfEmpty() {
 		}
 	}
 }
-func (f *fibStrategyTreeEntry) pruneIfEmpty1() {
+func (f *fibStrategyTreeEntry) pruneIfEmptyEnc() {
 	for curNode := f; curNode.parent != nil && len(curNode.children) == 0 && len(curNode.nexthops) == 0 && curNode.ppstrategy == nil; curNode = curNode.parent {
 		// Remove from parent's children
 		for i, child := range curNode.parent.children {
@@ -180,12 +178,12 @@ func (f *FibStrategyTree) FindNextHops(name *ndn.Name) []*FibNextHopEntry {
 	return nexthops
 }
 
-func (f *FibStrategyTree) FindNextHops1(name *enc.Name) []*FibNextHopEntry {
+func (f *FibStrategyTree) FindNextHopsEnc(name *enc.Name) []*FibNextHopEntry {
 	f.fibStrategyRWMutex.RLock()
 	defer f.fibStrategyRWMutex.RUnlock()
 
 	// Find longest prefix matching entry
-	curNode := f.root.findLongestPrefixEntry1(name)
+	curNode := f.root.findLongestPrefixEntryEnc(name)
 
 	// Now step back up until we find a nexthops entry
 	// since some might only have a strategy but no nexthops
@@ -222,12 +220,12 @@ func (f *FibStrategyTree) FindStrategy(name *ndn.Name) *ndn.Name {
 	return strategy
 }
 
-func (f *FibStrategyTree) FindStrategy1(name *enc.Name) *enc.Name {
+func (f *FibStrategyTree) FindStrategyEnc(name *enc.Name) *enc.Name {
 	f.fibStrategyRWMutex.RLock()
 	defer f.fibStrategyRWMutex.RUnlock()
 
 	// Find longest prefix matching entry
-	curNode := f.root.findLongestPrefixEntry1(name)
+	curNode := f.root.findLongestPrefixEntryEnc(name)
 
 	// Now step back up until we find a strategy entry
 	// since some might only have a nexthops but no strategy
@@ -244,7 +242,6 @@ func (f *FibStrategyTree) FindStrategy1(name *enc.Name) *enc.Name {
 
 // InsertNextHop adds or updates a nexthop entry for the specified prefix.
 func (f *FibStrategyTree) InsertNextHop(name *ndn.Name, nexthop uint64, cost uint64) {
-	//fmt.Println("this has been called for ", name)
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 
@@ -263,16 +260,15 @@ func (f *FibStrategyTree) InsertNextHop(name *ndn.Name, nexthop uint64, cost uin
 	newEntry.Nexthop = nexthop
 	newEntry.Cost = cost
 	entry.nexthops = append(entry.nexthops, newEntry)
-	//fmt.Println("yanfd fib nexthop", entry.name, nexthop)
 	f.fibPrefixes[xxhash.Sum64String(name.String())] = entry
 }
 
-func (f *FibStrategyTree) InsertNextHop1(name *enc.Name, nexthop uint64, cost uint64) {
+func (f *FibStrategyTree) InsertNextHopEnc(name *enc.Name, nexthop uint64, cost uint64) {
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
-	entry := f.fillTreeToPrefix1(name)
+	entry := f.fillTreeToPrefixEnc(name)
 	if entry.name == nil {
-		entry.ppname = name
+		entry.encname = name
 	}
 	for _, existingNexthop := range entry.nexthops {
 		if existingNexthop.Nexthop == nexthop {
@@ -285,13 +281,11 @@ func (f *FibStrategyTree) InsertNextHop1(name *enc.Name, nexthop uint64, cost ui
 	newEntry.Nexthop = nexthop
 	newEntry.Cost = cost
 	entry.nexthops = append(entry.nexthops, newEntry)
-	//fmt.Println("gondn fib nexthop", entry.ppname, nexthop)
 	f.fibPrefixes[xxhash.Sum64(name.Bytes())] = entry
 }
 
 // ClearNextHops clears all nexthops for the specified prefix.
 func (f *FibStrategyTree) ClearNextHops(name *ndn.Name) {
-	//fmt.Println("clearnexthops")
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 
@@ -303,15 +297,14 @@ func (f *FibStrategyTree) ClearNextHops(name *ndn.Name) {
 		node.nexthops = make([]*FibNextHopEntry, 0)
 	}
 }
-func (f *FibStrategyTree) ClearNextHops1(name *enc.Name) {
-	//fmt.Println("clearnexthops1111")
+func (f *FibStrategyTree) ClearNextHopsEnc(name *enc.Name) {
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 
 	if name == nil {
 		return // In some wierd case, when RibEntry.updateNexthops() is called, the name becomes nil.
 	}
-	node := f.root.findExactMatchEntry1(name)
+	node := f.root.findExactMatchEntryEnc(name)
 	if node != nil {
 		node.nexthops = make([]*FibNextHopEntry, 0)
 	}
@@ -339,10 +332,10 @@ func (f *FibStrategyTree) RemoveNextHop(name *ndn.Name, nexthop uint64) {
 	}
 }
 
-func (f *FibStrategyTree) RemoveNextHop1(name *enc.Name, nexthop uint64) {
+func (f *FibStrategyTree) RemoveNextHopEnc(name *enc.Name, nexthop uint64) {
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
-	entry := f.root.findExactMatchEntry1(name)
+	entry := f.root.findExactMatchEntryEnc(name)
 	if entry != nil {
 		for i, existingNexthop := range entry.nexthops {
 			if existingNexthop.Nexthop == nexthop {
@@ -406,24 +399,24 @@ func (f *FibStrategyTree) UnsetStrategy(name *ndn.Name) {
 		entry.pruneIfEmpty()
 	}
 }
-func (f *FibStrategyTree) SetStrategy1(name *enc.Name, strategy *enc.Name) {
+func (f *FibStrategyTree) SetStrategyEnc(name *enc.Name, strategy *enc.Name) {
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
-	entry := f.fillTreeToPrefix1(name)
+	entry := f.fillTreeToPrefixEnc(name)
 	if entry.name == nil {
-		entry.ppname = name
+		entry.encname = name
 	}
 	entry.ppstrategy = strategy
 }
 
 // UnsetStrategy unsets the strategy for the specified prefix.
-func (f *FibStrategyTree) UnsetStrategy1(name *enc.Name) {
+func (f *FibStrategyTree) UnSetStrategyEnc(name *enc.Name) {
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
-	entry := f.root.findExactMatchEntry1(name)
+	entry := f.root.findExactMatchEntryEnc(name)
 	if entry != nil {
 		entry.ppstrategy = nil
-		entry.pruneIfEmpty1()
+		entry.pruneIfEmptyEnc()
 	}
 }
 
