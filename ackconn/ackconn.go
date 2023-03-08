@@ -14,6 +14,7 @@ import (
 	"github.com/named-data/YaNFD/fw"
 	"github.com/named-data/YaNFD/ndn/mgmt"
 	"github.com/named-data/YaNFD/table"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 var AckChannel AckConn
@@ -33,6 +34,13 @@ type Message struct {
 	Versions  []uint64 `json:"versions"`
 	Dataset   []byte   `json:"dataset"`
 	Valid     bool     `json:"valid"`
+}
+
+func MakeAck() Message {
+	msg := Message{
+		Valid: true,
+	}
+	return msg
 }
 
 func (a *AckConn) Make(socketFile string) {
@@ -172,11 +180,47 @@ func (a *AckConn) process(size int, buf []byte) {
 			}
 		}
 		a.sendMessage(msg)
+	case "insert":
+		fmt.Println("insert")
+		hard, _ := enc.NameFromStr(commands.Name)
+		table.FibStrategyTable.ClearNextHopsEnc(&hard)
+		faceID := commands.FaceID
+		cost := commands.Cost
+		table.FibStrategyTable.InsertNextHopEnc(&hard, faceID, cost)
+		a.sendMessage(MakeAck())
+	case "remove":
+		hard, _ := enc.NameFromStr(commands.Name)
+		faceID := commands.FaceID
+		table.FibStrategyTable.RemoveNextHopEnc(&hard, faceID)
+		a.sendMessage(MakeAck())
+	case "clear":
+		hard, _ := enc.NameFromStr(commands.Name)
+		table.FibStrategyTable.ClearNextHopsEnc(&hard)
+		a.sendMessage(MakeAck())
+	case "set":
+		cap := commands.Capacity
+		table.SetCsCapacity(cap)
+		a.sendMessage(MakeAck())
+	case "setstrategy":
+		paramName, _ := enc.NameFromStr(commands.ParamName)
+		strategy, _ := enc.NameFromStr(commands.Strategy)
+		table.FibStrategyTable.SetStrategyEnc(&paramName, &strategy)
+		a.sendMessage(MakeAck())
+	case "unsetstrategy":
+		paramName, _ := enc.NameFromStr(commands.ParamName)
+		table.FibStrategyTable.UnSetStrategyEnc(&paramName)
+		a.sendMessage(MakeAck())
 	default:
 		//response = "NACK"
 	}
 }
-
+func (a *AckConn) SendFace(face uint64) {
+	msg := Message{
+		Command: "clean",
+		FaceID:  face,
+	}
+	a.sendMessage(msg)
+}
 func (a *AckConn) sendMessage(msg Message) {
 	b, err := json.Marshal(msg)
 	if err != nil {

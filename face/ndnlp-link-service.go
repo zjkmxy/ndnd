@@ -8,7 +8,9 @@
 package face
 
 import (
+	"bytes"
 	"container/list"
+	"fmt"
 	"math"
 	"runtime"
 	"strconv"
@@ -383,17 +385,21 @@ func (l *NDNLPLinkService) handleIncomingFrame(rawFrame []byte) {
 	// We have to copy so receive transport buffer can be reused
 	wire, _ := l.stealthPool.Get()
 	copy(wire, rawFrame)
-	go l.processIncomingFrame(wire)
+	go l.processIncomingFrame(wire, len(rawFrame))
 }
 
-func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
+func (l *NDNLPLinkService) processIncomingFrame(wire []byte, length int) {
 	// all incoming frames come through a link service
 	// Free up memory
 	defer l.stealthPool.Return(wire)
 	// Attempt to decode buffer into TLV block
-
+	wire = wire[:length]
+	_, _, e := spec.ReadPacket(enc.NewBufferReader(wire))
+	if e != nil {
+		fmt.Println(e)
+	}
 	block, _, err := tlv.DecodeBlock(wire)
-
+	b, _ := block.Wire()
 	if err != nil {
 		core.LogWarn(l, "Received invalid frame - DROP")
 		return
@@ -490,6 +496,9 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	*netPacket.IncomingFaceID = l.faceID
 	test, _, _ := spec.ReadPacket(enc.NewBufferReader(netPkt))
 	netPacket.EncPacket = test
+	fmt.Println("this is equality check", bytes.Equal(b, netPkt))
+	fmt.Println("cap", cap(b), cap(netPkt))
+	fmt.Println("size", len(b), len(b))
 	netPacket.RawBytes = netPkt
 
 	// Congestion marking

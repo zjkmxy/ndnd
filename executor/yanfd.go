@@ -19,7 +19,6 @@ import (
 	"github.com/named-data/YaNFD/face"
 	"github.com/named-data/YaNFD/fw"
 	"github.com/named-data/YaNFD/mgmt"
-	"github.com/named-data/YaNFD/mgmtconn"
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/table"
 	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
@@ -115,12 +114,12 @@ func (y *YaNFD) Start() {
 	face.FaceTable.Add(nullFace)
 	go nullFace.Run(nil)
 
-	mgmtconn.Channel.Make("/tmp/mgmt.sock")
-	go mgmtconn.Channel.RunReceive()
 	ackconn.AckChannel.Make("/tmp/ackmgmt.sock")
 	go ackconn.AckChannel.RunReceive()
+	face.FaceTable.ExternalManager = &ackconn.AckChannel
 	add, _ := enc.NameFromStr("/localhost/nfd")
 	table.FibStrategyTable.InsertNextHopEnc(&add, 3, 0)
+
 	// Start management thread
 	management := mgmt.MakeMgmtThread()
 	go management.Run()
