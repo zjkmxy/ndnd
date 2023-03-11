@@ -266,9 +266,11 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 				core.LogError(l, "Unable to decode Data (", err, ") - DROP")
 				break
 			}
-			for _, thread := range fw.HashNameToAllPrefixFwThreads(&netPacket.EncPacket.Data.NameV) {
+			for thread, valid := range fw.HashNameToAllPrefixFwThreads(&netPacket.EncPacket.Data.NameV) {
 				core.LogTrace(l, "Prefix dispatched local-origin Data packet to thread ", thread)
-				dispatch.GetFWThread(thread).QueueData(netPacket)
+				if valid {
+					dispatch.GetFWThread(thread).QueueData(netPacket)
+				}
 			}
 		}
 	default:

@@ -35,26 +35,34 @@ func HashNameToFwThread(name *enc.Name) int {
 	if len(*name) > 0 && bytes.Equal((*name)[0].Val, LOCALHOST) {
 		return 0
 	}
-	print := int(xxhash.Sum64(name.Bytes()) % uint64(len(Threads)))
+	var hash uint64
+	hash = 0
+	for _, component := range *name {
+		//fmt.Println(hash, component.Val)
+		hash = hash + xxhash.Sum64(component.Val)
+	}
+	print := int(hash % uint64(len(Threads)))
+	//fmt.Println(print)
 	return print
 }
 
 // HashNameToAllPrefixFwThreads hahes an NDN name to all forwarding threads for all prefixes of the name.
-func HashNameToAllPrefixFwThreads(name *enc.Name) []int {
+func HashNameToAllPrefixFwThreads(name *enc.Name) []bool {
+	threadList := make([]bool, len(Threads), len(Threads))
 	// Dispatch all management requests to thread 0
 	if len(*name) > 0 && bytes.Equal((*name)[0].Val, LOCALHOST) {
-		return []int{0}
+		threadList[0] = true
+		return threadList
 	}
-
-	threadMap := make(map[int]interface{})
-
 	// Strings are likely better to work with for performance here than calling Name.prefix
-	for nameString := (*name); len(nameString) > 1; nameString = nameString[:len(nameString)-1] {
-		threadMap[int(xxhash.Sum64(nameString.Bytes())%uint64(len(Threads)))] = true
-	}
-	threadList := make([]int, 0, len(threadMap))
-	for i := range threadMap {
-		threadList = append(threadList, i)
+	// for nameString := (*name); len(nameString) > 1; nameString = nameString[:len(nameString)-1] {
+	// 	threadMap[int(xxhash.Sum64(nameString.Bytes())%uint64(len(Threads)))] = true
+	// }
+	var hash uint64
+	hash = 0
+	for _, component := range *name {
+		hash = hash + xxhash.Sum64(component.Val)
+		threadList[int(hash%uint64(len(Threads)))] = true
 	}
 	return threadList
 }
@@ -229,9 +237,8 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 	// Get strategy for name
 	// getting strategy for name seems generic enough that it will be easy
 	//strategyName := table.FibStrategyTable.FindStrategyEnc(&pendingPacket.EncPacket.Interest.NameV)
-	strategyName, _ := ndn.NameFromString("/localhost/nfd/strategy/best-route/v=1")
-	strategy := t.strategies[strategyName.String()]
-	core.LogDebug(t, "Using Strategy=", strategyName, " for Interest=", pendingPacket.NameCache)
+	strategy := t.strategies["/localhost/nfd/strategy/best-route/v=1"]
+	core.LogDebug(t, "Using Strategy=", "/localhost/nfd/strategy/best-route/v=1", " for Interest=", pendingPacket.NameCache)
 
 	// Add in-record and determine if already pending
 	// this looks like custom interest again, but again can be changed without much issue?
@@ -377,8 +384,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 	// Get strategy for name
 
 	//strategyName := table.FibStrategyTable.FindStrategyEnc(&pendingPacket.EncPacket.Data.NameV)
-	strategyName, _ := ndn.NameFromString("/localhost/nfd/strategy/best-route/v=1")
-	strategy := t.strategies[strategyName.String()]
+	strategy := t.strategies["/localhost/nfd/strategy/best-route/v=1"]
 
 	if len(pitEntries) == 1 {
 		// Set PIT entry expiration to now
@@ -386,7 +392,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 		// pitEntries[0].SetExpirationTimerToNow()
 
 		// Invoke strategy's AfterReceiveData
-		core.LogTrace(t, "Sending Data=", pendingPacket.NameCache, " to strategy=", strategyName)
+		core.LogTrace(t, "Sending Data=", pendingPacket.NameCache, " to strategy=", "/localhost/nfd/strategy/best-route/v=1")
 		strategy.AfterReceiveData(pendingPacket, pitEntries[0], *pendingPacket.IncomingFaceID)
 
 		// Mark PIT entry as satisfied

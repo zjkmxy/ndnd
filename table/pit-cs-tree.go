@@ -148,7 +148,6 @@ func (p *PitCsTree) InsertInterest(pendingPacket *ndn.PendingPacket, hint *enc.N
 		entry = new(nameTreePitEntry)
 		entry.node = node
 		entry.pitCsTable = p
-		//entry.name = interest.Name()
 		entry.encname = &pendingPacket.EncPacket.Interest.NameV
 		entry.canBePrefix = pendingPacket.EncPacket.Interest.CanBePrefixV
 		entry.mustBeFresh = pendingPacket.EncPacket.Interest.MustBeFreshV
@@ -448,7 +447,13 @@ func (p *PitCsTree) generateNewPitToken() uint32 {
 }
 
 func (p *PitCsTree) hashCsName(name enc.Name) uint64 {
-	return xxhash.Sum64(name.Bytes())
+	var hash uint64
+	hash = 0
+	for _, component := range name {
+		//fmt.Println(hash, component.Val)
+		hash = hash + xxhash.Sum64(component.Val)
+	}
+	return hash
 }
 
 // FindMatchingDataFromCS finds the best matching entry in the CS (if any).
@@ -459,7 +464,7 @@ func (p *PitCsTree) FindMatchingDataFromCS(pendingPacket *ndn.PendingPacket) CsE
 	if node != nil {
 		if !pendingPacket.EncPacket.Interest.CanBePrefixV {
 			if node.csEntry != nil && (!pendingPacket.EncPacket.Interest.MustBeFreshV || time.Now().Before(node.csEntry.staleTime)) {
-				p.csReplacement.BeforeUse(node.csEntry.index, node.csEntry.data)
+				p.csReplacement.BeforeUse(node.csEntry.index, node.csEntry.encData)
 				return node.csEntry
 			}
 			// Return nil instead of node.csEntry so that
@@ -485,7 +490,7 @@ func (p *PitCsTree) InsertData(pendingPacket *ndn.PendingPacket) {
 		entry.encData = pendingPacket
 		entry.staleTime = staleTime
 
-		p.csReplacement.AfterRefresh(index, nil)
+		p.csReplacement.AfterRefresh(index, pendingPacket)
 	} else {
 		// New entry
 		p.nCsEntries++
@@ -493,20 +498,17 @@ func (p *PitCsTree) InsertData(pendingPacket *ndn.PendingPacket) {
 		node.csEntry = &nameTreeCsEntry{
 			node: node,
 			baseCsEntry: baseCsEntry{
-				index: index,
-				//data:      nil,
+				index:     index,
 				encData:   pendingPacket,
 				staleTime: staleTime,
 			},
 		}
 		node.csEntry.node = node
 		node.csEntry.index = index
-		//node.csEntry.data = data
 		node.csEntry.encData = pendingPacket
 
 		p.csMap[index] = node.csEntry
-		//cs replacement needs to be changed
-		p.csReplacement.AfterInsert(index, nil)
+		p.csReplacement.AfterInsert(index, pendingPacket)
 
 		// Tell replacement strategy to evict entries if needed
 		p.csReplacement.EvictEntries()

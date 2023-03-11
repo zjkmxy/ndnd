@@ -8,6 +8,9 @@
 package executor
 
 import (
+	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -105,7 +108,9 @@ func (y *YaNFD) Start() {
 	// Load strategies
 	//core.LogInfo("Main", "Loading strategies")
 	//fw.LoadStrategies()
-
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	// Initialize FIB table
 	fibTableAlgorithm := core.GetConfigStringDefault("tables.fib.algorithm", "nametree")
 	table.CreateFIBTable(fibTableAlgorithm)
@@ -119,7 +124,6 @@ func (y *YaNFD) Start() {
 	face.FaceTable.ExternalManager = &ackconn.AckChannel
 	add, _ := enc.NameFromStr("/localhost/nfd")
 	table.FibStrategyTable.InsertNextHopEnc(&add, 3, 0)
-
 	// Start management thread
 	management := mgmt.MakeMgmtThread()
 	go management.Run()

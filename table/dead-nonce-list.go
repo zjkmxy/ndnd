@@ -67,7 +67,13 @@ func (d *DeadNonceList) Insert(name *ndn.Name, nonce []byte) bool {
 }
 
 func (d *DeadNonceList) InsertEnc(name *enc.Name, nonce uint32) bool {
-	hash := xxhash.Sum64(name.Bytes()) + uint64(nonce)
+	var hash uint64
+	hash = 0
+	for _, component := range *name {
+		//fmt.Println(hash, component.Val)
+		hash = hash + xxhash.Sum64(component.Val)
+	}
+	hash = hash + uint64(nonce)
 	_, exists := d.list[hash]
 
 	if !exists {

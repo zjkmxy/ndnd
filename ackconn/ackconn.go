@@ -181,7 +181,6 @@ func (a *AckConn) process(size int, buf []byte) {
 		}
 		a.sendMessage(msg)
 	case "insert":
-		fmt.Println("insert")
 		hard, _ := enc.NameFromStr(commands.Name)
 		table.FibStrategyTable.ClearNextHopsEnc(&hard)
 		faceID := commands.FaceID

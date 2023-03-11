@@ -281,7 +281,12 @@ func (f *FibStrategyTree) InsertNextHopEnc(name *enc.Name, nexthop uint64, cost 
 	newEntry.Nexthop = nexthop
 	newEntry.Cost = cost
 	entry.nexthops = append(entry.nexthops, newEntry)
-	f.fibPrefixes[xxhash.Sum64(name.Bytes())] = entry
+	var hash uint64
+	hash = 0
+	for _, component := range *name {
+		hash = hash + xxhash.Sum64(component.Val)
+	}
+	f.fibPrefixes[hash] = entry
 }
 
 // ClearNextHops clears all nexthops for the specified prefix.
@@ -347,7 +352,12 @@ func (f *FibStrategyTree) RemoveNextHopEnc(name *enc.Name, nexthop uint64) {
 			}
 		}
 		if len(entry.nexthops) == 0 {
-			delete(f.fibPrefixes, xxhash.Sum64(name.Bytes()))
+			var hash uint64
+			hash = 0
+			for _, component := range *name {
+				hash = hash + xxhash.Sum64(component.Val)
+			}
+			delete(f.fibPrefixes, hash)
 		}
 		entry.pruneIfEmpty()
 	}
