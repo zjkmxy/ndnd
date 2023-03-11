@@ -47,22 +47,21 @@ func HashNameToFwThread(name *enc.Name) int {
 }
 
 // HashNameToAllPrefixFwThreads hahes an NDN name to all forwarding threads for all prefixes of the name.
-func HashNameToAllPrefixFwThreads(name *enc.Name) []bool {
-	threadList := make([]bool, len(Threads), len(Threads))
+func HashNameToAllPrefixFwThreads(name *enc.Name) []int {
 	// Dispatch all management requests to thread 0
 	if len(*name) > 0 && bytes.Equal((*name)[0].Val, LOCALHOST) {
-		threadList[0] = true
-		return threadList
+		return []int{0}
 	}
+	threadList := make([]int, len(*name), len(*name))
 	// Strings are likely better to work with for performance here than calling Name.prefix
 	// for nameString := (*name); len(nameString) > 1; nameString = nameString[:len(nameString)-1] {
 	// 	threadMap[int(xxhash.Sum64(nameString.Bytes())%uint64(len(Threads)))] = true
 	// }
 	var hash uint64
 	hash = 0
-	for _, component := range *name {
+	for index, component := range *name {
 		hash = hash + xxhash.Sum64(component.Val)
-		threadList[int(hash%uint64(len(Threads)))] = true
+		threadList[index] = int(hash % uint64(len(Threads)))
 	}
 	return threadList
 }
