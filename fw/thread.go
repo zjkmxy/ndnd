@@ -52,16 +52,21 @@ func HashNameToAllPrefixFwThreads(name *enc.Name) []int {
 	if len(*name) > 0 && bytes.Equal((*name)[0].Val, LOCALHOST) {
 		return []int{0}
 	}
-	threadList := make([]int, len(*name), len(*name))
+	threadMap := make(map[int]interface{})
+
 	// Strings are likely better to work with for performance here than calling Name.prefix
 	// for nameString := (*name); len(nameString) > 1; nameString = nameString[:len(nameString)-1] {
 	// 	threadMap[int(xxhash.Sum64(nameString.Bytes())%uint64(len(Threads)))] = true
 	// }
 	var hash uint64
 	hash = 0
-	for index, component := range *name {
+	for _, component := range *name {
 		hash = hash + xxhash.Sum64(component.Val)
-		threadList[index] = int(hash % uint64(len(Threads)))
+		threadMap[int(hash%uint64(len(Threads)))] = true
+	}
+	threadList := make([]int, 0, len(threadMap))
+	for i := range threadMap {
+		threadList = append(threadList, i)
 	}
 	return threadList
 }
