@@ -39,7 +39,7 @@ func HashNameToFwThread(name *enc.Name) int {
 	hash = 0
 	for _, component := range *name {
 		//fmt.Println(hash, component.Val)
-		hash = hash + xxhash.Sum64(component.Val)
+		hash ^= xxhash.Sum64(component.Val)
 	}
 	print := int(hash % uint64(len(Threads)))
 	//fmt.Println(print)
@@ -61,7 +61,7 @@ func HashNameToAllPrefixFwThreads(name *enc.Name) []int {
 	var hash uint64
 	hash = 0
 	for _, component := range *name {
-		hash = hash + xxhash.Sum64(component.Val)
+		hash ^= xxhash.Sum64(component.Val)
 		threadMap[int(hash%uint64(len(Threads)))] = true
 	}
 	threadList := make([]int, 0, len(threadMap))
@@ -361,7 +361,7 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 	// Get incoming face
 	incomingFace := dispatch.GetFace(*pendingPacket.IncomingFaceID)
 	if incomingFace == nil {
-		core.LogError(t, "Non-existent nexthop FaceID=", *pendingPacket.IncomingFaceID, " for Data=", " DROP")
+		core.LogError(t, "Non-existent nexthop FaceID=", *pendingPacket.IncomingFaceID, " for Data=", pendingPacket.EncPacket.Data.NameV, " DROP")
 		return
 	}
 

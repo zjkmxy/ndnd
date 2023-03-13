@@ -9,6 +9,7 @@ package table
 
 import (
 	"container/list"
+	"fmt"
 	"sync"
 
 	"github.com/cespare/xxhash"
@@ -264,6 +265,7 @@ func (f *FibStrategyTree) InsertNextHop(name *ndn.Name, nexthop uint64, cost uin
 }
 
 func (f *FibStrategyTree) InsertNextHopEnc(name *enc.Name, nexthop uint64, cost uint64) {
+	fmt.Println("insert", name.String())
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 	entry := f.fillTreeToPrefixEnc(name)
@@ -303,6 +305,7 @@ func (f *FibStrategyTree) ClearNextHops(name *ndn.Name) {
 	}
 }
 func (f *FibStrategyTree) ClearNextHopsEnc(name *enc.Name) {
+	fmt.Println("clear", name.String())
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 
@@ -338,6 +341,7 @@ func (f *FibStrategyTree) RemoveNextHop(name *ndn.Name, nexthop uint64) {
 }
 
 func (f *FibStrategyTree) RemoveNextHopEnc(name *enc.Name, nexthop uint64) {
+	fmt.Println("remove", name.String())
 	f.fibStrategyRWMutex.Lock()
 	defer f.fibStrategyRWMutex.Unlock()
 	entry := f.root.findExactMatchEntryEnc(name)

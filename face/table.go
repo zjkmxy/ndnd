@@ -8,6 +8,7 @@
 package face
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/named-data/YaNFD/conn"
@@ -48,6 +49,7 @@ func (t *Table) Add(face LinkService) {
 
 	// Add to dispatch
 	dispatch.AddFace(faceID, face)
+	fmt.Println(faceID, face)
 
 	core.LogDebug("FaceTable", "Registered FaceID=", faceID)
 	EmitFaceEvent(FaceEventCreated, face)
