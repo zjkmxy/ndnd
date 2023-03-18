@@ -123,10 +123,8 @@ func (y *YaNFD) Start() {
 	go ackconn.AckChannel.RunReceive()
 	face.FaceTable.ExternalManager = &ackconn.AckChannel
 	add, _ := enc.NameFromStr("/localhost/nfd")
-	table.FibStrategyTable.InsertNextHopEnc(&add, 3, 0)
+	table.FibStrategyTable.InsertNextHopEnc(&add, 2, 0)
 	// Start management thread
-	management := mgmt.MakeMgmtThread()
-	go management.Run()
 	// Create forwarding threads
 	if fw.NumFwThreads < 1 || fw.NumFwThreads > fw.MaxFwThreads {
 		core.LogFatal("Main", "Number of forwarding threads must be in range [1, ", fw.MaxFwThreads, "]")

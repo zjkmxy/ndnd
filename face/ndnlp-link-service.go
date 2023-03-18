@@ -31,7 +31,7 @@ const ackOverhead = 3 + 1 + 8
 
 const maxPoolBlockCnt = 1000
 const maxPoolBlockSize = 9000
-const workers = 8
+const workers = 16
 
 const (
 	FaceFlagLocalFields = 1 << iota
@@ -103,6 +103,7 @@ type NDNLPLinkService struct {
 	bees                     []*WorkerBee
 	workQueue                chan *ndn.PendingPacket
 	stealthPool              *stealthpool.Pool
+	BufferReader             enc.BufferReader
 }
 
 type WorkerBee struct {
@@ -117,10 +118,16 @@ func NewBee(id int, l *NDNLPLinkService) *WorkerBee {
 	return b
 }
 func (b *WorkerBee) Run(jobs <-chan *ndn.PendingPacket) {
-	for {
-		packet := <-jobs
-		//fmt.Println(b.id, "worked on packet")
-		sendPacket(b.link, packet)
+	shouldContinue := true
+	for shouldContinue {
+		select {
+
+		case packet := <-jobs:
+			//fmt.Println(b.id, "worked on packet")
+			sendPacket(b.link, packet)
+		case <-b.link.HasQuit:
+			shouldContinue = false
+		}
 	}
 }
 
@@ -363,8 +370,8 @@ func (l *NDNLPLinkService) runSend() {
 	for {
 		select {
 		case netPacket := <-l.sendQueue:
-			//go sendPacket(l, netPacket)
-			l.workQueue <- netPacket
+			go sendPacket(l, netPacket)
+			//l.workQueue <- netPacket
 		case oldTxSequence := <-l.retransmitQueue:
 			loadedFrame, ok := l.unacknowledgedFrames.Load(oldTxSequence)
 			if !ok {

@@ -40,8 +40,6 @@ type Message struct {
 	Valid           bool                   `json:"valid"`
 	ControlParams   mgmt.ControlParameters `json:"controlparams"`
 	ControlResponse mgmt.ControlResponse   `json:"controlresponse"`
-	ErrorCode       int                    `json:"errorcode"`
-	ErrorMessage    string                 `json:"errormessage"`
 	ParamsValid     bool                   `json:"paramsvalid"`
 	FaceQueryFilter mgmt.FaceQueryFilter   `json:"facequeryfilter"`
 }
@@ -49,13 +47,6 @@ type Message struct {
 func MakeAck() Message {
 	msg := Message{
 		Valid: true,
-	}
-	return msg
-}
-
-func MakeError(errorcode int) Message {
-	msg := Message{
-		ErrorCode: errorcode,
 	}
 	return msg
 }
