@@ -28,6 +28,15 @@ const MaxFwThreads = 32
 var Threads map[int]*Thread
 var LOCALHOST = []byte{0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x68, 0x6f, 0x73, 0x74}
 
+func NameHash(name *enc.Name) int {
+	var hash uint64
+	hash = 0
+	for _, component := range *name {
+		hash ^= xxhash.Sum64(component.Val)
+	}
+	return int(hash)
+}
+
 // HashNameToFwThread hashes an NDN name to a forwarding thread.
 func HashNameToFwThread(name *enc.Name) int {
 	// Dispatch all management requests to thread 0
@@ -35,13 +44,8 @@ func HashNameToFwThread(name *enc.Name) int {
 	if len(*name) > 0 && bytes.Equal((*name)[0].Val, LOCALHOST) {
 		return 0
 	}
-	var hash uint64
-	hash = 0
-	for _, component := range *name {
-		hash ^= xxhash.Sum64(component.Val)
-	}
-	print := int(hash % uint64(len(Threads)))
-	return print
+	// to prevent negative modulos because we converted from uint to int
+	return (NameHash(name)%len(Threads) + len(Threads)) % len(Threads)
 }
 
 // HashNameToAllPrefixFwThreads hahes an NDN name to all forwarding threads for all prefixes of the name.
@@ -75,7 +79,7 @@ type Thread struct {
 	pendingInterests chan *ndn.PendingPacket
 	pendingDatas     chan *ndn.PendingPacket
 	pitCS            table.PitCsTable
-	strategies       map[string]Strategy
+	strategies       map[int]Strategy
 	deadNonceList    *table.DeadNonceList
 	shouldQuit       chan interface{}
 	HasQuit          chan interface{}
@@ -238,8 +242,8 @@ func (t *Thread) processIncomingInterest(pendingPacket *ndn.PendingPacket) {
 
 	// Get strategy for name
 	// getting strategy for name seems generic enough that it will be easy
-	//strategyName := table.FibStrategyTable.FindStrategyEnc(&pendingPacket.EncPacket.Interest.NameV)
-	strategy := t.strategies["/localhost/nfd/strategy/best-route/v=1"]
+	strategyName := table.FibStrategyTable.FindStrategyEnc(&pendingPacket.EncPacket.Interest.NameV)
+	strategy := t.strategies[NameHash(strategyName)]
 	core.LogDebug(t, "Using Strategy=", "/localhost/nfd/strategy/best-route/v=1", " for Interest=", pendingPacket.NameCache)
 
 	// Add in-record and determine if already pending
@@ -385,8 +389,9 @@ func (t *Thread) processIncomingData(pendingPacket *ndn.PendingPacket) {
 	}
 	// Get strategy for name
 
-	//strategyName := table.FibStrategyTable.FindStrategyEnc(&pendingPacket.EncPacket.Data.NameV)
-	strategy := t.strategies["/localhost/nfd/strategy/best-route/v=1"]
+	strategyName := table.FibStrategyTable.FindStrategyEnc(&pendingPacket.EncPacket.Data.NameV)
+	//strategy := t.strategies["/localhost/nfd/strategy/best-route/v=1"]
+	strategy := t.strategies[NameHash(strategyName)]
 
 	if len(pitEntries) == 1 {
 		// Set PIT entry expiration to now

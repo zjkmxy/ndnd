@@ -12,6 +12,7 @@ import (
 
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/table"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // StrategyPrefix is the prefix of all strategy names for YaNFD
@@ -22,6 +23,7 @@ type Strategy interface {
 	Instantiate(fwThread *Thread)
 	String() string
 	GetName() *ndn.Name
+	GetEncName() *enc.Name
 
 	AfterContentStoreHit(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64)
 	AfterReceiveData(pendingPacket *ndn.PendingPacket, pitEntry table.PitEntry, inFace uint64)
@@ -34,6 +36,7 @@ type StrategyBase struct {
 	thread          *Thread
 	threadID        int
 	name            *ndn.Name
+	encName         *enc.Name
 	strategyName    *ndn.GenericNameComponent
 	version         uint64
 	strategyLogName string
@@ -57,6 +60,10 @@ func (s *StrategyBase) String() string {
 // GetName returns the name of strategy, including version information.
 func (s *StrategyBase) GetName() *ndn.Name {
 	return s.name
+}
+
+func (s *StrategyBase) GetEncName() *enc.Name {
+	return s.encName
 }
 
 // SendInterest sends an Interest on the specified face.
