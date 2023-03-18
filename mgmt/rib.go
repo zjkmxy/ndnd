@@ -114,9 +114,8 @@ func (r *RIBModule) register(interest *ndn.Interest, pitToken []byte, inFace uin
 		*expirationPeriod = time.Duration(*params.ExpirationPeriod) * time.Millisecond
 	}
 
-	//table.Rib.AddRoute(params.Name, faceID, origin, cost, flags, expirationPeriod)
-	cheat, _ := enc.NameFromStr(params.Name.String())
-	table.Rib.AddEncRoute(&cheat, faceID, origin, cost, flags, expirationPeriod)
+	convert, _ := enc.NameFromStr(params.Name.String())
+	table.Rib.AddEncRoute(&convert, faceID, origin, cost, flags, expirationPeriod)
 	if expirationPeriod != nil {
 		core.LogInfo(r, "Created route for Prefix=", params.Name, ", FaceID=", faceID, ", Origin=", origin, ", Cost=", cost, ", Flags=0x", strconv.FormatUint(flags, 16), ", ExpirationPeriod=", expirationPeriod)
 	} else {
@@ -180,8 +179,8 @@ func (r *RIBModule) unregister(interest *ndn.Interest, pitToken []byte, inFace u
 	if params.Origin != nil {
 		origin = *params.Origin
 	}
-
-	table.Rib.RemoveRoute(params.Name, faceID, origin)
+	convert, _ := enc.NameFromStr(params.Name.String())
+	table.Rib.RemoveRouteEnc(&convert, faceID, origin)
 
 	core.LogInfo(r, "Removed route for Prefix=", params.Name, ", FaceID=", faceID, ", Origin=", origin)
 	responseParams := mgmt.MakeControlParameters()
@@ -243,8 +242,8 @@ func (r *RIBModule) announce(interest *ndn.Interest, pitToken []byte, inFace uin
 	} else if notAfter.Before(time.Now().Add(expirationPeriod)) {
 		expirationPeriod = time.Until(notAfter)
 	}
-
-	table.Rib.AddRoute(prefix, faceID, origin, cost, 0, &expirationPeriod)
+	convert, _ := enc.NameFromStr(prefix.String())
+	table.Rib.AddEncRoute(&convert, faceID, origin, cost, 0, &expirationPeriod)
 
 	core.LogInfo(r, "Created route via PrefixAnnouncement for Prefix=", prefix, ", FaceID=", faceID, ", Origin=", origin, ", Cost=", cost, ", Flags=0x0, ExpirationPeriod=", expirationPeriod)
 

@@ -121,9 +121,7 @@ func (b *WorkerBee) Run(jobs <-chan *ndn.PendingPacket) {
 	shouldContinue := true
 	for shouldContinue {
 		select {
-
 		case packet := <-jobs:
-			//fmt.Println(b.id, "worked on packet")
 			sendPacket(b.link, packet)
 		case <-b.link.HasQuit:
 			shouldContinue = false
@@ -292,7 +290,6 @@ func sendPacket(l *NDNLPLinkService, netPacket *ndn.PendingPacket) {
 	// Congestion marking
 	if congestionMarking && l.transport.GetSendQueueSize() > l.options.DefaultCongestionThresholdBytes && now.After(l.lastTimeCongestionMarked.Add(l.options.BaseCongestionMarkingInterval)) {
 		// Mark congestion
-		//fmt.Println(l.transport.GetSendQueueSize(), l.options.DefaultCongestionThresholdBytes)
 		core.LogWarn(l, "Marking congestion")
 		fragments[0].SetCongestionMark(1)
 		l.lastTimeCongestionMarked = now
@@ -414,7 +411,6 @@ func (l *NDNLPLinkService) runSend() {
 
 func (l *NDNLPLinkService) handleIncomingFrame(rawFrame []byte) {
 	// We have to copy so receive transport buffer can be reused
-	//wire, _ := l.stealthPool.Get()
 	wire := make([]byte, len(rawFrame), len(rawFrame))
 	copy(wire, rawFrame)
 	go l.processIncomingFrame(wire)
@@ -423,7 +419,6 @@ func (l *NDNLPLinkService) handleIncomingFrame(rawFrame []byte) {
 func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	// all incoming frames come through a link service
 	// Free up memory
-	//defer l.stealthPool.Return(wire)
 	// Attempt to decode buffer into TLV block
 	netPacket := new(ndn.PendingPacket)
 	netPacket.IncomingFaceID = new(uint64)
@@ -431,6 +426,7 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 	packet, _, e := spec.ReadPacket(enc.NewBufferReader(wire))
 	if e != nil {
 		fmt.Println(e)
+		return
 	}
 	if packet.LpPacket == nil {
 		netPacket.RawBytes = wire
@@ -454,7 +450,10 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 			netPacket.PitToken = make([]byte, len(packet.LpPacket.PitToken))
 			copy(netPacket.PitToken, packet.LpPacket.PitToken)
 		}
-		packet, _, _ = spec.ReadPacket(enc.NewBufferReader(fragment))
+		packet, _, e = spec.ReadPacket(enc.NewBufferReader(fragment))
+		if e != nil {
+			return
+		}
 		netPacket.RawBytes = fragment
 		netPacket.EncPacket = packet
 	}

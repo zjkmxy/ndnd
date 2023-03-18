@@ -38,11 +38,9 @@ func HashNameToFwThread(name *enc.Name) int {
 	var hash uint64
 	hash = 0
 	for _, component := range *name {
-		//fmt.Println(hash, component.Val)
 		hash ^= xxhash.Sum64(component.Val)
 	}
 	print := int(hash % uint64(len(Threads)))
-	//fmt.Println(print)
 	return print
 }
 
@@ -330,7 +328,7 @@ func (t *Thread) processOutgoingInterest(pendingPacket *ndn.PendingPacket, pitEn
 }
 
 func (t *Thread) finalizeInterest(pitEntry table.PitEntry) {
-	core.LogTrace(t, "OnFinalizeInterest: ", pitEntry.Name())
+	//core.LogTrace(t, "OnFinalizeInterest: ", pitEntry.Name())
 
 	// Check for nonces to insert into dead nonce list
 	for _, outRecord := range pitEntry.OutRecords() {

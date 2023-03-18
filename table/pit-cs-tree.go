@@ -133,7 +133,6 @@ func (e *nameTreePitEntry) PitCs() PitCsTable {
 // InsertInterest inserts an entry in the PIT upon receipt of an Interest.
 // Returns tuple of PIT entry and whether the Nonce is a duplicate.
 func (p *PitCsTree) InsertInterest(pendingPacket *ndn.PendingPacket, hint *enc.Name, inFace uint64) (PitEntry, bool) {
-	//node := p.root.fillTreeToPrefix(interest.Name())
 	node := p.root.fillTreeToPrefixEnc(&pendingPacket.EncPacket.Interest.NameV)
 	var entry *nameTreePitEntry
 	for _, curEntry := range node.pitEntries {
@@ -151,7 +150,6 @@ func (p *PitCsTree) InsertInterest(pendingPacket *ndn.PendingPacket, hint *enc.N
 		entry.encname = &pendingPacket.EncPacket.Interest.NameV
 		entry.canBePrefix = pendingPacket.EncPacket.Interest.CanBePrefixV
 		entry.mustBeFresh = pendingPacket.EncPacket.Interest.MustBeFreshV
-		entry.forwardingHint = nil
 		entry.forwardingHintNew = hint
 		entry.inRecords = make(map[uint64]*PitInRecord)
 		entry.outRecords = make(map[uint64]*PitOutRecord)
@@ -198,46 +196,11 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 
 // FindInterestExactMatch returns the PIT entry for an exact match of the
 // given interest.
-func (p *PitCsTree) FindInterestExactMatch(pendingPacket *ndn.PendingPacket, interest *ndn.Interest) PitEntry {
-	node := p.root.findExactMatchEntry(interest.Name())
-	if node != nil {
-		for _, curEntry := range node.pitEntries {
-			if curEntry.CanBePrefix() == pendingPacket.EncPacket.Interest.CanBePrefixV && curEntry.MustBeFresh() == pendingPacket.EncPacket.Interest.MustBeFreshV {
-				return curEntry
-			}
-		}
-	}
-	return nil
-}
 
 // FindInterestPrefixMatchByData returns all interests that could be satisfied
 // by the given data.
 // Example: If we have interests /a and /a/b, a prefix search for data with name /a/b
 // will return PitEntries for both /a and /a/b
-func (p *PitCsTree) FindInterestPrefixMatchByData(pendingPacket *ndn.PendingPacket, data *ndn.Data, token *uint32) []PitEntry {
-	if token != nil {
-		if entry, ok := p.pitTokenMap[*token]; ok && entry.Token() == *token {
-			return []PitEntry{entry}
-		}
-		return nil
-	}
-
-	return p.findInterestPrefixMatchByName(data.Name())
-}
-
-func (p *PitCsTree) findInterestPrefixMatchByName(name *ndn.Name) []PitEntry {
-	matching := make([]PitEntry, 0)
-	dataNameLen := name.Size()
-	for curNode := p.root.findLongestPrefixEntry(name); curNode != nil; curNode = curNode.parent {
-		for _, entry := range curNode.pitEntries {
-			if entry.canBePrefix || curNode.depth == dataNameLen {
-				matching = append(matching, entry)
-			}
-		}
-	}
-	return matching
-}
-
 func (p *PitCsTree) FindInterestExactMatchEnc(pendingPacket *ndn.PendingPacket) PitEntry {
 	node := p.root.findExactMatchEntryEnc(&pendingPacket.EncPacket.Interest.NameV)
 	if node != nil {
@@ -450,7 +413,6 @@ func (p *PitCsTree) hashCsName(name enc.Name) uint64 {
 	var hash uint64
 	hash = 0
 	for _, component := range name {
-		//fmt.Println(hash, component.Val)
 		hash = hash + xxhash.Sum64(component.Val)
 	}
 	return hash

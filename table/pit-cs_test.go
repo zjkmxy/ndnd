@@ -158,16 +158,17 @@ func TestInsertInRecord(t *testing.T) {
 }
 
 func TestBaseCsEntryGetters(t *testing.T) {
-	name, _ := ndn.NameFromString("/something")
+	name, _ := enc.NameFromStr("/something")
 	currTime := time.Now()
-	data := ndn.NewData(name, []byte("abc"))
+	content := enc.Wire{enc.Buffer("test")}
+	data := makeData(name, content)
 	bpe := baseCsEntry{
 		index:     1234,
 		staleTime: currTime,
-		data:      data,
+		encData:   data,
 	}
 
 	assert.Equal(t, bpe.Index(), uint64(1234))
 	assert.Equal(t, bpe.StaleTime(), currTime)
-	assert.Equal(t, bpe.Data(), data)
+	assert.Equal(t, bpe.EncData(), data)
 }

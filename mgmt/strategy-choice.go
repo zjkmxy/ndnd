@@ -14,6 +14,7 @@ import (
 	"github.com/named-data/YaNFD/ndn/mgmt"
 	"github.com/named-data/YaNFD/ndn/tlv"
 	"github.com/named-data/YaNFD/table"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // StrategyChoiceModule is the module that handles Strategy Choice Management.
@@ -138,8 +139,9 @@ func (s *StrategyChoiceModule) set(interest *ndn.Interest, pitToken []byte, inFa
 		// Add missing version information to strategy name
 		params.Strategy.Append(ndn.NewVersionNameComponent(strategyVersion))
 	}
-
-	table.FibStrategyTable.SetStrategy(params.Name, params.Strategy)
+	convertName, _ := enc.NameFromStr(params.Name.String())
+	convertStrategy, _ := enc.NameFromStr(params.Strategy.String())
+	table.FibStrategyTable.SetStrategyEnc(&convertName, &convertStrategy)
 
 	core.LogInfo(s, "Set strategy for Name=", params.Name, " to Strategy=", params.Strategy)
 	responseParams := mgmt.MakeControlParameters()
@@ -186,8 +188,8 @@ func (s *StrategyChoiceModule) unset(interest *ndn.Interest, pitToken []byte, in
 		s.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
-
-	table.FibStrategyTable.UnsetStrategy(params.Name)
+	convertName, _ := enc.NameFromStr(params.Name.String())
+	table.FibStrategyTable.UnSetStrategyEnc(&convertName)
 
 	core.LogInfo(s, "Unset Strategy for Name=", params.Name)
 	responseParams := mgmt.MakeControlParameters()

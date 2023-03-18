@@ -19,8 +19,7 @@ import (
 type PitCsTable interface {
 	InsertInterest(pendingPacket *ndn.PendingPacket, hint *enc.Name, inFace uint64) (PitEntry, bool)
 	RemoveInterest(pitEntry PitEntry) bool
-	FindInterestExactMatch(pendingPacket *ndn.PendingPacket, interest *ndn.Interest) PitEntry
-	FindInterestPrefixMatchByData(pendingPacket *ndn.PendingPacket, data *ndn.Data, token *uint32) []PitEntry
+	FindInterestExactMatchEnc(pendingPacket *ndn.PendingPacket) PitEntry
 	FindInterestPrefixMatchByDataEnc(pendingPacket *ndn.PendingPacket, token *uint32) []PitEntry
 	PitSize() int
 
@@ -47,11 +46,9 @@ type basePitCsTable struct{}
 // PitEntry dictates what entries in a PIT-CS table should implement
 type PitEntry interface {
 	PitCs() PitCsTable
-	Name() *ndn.Name
 	EncName() *enc.Name
 	CanBePrefix() bool
 	MustBeFresh() bool
-	ForwardingHint() *ndn.Name
 	ForwardingHintNew() *enc.Name
 	// Interests must match in terms of Forwarding Hint to be aggregated in PIT.
 	InRecords() map[uint64]*PitInRecord   // Key is face ID
@@ -74,11 +71,9 @@ type PitEntry interface {
 // basePitEntry contains PIT entry properties common to all tables.
 type basePitEntry struct {
 	// lowercase fields so that they aren't exported
-	name              *ndn.Name
 	encname           *enc.Name
 	canBePrefix       bool
 	mustBeFresh       bool
-	forwardingHint    *ndn.Name
 	forwardingHintNew *enc.Name
 	// Interests must match in terms of Forwarding Hint to be
 	// aggregated in PIT.
@@ -93,9 +88,7 @@ type basePitEntry struct {
 // PitInRecord records an incoming Interest on a given face.
 type PitInRecord struct {
 	Face              uint64
-	LatestNonce       []byte
 	LatestTimestamp   time.Time
-	LatestInterest    *ndn.Interest
 	LatestEncInterest *ndn.PendingPacket
 	LatestEncNonce    uint32
 	ExpirationTime    time.Time
@@ -105,9 +98,7 @@ type PitInRecord struct {
 // PitOutRecord records an outgoing Interest on a given face.
 type PitOutRecord struct {
 	Face              uint64
-	LatestNonce       []byte
 	LatestTimestamp   time.Time
-	LatestInterest    *ndn.Interest
 	LatestEncInterest *ndn.PendingPacket
 	LatestEncNonce    uint32
 	ExpirationTime    time.Time
@@ -117,14 +108,12 @@ type PitOutRecord struct {
 type CsEntry interface {
 	Index() uint64 // the hash of the entry, for fast lookup
 	StaleTime() time.Time
-	Data() *ndn.Data
 	EncData() *ndn.PendingPacket
 }
 
 type baseCsEntry struct {
 	index     uint64
 	staleTime time.Time
-	data      *ndn.Data
 	encData   *ndn.PendingPacket
 }
 
@@ -136,10 +125,8 @@ func (bpe *basePitEntry) InsertInRecord(pendingPacket *ndn.PendingPacket, face u
 	if record, ok = bpe.inRecords[face]; !ok {
 		record := new(PitInRecord)
 		record.Face = face
-		//record.LatestNonce = interest.Nonce()
 		record.LatestEncNonce = *pendingPacket.EncPacket.Interest.NonceV
 		record.LatestTimestamp = time.Now()
-		//record.LatestInterest = interest
 		record.LatestEncInterest = pendingPacket
 		record.ExpirationTime = time.Now().Add(time.Millisecond * 4000)
 		record.PitToken = incomingPitToken
@@ -148,10 +135,8 @@ func (bpe *basePitEntry) InsertInRecord(pendingPacket *ndn.PendingPacket, face u
 	}
 
 	// Existing record
-	//record.LatestNonce = interest.Nonce()
 	record.LatestEncNonce = *pendingPacket.EncPacket.Interest.NonceV
 	record.LatestTimestamp = time.Now()
-	//record.LatestInterest = interest
 	record.LatestEncInterest = pendingPacket
 	record.ExpirationTime = time.Now().Add(time.Millisecond * 4000)
 	return record, true
@@ -183,12 +168,7 @@ func UpdateExpirationTimer(e PitEntry) {
 	e.PitCs().updatePitExpiry(e)
 }
 
-///// Setters and Getters /////
-
-func (bpe *basePitEntry) Name() *ndn.Name {
-	return bpe.name
-}
-
+// /// Setters and Getters /////
 func (bpe *basePitEntry) EncName() *enc.Name {
 	return bpe.encname
 }
@@ -200,11 +180,6 @@ func (bpe *basePitEntry) CanBePrefix() bool {
 func (bpe *basePitEntry) MustBeFresh() bool {
 	return bpe.mustBeFresh
 }
-
-func (bpe *basePitEntry) ForwardingHint() *ndn.Name {
-	return bpe.forwardingHint
-}
-
 func (bpe *basePitEntry) ForwardingHintNew() *enc.Name {
 	return bpe.forwardingHintNew
 }
@@ -253,10 +228,6 @@ func (bce *baseCsEntry) Index() uint64 {
 
 func (bce *baseCsEntry) StaleTime() time.Time {
 	return bce.staleTime
-}
-
-func (bce *baseCsEntry) Data() *ndn.Data {
-	return bce.data
 }
 
 func (bce *baseCsEntry) EncData() *ndn.PendingPacket {

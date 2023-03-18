@@ -41,21 +41,12 @@ type FibNextHopEntry struct {
 
 // FibStrategy represents the functionality that a FIB-strategy table should implement.
 type FibStrategy interface {
-	FindNextHops(name *ndn.Name) []*FibNextHopEntry
 	FindNextHopsEnc(name *enc.Name) []*FibNextHopEntry
-	FindStrategy(name *ndn.Name) *ndn.Name
 	FindStrategyEnc(name *enc.Name) *enc.Name
-	InsertNextHop(name *ndn.Name, nextHop uint64, cost uint64)
 	InsertNextHopEnc(name *enc.Name, nextHop uint64, cost uint64)
-	ClearNextHops(name *ndn.Name)
 	ClearNextHopsEnc(name *enc.Name)
-	RemoveNextHop(name *ndn.Name, nextHop uint64)
 	RemoveNextHopEnc(name *enc.Name, nextHop uint64)
-
 	GetAllFIBEntries() []FibStrategyEntry
-
-	SetStrategy(name *ndn.Name, strategy *ndn.Name)
-	UnsetStrategy(name *ndn.Name)
 	SetStrategyEnc(name *enc.Name, strategy *enc.Name)
 	UnSetStrategyEnc(name *enc.Name)
 	GetAllForwardingStrategies() []FibStrategyEntry
