@@ -164,7 +164,6 @@ func (t *InternalTransport) runReceive() {
 			}
 
 			t.nInBytes += uint64(len(frame))
-
 			t.linkService.handleIncomingFrame(frame)
 		}
 	}

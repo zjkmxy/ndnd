@@ -14,6 +14,7 @@ import (
 	"github.com/named-data/YaNFD/ndn/mgmt"
 	"github.com/named-data/YaNFD/ndn/tlv"
 	"github.com/named-data/YaNFD/table"
+	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // Thread Represents the management thread
@@ -38,12 +39,7 @@ func MakeMgmtThread() *Thread {
 		core.LogFatal(m, "Unable to create name for management prefix: ", err)
 	}
 	m.modules = make(map[string]Module)
-	m.registerModule("cs", new(ContentStoreModule))
 	m.registerModule("faces", new(FaceModule))
-	m.registerModule("fib", new(FIBModule))
-	m.registerModule("rib", new(RIBModule))
-	m.registerModule("status", new(ForwarderStatusModule))
-	m.registerModule("strategy-choice", new(StrategyChoiceModule))
 	return m
 }
 
@@ -89,11 +85,15 @@ func (m *Thread) Run() {
 
 	// Create and register Internal transport
 	m.face, m.transport = face.RegisterInternalTransport()
-	table.FibStrategyTable.InsertNextHop(m.localPrefix, m.face.FaceID(), 0)
-	if enableLocalhopManagement {
-		table.FibStrategyTable.InsertNextHop(m.nonLocalPrefix, m.face.FaceID(), 0)
+	faces, err := enc.NameFromStr("/localhost/nfd/faces")
+	if err != nil {
+		core.LogFatal(m, "Unable to create name for management prefix: ", err)
 	}
-
+	table.FibStrategyTable.InsertNextHopEnc(&faces, m.face.FaceID(), 0)
+	if enableLocalhopManagement {
+		add1, _ := enc.NameFromStr("/localhop/nfd/faces")
+		table.FibStrategyTable.InsertNextHopEnc(&add1, m.face.FaceID(), 0)
+	}
 	for {
 		block, pitToken, inFace := m.transport.Receive()
 		if block == nil {
@@ -125,15 +125,14 @@ func (m *Thread) Run() {
 		}
 
 		core.LogTrace(m, "Received management Interest ", interest.Name())
-
+		var e error
+		if e != nil {
+			core.LogWarn("Failed to parse packet in LpPacket: %v", e)
+		}
 		// Dispatch interest based on name
 		moduleName := interest.Name().At(m.localPrefix.Size()).String()
 		if module, ok := m.modules[moduleName]; ok {
 			module.handleIncomingInterest(interest, pitToken, inFace)
-		} else {
-			core.LogWarn(m, "Received management Interest for unknown module ", moduleName)
-			response := mgmt.MakeControlResponse(501, "Unknown module", nil)
-			m.sendResponse(response, interest, pitToken, inFace)
 		}
 	}
 }
