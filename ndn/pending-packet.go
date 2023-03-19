@@ -7,11 +7,7 @@
 
 package ndn
 
-import (
-	"github.com/named-data/YaNFD/ndn/tlv"
-	_ "github.com/zjkmxy/go-ndn/pkg/encoding"
-	spec "github.com/zjkmxy/go-ndn/pkg/ndn/spec_2022"
-)
+import "github.com/named-data/YaNFD/ndn/tlv"
 
 // PendingPacket represents a pending network-layer packet to be sent or recently received on the link, plus any associated metadata.
 type PendingPacket struct {
@@ -22,9 +18,6 @@ type PendingPacket struct {
 	IncomingFaceID *uint64
 	NextHopFaceID  *uint64
 	CachePolicy    *uint64
-	EncPacket      *spec.Packet
-	RawBytes       []byte
-	NameCache      string
 }
 
 // DeepCopy creates a deep copy of a pending packet.

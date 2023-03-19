@@ -14,7 +14,6 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/utils/priority_queue"
-	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // DeadNonceList represents the Dead Nonce List for a forwarding thread.
@@ -44,12 +43,6 @@ func (d *DeadNonceList) Find(name *ndn.Name, nonce []byte) bool {
 	return ok
 }
 
-func (d *DeadNonceList) FindEnc(name string, nonce uint32) bool {
-	hash := xxhash.Sum64String(name) + uint64(nonce)
-	_, ok := d.list[hash]
-	return ok
-}
-
 // Insert inserts an entry in the Dead Nonce List with the specified name and nonce. Returns whether nonce already present.
 func (d *DeadNonceList) Insert(name *ndn.Name, nonce []byte) bool {
 	wire, err := name.Encode().Wire()
@@ -57,23 +50,6 @@ func (d *DeadNonceList) Insert(name *ndn.Name, nonce []byte) bool {
 		return false
 	}
 	hash := xxhash.Sum64(wire) + uint64(binary.BigEndian.Uint32(nonce))
-	_, exists := d.list[hash]
-
-	if !exists {
-		d.list[hash] = true
-		d.expirationQueue.Push(hash, time.Now().Add(deadNonceListLifetime).UnixNano())
-	}
-	return exists
-}
-
-func (d *DeadNonceList) InsertEnc(name *enc.Name, nonce uint32) bool {
-	var hash uint64
-	hash = 0
-	for _, component := range *name {
-		//fmt.Println(hash, component.Val)
-		hash = hash + xxhash.Sum64(component.Val)
-	}
-	hash = hash + uint64(nonce)
 	_, exists := d.list[hash]
 
 	if !exists {

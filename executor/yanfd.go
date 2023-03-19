@@ -8,15 +8,12 @@
 package executor
 
 import (
-	"fmt"
-	"net/http"
-	_ "net/http/pprof"
+	"net"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"time"
 
-	"github.com/named-data/YaNFD/ackconn"
 	"github.com/named-data/YaNFD/core"
 	"github.com/named-data/YaNFD/dispatch"
 	"github.com/named-data/YaNFD/face"
@@ -24,7 +21,6 @@ import (
 	"github.com/named-data/YaNFD/mgmt"
 	"github.com/named-data/YaNFD/ndn"
 	"github.com/named-data/YaNFD/table"
-	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // YaNFDConfig is the configuration of YaNFD.
@@ -102,29 +98,29 @@ func NewYaNFD(config *YaNFDConfig) *YaNFD {
 		blockProfiler:  blockProfiler,
 	}
 }
+
+// Start runs YaNFD. Note: this function may exit the program when there is error.
+// This function is non-blocking.
 func (y *YaNFD) Start() {
 	core.LogInfo("Main", "Starting YaNFD")
 
 	// Load strategies
 	//core.LogInfo("Main", "Loading strategies")
 	//fw.LoadStrategies()
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
+
 	// Initialize FIB table
 	fibTableAlgorithm := core.GetConfigStringDefault("tables.fib.algorithm", "nametree")
 	table.CreateFIBTable(fibTableAlgorithm)
+
 	// Create null face
 	nullFace := face.MakeNullLinkService(face.MakeNullTransport())
 	face.FaceTable.Add(nullFace)
 	go nullFace.Run(nil)
 
-	ackconn.AckChannel.Make("/tmp/ackmgmt.sock")
-	go ackconn.AckChannel.RunReceive()
-	face.FaceTable.ExternalManager = &ackconn.AckChannel
-	add, _ := enc.NameFromStr("/localhost/nfd")
-	table.FibStrategyTable.InsertNextHopEnc(&add, 2, 0)
 	// Start management thread
+	management := mgmt.MakeMgmtThread()
+	go management.Run()
+
 	// Create forwarding threads
 	if fw.NumFwThreads < 1 || fw.NumFwThreads > fw.MaxFwThreads {
 		core.LogFatal("Main", "Number of forwarding threads must be in range [1, ", fw.MaxFwThreads, "]")
@@ -138,94 +134,93 @@ func (y *YaNFD) Start() {
 		go fw.Threads[i].Run()
 	}
 	dispatch.InitializeFWThreads(fwForDispatch)
-	//hard code in face to mgmt thread outside of mgmt thread (is dubious at best to do this)
 
 	// Perform setup operations for each network interface
 	faceCnt := 0
-	//ifaces, err := net.Interfaces()
-	// multicastEthURI := ndn.DecodeURIString("ether://[" + face.EthernetMulticastAddress + "]")
-	// if err != nil {
-	// 	core.LogFatal("Main", "Unable to access network interfaces: ", err)
-	// 	os.Exit(2)
-	// }
-	// ethEnabled := core.GetConfigBoolDefault("faces.ethernet.enabled", true) && !y.config.DisableEthernet
-	// tcpEnabled := core.GetConfigBoolDefault("faces.tcp.enabled", true)
-	// tcpPort := face.TCPUnicastPort
-	// y.tcpListeners = make([]*face.TCPListener, 0)
-	// for _, iface := range ifaces {
-	// 	if iface.Flags&net.FlagUp == 0 {
-	// 		core.LogInfo("Main", "Skipping interface ", iface.Name, " because not up")
-	// 		continue
-	// 	}
+	ifaces, err := net.Interfaces()
+	multicastEthURI := ndn.DecodeURIString("ether://[" + face.EthernetMulticastAddress + "]")
+	if err != nil {
+		core.LogFatal("Main", "Unable to access network interfaces: ", err)
+		os.Exit(2)
+	}
+	ethEnabled := core.GetConfigBoolDefault("faces.ethernet.enabled", true) && !y.config.DisableEthernet
+	tcpEnabled := core.GetConfigBoolDefault("faces.tcp.enabled", true)
+	tcpPort := face.TCPUnicastPort
+	y.tcpListeners = make([]*face.TCPListener, 0)
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			core.LogInfo("Main", "Skipping interface ", iface.Name, " because not up")
+			continue
+		}
 
-	// 	if ethEnabled && iface.Flags&net.FlagMulticast != 0 {
-	// 		// Create multicast Ethernet face for interface
-	// 		multicastEthTransport, err := face.MakeMulticastEthernetTransport(multicastEthURI, ndn.MakeDevFaceURI(iface.Name))
-	// 		if err != nil {
-	// 			core.LogError("Main", "Unable to create MulticastEthernetTransport for ", iface.Name, ": ", err)
-	// 		} else {
-	// 			multicastEthFace := face.MakeNDNLPLinkService(multicastEthTransport, face.MakeNDNLPLinkServiceOptions())
-	// 			face.FaceTable.Add(multicastEthFace)
-	// 			faceCnt += 1
-	// 			go multicastEthFace.Run(nil)
-	// 			core.LogInfo("Main", "Created multicast Ethernet face for ", iface.Name)
+		if ethEnabled && iface.Flags&net.FlagMulticast != 0 {
+			// Create multicast Ethernet face for interface
+			multicastEthTransport, err := face.MakeMulticastEthernetTransport(multicastEthURI, ndn.MakeDevFaceURI(iface.Name))
+			if err != nil {
+				core.LogError("Main", "Unable to create MulticastEthernetTransport for ", iface.Name, ": ", err)
+			} else {
+				multicastEthFace := face.MakeNDNLPLinkService(multicastEthTransport, face.MakeNDNLPLinkServiceOptions())
+				face.FaceTable.Add(multicastEthFace)
+				faceCnt += 1
+				go multicastEthFace.Run(nil)
+				core.LogInfo("Main", "Created multicast Ethernet face for ", iface.Name)
 
-	// 			// Create Ethernet listener for interface
-	// 			// TODO
-	// 		}
-	// 	}
+				// Create Ethernet listener for interface
+				// TODO
+			}
+		}
 
-	// 	// Create UDP/TCP listener and multicast UDP interface for every address on interface
-	// 	addrs, err := iface.Addrs()
-	// 	if err != nil {
-	// 		core.LogFatal("Main", "Unable to access addresses on network interface ", iface.Name, ": ", err)
-	// 	}
-	// 	for _, addr := range addrs {
-	// 		ipAddr := addr.(*net.IPNet)
+		// Create UDP/TCP listener and multicast UDP interface for every address on interface
+		addrs, err := iface.Addrs()
+		if err != nil {
+			core.LogFatal("Main", "Unable to access addresses on network interface ", iface.Name, ": ", err)
+		}
+		for _, addr := range addrs {
+			ipAddr := addr.(*net.IPNet)
 
-	// 		ipVersion := 4
-	// 		path := ipAddr.IP.String()
-	// 		if ipAddr.IP.To4() == nil {
-	// 			ipVersion = 6
-	// 			path += "%" + iface.Name
-	// 		}
+			ipVersion := 4
+			path := ipAddr.IP.String()
+			if ipAddr.IP.To4() == nil {
+				ipVersion = 6
+				path += "%" + iface.Name
+			}
 
-	// 		if !addr.(*net.IPNet).IP.IsLoopback() {
-	// 			multicastUDPTransport, err := face.MakeMulticastUDPTransport(ndn.MakeUDPFaceURI(ipVersion, path, face.UDPMulticastPort))
-	// 			if err != nil {
-	// 				core.LogError("Main", "Unable to create MulticastUDPTransport for ", path, " on ", iface.Name, ": ", err)
-	// 				continue
-	// 			}
-	// 			multicastUDPFace := face.MakeNDNLPLinkService(multicastUDPTransport, face.MakeNDNLPLinkServiceOptions())
-	// 			face.FaceTable.Add(multicastUDPFace)
-	// 			faceCnt += 1
-	// 			go multicastUDPFace.Run(nil)
-	// 			core.LogInfo("Main", "Created multicast UDP face for ", path, " on ", iface.Name)
-	// 		}
+			if !addr.(*net.IPNet).IP.IsLoopback() {
+				multicastUDPTransport, err := face.MakeMulticastUDPTransport(ndn.MakeUDPFaceURI(ipVersion, path, face.UDPMulticastPort))
+				if err != nil {
+					core.LogError("Main", "Unable to create MulticastUDPTransport for ", path, " on ", iface.Name, ": ", err)
+					continue
+				}
+				multicastUDPFace := face.MakeNDNLPLinkService(multicastUDPTransport, face.MakeNDNLPLinkServiceOptions())
+				face.FaceTable.Add(multicastUDPFace)
+				faceCnt += 1
+				go multicastUDPFace.Run(nil)
+				core.LogInfo("Main", "Created multicast UDP face for ", path, " on ", iface.Name)
+			}
 
-	// 		udpListener, err := face.MakeUDPListener(ndn.MakeUDPFaceURI(ipVersion, path, face.UDPUnicastPort))
-	// 		if err != nil {
-	// 			core.LogError("Main", "Unable to create UDP listener for ", path, " on ", iface.Name, ": ", err)
-	// 			continue
-	// 		}
-	// 		faceCnt += 1
-	// 		go udpListener.Run()
-	// 		core.LogInfo("Main", "Created UDP listener for ", path, " on ", iface.Name)
+			udpListener, err := face.MakeUDPListener(ndn.MakeUDPFaceURI(ipVersion, path, face.UDPUnicastPort))
+			if err != nil {
+				core.LogError("Main", "Unable to create UDP listener for ", path, " on ", iface.Name, ": ", err)
+				continue
+			}
+			faceCnt += 1
+			go udpListener.Run()
+			core.LogInfo("Main", "Created UDP listener for ", path, " on ", iface.Name)
 
-	// 		if tcpEnabled {
-	// 			tcpListener, err := face.MakeTCPListener(ndn.MakeTCPFaceURI(ipVersion, path, tcpPort))
-	// 			if err != nil {
-	// 				core.LogError("Main", "Unable to create TCP listener for ", path, " on ", iface.Name, ": ", err)
-	// 				continue
-	// 			}
-	// 			faceCnt += 1
-	// 			go tcpListener.Run()
-	// 			core.LogInfo("Main", "Created TCP listener for ", path, " on ", iface.Name)
-	// 			y.tcpListeners = append(y.tcpListeners, tcpListener)
-	// 		}
-	// 	}
-	// }
-	var err error
+			if tcpEnabled {
+				tcpListener, err := face.MakeTCPListener(ndn.MakeTCPFaceURI(ipVersion, path, tcpPort))
+				if err != nil {
+					core.LogError("Main", "Unable to create TCP listener for ", path, " on ", iface.Name, ": ", err)
+					continue
+				}
+				faceCnt += 1
+				go tcpListener.Run()
+				core.LogInfo("Main", "Created TCP listener for ", path, " on ", iface.Name)
+				y.tcpListeners = append(y.tcpListeners, tcpListener)
+			}
+		}
+	}
+
 	if core.GetConfigBoolDefault("faces.unix.enabled", true) && !y.config.DisableUnix {
 		// Set up Unix stream listener
 		y.unixListener, err = face.MakeUnixStreamListener(ndn.MakeUnixFaceURI(face.UnixSocketPath))
@@ -238,23 +233,23 @@ func (y *YaNFD) Start() {
 		}
 	}
 
-	// if core.GetConfigBoolDefault("faces.websocket.enabled", true) {
-	// 	cfg := face.WebSocketListenerConfig{
-	// 		Bind:       core.GetConfigStringDefault("faces.websocket.bind", ""),
-	// 		Port:       core.GetConfigUint16Default("faces.websocket.port", 9696),
-	// 		TLSEnabled: core.GetConfigBoolDefault("faces.websocket.tls_enabled", false),
-	// 		TLSCert:    core.ResolveConfigFileRelPath(core.GetConfigStringDefault("faces.websocket.tls_cert", "")),
-	// 		TLSKey:     core.ResolveConfigFileRelPath(core.GetConfigStringDefault("faces.websocket.tls_key", "")),
-	// 	}
-	// 	y.wsListener, err = face.NewWebSocketListener(cfg)
-	// 	if err != nil {
-	// 		core.LogError("Main", "Unable to create ", cfg, ": ", err)
-	// 	} else {
-	// 		faceCnt++
-	// 		go y.wsListener.Run()
-	// 		core.LogInfo("Main", "Created ", cfg)
-	// 	}
-	// }
+	if core.GetConfigBoolDefault("faces.websocket.enabled", true) {
+		cfg := face.WebSocketListenerConfig{
+			Bind:       core.GetConfigStringDefault("faces.websocket.bind", ""),
+			Port:       core.GetConfigUint16Default("faces.websocket.port", 9696),
+			TLSEnabled: core.GetConfigBoolDefault("faces.websocket.tls_enabled", false),
+			TLSCert:    core.ResolveConfigFileRelPath(core.GetConfigStringDefault("faces.websocket.tls_cert", "")),
+			TLSKey:     core.ResolveConfigFileRelPath(core.GetConfigStringDefault("faces.websocket.tls_key", "")),
+		}
+		y.wsListener, err = face.NewWebSocketListener(cfg)
+		if err != nil {
+			core.LogError("Main", "Unable to create ", cfg, ": ", err)
+		} else {
+			faceCnt++
+			go y.wsListener.Run()
+			core.LogInfo("Main", "Created ", cfg)
+		}
+	}
 
 	if faceCnt <= 0 {
 		core.LogFatal("Main", "No face or listener is successfully created. Quit.")

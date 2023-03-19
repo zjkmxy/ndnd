@@ -17,7 +17,6 @@ import (
 	"github.com/named-data/YaNFD/ndn/mgmt"
 	"github.com/named-data/YaNFD/ndn/tlv"
 	"github.com/named-data/YaNFD/table"
-	enc "github.com/zjkmxy/go-ndn/pkg/encoding"
 )
 
 // RIBModule is the module that handles RIB Management.
@@ -114,9 +113,8 @@ func (r *RIBModule) register(interest *ndn.Interest, pitToken []byte, inFace uin
 		*expirationPeriod = time.Duration(*params.ExpirationPeriod) * time.Millisecond
 	}
 
-	//table.Rib.AddRoute(params.Name, faceID, origin, cost, flags, expirationPeriod)
-	cheat, _ := enc.NameFromStr(params.Name.String())
-	table.Rib.AddEncRoute(&cheat, faceID, origin, cost, flags, expirationPeriod)
+	table.Rib.AddRoute(params.Name, faceID, origin, cost, flags, expirationPeriod)
+
 	if expirationPeriod != nil {
 		core.LogInfo(r, "Created route for Prefix=", params.Name, ", FaceID=", faceID, ", Origin=", origin, ", Cost=", cost, ", Flags=0x", strconv.FormatUint(flags, 16), ", ExpirationPeriod=", expirationPeriod)
 	} else {
@@ -202,6 +200,7 @@ func (r *RIBModule) unregister(interest *ndn.Interest, pitToken []byte, inFace u
 
 func (r *RIBModule) announce(interest *ndn.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
+
 	if interest.Name().Size() != r.manager.prefixLength()+3 || interest.Name().At(r.manager.prefixLength()+2).Type() != tlv.ParametersSha256DigestComponent {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(r, "Name of Interest=", interest.Name(), " is either too short or incorrectly formatted to be rib/announce")

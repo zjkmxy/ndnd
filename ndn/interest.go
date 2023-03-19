@@ -20,7 +20,6 @@ import (
 
 	"github.com/named-data/YaNFD/ndn/tlv"
 	"github.com/named-data/YaNFD/ndn/util"
-	spec "github.com/zjkmxy/go-ndn/pkg/ndn/spec_2022"
 )
 
 // Interest represents an NDN Interest packet.
@@ -34,7 +33,6 @@ type Interest struct {
 	hopLimit       *uint8
 	parameters     []*tlv.Block
 	wire           *tlv.Block
-	Mole           *spec.Packet
 }
 
 // NewInterest creates a new Interest with the specified name and default values.

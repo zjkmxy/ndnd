@@ -16,6 +16,7 @@ import (
 	"github.com/named-data/YaNFD/dispatch"
 	"github.com/named-data/YaNFD/fw"
 	"github.com/named-data/YaNFD/ndn"
+	"github.com/named-data/YaNFD/ndn/tlv"
 )
 
 // LinkService is an interface for link service implementations
@@ -232,18 +233,17 @@ func (l *linkServiceBase) SendPacket(packet *ndn.PendingPacket) {
 func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 	// Hand off to network layer by dispatching to appropriate forwarding thread(s)
 	var err error
-	switch {
-	case netPacket.EncPacket.Interest != nil:
-		//netPacket.NameCache = netPacket.EncPacket.Interest.NameV.String()
+	switch netPacket.Wire.Type() {
+	case tlv.Interest:
+		netPacket.NetPacket, err = ndn.DecodeInterest(netPacket.Wire)
 		if err != nil {
 			core.LogError(l, "Unable to decode Interest (", err, ") - DROP")
 			break
 		}
-		thread := fw.HashNameToFwThread(&netPacket.EncPacket.Interest.NameV)
+		thread := fw.HashNameToFwThread(netPacket.NetPacket.(*ndn.Interest).Name())
 		core.LogTrace(l, "Dispatched Interest to thread ", thread)
 		dispatch.GetFWThread(thread).QueueInterest(netPacket)
-	case netPacket.EncPacket.Data != nil:
-		//netPacket.NameCache = netPacket.EncPacket.Data.NameV.String()
+	case tlv.Data:
 		if len(netPacket.PitToken) == 6 {
 			// Decode PitToken. If it's for us, it's a uint16 + uint32.
 			pitTokenThread := binary.BigEndian.Uint16(netPacket.PitToken)
@@ -262,18 +262,18 @@ func (l *linkServiceBase) dispatchIncomingPacket(netPacket *ndn.PendingPacket) {
 			// Only if from a local face (and therefore from a producer), dispatch to threads matching every prefix.
 			// We need to do this because producers do not attach PIT tokens to their data packets.
 			core.LogDebug(l, "Missing PIT token from local origin Data packet - performing prefix dispatching")
+			netPacket.NetPacket, err = ndn.DecodeData(netPacket.Wire, false)
 			if err != nil {
 				core.LogError(l, "Unable to decode Data (", err, ") - DROP")
 				break
 			}
-			for _, thread := range fw.HashNameToAllPrefixFwThreads(&netPacket.EncPacket.Data.NameV) {
+			for _, thread := range fw.HashNameToAllPrefixFwThreads(netPacket.NetPacket.(*ndn.Data).Name()) {
 				core.LogTrace(l, "Prefix dispatched local-origin Data packet to thread ", thread)
 				dispatch.GetFWThread(thread).QueueData(netPacket)
 			}
 		}
 	default:
-		//change this
-		core.LogError(l, "Cannot dispatch packet of unknown type ")
+		core.LogError(l, "Cannot dispatch packet of unknown type ", netPacket.Wire.Type())
 	}
 }
 

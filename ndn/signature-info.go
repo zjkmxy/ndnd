@@ -259,7 +259,6 @@ func (s *SignatureInfo) Interest() bool {
 
 // Encode encodes the SignatureInfo (or InterestSignatureInfo) into a block.
 func (s *SignatureInfo) Encode() (*tlv.Block, error) {
-	//the reason encode takes so long is because appending is actually appending into subelements as blocks. This is probably a copy, which is then undecoded and then reassigned as the array on the end.
 	if s.wire == nil {
 		if s.isInterest {
 			s.wire = tlv.NewEmptyBlock(tlv.InterestSignatureInfo)
