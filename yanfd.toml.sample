@@ -81,6 +81,14 @@
     # TLS private key (relative to the config file)
     tls_key = ""
 
+  [faces.ble]
+
+    # Whether to enable BLE Peripheral face (NOTE: Incompatible with esp8266ndn)
+    enabled = true
+
+    # Local name for BLE Peripheral
+    local_name = ""
+
 [fw]
 
   # Number of forwarding threads

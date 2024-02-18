@@ -249,6 +249,27 @@ func (y *YaNFD) Start() {
 		}
 	}
 
+	if core.GetConfigBoolDefault("faces.ble.enabled", false) {
+		localName := core.GetConfigStringDefault("faces.ble.local_name", "")
+		if len(localName) == 0 {
+			localName = "YaNFD"
+			hostName, err := os.Hostname()
+			if err == nil {
+				localName += "-" + hostName
+			}
+		}
+		bleTransport, err := face.NewBLEPeripheral(localName)
+		if err != nil {
+			core.LogError("Main", "Unable to create BLE transport for ", localName, ": ", err)
+		} else {
+			bleFace := face.MakeNDNLPLinkService(bleTransport, face.MakeNDNLPLinkServiceOptions())
+			face.FaceTable.Add(bleFace)
+			faceCnt += 1
+			go bleFace.Run(nil)
+			core.LogInfo("Main", "Created BLE face for ", localName)
+		}
+	}
+
 	if faceCnt <= 0 {
 		core.LogFatal("Main", "No face or listener is successfully created. Quit.")
 		os.Exit(2)

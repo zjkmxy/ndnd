@@ -44,6 +44,7 @@ const (
 	unixURI
 	wsURI
 	wsclientURI
+	bleURI
 )
 
 // URI represents a URI for a face.
@@ -165,6 +166,16 @@ func MakeWebSocketClientFaceURI(addr net.Addr) *URI {
 		scheme:  "wsclient",
 		path:    host,
 		port:    uint16(port),
+	}
+}
+
+// MakeBLEURI constructs a URI for a BLE Peripheral.
+func MakeBLEURI(name string, uuid string) *URI {
+	return &URI{
+		uriType: bleURI,
+		scheme:  "blePeripheral",
+		path:    name + "[" + uuid + "]",
+		port:    0,
 	}
 }
 
@@ -391,6 +402,9 @@ func (u *URI) IsCanonical() bool {
 	case unixURI:
 		// Do not check whether file exists, because it may fail due to lack of priviledge in testing environment
 		return u.scheme == "unix" && u.path != "" && u.port == 0
+	case wsURI, wsclientURI, bleURI:
+		// No check
+		return true
 	default:
 		// Of unknown type
 		return false
@@ -463,6 +477,9 @@ func (u *URI) Canonize() error {
 			return core.ErrNotCanonical
 		}
 		u.port = 0
+	case wsURI, wsclientURI, bleURI:
+		// No check
+		return nil
 	default:
 		return core.ErrNotCanonical
 	}
@@ -513,6 +530,8 @@ func (u *URI) String() string {
 	case udpURI, tcpURI, wsURI, wsclientURI:
 		return u.scheme + "://" + net.JoinHostPort(u.path, strconv.FormatUint(uint64(u.port), 10))
 	case unixURI:
+		return u.scheme + "://" + u.path
+	case bleURI:
 		return u.scheme + "://" + u.path
 	default:
 		return "unknown://"
