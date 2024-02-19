@@ -8,19 +8,17 @@
 package face
 
 import (
+	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/named-data/YaNFD/core"
 	"github.com/named-data/YaNFD/ndn"
-	"github.com/named-data/YaNFD/ndn/tlv"
 	"tinygo.org/x/bluetooth"
 )
 
-// const BLEMTU = 512 // See esp8266ndn, it uses 512 & 517
+const BLEMTU = 512 // See esp8266ndn, it uses 512 & 517
 // Note that this MTU does not match the real MTU: tinygo/bluetooth only supports the default 23
-
-const BLERealMTU = 20
+// However, it can receive and send packet with 512B
 
 var (
 	serviceUUID = bluetooth.NewUUID([16]byte{0x09, 0x95, 0x77, 0xe3, 0x07, 0x88, 0x41, 0x2a, 0x88, 0x24, 0x39, 0x50, 0x84, 0xd9, 0x73, 0x91})
@@ -32,12 +30,9 @@ var (
 type BLEPeripheral struct {
 	transportBase
 
-	cs       bluetooth.Characteristic
-	sc       bluetooth.Characteristic
-	recvBuf  []byte
-	startPos int
-	adv      *bluetooth.Advertisement
-	lock     sync.Mutex
+	cs  bluetooth.Characteristic
+	sc  bluetooth.Characteristic
+	adv *bluetooth.Advertisement
 }
 
 var _ transport = &BLEPeripheral{} // trait
@@ -46,10 +41,8 @@ var _ transport = &BLEPeripheral{} // trait
 func NewBLEPeripheral(localName string) (t *BLEPeripheral, err error) {
 	remoteURI := ndn.MakeBLEURI(localName, serviceUUID.String())
 	t = &BLEPeripheral{
-		cs:       bluetooth.Characteristic{},
-		sc:       bluetooth.Characteristic{},
-		recvBuf:  make([]byte, tlv.MaxNDNPacketSize),
-		startPos: 0,
+		cs: bluetooth.Characteristic{},
+		sc: bluetooth.Characteristic{},
 	}
 
 	adapter := bluetooth.DefaultAdapter
@@ -101,7 +94,7 @@ func NewBLEPeripheral(localName string) (t *BLEPeripheral, err error) {
 	}
 
 	scope := ndn.NonLocal
-	t.makeTransportBase(remoteURI, remoteURI, PersistencyPermanent, scope, ndn.MultiAccess, tlv.MaxNDNPacketSize)
+	t.makeTransportBase(remoteURI, remoteURI, PersistencyPermanent, scope, ndn.MultiAccess, BLEMTU)
 	t.changeState(ndn.Up)
 	return
 }
@@ -121,33 +114,13 @@ func (t *BLEPeripheral) GetSendQueueSize() uint64 {
 }
 
 func (t *BLEPeripheral) sendFrame(frame []byte) {
-	sendBuf := make([]byte, BLERealMTU+2)
-	first := true
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	for len(frame) != 0 {
-		// Chop off up to 20 bytes from the sendbuf.
-		partlen := BLERealMTU
-		if len(frame) < BLERealMTU {
-			partlen = len(frame)
-		}
-		part := frame[:partlen]
-		frame = frame[partlen:]
-		// This also sends a notification.
-		copy(sendBuf[1:], part)
-		if first {
-			sendBuf[0] = 1 // start
-			first = false
-		} else if len(frame) == 0 {
-			sendBuf[0] = 2 // end
-		} else {
-			sendBuf[0] = 0 // middle
-		}
-		_, err := t.sc.Write(sendBuf[:1+partlen])
-		if err != nil {
-			core.LogError(t, "Unable to write BLE frame", err)
-		}
+	_, err := t.sc.Write(frame)
+	if err != nil {
+		core.LogError(t, "Unable to write BLE frame", err)
 	}
+
+	fmt.Println("SENT:", frame)
+
 	t.nOutBytes += uint64(len(frame))
 }
 
@@ -172,23 +145,8 @@ func (t *BLEPeripheral) changeState(new ndn.State) {
 }
 
 func (t *BLEPeripheral) onWrite(client bluetooth.Connection, offset int, value []byte) {
-	// Then do reassembly
-	if value[0] == 1 {
-		// Start
-		t.startPos = 0
-	}
-	nCopied := copy(t.recvBuf[t.startPos:], value[1:])
-	t.startPos += nCopied
-	if value[0] == 2 {
-		// End
-		t.linkService.handleIncomingFrame(t.recvBuf[:t.startPos])
+	fmt.Println("RECVED:", value)
 
-		// bounce back the packet to other clients
-		bounceBuf := make([]byte, t.startPos)
-		copy(bounceBuf, t.recvBuf[:t.startPos])
-		go t.sendFrame(bounceBuf)
-
-		t.startPos = 0
-	}
-	t.nInBytes += uint64(len(value) - 1)
+	t.linkService.handleIncomingFrame(value)
+	t.nInBytes += uint64(len(value))
 }

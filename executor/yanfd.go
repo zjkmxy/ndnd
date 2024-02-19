@@ -262,7 +262,10 @@ func (y *YaNFD) Start() {
 		if err != nil {
 			core.LogError("Main", "Unable to create BLE transport for ", localName, ": ", err)
 		} else {
-			bleFace := face.MakeNDNLPLinkService(bleTransport, face.MakeNDNLPLinkServiceOptions())
+			options := face.MakeNDNLPLinkServiceOptions()
+			options.IsFragmentationEnabled = true
+			options.IsReassemblyEnabled = true
+			bleFace := face.MakeNDNLPLinkService(bleTransport, options)
 			face.FaceTable.Add(bleFace)
 			faceCnt += 1
 			go bleFace.Run(nil)
