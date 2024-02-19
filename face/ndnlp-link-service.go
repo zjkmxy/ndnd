@@ -104,7 +104,8 @@ type NDNLPLinkService struct {
 	// Low layer transports are not supposed to have sendFrame() called concurrently
 	// Search `go sendPacket(l, netPacket)` to find the line that causes this problems
 	// Ref: https://github.com/named-data/YaNFD/issues/56
-	sendFrameMutex sync.Mutex
+	sendFrameMutex           sync.Mutex
+	partialMessageStoreMutex sync.Mutex
 }
 
 type WorkerBee struct {
@@ -461,35 +462,37 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 		}
 
 		// Reassembly
-		if l.options.IsReassemblyEnabled {
-			if packet.LpPacket.Sequence == nil {
-				core.LogInfo(l, "Received NDNLPv2 frame without Sequence but reassembly requires it - DROP")
-				return
-			}
-
-			fragIndex := uint64(0)
-			if packet.LpPacket.FragIndex != nil {
-				fragIndex = *packet.LpPacket.FragIndex
-			}
-			fragCount := uint64(1)
-			if packet.LpPacket.FragCount != nil {
-				fragCount = *packet.LpPacket.FragCount
-			}
-			baseSequence := *packet.LpPacket.Sequence - fragIndex
-
-			core.LogTrace(l, "Received fragment ", fragIndex, " of ", fragCount, " for ", baseSequence)
-			if fragIndex == 0 && fragCount == 1 {
-				// Bypass reassembly since only one fragment
-			} else {
-				fragment = l.reassemblePacket(packet.LpPacket, baseSequence, fragIndex, fragCount)
-				if fragment == nil {
-					// Nothing more to be done, so return
+		if packet.LpPacket.FragCount != nil || packet.LpPacket.FragIndex != nil {
+			if l.options.IsReassemblyEnabled {
+				if packet.LpPacket.Sequence == nil {
+					core.LogInfo(l, "Received NDNLPv2 frame without Sequence but reassembly requires it - DROP")
 					return
 				}
+
+				fragIndex := uint64(0)
+				if packet.LpPacket.FragIndex != nil {
+					fragIndex = *packet.LpPacket.FragIndex
+				}
+				fragCount := uint64(1)
+				if packet.LpPacket.FragCount != nil {
+					fragCount = *packet.LpPacket.FragCount
+				}
+				baseSequence := *packet.LpPacket.Sequence - fragIndex
+
+				core.LogTrace(l, "Received fragment ", fragIndex, " of ", fragCount, " for ", baseSequence)
+				if fragIndex == 0 && fragCount == 1 {
+					// Bypass reassembly since only one fragment
+				} else {
+					fragment = l.reassemblePacket(packet.LpPacket, baseSequence, fragIndex, fragCount)
+					if fragment == nil {
+						// Nothing more to be done, so return
+						return
+					}
+				}
+			} else {
+				core.LogWarn(l, "Received NDNLPv2 frame containing fragmentation fields but reassembly disabled - DROP")
+				return
 			}
-		} else if packet.LpPacket.FragCount != nil || packet.LpPacket.FragIndex != nil {
-			core.LogWarn(l, "Received NDNLPv2 frame containing fragmentation fields but reassembly disabled - DROP")
-			return
 		}
 
 		// Congestion mark
@@ -528,6 +531,8 @@ func (l *NDNLPLinkService) processIncomingFrame(wire []byte) {
 func (l *NDNLPLinkService) reassemblePacket(
 	frame *spec.LpPacket, baseSequence uint64, fragIndex uint64, fragCount uint64,
 ) enc.Wire {
+	l.partialMessageStoreMutex.Lock()
+	defer l.partialMessageStoreMutex.Unlock()
 	_, hasSequence := l.partialMessageStore[baseSequence]
 	if !hasSequence {
 		// Create map entry

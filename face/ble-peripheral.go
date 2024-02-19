@@ -16,7 +16,9 @@ import (
 	"tinygo.org/x/bluetooth"
 )
 
-const BLEMTU = 512 // See esp8266ndn, it uses 512 & 517
+// const BLEMTU = 512 // See esp8266ndn, it uses 512 & 517
+const BLEMTU = 256
+
 // Note that this MTU does not match the real MTU: tinygo/bluetooth only supports the default 23
 // However, it can receive and send packet with 512B
 
