@@ -86,7 +86,7 @@
     # Whether to enable BLE Peripheral face (NOTE: Incompatible with esp8266ndn)
     enabled = true
 
-    # Local name for BLE Peripheral
+    # Local name for BLE Peripheral. If empty, "YaNFD-$(hostname)" will be used
     local_name = ""
 
 [fw]

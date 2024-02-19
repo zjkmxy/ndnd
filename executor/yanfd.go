@@ -249,7 +249,7 @@ func (y *YaNFD) Start() {
 		}
 	}
 
-	if core.GetConfigBoolDefault("faces.ble.enabled", false) {
+	if core.GetConfigBoolDefault("faces.ble.enabled", false) && runtime.GOOS == "linux" {
 		localName := core.GetConfigStringDefault("faces.ble.local_name", "")
 		if len(localName) == 0 {
 			localName = "YaNFD"

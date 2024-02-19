@@ -1,3 +1,5 @@
+//go:build linux
+
 /* YaNFD - Yet another NDN Forwarding Daemon
  *
  * Copyright (C) 2020-2024 Eric Newberry.
