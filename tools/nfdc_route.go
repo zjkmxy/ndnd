@@ -56,7 +56,7 @@ func (n *Nfdc) ExecFibList(args []string) {
 
 	status, err := mgmt.ParseFibStatus(enc.NewWireReader(data), true)
 	if err != nil {
-		log.Fatalf("Error parsing RIB status: %+v", err)
+		log.Fatalf("Error parsing FIB status: %+v", err)
 		return
 	}
 

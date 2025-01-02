@@ -16,11 +16,18 @@ func GetNfdcCmdTree() utils.CmdTree {
 		}
 	}
 
-	// all subcommands MUST be two words "module", "command"
 	return utils.CmdTree{
 		Name: "nfdc",
 		Help: "NDNd Forwarder Control",
 		Sub: []*utils.CmdTree{{
+			Name: "status",
+			Help: "Print general status",
+			Fun:  nfdc.ExecStatusGeneral,
+		}, {
+			Name: "face list",
+			Help: "Print face table",
+			Fun:  nfdc.ExecFaceList,
+		}, {
 			Name: "route list",
 			Help: "Print RIB routes",
 			Fun:  nfdc.ExecRouteList,
