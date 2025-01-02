@@ -70,6 +70,18 @@ func GetNfdcCmdTree() utils.CmdTree {
 			Name: "cs info",
 			Help: "Print content store info",
 			Fun:  start(nfdc.ExecCsInfo),
+		}, {
+			Name: "strategy list",
+			Help: "Print strategy choices",
+			Fun:  start(nfdc.ExecStrategyList),
+		}, {
+			Name: "strategy set",
+			Help: "Set strategy choice",
+			Fun:  start(cmd("strategy-choice", "set", []string{})),
+		}, {
+			Name: "strategy unset",
+			Help: "Unset strategy choice",
+			Fun:  start(cmd("strategy-choice", "unset", []string{})),
 		}},
 	}
 }

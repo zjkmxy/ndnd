@@ -85,6 +85,16 @@ func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 		return v
 	}
 
+	// helper function to parse name values
+	parseName := func(val string) enc.Name {
+		name, err := enc.NameFromStr(val)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid name for %s: %s\n", key, val)
+			os.Exit(9)
+		}
+		return name
+	}
+
 	// convert key-value pairs to command arguments
 	switch key {
 	// face arguments
@@ -108,19 +118,18 @@ func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 		}
 
 	// route arguments
-	case "name":
-		name, err := enc.NameFromStr(val)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid name for %s: %s\n", key, val)
-			os.Exit(9)
-		}
-		ctrlArgs.Name = name
+	case "prefix":
+		ctrlArgs.Name = parseName(val)
 	case "cost":
 		ctrlArgs.Cost = utils.IdPtr(parseUint(val))
 	case "origin":
 		ctrlArgs.Origin = utils.IdPtr(parseUint(val))
 	case "expires":
 		ctrlArgs.ExpirationPeriod = utils.IdPtr(parseUint(val))
+
+	// strategy arguments
+	case "strategy":
+		ctrlArgs.Strategy = &mgmt.Strategy{Name: parseName(val)}
 
 	// unknown argument
 	default:
