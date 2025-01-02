@@ -37,39 +37,11 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 
 	// parse response
 	res, ok := raw.(*mgmt.ControlResponse)
-	if !ok {
-		fmt.Fprintf(os.Stderr, "Invalid response type: %T\n", raw)
+	if !ok || res.Val == nil || res.Val.Params == nil {
+		fmt.Fprintf(os.Stderr, "Invalid or empty response type: %T\n", raw)
 		return
 	}
-
-	if res.Val == nil || res.Val.Params == nil {
-		fmt.Fprintf(os.Stderr, "Empty response: %+v\n", res)
-		return
-	}
-
-	// print status code and text
-	fmt.Printf("Status=%d (%s)\n", res.Val.StatusCode, res.Val.StatusText)
-
-	// iterate over parameters in sorted order
-	params := res.Val.Params.ToDict()
-	keys := make([]string, 0, len(params))
-	for key := range params {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	// print parameters
-	for _, key := range keys {
-		val := params[key]
-
-		// convert some values to human-readable form
-		switch key {
-		case "FacePersistency":
-			val = mgmt.Persistency(val.(uint64)).String()
-		}
-
-		fmt.Printf("  %s=%v\n", key, val)
-	}
+	n.printCtrlResponse(res)
 
 	if execErr != nil {
 		os.Exit(1)
@@ -150,8 +122,8 @@ func (n *Nfdc) preprocessArg(
 				fmt.Fprintf(os.Stderr, "Invalid or empty response type: %T\n", raw)
 				os.Exit(1)
 			}
+			n.printCtrlResponse(res)
 
-			fmt.Printf("Using FaceId=%d (%d)\n", *res.Val.Params.FaceId, res.Val.StatusCode)
 			return key, fmt.Sprintf("%d", *res.Val.Params.FaceId)
 		}
 	}
@@ -220,5 +192,31 @@ func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command argument key: %s\n", key)
 		os.Exit(9)
+	}
+}
+
+func (n *Nfdc) printCtrlResponse(res *mgmt.ControlResponse) {
+	// print status code and text
+	fmt.Printf("Status=%d (%s)\n", res.Val.StatusCode, res.Val.StatusText)
+
+	// iterate over parameters in sorted order
+	params := res.Val.Params.ToDict()
+	keys := make([]string, 0, len(params))
+	for key := range params {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	// print parameters
+	for _, key := range keys {
+		val := params[key]
+
+		// convert some values to human-readable form
+		switch key {
+		case "FacePersistency":
+			val = mgmt.Persistency(val.(uint64)).String()
+		}
+
+		fmt.Printf("  %s=%v\n", key, val)
 	}
 }
