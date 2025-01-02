@@ -156,7 +156,7 @@ func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inF
 	}
 	table.FibStrategyTable.SetStrategyEnc(params.Name, params.Strategy.Name)
 
-	core.LogInfo(s, "Set strategy for Name=", params.Name, " to Strategy=", params.Strategy)
+	core.LogInfo(s, "Set strategy for Name=", params.Name, " to Strategy=", params.Strategy.Name)
 	responseParams := map[string]any{}
 	responseParams["Name"] = params.Name
 	responseParams["Strategy"] = params.Strategy
