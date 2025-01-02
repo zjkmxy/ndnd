@@ -7,14 +7,17 @@ import (
 	"strconv"
 	"strings"
 
+	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
 
-func (n *Nfdc) ExecCmd(mod string, cmd string, args []string) {
+func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string) {
+	// parse command arguments
 	ctrlArgs := mgmt.ControlArgs{}
 
-	for _, arg := range args[1:] {
+	// set default values first, then user-provided values
+	for _, arg := range append(defaults, args[1:]...) {
 		kv := strings.SplitN(arg, "=", 2)
 		if len(kv) != 2 {
 			fmt.Fprintf(os.Stderr, "Invalid argument: %s (should be key=value)\n", arg)
@@ -23,12 +26,14 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string) {
 		n.convCmdArg(&ctrlArgs, kv[0], kv[1])
 	}
 
+	// execute command
 	raw, execErr := n.engine.ExecMgmtCmd(mod, cmd, &ctrlArgs)
 	if raw == nil {
 		fmt.Fprintf(os.Stderr, "Error executing command: %+v\n", execErr)
 		return
 	}
 
+	// parse response
 	res, ok := raw.(*mgmt.ControlResponse)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "Invalid response type: %T\n", raw)
@@ -40,16 +45,18 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string) {
 		return
 	}
 
+	// print status code and text
 	fmt.Printf("Status=%d (%s)\n", res.Val.StatusCode, res.Val.StatusText)
 
+	// iterate over parameters in sorted order
 	params := res.Val.Params.ToDict()
-
 	keys := make([]string, 0, len(params))
 	for key := range params {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 
+	// print parameters
 	for _, key := range keys {
 		val := params[key]
 
@@ -73,20 +80,16 @@ func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 		v, err := strconv.ParseUint(val, 10, 64)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Invalid value for %s: %s\n", key, val)
-			os.Exit(1)
+			os.Exit(9)
 		}
 		return v
 	}
 
 	// convert key-value pairs to command arguments
 	switch key {
+	// face arguments
 	case "face":
-		if v, err := strconv.ParseUint(val, 10, 64); err == nil {
-			ctrlArgs.FaceId = utils.IdPtr(v)
-		} else {
-			fmt.Fprintf(os.Stderr, "Invalid face ID: %s\n", val) // TODO: support URI
-			os.Exit(1)
-		}
+		ctrlArgs.FaceId = utils.IdPtr(parseUint(val))
 	case "remote":
 		ctrlArgs.Uri = utils.IdPtr(val)
 	case "local":
@@ -101,10 +104,27 @@ func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 			ctrlArgs.FacePersistency = utils.IdPtr(uint64(mgmt.PersistencyPersistent))
 		default:
 			fmt.Fprintf(os.Stderr, "Invalid persistency: %s\n", val)
-			os.Exit(1)
+			os.Exit(9)
 		}
+
+	// route arguments
+	case "name":
+		name, err := enc.NameFromStr(val)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid name for %s: %s\n", key, val)
+			os.Exit(9)
+		}
+		ctrlArgs.Name = name
+	case "cost":
+		ctrlArgs.Cost = utils.IdPtr(parseUint(val))
+	case "origin":
+		ctrlArgs.Origin = utils.IdPtr(parseUint(val))
+	case "expires":
+		ctrlArgs.ExpirationPeriod = utils.IdPtr(parseUint(val))
+
+	// unknown argument
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command argument key: %s\n", key)
-		os.Exit(1)
+		os.Exit(9)
 	}
 }

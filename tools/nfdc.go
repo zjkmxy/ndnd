@@ -12,9 +12,9 @@ import (
 
 func GetNfdcCmdTree() utils.CmdTree {
 	nfdc := &Nfdc{}
-	cmd := func(mod string, cmd string) func([]string) {
+	cmd := func(mod string, cmd string, defaults []string) func([]string) {
 		return func(args []string) {
-			nfdc.ExecCmd(mod, cmd, args)
+			nfdc.ExecCmd(mod, cmd, args, defaults)
 		}
 	}
 	start := func(fun func([]string)) func([]string) {
@@ -39,11 +39,13 @@ func GetNfdcCmdTree() utils.CmdTree {
 		}, {
 			Name: "face create",
 			Help: "Create a face",
-			Fun:  start(cmd("faces", "create")),
+			Fun: start(cmd("faces", "create", []string{
+				"persistency=persistent",
+			})),
 		}, {
 			Name: "face destroy",
 			Help: "Destroy a face",
-			Fun:  start(cmd("faces", "destroy")),
+			Fun:  start(cmd("faces", "destroy", []string{})),
 		}, {
 			Name: "route list",
 			Help: "Print RIB routes",
@@ -51,7 +53,15 @@ func GetNfdcCmdTree() utils.CmdTree {
 		}, {
 			Name: "route add",
 			Help: "Add a route to the RIB",
-			Fun:  start(cmd("rib", "add")),
+			Fun: start(cmd("rib", "register", []string{
+				"cost=0", "origin=255",
+			})),
+		}, {
+			Name: "route remove",
+			Help: "Remove a route from the RIB",
+			Fun: start(cmd("rib", "unregister", []string{
+				"origin=255",
+			})),
 		}, {
 			Name: "fib list",
 			Help: "Print FIB entries",
