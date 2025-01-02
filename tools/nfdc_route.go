@@ -2,11 +2,11 @@ package tools
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/log"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 )
 
@@ -18,13 +18,13 @@ func (n *Nfdc) ExecRouteList(args []string) {
 
 	data, err := n.fetchStatusDataset(suffix)
 	if err != nil {
-		log.Fatalf("Error fetching status dataset: %+v", err)
+		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
 		return
 	}
 
 	status, err := mgmt.ParseRibStatus(enc.NewWireReader(data), true)
 	if err != nil {
-		log.Fatalf("Error parsing RIB status: %+v", err)
+		fmt.Fprintf(os.Stderr, "Error parsing RIB status: %+v\n", err)
 		return
 	}
 
@@ -50,13 +50,13 @@ func (n *Nfdc) ExecFibList(args []string) {
 
 	data, err := n.fetchStatusDataset(suffix)
 	if err != nil {
-		log.Fatalf("Error fetching status dataset: %+v", err)
+		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
 		return
 	}
 
 	status, err := mgmt.ParseFibStatus(enc.NewWireReader(data), true)
 	if err != nil {
-		log.Fatalf("Error parsing FIB status: %+v", err)
+		fmt.Fprintf(os.Stderr, "Error parsing FIB status: %+v\n", err)
 		return
 	}
 

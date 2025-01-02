@@ -1,9 +1,11 @@
 package tools
 
 import (
+	"fmt"
+	"os"
+
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
-	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -35,6 +37,14 @@ func GetNfdcCmdTree() utils.CmdTree {
 			Help: "Print face table",
 			Fun:  start(nfdc.ExecFaceList),
 		}, {
+			Name: "face create",
+			Help: "Create a face",
+			Fun:  start(cmd("faces", "create")),
+		}, {
+			Name: "face destroy",
+			Help: "Destroy a face",
+			Fun:  start(cmd("faces", "destroy")),
+		}, {
 			Name: "route list",
 			Help: "Print RIB routes",
 			Fun:  start(nfdc.ExecRouteList),
@@ -65,7 +75,7 @@ func (n *Nfdc) Start() {
 
 	err := n.engine.Start()
 	if err != nil {
-		log.Fatalf("Unable to start engine: %+v", err)
+		fmt.Fprintf(os.Stderr, "Unable to start engine: %+v\n", err)
 		return
 	}
 }

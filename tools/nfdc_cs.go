@@ -2,9 +2,9 @@ package tools
 
 import (
 	"fmt"
+	"os"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/log"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 )
 
@@ -16,13 +16,13 @@ func (n *Nfdc) ExecCsInfo(args []string) {
 
 	data, err := n.fetchStatusDataset(suffix)
 	if err != nil {
-		log.Fatalf("Error fetching status dataset: %+v", err)
+		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
 		return
 	}
 
 	status, err := mgmt.ParseCsInfoMsg(enc.NewWireReader(data), true)
 	if err != nil || status.CsInfo == nil {
-		log.Fatalf("Error parsing CS info: %+v", err)
+		fmt.Fprintf(os.Stderr, "Error parsing CS info: %+v\n", err)
 		return
 	}
 
