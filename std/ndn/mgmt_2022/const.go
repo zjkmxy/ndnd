@@ -1,11 +1,4 @@
-/* YaNFD - Yet another NDN Forwarding Daemon
- *
- * Copyright (C) 2020-2021 Eric Newberry.
- *
- * This file is licensed under the terms of the MIT License, as found in LICENSE.md.
- */
-
-package face
+package mgmt_2022
 
 // Persistency represents the persistency of a face.
 type Persistency uint64

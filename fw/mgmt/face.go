@@ -141,12 +141,12 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		}
 
 		// Check face persistency
-		persistency := face.PersistencyPersistent
-		if params.FacePersistency != nil && (*params.FacePersistency == uint64(face.PersistencyPersistent) ||
-			*params.FacePersistency == uint64(face.PersistencyPermanent)) {
-			persistency = face.Persistency(*params.FacePersistency)
+		persistency := mgmt.PersistencyPersistent
+		if params.FacePersistency != nil && (*params.FacePersistency == uint64(mgmt.PersistencyPersistent) ||
+			*params.FacePersistency == uint64(mgmt.PersistencyPermanent)) {
+			persistency = mgmt.Persistency(*params.FacePersistency)
 		} else if params.FacePersistency != nil {
-			core.LogWarn(f, "Unacceptable persistency ", face.Persistency(*params.FacePersistency),
+			core.LogWarn(f, "Unacceptable persistency ", mgmt.Persistency(*params.FacePersistency),
 				" for UDP face specified in ControlParameters for ", interest.Name())
 			response = makeControlResponse(406, "Unacceptable persistency", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
@@ -231,12 +231,12 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		}
 
 		// Check face persistency
-		persistency := face.PersistencyPersistent
-		if params.FacePersistency != nil && (*params.FacePersistency == uint64(face.PersistencyPersistent) ||
-			*params.FacePersistency == uint64(face.PersistencyPermanent)) {
-			persistency = face.Persistency(*params.FacePersistency)
+		persistency := mgmt.PersistencyPersistent
+		if params.FacePersistency != nil && (*params.FacePersistency == uint64(mgmt.PersistencyPersistent) ||
+			*params.FacePersistency == uint64(mgmt.PersistencyPermanent)) {
+			persistency = mgmt.Persistency(*params.FacePersistency)
 		} else if params.FacePersistency != nil {
-			core.LogWarn(f, "Unacceptable persistency ", face.Persistency(*params.FacePersistency),
+			core.LogWarn(f, "Unacceptable persistency ", mgmt.Persistency(*params.FacePersistency),
 				" for UDP face specified in ControlParameters for ", interest.Name())
 			response = makeControlResponse(406, "Unacceptable persistency", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
@@ -372,16 +372,16 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 	}
 
 	if params.FacePersistency != nil {
-		if selectedFace.RemoteURI().Scheme() == "ether" && *params.FacePersistency != uint64(face.PersistencyPermanent) {
+		if selectedFace.RemoteURI().Scheme() == "ether" && *params.FacePersistency != uint64(mgmt.PersistencyPermanent) {
 			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
 			areParamsValid = false
 		} else if (selectedFace.RemoteURI().Scheme() == "udp4" || selectedFace.RemoteURI().Scheme() == "udp6") &&
-			*params.FacePersistency != uint64(face.PersistencyPersistent) &&
-			*params.FacePersistency != uint64(face.PersistencyPermanent) {
+			*params.FacePersistency != uint64(mgmt.PersistencyPersistent) &&
+			*params.FacePersistency != uint64(mgmt.PersistencyPermanent) {
 			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
 			areParamsValid = false
 		} else if selectedFace.LocalURI().Scheme() == "unix" &&
-			*params.FacePersistency != uint64(face.PersistencyPersistent) {
+			*params.FacePersistency != uint64(mgmt.PersistencyPersistent) {
 			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
 			areParamsValid = false
 		}
@@ -408,7 +408,7 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 	// Persistency
 	if params.FacePersistency != nil {
 		// Correctness of FacePersistency already validated
-		selectedFace.SetPersistency(face.Persistency(*params.FacePersistency))
+		selectedFace.SetPersistency(mgmt.Persistency(*params.FacePersistency))
 	}
 
 	options := selectedFace.(*face.NDNLPLinkService).Options()

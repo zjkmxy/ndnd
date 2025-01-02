@@ -17,6 +17,7 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/face/impl"
+	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -38,7 +39,7 @@ type UnicastTCPTransport struct {
 func MakeUnicastTCPTransport(
 	remoteURI *defn.URI,
 	localURI *defn.URI,
-	persistency Persistency,
+	persistency spec_mgmt.Persistency,
 ) (*UnicastTCPTransport, error) {
 	// Validate URIs.
 	if !remoteURI.IsCanonical() ||
@@ -87,7 +88,7 @@ func MakeUnicastTCPTransport(
 func AcceptUnicastTCPTransport(
 	remoteConn net.Conn,
 	localURI *defn.URI,
-	persistency Persistency,
+	persistency spec_mgmt.Persistency,
 ) (*UnicastTCPTransport, error) {
 	// Construct remote URI
 	var remoteURI *defn.URI
@@ -150,7 +151,7 @@ func (t *UnicastTCPTransport) String() string {
 	return fmt.Sprintf("UnicastTCPTransport, FaceID=%d, RemoteURI=%s, LocalURI=%s", t.faceID, t.remoteURI, t.localURI)
 }
 
-func (t *UnicastTCPTransport) SetPersistency(persistency Persistency) bool {
+func (t *UnicastTCPTransport) SetPersistency(persistency spec_mgmt.Persistency) bool {
 	t.persistency = persistency
 	return true
 }
@@ -191,7 +192,7 @@ func (t *UnicastTCPTransport) reconnect() {
 		// However, make only one attempt to connect for non-permanent faces
 		if !(t.conn == nil && attempt == 1) {
 			// Do not continue if the transport is not permanent or closed
-			if t.Persistency() != PersistencyPermanent || t.closed {
+			if t.Persistency() != spec_mgmt.PersistencyPermanent || t.closed {
 				t.rechan <- false // do not continue
 				return
 			}

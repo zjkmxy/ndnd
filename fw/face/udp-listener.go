@@ -17,6 +17,7 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/face/impl"
+	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 )
 
 // UDPListener listens for incoming UDP unicast connections.
@@ -98,7 +99,7 @@ func (l *UDPListener) Run() {
 		}
 
 		// If frame received here, must be for new remote endpoint
-		newTransport, err := MakeUnicastUDPTransport(remoteURI, l.localURI, PersistencyOnDemand)
+		newTransport, err := MakeUnicastUDPTransport(remoteURI, l.localURI, spec_mgmt.PersistencyOnDemand)
 		if err != nil {
 			core.LogError(l, "Failed to create new unicast UDP transport: ", err)
 			continue
