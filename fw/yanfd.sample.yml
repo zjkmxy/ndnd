@@ -14,6 +14,10 @@ faces:
   lock_threads_to_cores: false
 
   udp:
+    # Whether to enable unicast UDP listener
+    enabled_unicast: true
+    # Whether to enable multicast UDP listener
+    enabled_multicast: true
     # Port used for unicast UDP faces
     port_unicast: 6363
     # Port used for multicast UDP faces

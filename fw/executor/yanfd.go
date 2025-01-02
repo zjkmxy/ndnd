@@ -8,6 +8,7 @@
 package executor
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"time"
@@ -108,40 +109,40 @@ func (y *YaNFD) Start() {
 
 	// Perform setup operations for each network interface
 	faceCnt := 0
+	y.tcpListeners = make([]*face.TCPListener, 0)
+
+	// Create multicast UDP face on each non-loopback interface
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		core.LogFatal("Main", "Unable to access network interfaces: ", err)
-		os.Exit(2)
+		core.LogError("Main", "Unable to access network interfaces: ", err)
 	}
-	tcpEnabled := core.GetConfig().Faces.Tcp.Enabled
-	tcpPort := face.TCPUnicastPort
-	y.tcpListeners = make([]*face.TCPListener, 0)
 	for _, iface := range ifaces {
 		if iface.Flags&net.FlagUp == 0 {
 			core.LogInfo("Main", "Skipping interface ", iface.Name, " because not up")
 			continue
 		}
 
-		// Create UDP/TCP listener and multicast UDP interface for every address on interface
 		addrs, err := iface.Addrs()
 		if err != nil {
-			core.LogFatal("Main", "Unable to access addresses on network interface ", iface.Name, ": ", err)
+			core.LogError("Main", "Unable to access addresses on network interface ", iface.Name, ": ", err)
+			continue
 		}
+
 		for _, addr := range addrs {
 			ipAddr := addr.(*net.IPNet)
 
-			ipVersion := 4
-			path := ipAddr.IP.String()
-			if ipAddr.IP.To4() == nil {
-				ipVersion = 6
-				path += "%" + iface.Name
+			udpAddr := net.UDPAddr{
+				IP:   ipAddr.IP,
+				Zone: iface.Name,
+				// Port: set later
 			}
 
-			if !addr.(*net.IPNet).IP.IsLoopback() {
-				multicastUDPTransport, err := face.MakeMulticastUDPTransport(
-					defn.MakeUDPFaceURI(ipVersion, path, face.UDPMulticastPort))
+			if core.GetConfig().Faces.Udp.EnabledMulticast && !addr.(*net.IPNet).IP.IsLoopback() {
+				udpAddr.Port = int(face.UDPMulticastPort)
+				uri := fmt.Sprintf("udp://%s", &udpAddr)
+				multicastUDPTransport, err := face.MakeMulticastUDPTransport(defn.DecodeURIString(uri))
 				if err != nil {
-					core.LogError("Main", "Unable to create MulticastUDPTransport for ", path, " on ", iface.Name, ": ", err)
+					core.LogError("Main", "Unable to create MulticastUDPTransport for ", uri, ": ", err)
 					continue
 				}
 
@@ -151,29 +152,37 @@ func (y *YaNFD) Start() {
 				).Run(nil)
 
 				faceCnt += 1
-				core.LogInfo("Main", "Created multicast UDP face for ", path, " on ", iface.Name)
+				core.LogInfo("Main", "Created multicast UDP face for ", uri)
 			}
 
-			udpListener, err := face.MakeUDPListener(defn.MakeUDPFaceURI(ipVersion, path, face.UDPUnicastPort))
-			if err != nil {
-				core.LogError("Main", "Unable to create UDP listener for ", path, " on ", iface.Name, ": ", err)
-				continue
-			}
-			faceCnt += 1
-			go udpListener.Run()
-			y.udpListener = udpListener
-			core.LogInfo("Main", "Created UDP listener for ", path, " on ", iface.Name)
-
-			if tcpEnabled {
-				tcpListener, err := face.MakeTCPListener(defn.MakeTCPFaceURI(ipVersion, path, tcpPort))
+			if core.GetConfig().Faces.Udp.EnabledUnicast {
+				udpAddr.Port = int(face.UDPUnicastPort)
+				uri := fmt.Sprintf("udp://%s", &udpAddr)
+				udpListener, err := face.MakeUDPListener(defn.DecodeURIString(uri))
 				if err != nil {
-					core.LogError("Main", "Unable to create TCP listener for ", path, " on ", iface.Name, ": ", err)
+					core.LogError("Main", "Unable to create UDP listener for ", uri, ": ", err)
+					continue
+				}
+
+				faceCnt += 1
+				go udpListener.Run()
+				y.udpListener = udpListener
+				core.LogInfo("Main", "Created UDP listener for ", uri)
+			}
+
+			if core.GetConfig().Faces.Tcp.Enabled {
+				udpAddr.Port = int(face.TCPUnicastPort)
+				uri := fmt.Sprintf("tcp://%s", &udpAddr)
+
+				tcpListener, err := face.MakeTCPListener(defn.DecodeURIString(uri))
+				if err != nil {
+					core.LogError("Main", "Unable to create TCP listener for ", uri, ": ", err)
 					continue
 				}
 				faceCnt += 1
 				go tcpListener.Run()
 				y.tcpListeners = append(y.tcpListeners, tcpListener)
-				core.LogInfo("Main", "Created TCP listener for ", path, " on ", iface.Name)
+				core.LogInfo("Main", "Created TCP listener for ", uri)
 			}
 		}
 	}
