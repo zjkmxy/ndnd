@@ -28,31 +28,28 @@ func (n *Nfdc) ExecStatusGeneral(args []string) {
 		return
 	}
 
-	print := func(key string, value any) {
-		if _, ok := value.(uint64); ok {
-			value = fmt.Sprintf("%d", value)
-		}
-
-		padding := 24 - len(key)
-		fmt.Printf("%s%s=%s\n", strings.Repeat(" ", padding), key, value)
-	}
-
 	fmt.Println("General NFD status:")
-	print("version", status.NfdVersion)
-	print("startTime", time.UnixMilli(int64(status.StartTimestamp)))
-	print("currentTime", time.UnixMilli(int64(status.CurrentTimestamp)))
-	print("uptime", time.Duration(status.CurrentTimestamp-status.StartTimestamp)*time.Millisecond)
-	print("nNameTreeEntries", status.NNameTreeEntries)
-	print("nFibEntries", status.NFibEntries)
-	print("nPitEntries", status.NCsEntries)
-	print("nMeasurementsEntries", status.NMeasurementsEntries)
-	print("nCsEntries", status.NCsEntries)
-	print("nInInterests", status.NInInterests)
-	print("nOutInterests", status.NOutInterests)
-	print("nInData", status.NInData)
-	print("nOutData", status.NOutData)
-	print("nInNacks", status.NInNacks)
-	print("nOutNacks", status.NOutNacks)
-	print("nSatisfiedInterests", status.NSatisfiedInterests)
-	print("nUnsatisfiedInterests", status.NUnsatisfiedInterests)
+	n.statusPadding = 24
+	n.printStatusLine("version", status.NfdVersion)
+	n.printStatusLine("startTime", time.UnixMilli(int64(status.StartTimestamp)))
+	n.printStatusLine("currentTime", time.UnixMilli(int64(status.CurrentTimestamp)))
+	n.printStatusLine("uptime", time.Duration(status.CurrentTimestamp-status.StartTimestamp)*time.Millisecond)
+	n.printStatusLine("nNameTreeEntries", status.NNameTreeEntries)
+	n.printStatusLine("nFibEntries", status.NFibEntries)
+	n.printStatusLine("nPitEntries", status.NCsEntries)
+	n.printStatusLine("nMeasurementsEntries", status.NMeasurementsEntries)
+	n.printStatusLine("nCsEntries", status.NCsEntries)
+	n.printStatusLine("nInInterests", status.NInInterests)
+	n.printStatusLine("nOutInterests", status.NOutInterests)
+	n.printStatusLine("nInData", status.NInData)
+	n.printStatusLine("nOutData", status.NOutData)
+	n.printStatusLine("nInNacks", status.NInNacks)
+	n.printStatusLine("nOutNacks", status.NOutNacks)
+	n.printStatusLine("nSatisfiedInterests", status.NSatisfiedInterests)
+	n.printStatusLine("nUnsatisfiedInterests", status.NUnsatisfiedInterests)
+}
+
+func (n *Nfdc) printStatusLine(key string, value any) {
+	padding := n.statusPadding - len(key)
+	fmt.Printf("%s%s=%v\n", strings.Repeat(" ", padding), key, value)
 }

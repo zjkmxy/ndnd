@@ -39,12 +39,17 @@ func GetNfdcCmdTree() utils.CmdTree {
 			Name: "fib list",
 			Help: "Print FIB entries",
 			Fun:  nfdc.ExecFibList,
+		}, {
+			Name: "cs info",
+			Help: "Print content store info",
+			Fun:  nfdc.ExecCsInfo,
 		}},
 	}
 }
 
 type Nfdc struct {
-	engine ndn.Engine
+	engine        ndn.Engine
+	statusPadding int
 }
 
 func (n *Nfdc) Start() {
