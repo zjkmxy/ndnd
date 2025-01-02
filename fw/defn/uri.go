@@ -193,8 +193,12 @@ func DecodeURIString(str string) *URI {
 
 		ret.scheme = uri.Scheme
 		ret.path = uri.Hostname()
-		port, _ := strconv.ParseUint(uri.Port(), 10, 16)
-		ret.port = uint16(port)
+		if uri.Port() != "" {
+			port, _ := strconv.ParseUint(uri.Port(), 10, 16)
+			ret.port = uint16(port)
+		} else {
+			ret.port = uint16(6363) // default NDN port
+		}
 
 		if zone != "" {
 			ret.path += "%" + zone
