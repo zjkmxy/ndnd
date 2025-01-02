@@ -16,7 +16,8 @@ func dvGetStatus() *dvtlv.Status {
 	app := engine.NewBasicEngine(engine.NewDefaultFace())
 	err := app.Start()
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Failed to start engine: %v\n", err)
+		os.Exit(1)
 	}
 	defer app.Stop()
 
