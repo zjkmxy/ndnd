@@ -37,7 +37,7 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 
 	// parse response
 	res, ok := raw.(*mgmt.ControlResponse)
-	if !ok || res.Val == nil || res.Val.Params == nil {
+	if !ok || res == nil || res.Val == nil || res.Val.Params == nil {
 		fmt.Fprintf(os.Stderr, "Invalid or empty response type: %T\n", raw)
 		return
 	}

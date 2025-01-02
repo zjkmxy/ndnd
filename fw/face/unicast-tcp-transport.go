@@ -54,7 +54,7 @@ func MakeUnicastTCPTransport(
 	t := new(UnicastTCPTransport)
 	t.makeTransportBase(remoteURI, localURI, persistency, defn.NonLocal, defn.PointToPoint, defn.MaxNDNPacketSize)
 	t.expirationTime = utils.IdPtr(time.Now().Add(tcpLifetime))
-	t.rechan = make(chan bool, 1)
+	t.rechan = make(chan bool, 2)
 
 	// Set scope
 	ip := net.ParseIP(remoteURI.Path())

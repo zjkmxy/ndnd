@@ -503,8 +503,8 @@ func (f *FaceModule) destroy(interest *spec.Interest, pitToken []byte, inFace ui
 		return
 	}
 
-	if face.FaceTable.Get(*params.FaceId) != nil {
-		face.FaceTable.Remove(*params.FaceId)
+	if link := face.FaceTable.Get(*params.FaceId); link != nil {
+		link.Close()
 		core.LogInfo(f, "Destroyed face with FaceID=", *params.FaceId)
 	} else {
 		core.LogInfo(f, "Ignoring attempt to delete non-existent face with FaceID=", *params.FaceId)
