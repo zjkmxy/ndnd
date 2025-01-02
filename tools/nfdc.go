@@ -10,9 +10,16 @@ import (
 
 func GetNfdcCmdTree() utils.CmdTree {
 	nfdc := &Nfdc{}
-	execCmd := func(mod string, cmd string) func([]string) {
+	cmd := func(mod string, cmd string) func([]string) {
 		return func(args []string) {
 			nfdc.ExecCmd(mod, cmd, args)
+		}
+	}
+	start := func(fun func([]string)) func([]string) {
+		return func(args []string) {
+			nfdc.Start()
+			defer nfdc.Stop()
+			fun(args)
 		}
 	}
 
@@ -22,27 +29,27 @@ func GetNfdcCmdTree() utils.CmdTree {
 		Sub: []*utils.CmdTree{{
 			Name: "status",
 			Help: "Print general status",
-			Fun:  nfdc.ExecStatusGeneral,
+			Fun:  start(nfdc.ExecStatusGeneral),
 		}, {
 			Name: "face list",
 			Help: "Print face table",
-			Fun:  nfdc.ExecFaceList,
+			Fun:  start(nfdc.ExecFaceList),
 		}, {
 			Name: "route list",
 			Help: "Print RIB routes",
-			Fun:  nfdc.ExecRouteList,
+			Fun:  start(nfdc.ExecRouteList),
 		}, {
 			Name: "route add",
 			Help: "Add a route to the RIB",
-			Fun:  execCmd("rib", "add"),
+			Fun:  start(cmd("rib", "add")),
 		}, {
 			Name: "fib list",
 			Help: "Print FIB entries",
-			Fun:  nfdc.ExecFibList,
+			Fun:  start(nfdc.ExecFibList),
 		}, {
 			Name: "cs info",
 			Help: "Print content store info",
-			Fun:  nfdc.ExecCsInfo,
+			Fun:  start(nfdc.ExecCsInfo),
 		}},
 	}
 }

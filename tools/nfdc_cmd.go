@@ -6,9 +6,6 @@ import (
 )
 
 func (n *Nfdc) ExecCmd(mod string, cmd string, args []string) {
-	n.Start()
-	defer n.Stop()
-
 	argmap := map[string]any{}
 	ctrlArgs, err := mgmt.DictToControlArgs(argmap)
 	if err != nil {

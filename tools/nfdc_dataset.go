@@ -10,9 +10,6 @@ import (
 )
 
 func (n *Nfdc) fetchStatusDataset(suffix enc.Name) (enc.Wire, error) {
-	n.Start()
-	defer n.Stop()
-
 	// TODO: segmented fetch once supported by fw/mgmt
 	name := append(n.GetPrefix(), suffix...)
 	config := &ndn.InterestConfig{
