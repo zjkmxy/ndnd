@@ -66,7 +66,7 @@ func MakeMgmtThread() *Thread {
 }
 
 func (m *Thread) String() string {
-	return "Management"
+	return "Mgmt"
 }
 
 func (m *Thread) registerModule(name string, module Module) {
@@ -115,7 +115,7 @@ func (m *Thread) sendResponse(response *mgmt.ControlResponse, interest *spec.Int
 
 // Run management thread
 func (m *Thread) Run() {
-	core.LogInfo(m, "Starting management")
+	core.LogInfo(m, "Starting management thread")
 
 	// Create and register Internal transport
 	m.face, m.transport = face.RegisterInternalTransport()
