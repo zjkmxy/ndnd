@@ -7,6 +7,7 @@ import (
 	fw "github.com/named-data/ndnd/fw/executor"
 	"github.com/named-data/ndnd/std/utils"
 	tools "github.com/named-data/ndnd/tools"
+	nfdc "github.com/named-data/ndnd/tools/nfdc"
 )
 
 func main() {
@@ -61,6 +62,6 @@ func fwSubtree() []*utils.CmdTree {
 	}, {
 		// separator for nfdc
 	}}
-	tree = append(tree, tools.GetNfdcCmdTree().Sub...)
+	tree = append(tree, nfdc.GetNfdcCmdTree().Sub...)
 	return tree
 }
