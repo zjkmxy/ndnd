@@ -39,7 +39,8 @@ type Engine interface {
 	UnregisterRoute(prefix enc.Name) error
 	// ExecMgmtCmd executes a management command.
 	// args is a pointer to mgmt.ControlArgs
-	ExecMgmtCmd(module string, cmd string, args any) error
+	// returns error and the response (error, *mgmt.ControlResponse)
+	ExecMgmtCmd(module string, cmd string, args any) (any, error)
 }
 
 type Timer interface {

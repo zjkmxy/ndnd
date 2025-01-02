@@ -17,11 +17,7 @@ func main() {
 		Sub: []*utils.CmdTree{{
 			Name: "fw",
 			Help: "NDN Forwarding Daemon",
-			Sub: []*utils.CmdTree{{
-				Name: "run",
-				Help: "Start the NDN Forwarding Daemon",
-				Fun:  fw.Main,
-			}},
+			Sub:  fwSubtree(),
 		}, {
 			Name: "dv",
 			Help: "NDN Distance Vector Routing Daemon",
@@ -55,4 +51,16 @@ func main() {
 	args := os.Args
 	args[0] = tree.Name
 	tree.Execute(args)
+}
+
+func fwSubtree() []*utils.CmdTree {
+	tree := []*utils.CmdTree{{
+		Name: "run",
+		Help: "Start the NDN Forwarding Daemon",
+		Fun:  fw.Main,
+	}, {
+		// separator for nfdc
+	}}
+	tree = append(tree, tools.GetNfdcCmdTree().Sub...)
+	return tree
 }

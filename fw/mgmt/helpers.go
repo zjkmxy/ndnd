@@ -57,8 +57,8 @@ func makeControlResponse(statusCode uint64, statusText string, args map[string]a
 // Note: The old mgmt.MakeStatusDataset is clearly wrong as it is against the single-Interest-single-Data
 // principle. Thus, we simply assume that the data packet should always fit in one segment.
 func makeStatusDataset(name enc.Name, version uint64, dataset enc.Wire) enc.Wire {
-	// Split into 8000 byte segments and publish
-	if len(dataset) > 8000 {
+	// TODO: Split into 8000 byte segments and publish
+	if dataset.Length() > 8000 {
 		core.LogError("mgmt", "Status dataset is too large")
 		return nil
 	}
