@@ -167,7 +167,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		// Create new UDP face
 		transport, err := face.MakeUnicastUDPTransport(URI, nil, persistency)
 		if err != nil {
-			core.LogWarn(f, "Unable to create unicast UDP face with URI ", URI, ":", err.Error())
+			core.LogWarn(f, "Unable to create unicast UDP face with URI ", URI, ": ", err.Error())
 			response = makeControlResponse(406, "Transport error", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
