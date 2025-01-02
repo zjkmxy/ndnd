@@ -91,10 +91,6 @@ func MakeNullFaceURI() *URI {
 
 // MakeUDPFaceURI constructs a URI for a UDP face.
 func MakeUDPFaceURI(ipVersion int, host string, port uint16) *URI {
-	/*path := host
-	if zone != "" {
-		path += "%" + zone
-	}*/
 	uri := new(URI)
 	uri.uriType = udpURI
 	uri.scheme = "udp" + strconv.Itoa(ipVersion)

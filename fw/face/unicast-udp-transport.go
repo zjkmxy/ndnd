@@ -36,9 +36,13 @@ func MakeUnicastUDPTransport(
 	localURI *defn.URI,
 	persistency spec_mgmt.Persistency,
 ) (*UnicastUDPTransport, error) {
-	// Validate URIs
-	if !remoteURI.IsCanonical() || (remoteURI.Scheme() != "udp4" && remoteURI.Scheme() != "udp6") ||
-		(localURI != nil && !localURI.IsCanonical()) || (localURI != nil && remoteURI.Scheme() != localURI.Scheme()) {
+	// Validate remote URI
+	if remoteURI == nil || !remoteURI.IsCanonical() || (remoteURI.Scheme() != "udp4" && remoteURI.Scheme() != "udp6") {
+		return nil, core.ErrNotCanonical
+	}
+
+	// Validate local URI
+	if localURI != nil && (!localURI.IsCanonical() || remoteURI.Scheme() != localURI.Scheme()) {
 		return nil, core.ErrNotCanonical
 	}
 

@@ -91,24 +91,8 @@ func AcceptUnicastTCPTransport(
 	persistency spec_mgmt.Persistency,
 ) (*UnicastTCPTransport, error) {
 	// Construct remote URI
-	var remoteURI *defn.URI
 	remoteAddr := remoteConn.RemoteAddr()
-	host, port, err := net.SplitHostPort(remoteAddr.String())
-	if err != nil {
-		core.LogWarn("UnicastTCPTransport", "Unable to create face from ", remoteAddr, ": could not split host from port")
-		return nil, err
-	}
-	portInt, err := strconv.ParseUint(port, 10, 16)
-	if err != nil {
-		core.LogWarn("UnicastTCPTransport", "Unable to create face from ", remoteAddr, ": could not split host from port")
-		return nil, err
-	}
-	remoteURI = defn.MakeTCPFaceURI(4, host, uint16(portInt))
-	remoteURI.Canonize()
-	if !remoteURI.IsCanonical() {
-		core.LogWarn("UnicastTCPTransport", "Unable to create face from ", remoteURI, ": remote URI is not canonical")
-		return nil, err
-	}
+	remoteURI := defn.DecodeURIString(fmt.Sprintf("tcp://%s", remoteAddr))
 
 	// Construct transport
 	t := new(UnicastTCPTransport)
