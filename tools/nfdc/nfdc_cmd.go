@@ -118,11 +118,15 @@ func (n *Nfdc) preprocessArg(
 			}
 
 			res, ok := raw.(*mgmt.ControlResponse)
-			if !ok || res.Val == nil || res.Val.Params == nil || res.Val.Params.FaceId == nil {
+			if !ok {
 				fmt.Fprintf(os.Stderr, "Invalid or empty response type: %T\n", raw)
 				os.Exit(1)
 			}
 			n.printCtrlResponse(res)
+			if res.Val == nil || res.Val.Params == nil || res.Val.Params.FaceId == nil {
+				fmt.Fprintf(os.Stderr, "Failed to create face for route\n")
+				os.Exit(1)
+			}
 
 			return key, fmt.Sprintf("%d", *res.Val.Params.FaceId)
 		}
