@@ -118,7 +118,7 @@ func (n *Nfdc) preprocessArg(
 			}
 
 			res, ok := raw.(*mgmt.ControlResponse)
-			if !ok || res.Val == nil || res.Val.Params == nil {
+			if !ok || res.Val == nil || res.Val.Params == nil || res.Val.Params.FaceId == nil {
 				fmt.Fprintf(os.Stderr, "Invalid or empty response type: %T\n", raw)
 				os.Exit(1)
 			}
