@@ -550,7 +550,7 @@ func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
 		return
 	}
 	filterV, err := mgmt.ParseFaceQueryFilter(enc.NewBufferReader(interest.NameV[f.manager.prefixLength()+2].Val), true)
-	if err != nil {
+	if err != nil || filterV == nil || filterV.Val == nil {
 		return
 	}
 	filter := filterV.Val
