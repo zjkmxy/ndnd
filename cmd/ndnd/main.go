@@ -3,21 +3,21 @@ package main
 import (
 	"os"
 
-	"github.com/named-data/ndnd/cmd"
 	dv "github.com/named-data/ndnd/dv/executor"
 	fw "github.com/named-data/ndnd/fw/executor"
+	"github.com/named-data/ndnd/std/utils"
 	tools "github.com/named-data/ndnd/tools"
 )
 
 func main() {
 	// create a command tree
-	tree := cmd.CmdTree{
+	tree := utils.CmdTree{
 		Name: "ndnd",
 		Help: "Named Data Networking Daemon",
-		Sub: []*cmd.CmdTree{{
+		Sub: []*utils.CmdTree{{
 			Name: "fw",
 			Help: "NDN Forwarding Daemon",
-			Sub: []*cmd.CmdTree{{
+			Sub: []*utils.CmdTree{{
 				Name: "run",
 				Help: "Start the NDN Forwarding Daemon",
 				Fun:  fw.Main,
@@ -25,7 +25,7 @@ func main() {
 		}, {
 			Name: "dv",
 			Help: "NDN Distance Vector Routing Daemon",
-			Sub: []*cmd.CmdTree{{
+			Sub: []*utils.CmdTree{{
 				Name: "run",
 				Help: "Start the NDN Distance Vector Routing Daemon",
 				Fun:  dv.Main,
