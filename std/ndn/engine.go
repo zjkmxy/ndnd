@@ -38,8 +38,8 @@ type Engine interface {
 	// UnregisterRoute unregisters a route of prefix to the local forwarder.
 	UnregisterRoute(prefix enc.Name) error
 	// ExecMgmtCmd executes a management command.
-	// args is a pointer to mgmt.ControlArgs
-	// returns error and the response (error, *mgmt.ControlResponse)
+	//   args are the control arguments (*mgmt.ControlArgs)
+	//   returns response and error if any (*mgmt.ControlResponse, error)
 	ExecMgmtCmd(module string, cmd string, args any) (any, error)
 }
 
