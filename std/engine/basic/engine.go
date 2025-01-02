@@ -457,7 +457,7 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 	}
 	interest, err := e.mgmtConf.MakeCmd(module, cmd, cmdArgs, intCfg)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	type mgmtResp struct {
@@ -505,7 +505,7 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 		}
 	})
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	resp := <-respCh
