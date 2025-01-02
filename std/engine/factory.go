@@ -21,3 +21,7 @@ func NewBasicEngine(face face.Face) ndn.Engine {
 func NewUnixFace(addr string) face.Face {
 	return face.NewStreamFace("unix", addr, true)
 }
+
+func NewDefaultFace() face.Face {
+	return NewUnixFace("/var/run/nfd/nfd.sock")
+}

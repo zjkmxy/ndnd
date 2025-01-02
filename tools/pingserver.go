@@ -51,8 +51,7 @@ func (ps *PingServer) run() {
 	ps.name = append(prefix,
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
 
-	face := engine.NewUnixFace("/var/run/nfd/nfd.sock")
-	ps.app = engine.NewBasicEngine(face)
+	ps.app = engine.NewBasicEngine(engine.NewDefaultFace())
 	err = ps.app.Start()
 	if err != nil {
 		log.Fatalf("Unable to start engine: %+v", err)

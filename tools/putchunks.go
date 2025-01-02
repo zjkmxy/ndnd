@@ -41,17 +41,16 @@ func (pc *PutChunks) run() {
 	}
 
 	// start face and engine
-	face := engine.NewUnixFace("/var/run/nfd/nfd.sock")
-	engine := engine.NewBasicEngine(face)
-	err = engine.Start()
+	app := engine.NewBasicEngine(engine.NewDefaultFace())
+	err = app.Start()
 	if err != nil {
 		log.Errorf("Unable to start engine: %+v", err)
 		return
 	}
-	defer engine.Stop()
+	defer app.Stop()
 
 	// start object client
-	cli := object.NewClient(engine, object.NewMemoryStore())
+	cli := object.NewClient(app, object.NewMemoryStore())
 	err = cli.Start()
 	if err != nil {
 		log.Errorf("Unable to start object client: %+v", err)
@@ -86,7 +85,7 @@ func (pc *PutChunks) run() {
 	log.Infof("Object produced: %s", vname)
 
 	// register route to the object
-	err = engine.RegisterRoute(name)
+	err = app.RegisterRoute(name)
 	if err != nil {
 		log.Fatalf("Unable to register route: %+v", err)
 		return

@@ -157,8 +157,7 @@ func (pc *PingClient) run() {
 	}
 
 	// start the engine
-	face := engine.NewUnixFace("/var/run/nfd/nfd.sock")
-	pc.app = engine.NewBasicEngine(face)
+	pc.app = engine.NewBasicEngine(engine.NewDefaultFace())
 	err = pc.app.Start()
 	if err != nil {
 		log.Fatalf("Unable to start engine: %+v", err)

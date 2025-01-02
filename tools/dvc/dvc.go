@@ -13,8 +13,7 @@ import (
 )
 
 func dvGetStatus() *dvtlv.Status {
-	face := engine.NewUnixFace("/var/run/nfd/nfd.sock")
-	app := engine.NewBasicEngine(face)
+	app := engine.NewBasicEngine(engine.NewDefaultFace())
 	err := app.Start()
 	if err != nil {
 		panic(err)

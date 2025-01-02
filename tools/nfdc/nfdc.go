@@ -92,8 +92,7 @@ type Nfdc struct {
 }
 
 func (n *Nfdc) Start() {
-	face := engine.NewUnixFace("/var/run/nfd/nfd.sock")
-	n.engine = engine.NewBasicEngine(face)
+	n.engine = engine.NewBasicEngine(engine.NewDefaultFace())
 
 	err := n.engine.Start()
 	if err != nil {
