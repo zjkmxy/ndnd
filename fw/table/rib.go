@@ -9,6 +9,7 @@ package table
 
 import (
 	"container/list"
+	"sync"
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -16,7 +17,8 @@ import (
 
 // RibTable represents the Routing Information Base (RIB).
 type RibTable struct {
-	RibEntry
+	root  RibEntry
+	mutex sync.RWMutex
 }
 
 // RibEntry represents an entry in the RIB table.
@@ -59,12 +61,12 @@ const (
 
 // Rib is the Routing Information Base.
 var Rib = RibTable{
-	RibEntry: RibEntry{
+	root: RibEntry{
 		children: map[*RibEntry]bool{},
 	},
 }
 
-func (r *RibTable) fillTreeToPrefixEnc(name enc.Name) *RibEntry {
+func (r *RibEntry) fillTreeToPrefixEnc(name enc.Name) *RibEntry {
 	entry := r.findLongestPrefixEntryEnc(name)
 	for depth := entry.depth + 1; depth <= len(name); depth++ {
 		child := &RibEntry{
@@ -149,8 +151,11 @@ func (r *RibEntry) updateNexthopsEnc() {
 
 // AddRoute adds or updates a RIB entry for the specified prefix.
 func (r *RibTable) AddEncRoute(name enc.Name, route *Route) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	name = name.Clone()
-	node := r.fillTreeToPrefixEnc(name)
+	node := r.root.fillTreeToPrefixEnc(name)
 	if node.Name == nil {
 		node.Name = name
 	}
@@ -172,10 +177,13 @@ func (r *RibTable) AddEncRoute(name enc.Name, route *Route) {
 
 // GetAllEntries returns all routes in the RIB.
 func (r *RibTable) GetAllEntries() []*RibEntry {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	entries := make([]*RibEntry, 0)
 	// Walk tree in-order
 	queue := list.New()
-	queue.PushBack(&r.RibEntry)
+	queue.PushBack(&r.root)
 	for queue.Len() > 0 {
 		ribEntry := queue.Front().Value.(*RibEntry)
 		queue.Remove(queue.Front())
@@ -192,14 +200,12 @@ func (r *RibTable) GetAllEntries() []*RibEntry {
 	return entries
 }
 
-// GetRoutes returns all routes in the RIB entry.
-func (r *RibEntry) GetRoutes() []*Route {
-	return r.routes
-}
-
 // RemoveRoute removes the specified route from the specified prefix.
 func (r *RibTable) RemoveRouteEnc(name enc.Name, faceID uint64, origin uint64) {
-	entry := r.findExactMatchEntryEnc(name)
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	entry := r.root.findExactMatchEntryEnc(name)
 	if entry != nil {
 		for i, route := range entry.routes {
 			if route.FaceID == faceID && route.Origin == origin {
@@ -216,11 +222,23 @@ func (r *RibTable) RemoveRouteEnc(name enc.Name, faceID uint64, origin uint64) {
 	}
 }
 
+func (r *RibTable) CleanUpFace(faceId uint64) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	r.root.cleanUpFace(faceId)
+}
+
+// GetRoutes returns all routes in the RIB entry.
+func (r *RibEntry) GetRoutes() []*Route {
+	return r.routes
+}
+
 // CleanUpFace removes the specified face from all entries. Used for clean-up after a face is destroyed.
-func (r *RibEntry) CleanUpFace(faceId uint64) {
+func (r *RibEntry) cleanUpFace(faceId uint64) {
 	// Recursively clean children
 	for child := range r.children {
-		child.CleanUpFace(faceId)
+		child.cleanUpFace(faceId)
 	}
 
 	if r.Name == nil {
