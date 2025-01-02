@@ -23,7 +23,9 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 			fmt.Fprintf(os.Stderr, "Invalid argument: %s (should be key=value)\n", arg)
 			return
 		}
-		n.convCmdArg(&ctrlArgs, kv[0], kv[1])
+
+		key, val := n.preprocessArg(&ctrlArgs, mod, cmd, kv[0], kv[1])
+		n.convCmdArg(&ctrlArgs, key, val)
 	}
 
 	// execute command
@@ -72,6 +74,89 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 	if execErr != nil {
 		os.Exit(1)
 	}
+}
+
+func (n *Nfdc) preprocessArg(
+	ctrlArgs *mgmt.ControlArgs,
+	mod string, cmd string,
+	key string, val string,
+) (string, string) {
+	// convert face from URI to face ID
+	if key == "face" && strings.Contains(val, "://") {
+		// query the existing face (without attempting to create a new one)
+		// for faces/create, we require specifying "remote" and/or "local" instead
+		if (mod == "faces" && cmd == "destroy") ||
+			(mod == "rib" && cmd == "unregister") {
+
+			filter := mgmt.FaceQueryFilter{
+				Val: &mgmt.FaceQueryFilterValue{Uri: utils.IdPtr(val)},
+			}
+
+			dataset, err := n.fetchStatusDataset(enc.Name{
+				enc.NewStringComponent(enc.TypeGenericNameComponent, "faces"),
+				enc.NewStringComponent(enc.TypeGenericNameComponent, "query"),
+				enc.NewBytesComponent(enc.TypeGenericNameComponent, filter.Encode().Join()),
+			})
+			if dataset == nil {
+				fmt.Fprintf(os.Stderr, "Error fetching face status dataset: %+v\n", err)
+				os.Exit(1)
+			}
+
+			status, err := mgmt.ParseFaceStatusMsg(enc.NewWireReader(dataset), true)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error parsing face status: %+v\n", err)
+				os.Exit(1)
+			}
+
+			// face needs to exist, otherwise no point in continuing
+			if len(status.Vals) == 0 {
+				fmt.Fprintf(os.Stderr, "Face not found for URI: %s\n", val)
+				os.Exit(9)
+			} else if len(status.Vals) > 1 {
+				fmt.Fprintf(os.Stderr, "Multiple faces found for URI: %s\n", val)
+				os.Exit(9)
+			}
+
+			// found the face we need
+			return key, fmt.Sprintf("%d", status.Vals[0].FaceId)
+		}
+
+		// only for rib/register, create a new face if it doesn't exist
+		if mod == "rib" && cmd == "register" {
+			// copy over any face arguments that are already set
+			faceArgs := mgmt.ControlArgs{Uri: utils.IdPtr(val)}
+			if ctrlArgs.LocalUri != nil {
+				faceArgs.LocalUri = ctrlArgs.LocalUri
+				ctrlArgs.LocalUri = nil
+			}
+			if ctrlArgs.Mtu != nil {
+				faceArgs.Mtu = ctrlArgs.Mtu
+				ctrlArgs.Mtu = nil
+			}
+			if ctrlArgs.FacePersistency != nil {
+				faceArgs.FacePersistency = ctrlArgs.FacePersistency
+				ctrlArgs.FacePersistency = nil
+			}
+
+			// create or use existing face
+			raw, execErr := n.engine.ExecMgmtCmd("faces", "create", &faceArgs)
+			if raw == nil {
+				fmt.Fprintf(os.Stderr, "Error creating face: %+v\n", execErr)
+				os.Exit(1)
+			}
+
+			res, ok := raw.(*mgmt.ControlResponse)
+			if !ok || res.Val == nil || res.Val.Params == nil {
+				fmt.Fprintf(os.Stderr, "Invalid or empty response type: %T\n", raw)
+				os.Exit(1)
+			}
+
+			fmt.Printf("Using FaceId=%d (%d)\n", *res.Val.Params.FaceId, res.Val.StatusCode)
+			return key, fmt.Sprintf("%d", *res.Val.Params.FaceId)
+		}
+	}
+
+	return key, val
 }
 
 func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {

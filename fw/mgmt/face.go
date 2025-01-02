@@ -555,6 +555,22 @@ func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
 	}
 	filter := filterV.Val
 
+	// canonize URI if present in filter
+	var filterUri *defn.URI
+	if filter.Uri != nil {
+		filterUri = defn.DecodeURIString(*filter.Uri)
+		if filterUri == nil {
+			core.LogWarn(f, "Cannot decode URI in FaceQueryFilter ", filterUri)
+			return
+		}
+		err = filterUri.Canonize()
+		if err != nil {
+			core.LogWarn(f, "Cannot canonize URI in FaceQueryFilter ", filterUri)
+			return
+		}
+	}
+
+	// filter all faces to match filter
 	faces := face.FaceTable.GetAll()
 	matchingFaces := make([]int, 0)
 	for pos, face := range faces {
@@ -568,7 +584,7 @@ func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
 			continue
 		}
 
-		if filter.Uri != nil && *filter.Uri != face.RemoteURI().String() {
+		if filterUri != nil && filterUri.String() != face.RemoteURI().String() {
 			continue
 		}
 
@@ -592,7 +608,7 @@ func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
 	}
 
 	// We have to sort these or they appear in a strange order
-	//sort.Slice(matchingFaces, func(a int, b int) bool { return matchingFaces[a] < matchingFaces[b] })
+	sort.Slice(matchingFaces, func(a int, b int) bool { return matchingFaces[a] < matchingFaces[b] })
 
 	dataset := &mgmt.FaceStatusMsg{}
 	for _, pos := range matchingFaces {

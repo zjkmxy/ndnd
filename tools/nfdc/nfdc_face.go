@@ -54,7 +54,9 @@ func (n *Nfdc) ExecFaceList(args []string) {
 			entry.NInInterests, entry.NInData, entry.NInNacks, entry.NInBytes,
 			entry.NOutInterests, entry.NOutData, entry.NOutNacks, entry.NOutBytes))
 
-		info = append(info, fmt.Sprintf("flags=%d", entry.Flags))
+		flags := []string{}
+		flags = append(flags, strings.ToLower(mgmt.Persistency(entry.FacePersistency).String()))
+		info = append(info, fmt.Sprintf("flags={%s}", strings.Join(flags, " ")))
 
 		fmt.Printf("%s\n", strings.Join(info, " "))
 	}
