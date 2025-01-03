@@ -150,7 +150,6 @@ func (t *InternalTransport) runReceive() {
 
 func (t *InternalTransport) Close() {
 	if t.running.Swap(false) {
-		close(t.recvQueue)
-		close(t.sendQueue)
+		// do not close the queues, let them be garbage collected
 	}
 }

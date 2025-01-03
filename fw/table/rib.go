@@ -13,6 +13,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 )
 
 // RibTable represents the Routing Information Base (RIB).
@@ -41,23 +42,6 @@ type Route struct {
 	Flags            uint64
 	ExpirationPeriod *time.Duration
 }
-
-// Route flags.
-const (
-	RouteFlagChildInherit uint64 = 0x01
-	RouteFlagCapture      uint64 = 0x02
-)
-
-// Route origins.
-const (
-	RouteOriginApp       uint64 = 0
-	RouteOriginStatic    uint64 = 255
-	RouteOriginNLSR      uint64 = 128
-	RouteOriginPrefixAnn uint64 = 129
-	RouteOriginClient    uint64 = 65
-	RouteOriginAutoreg   uint64 = 64
-	RouteOriginAutoconf  uint64 = 66
-)
 
 // Rib is the Routing Information Base.
 var Rib = RibTable{
@@ -269,9 +253,9 @@ func (r *RibEntry) HasCaptureRoute() bool {
 }
 
 func (r *Route) HasCaptureFlag() bool {
-	return r.Flags&RouteFlagCapture != 0
+	return r.Flags&uint64(spec_mgmt.RouteFlagCapture) != 0
 }
 
 func (r *Route) HasChildInheritFlag() bool {
-	return r.Flags&RouteFlagChildInherit != 0
+	return r.Flags&uint64(spec_mgmt.RouteFlagChildInherit) != 0
 }

@@ -8,11 +8,9 @@ import (
 )
 
 const CostInfinity = uint64(16)
-const MulticastStrategy = "/localhost/nfd/strategy/multicast"
 const NlsrOrigin = uint64(128)
 
-var Localhop = enc.Name{enc.NewStringComponent(enc.TypeGenericNameComponent, "localhop")}
-var Localhost = enc.Name{enc.NewStringComponent(enc.TypeGenericNameComponent, "localhost")}
+var MulticastStrategy, _ = enc.NameFromStr("/localhost/nfd/strategy/multicast")
 
 type Config struct {
 	// Network should be the same for all routers in the network.
@@ -81,7 +79,7 @@ func (c *Config) Parse() (err error) {
 	}
 
 	// Create name table
-	c.advSyncPfxN = append(Localhop, append(c.networkNameN,
+	c.advSyncPfxN = append(enc.Name{enc.LOCALHOP}, append(c.networkNameN,
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADS"),
 	)...)
@@ -91,7 +89,7 @@ func (c *Config) Parse() (err error) {
 	c.advSyncPassivePfxN = append(c.advSyncPfxN,
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PSV"),
 	)
-	c.advDataPfxN = append(Localhop, append(c.routerNameN,
+	c.advDataPfxN = append(enc.Name{enc.LOCALHOP}, append(c.routerNameN,
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
 	)...)
@@ -103,7 +101,7 @@ func (c *Config) Parse() (err error) {
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
 	)
-	c.localPfxN = append(Localhost,
+	c.localPfxN = append(enc.Name{enc.LOCALHOST},
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
 	)
 

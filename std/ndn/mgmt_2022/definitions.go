@@ -32,12 +32,6 @@ const (
 )
 
 const (
-	RouteFlagNoFlag       = uint64(0)
-	RouteFlagChildInherit = uint64(1)
-	RouteFlagCapture      = uint64(2)
-)
-
-const (
 	FaceEventCreated   = uint64(1)
 	FaceEventDestroyed = uint64(2)
 	FaceEventUp        = uint64(3)

@@ -107,7 +107,7 @@ func (n *Nfdc) Stop() {
 
 func (n *Nfdc) GetPrefix() enc.Name {
 	return enc.Name{
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "localhost"),
+		enc.LOCALHOST,
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd"),
 	}
 }

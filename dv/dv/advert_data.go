@@ -3,7 +3,6 @@ package dv
 import (
 	"time"
 
-	"github.com/named-data/ndnd/dv/config"
 	"github.com/named-data/ndnd/dv/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -20,7 +19,7 @@ func (dv *Router) advertDataFetch(nodeId enc.Name, seqNo uint64) {
 		return
 	}
 
-	advName := append(config.Localhop, append(nodeId,
+	advName := append(enc.Name{enc.LOCALHOP}, append(nodeId,
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
 		enc.NewSequenceNumComponent(seqNo), // unused for now

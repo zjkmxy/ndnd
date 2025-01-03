@@ -228,7 +228,6 @@ func (dv *Router) register() (err error) {
 	}
 
 	// Set strategy to multicast for sync prefixes
-	mcast, _ := enc.NameFromStr(config.MulticastStrategy)
 	pfxs = []enc.Name{
 		dv.config.AdvertisementSyncPrefix(),
 		dv.config.PrefixTableSyncPrefix(),
@@ -240,7 +239,7 @@ func (dv *Router) register() (err error) {
 			Args: &mgmt.ControlArgs{
 				Name: prefix,
 				Strategy: &mgmt.Strategy{
-					Name: mcast,
+					Name: config.MulticastStrategy,
 				},
 			},
 			Retries: -1,
