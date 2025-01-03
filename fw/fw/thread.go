@@ -305,13 +305,25 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 		lookupName = fhName
 	}
 
-	// Query the FIB for possible nexthops
+	// Query the FIB for all possible nexthops
 	nexthops := table.FibStrategyTable.FindNextHopsEnc(lookupName)
 
-	// Exclude faces that have an in-record for this interest
-	// TODO: unclear where NFD dev guide specifies such behavior (if any)
+	// If the first component is /localhop, we do not forward interests received
+	// on non-local faces to non-local faces
+	localFacesOnly := incomingFace.Scope() != defn.Local && len(packet.Name) > 0 && packet.Name[0].Equal(enc.LOCALHOP)
+
+	// Filter the nexthops that are allowed for this Interest
 	allowedNexthops := make([]*table.FibNextHopEntry, 0, len(nexthops))
 	for _, nexthop := range nexthops {
+		// Exclude non-local faces for localhop enforcement
+		if localFacesOnly {
+			if face := dispatch.GetFace(nexthop.Nexthop); face != nil && face.Scope() != defn.Local {
+				continue
+			}
+		}
+
+		// Exclude faces that have an in-record for this interest
+		// TODO: unclear where NFD dev guide specifies such behavior (if any)
 		record := pitEntry.InRecords()[nexthop.Nexthop]
 		if record == nil || nexthop.Nexthop == incomingFace.FaceID() {
 			allowedNexthops = append(allowedNexthops, nexthop)
