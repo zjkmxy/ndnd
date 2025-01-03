@@ -125,8 +125,9 @@ func (dv *Router) Start() (err error) {
 	dv.pfxSvs.Start()
 	defer dv.pfxSvs.Stop()
 
-	// Add self to the RIB
+	// Add self to the RIB and make initial advertisement
 	dv.rib.Set(dv.config.RouterName(), dv.config.RouterName(), 0)
+	dv.advertGenerateNew()
 
 	for {
 		select {
@@ -176,15 +177,6 @@ func (dv *Router) register() (err error) {
 	err = dv.engine.AttachHandler(dv.config.AdvertisementSyncPassivePrefix(),
 		func(args ndn.InterestHandlerArgs) {
 			go dv.advertSyncOnInterest(args, false)
-		})
-	if err != nil {
-		return err
-	}
-
-	// Advertisement Data
-	err = dv.engine.AttachHandler(dv.config.AdvertisementDataPrefix(),
-		func(args ndn.InterestHandlerArgs) {
-			go dv.advertDataOnInterest(args)
 		})
 	if err != nil {
 		return err

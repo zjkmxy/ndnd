@@ -54,7 +54,7 @@ func (dv *Router) ribUpdate(ns *table.NeighborState) {
 	if dirty {
 		go func() {
 			dv.fibUpdate()
-			dv.advertSyncNotifyNew()
+			dv.advertGenerateNew()
 			dv.prefixDataFetchAll()
 		}()
 	}
@@ -83,7 +83,7 @@ func (dv *Router) checkDeadNeighbors() {
 	if dirty {
 		go func() {
 			dv.fibUpdate()
-			dv.advertSyncNotifyNew()
+			dv.advertGenerateNew()
 		}()
 	}
 }

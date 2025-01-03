@@ -135,11 +135,3 @@ func (dv *Router) advertSyncOnInterest(args ndn.InterestHandlerArgs, active bool
 		go dv.fibUpdate()
 	}
 }
-
-func (dv *Router) advertSyncNotifyNew() {
-	dv.mutex.Lock()
-	defer dv.mutex.Unlock()
-
-	dv.advertSyncSeq++
-	go dv.advertSyncSendInterest()
-}
