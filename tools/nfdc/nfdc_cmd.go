@@ -168,15 +168,12 @@ func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 	case "mtu":
 		ctrlArgs.Mtu = utils.IdPtr(parseUint(val))
 	case "persistency":
-		switch val {
-		case "permanent":
-			ctrlArgs.FacePersistency = utils.IdPtr(uint64(mgmt.PersistencyPermanent))
-		case "persistent":
-			ctrlArgs.FacePersistency = utils.IdPtr(uint64(mgmt.PersistencyPersistent))
-		default:
+		persistency, err := mgmt.ParsePersistency(val)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Invalid persistency: %s\n", val)
 			os.Exit(9)
 		}
+		ctrlArgs.FacePersistency = utils.IdPtr(uint64(persistency))
 
 	// route arguments
 	case "prefix":
@@ -219,6 +216,8 @@ func (n *Nfdc) printCtrlResponse(res *mgmt.ControlResponse) {
 		switch key {
 		case "FacePersistency":
 			val = mgmt.Persistency(val.(uint64)).String()
+		case "Origin":
+			val = mgmt.RouteOrigin(val.(uint64)).String()
 		}
 
 		fmt.Printf("  %s=%v\n", key, val)

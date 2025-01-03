@@ -6,7 +6,7 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
-	ndn_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -32,7 +32,7 @@ func (r *NlsrReadvertiser) String() string {
 }
 
 func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
-	if route.Origin != table.RouteOriginClient {
+	if route.Origin != uint64(spec_mgmt.RouteOriginClient) {
 		core.LogDebug(r, "skip advertise=", name, " origin=", route.Origin)
 		return
 	}
@@ -42,14 +42,14 @@ func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
 	defer r.mutex.Unlock()
 	r.advertised[name.Hash()] += 1
 
-	params := &ndn_mgmt.ControlArgs{
+	params := &spec_mgmt.ControlArgs{
 		Name:   name,
 		Origin: utils.IdPtr(route.Origin),
 		Cost:   utils.IdPtr(route.Cost),
 	}
 
-	iparams := &ndn_mgmt.ControlParameters{
-		Val: &ndn_mgmt.ControlArgs{Name: name},
+	iparams := &spec_mgmt.ControlParameters{
+		Val: &spec_mgmt.ControlArgs{Name: name},
 	}
 	cmd, _ := enc.NameFromStr("/localhost/nlsr/rib/register")
 	cmd = append(cmd, enc.NewBytesComponent(enc.TypeGenericNameComponent, iparams.Encode().Join()))
@@ -58,7 +58,7 @@ func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
 }
 
 func (r *NlsrReadvertiser) Withdraw(name enc.Name, route *table.Route) {
-	if route.Origin != table.RouteOriginClient {
+	if route.Origin != uint64(spec_mgmt.RouteOriginClient) {
 		core.LogDebug(r, "skip withdraw=", name, " origin=", route.Origin)
 		return
 	}
@@ -74,13 +74,13 @@ func (r *NlsrReadvertiser) Withdraw(name enc.Name, route *table.Route) {
 	}
 	core.LogInfo(r, "withdraw=", name)
 
-	params := &ndn_mgmt.ControlArgs{
+	params := &spec_mgmt.ControlArgs{
 		Name:   name,
 		Origin: utils.IdPtr(route.Origin),
 	}
 
-	iparams := &ndn_mgmt.ControlParameters{
-		Val: &ndn_mgmt.ControlArgs{Name: name},
+	iparams := &spec_mgmt.ControlParameters{
+		Val: &spec_mgmt.ControlArgs{Name: name},
 	}
 	cmd, _ := enc.NameFromStr("/localhost/nlsr/rib/unregister")
 	cmd = append(cmd, enc.NewBytesComponent(enc.TypeGenericNameComponent, iparams.Encode().Join()))

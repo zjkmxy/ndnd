@@ -93,7 +93,7 @@ func (r *RIBModule) register(interest *spec.Interest, pitToken []byte, inFace ui
 		}
 	}
 
-	origin := table.RouteOriginApp
+	origin := uint64(mgmt.RouteOriginApp)
 	if params.Origin != nil {
 		origin = *params.Origin
 	}
@@ -103,7 +103,7 @@ func (r *RIBModule) register(interest *spec.Interest, pitToken []byte, inFace ui
 		cost = *params.Cost
 	}
 
-	flags := table.RouteFlagChildInherit
+	flags := uint64(mgmt.RouteFlagChildInherit)
 	if params.Flags != nil {
 		flags = *params.Flags
 	}
@@ -172,7 +172,7 @@ func (r *RIBModule) unregister(interest *spec.Interest, pitToken []byte, inFace 
 		faceID = *params.FaceId
 	}
 
-	origin := table.RouteOriginApp
+	origin := uint64(mgmt.RouteOriginApp)
 	if params.Origin != nil {
 		origin = *params.Origin
 	}

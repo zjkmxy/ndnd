@@ -35,9 +35,18 @@ func (n *Nfdc) ExecRouteList(args []string) {
 				expiry = (time.Duration(*route.ExpirationPeriod) * time.Millisecond).String()
 			}
 
-			// TODO: convert origin, flags to string
-			fmt.Printf("prefix=%s nexthop=%d origin=%d cost=%d flags=%d expires=%s\n",
-				entry.Name, route.FaceId, route.Origin, route.Cost, route.Flags, expiry)
+			flagList := make([]string, 0)
+			for flag, name := range mgmt.RouteFlagList {
+				if flag.IsSet(route.Flags) {
+					flagList = append(flagList, name)
+				}
+			}
+			flags := strings.Join(flagList, ", ")
+
+			origin := mgmt.RouteOrigin(route.Origin)
+
+			fmt.Printf("prefix=%s nexthop=%d origin=%s cost=%d flags={%s} expires=%s\n",
+				entry.Name, route.FaceId, origin, route.Cost, flags, expiry)
 		}
 	}
 }

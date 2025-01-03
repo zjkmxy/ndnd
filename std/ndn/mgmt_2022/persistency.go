@@ -1,24 +1,33 @@
 package mgmt_2022
 
-// Persistency represents the persistency of a face.
+import "errors"
+
 type Persistency uint64
 
-// Face persistencies (shared with management).
 const (
 	PersistencyPersistent Persistency = 0
 	PersistencyOnDemand   Persistency = 1
 	PersistencyPermanent  Persistency = 2
 )
 
+var PersistencyList = map[Persistency]string{
+	PersistencyPersistent: "persistent",
+	PersistencyOnDemand:   "on-demand",
+	PersistencyPermanent:  "permanent",
+}
+
 func (p Persistency) String() string {
-	switch p {
-	case PersistencyPersistent:
-		return "Persistent"
-	case PersistencyOnDemand:
-		return "OnDemand"
-	case PersistencyPermanent:
-		return "Permanent"
-	default:
-		return "Unknown"
+	if s, ok := PersistencyList[p]; ok {
+		return s
 	}
+	return "unknown"
+}
+
+func ParsePersistency(s string) (Persistency, error) {
+	for k, v := range PersistencyList {
+		if v == s {
+			return k, nil
+		}
+	}
+	return 0, errors.New("unknown persistency")
 }
