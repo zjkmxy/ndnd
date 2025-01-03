@@ -137,15 +137,14 @@ func (c *Client) consumeObject(state *ConsumeState) {
 	c.segfetch <- state
 }
 
+// fetch RDR metadata for an object with a given name
 func (c *Client) fetchMetadata(
 	name enc.Name,
 	callback func(meta *rdr.MetaData, err error),
 ) {
 	log.Debugf("consume: fetching object metadata %s", name)
 	args := ExpressRArgs{
-		Name: append(name,
-			enc.NewStringComponent(enc.TypeKeywordNameComponent, "metadata"),
-		),
+		Name: append(name, rdr.METADATA),
 		Config: &ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,

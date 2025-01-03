@@ -8,6 +8,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	rdr "github.com/named-data/ndnd/std/ndn/rdr_2024"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -28,7 +29,17 @@ type ProduceArgs struct {
 	Expiry time.Time // TODO: not implemented
 }
 
+// Produce and sign data, and insert into the client's store
 func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
+	// TODO: sign the data
+	signer := sec.NewSha256Signer()
+
+	return Produce(args, c.store, signer)
+}
+
+// Produce and sign data, and insert into a store
+// This function does not rely on the engine or client, so it can also be used in YaNFD
+func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, error) {
 	content := args.Content
 	contentSize := 0
 	for _, c := range content {
@@ -61,13 +72,11 @@ func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
 		FinalBlockID: &finalBlockId,
 	}
 
-	// TODO: sign the data
 	basename := append(args.Name, enc.NewVersionComponent(version))
-	signer := sec.NewSha256Signer()
 
 	// use a transaction to ensure the entire object is written
-	c.store.Begin()
-	defer c.store.Commit()
+	store.Begin()
+	defer store.Commit()
 
 	var seg uint64
 	for seg = 0; len(content) > 0; seg++ {
@@ -90,12 +99,12 @@ func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
 			}
 		}
 
-		data, err := c.engine.Spec().MakeData(name, cfg, segContent, signer)
+		data, err := spec.Spec{}.MakeData(name, cfg, segContent, signer)
 		if err != nil {
 			return nil, err
 		}
 
-		err = c.store.Put(name, version, data.Wire.Join())
+		err = store.Put(name, version, data.Wire.Join())
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +117,7 @@ func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
 
 	{ // write metadata packet
 		name := append(args.Name,
-			enc.NewStringComponent(enc.TypeKeywordNameComponent, "metadata"),
+			rdr.METADATA,
 			enc.NewVersionComponent(version),
 			enc.NewSegmentComponent(0),
 		)
@@ -117,12 +126,12 @@ func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
 			FinalBlockID: finalBlockId.Bytes(),
 		}
 
-		data, err := c.engine.Spec().MakeData(name, cfg, content.Encode(), signer)
+		data, err := spec.Spec{}.MakeData(name, cfg, content.Encode(), signer)
 		if err != nil {
 			return nil, err
 		}
 
-		err = c.store.Put(name, version, data.Wire.Join())
+		err = store.Put(name, version, data.Wire.Join())
 		if err != nil {
 			return nil, err
 		}
@@ -131,6 +140,7 @@ func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
 	return basename, nil
 }
 
+// onInterest looks up the store for the requested data
 func (c *Client) onInterest(args ndn.InterestHandlerArgs) {
 	// TODO: consult security if we can send this
 	wire, err := c.store.Get(args.Interest.Name(), args.Interest.CanBePrefix())
