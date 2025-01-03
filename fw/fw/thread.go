@@ -8,7 +8,6 @@
 package fw
 
 import (
-	"bytes"
 	"encoding/binary"
 	"runtime"
 	"strconv"
@@ -26,14 +25,13 @@ const MaxFwThreads = 32
 
 // Threads contains all forwarding threads
 var Threads []*Thread
-var LOCALHOST = []byte{0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x68, 0x6f, 0x73, 0x74}
 
 // HashNameToFwThread hashes an NDN name to a forwarding thread.
 func HashNameToFwThread(name enc.Name) int {
 	// Dispatch all management requests to thread 0
 	// this is fine, all it does is make sure the pitcs table in thread 0 has the management stuff.
 	// This is not actually touching management.
-	if len(name) > 0 && bytes.Equal((name)[0].Val, LOCALHOST) {
+	if len(name) > 0 && name[0].Equal(enc.LOCALHOST) {
 		return 0
 	}
 	// to prevent negative modulos because we converted from uint to int
@@ -46,7 +44,7 @@ func HashNameToAllPrefixFwThreads(name enc.Name) []bool {
 	threads := make([]bool, len(Threads))
 
 	// Dispatch all management requests to thread 0
-	if len(name) > 0 && bytes.Equal((name)[0].Val, LOCALHOST) {
+	if len(name) > 0 && name[0].Equal(enc.LOCALHOST) {
 		threads[0] = true
 		return threads
 	}
@@ -191,9 +189,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	core.LogTrace(t, "OnIncomingInterest: ", packet.Name, ", FaceID=", incomingFace.FaceID(), ", PitTokenL=", len(packet.PitToken))
 
 	// Check if violates /localhost
-	if incomingFace.Scope() == defn.NonLocal &&
-		len(interest.NameV) > 0 &&
-		bytes.Equal(interest.NameV[0].Val, LOCALHOST) {
+	if incomingFace.Scope() == defn.NonLocal && len(packet.Name) > 0 && packet.Name[0].Equal(enc.LOCALHOST) {
 		core.LogWarn(t, "Interest ", packet.Name, " from non-local face=", incomingFace.FaceID(), " violates /localhost scope - DROP")
 		return
 	}
@@ -412,8 +408,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 	t.NInData++
 
 	// Check if violates /localhost
-	if incomingFace.Scope() == defn.NonLocal && len(packet.Name) > 0 &&
-		bytes.Equal(data.NameV[0].Val, LOCALHOST) {
+	if incomingFace.Scope() == defn.NonLocal && len(packet.Name) > 0 && packet.Name[0].Equal(enc.LOCALHOST) {
 		core.LogWarn(t, "Data ", packet.Name, " from non-local FaceID=", packet.IncomingFaceID, " violates /localhost scope - DROP")
 		return
 	}
@@ -522,7 +517,7 @@ func (t *Thread) processOutgoingData(
 	}
 
 	// Check if violates /localhost
-	if outgoingFace.Scope() == defn.NonLocal && len(data.NameV) > 0 && bytes.Equal(data.NameV[0].Val, LOCALHOST) {
+	if outgoingFace.Scope() == defn.NonLocal && len(packet.Name) > 0 && packet.Name[0].Equal(enc.LOCALHOST) {
 		core.LogWarn(t, "Data ", packet.Name, " cannot be sent to non-local FaceID=", nexthop, " since violates /localhost scope - DROP")
 		return
 	}
