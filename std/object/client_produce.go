@@ -27,14 +27,6 @@ type ProduceArgs struct {
 	FreshnessPeriod time.Duration
 }
 
-// Produce and sign data, and insert into the client's store
-func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
-	// TODO: sign the data
-	signer := sec.NewSha256Signer()
-
-	return Produce(args, c.store, signer)
-}
-
 // Produce and sign data, and insert into a store
 // This function does not rely on the engine or client, so it can also be used in YaNFD
 func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, error) {
@@ -136,6 +128,42 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 	}
 
 	return basename, nil
+}
+
+// Produce and sign data, and insert into the client's store
+func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
+	// TODO: sign the data
+	signer := sec.NewSha256Signer()
+
+	return Produce(args, c.store, signer)
+}
+
+// Remove an object from the client's store by name
+func (c *Client) Remove(name enc.Name) error {
+	// This will clear the store (probably not what you want)
+	if len(name) == 0 {
+		return nil
+	}
+
+	c.store.Begin()
+	defer c.store.Commit()
+
+	// Remove object data
+	err := c.store.Remove(name, true)
+	if err != nil {
+		return err
+	}
+
+	// Remove RDR metadata if we have a version
+	// If there is no version, we removed this anyway in the previous step
+	if version := name[len(name)-1]; version.Typ == enc.TypeVersionNameComponent {
+		err = c.store.Remove(append(name[:len(name)-1], rdr.METADATA, version), true)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // onInterest looks up the store for the requested data
