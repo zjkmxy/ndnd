@@ -21,7 +21,7 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-const lpPacketOverhead = 1 + 3
+const lpPacketOverhead = 1 + 3 + 1 + 3 // LpPacket+Fragment
 const pitTokenOverhead = 1 + 1 + 6
 const congestionMarkOverhead = 3 + 1 + 8
 
@@ -116,10 +116,8 @@ func (l *NDNLPLinkService) computeHeaderOverhead() {
 
 	if l.options.IsFragmentationEnabled {
 		l.headerOverhead += 1 + 1 + 8 // Sequence
-	}
-
-	if l.options.IsFragmentationEnabled {
-		l.headerOverhead += 1 + 1 + 2 + 1 + 1 + 2 // FragIndex/FragCount (Type + Length + up to 2^16 fragments)
+		l.headerOverhead += 1 + 1 + 2 // FragIndex (max 2^16 fragments)
+		l.headerOverhead += 1 + 1 + 2 // FragCount
 	}
 
 	if l.options.IsIncomingFaceIndicationEnabled {
@@ -183,17 +181,23 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 		l.nOutData++
 	}
 
-	now := time.Now()
+	// Congestion marking
+	congestionMark := pkt.CongestionMark // from upstream
+	if l.checkCongestion(wire) && congestionMark == nil {
+		core.LogWarn(l, "Marking congestion")
+		congestionMark = utils.IdPtr(uint64(1)) // ours
+	}
 
+	// Calculate effective MTU after accounting for packet-specific overhead
 	effectiveMtu := l.transport.MTU() - l.headerOverhead
 	if pkt.PitToken != nil {
 		effectiveMtu -= pitTokenOverhead
 	}
-	if pkt.CongestionMark != nil {
+	if congestionMark != nil {
 		effectiveMtu -= congestionMarkOverhead
 	}
 
-	// Fragmentation
+	// Fragment packet if necessary
 	var fragments []*spec.LpPacket
 	if len(wire) > effectiveMtu {
 		if !l.options.IsFragmentationEnabled {
@@ -202,50 +206,35 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 		}
 
 		// Split up fragment
-		nFragments := int((len(wire) + effectiveMtu - 1) / effectiveMtu)
-		fragments = make([]*spec.LpPacket, nFragments)
+		fragCount := (len(wire) + effectiveMtu - 1) / effectiveMtu
+		fragCountPtr := utils.IdPtr(uint64(fragCount))
+		fragments = make([]*spec.LpPacket, fragCount)
+
 		reader := enc.NewBufferReader(wire)
-		for i := 0; i < nFragments; i++ {
+		for i := range fragments {
+			// Read till effective mtu or end of wire
 			readSize := effectiveMtu
-			if i == nFragments-1 {
-				readSize = len(wire) - effectiveMtu*(nFragments-1)
+			if i == fragCount-1 {
+				readSize = len(wire) - effectiveMtu*(fragCount-1)
 			}
 
 			frag, err := reader.ReadWire(readSize)
 			if err != nil {
 				core.LogFatal(l, "Unexpected Wire reading error")
 			}
-			fragments[i] = &spec.LpPacket{Fragment: frag}
+
+			// Create fragment with sequence and index
+			l.nextSequence++
+			fragments[i] = &spec.LpPacket{
+				Fragment:  frag,
+				Sequence:  utils.IdPtr(l.nextSequence),
+				FragIndex: utils.IdPtr(uint64(i)),
+				FragCount: fragCountPtr,
+			}
 		}
 	} else {
+		// No fragmentation necessary
 		fragments = []*spec.LpPacket{{Fragment: enc.Wire{wire}}}
-	}
-
-	// Sequence
-	if len(fragments) > 1 {
-		for _, fragment := range fragments {
-			fragment.Sequence = utils.IdPtr(l.nextSequence)
-			l.nextSequence++
-		}
-	}
-
-	// Congestion marking
-	congestionMark := pkt.CongestionMark // from upstream
-	if congestionMarking {
-		// GetSendQueueSize is expensive, so only check every 1/2 of the threshold
-		// and only if we can mark congestion for this particular packet
-		if l.congestionCheck > l.options.DefaultCongestionThresholdBytes {
-			if now.After(l.lastTimeCongestionMarked.Add(l.options.BaseCongestionMarkingInterval)) &&
-				l.transport.GetSendQueueSize() > l.options.DefaultCongestionThresholdBytes {
-				core.LogWarn(l, "Marking congestion")
-				congestionMark = utils.IdPtr[uint64](1) // ours
-				l.lastTimeCongestionMarked = now
-			}
-
-			l.congestionCheck = 0
-		}
-
-		l.congestionCheck += uint64(len(wire)) // approx
 	}
 
 	// Send fragment(s)
@@ -265,6 +254,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 			fragment.CongestionMark = congestionMark
 		}
 
+		// Encode final LP frame
 		pkt := &spec.Packet{
 			LpPacket: fragment,
 		}
@@ -296,7 +286,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		IncomingFaceID: l.faceID,
 	}
 
-	L2, err := ReadPacketUnverified(enc.NewBufferReader(wire))
+	L2, err := readPacketUnverified(enc.NewBufferReader(wire))
 	if err != nil {
 		core.LogError(l, err)
 		return
@@ -370,7 +360,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		}
 
 		// Parse inner packet in place
-		L3, err := ReadPacketUnverified(enc.NewBufferReader(wire))
+		L3, err := readPacketUnverified(enc.NewBufferReader(wire))
 		if err != nil {
 			return
 		}
@@ -433,6 +423,28 @@ func (l *NDNLPLinkService) reassemblePacket(
 	return nil
 }
 
+func (l *NDNLPLinkService) checkCongestion(wire []byte) bool {
+	if !congestionMarking {
+		return false
+	}
+
+	// GetSendQueueSize is expensive, so only check every 1/2 of the threshold
+	// and only if we can mark congestion for this particular packet
+	if l.congestionCheck > l.options.DefaultCongestionThresholdBytes {
+		now := time.Now()
+		if now.After(l.lastTimeCongestionMarked.Add(l.options.BaseCongestionMarkingInterval)) &&
+			l.transport.GetSendQueueSize() > l.options.DefaultCongestionThresholdBytes {
+			l.lastTimeCongestionMarked = now
+			return true
+		}
+
+		l.congestionCheck = 0 // reset
+	}
+
+	l.congestionCheck += uint64(len(wire)) // approx
+	return false
+}
+
 func (op *NDNLPLinkServiceOptions) Flags() (ret uint64) {
 	if op.IsConsumerControlledForwardingEnabled {
 		ret |= FaceFlagLocalFields
@@ -444,7 +456,7 @@ func (op *NDNLPLinkServiceOptions) Flags() (ret uint64) {
 }
 
 // Reads a packet without validating the internal fields
-func ReadPacketUnverified(reader enc.ParseReader) (*spec.Packet, error) {
+func readPacketUnverified(reader enc.ParseReader) (*spec.Packet, error) {
 	context := spec.PacketParsingContext{}
 	context.Init()
 	return context.Parse(reader, false)
