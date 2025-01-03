@@ -68,7 +68,10 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 	}
 
 	// Create sync groups
-	dv.pfxSvs = ndn_sync.NewSvSync(engine, config.PrefixTableSyncPrefix(), dv.onPfxSyncUpdate)
+	dv.pfxSvs = ndn_sync.NewSvSync(engine, config.PrefixTableSyncPrefix(),
+		func(ssu ndn_sync.SvSyncUpdate) {
+			go dv.onPfxSyncUpdate(ssu)
+		})
 
 	// Set initial sequence numbers
 	now := uint64(time.Now().UnixMilli())

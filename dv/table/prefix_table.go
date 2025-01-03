@@ -10,16 +10,16 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-const PrefixTableSnapThreshold = 100
+const PREFIX_SNAP_THRESHOLD = 100
 
-var PrefixTableSnap = enc.NewStringComponent(enc.TypeKeywordNameComponent, "SNAP")
+var PREFIX_SNAP_COMP = enc.NewStringComponent(enc.TypeKeywordNameComponent, "SNAP")
 
 type PrefixTable struct {
 	config *config.Config
 	client *object.Client
 	svs    *ndn_sync.SvSync
 
-	routers map[uint64]*PrefixTableRouter
+	routers map[string]*PrefixTableRouter
 	me      *PrefixTableRouter
 
 	snapshotAt uint64
@@ -30,7 +30,7 @@ type PrefixTableRouter struct {
 	Fetching bool
 	Known    uint64
 	Latest   uint64
-	Prefixes map[uint64]*PrefixEntry
+	Prefixes map[string]*PrefixEntry
 }
 
 type PrefixEntry struct {
@@ -47,7 +47,7 @@ func NewPrefixTable(
 		client: client,
 		svs:    svs,
 
-		routers: make(map[uint64]*PrefixTableRouter),
+		routers: make(map[string]*PrefixTableRouter),
 		me:      nil,
 	}
 
@@ -60,12 +60,12 @@ func NewPrefixTable(
 }
 
 func (pt *PrefixTable) GetRouter(name enc.Name) *PrefixTableRouter {
-	hash := name.Hash()
+	hash := name.String()
 	router := pt.routers[hash]
 	if router == nil {
 		router = &PrefixTableRouter{
 			Name:     name,
-			Prefixes: make(map[uint64]*PrefixEntry),
+			Prefixes: make(map[string]*PrefixEntry),
 		}
 		pt.routers[hash] = router
 	}
@@ -74,7 +74,7 @@ func (pt *PrefixTable) GetRouter(name enc.Name) *PrefixTableRouter {
 
 func (pt *PrefixTable) Announce(name enc.Name) {
 	log.Infof("prefix-table: announcing %s", name)
-	hash := name.Hash()
+	hash := name.String()
 
 	// Skip if matching entry already exists
 	// This will also need to check that all params are equal
@@ -97,7 +97,7 @@ func (pt *PrefixTable) Announce(name enc.Name) {
 
 func (pt *PrefixTable) Withdraw(name enc.Name) {
 	log.Infof("prefix-table: withdrawing %s", name)
-	hash := name.Hash()
+	hash := name.String()
 
 	// Check if entry does not exist
 	if entry := pt.me.Prefixes[hash]; entry == nil {
@@ -125,23 +125,73 @@ func (pt *PrefixTable) Apply(ops *tlv.PrefixOpList) (dirty bool) {
 
 	if ops.PrefixOpReset {
 		log.Infof("prefix-table: reset prefix table for %s", ops.ExitRouter.Name)
-		router.Prefixes = make(map[uint64]*PrefixEntry)
+		router.Prefixes = make(map[string]*PrefixEntry)
 		dirty = true
 	}
 
 	for _, add := range ops.PrefixOpAdds {
 		log.Infof("prefix-table: added prefix for %s: %s", ops.ExitRouter.Name, add.Name)
-		router.Prefixes[add.Name.Hash()] = &PrefixEntry{Name: add.Name}
+		router.Prefixes[add.Name.String()] = &PrefixEntry{Name: add.Name}
 		dirty = true
 	}
 
 	for _, remove := range ops.PrefixOpRemoves {
 		log.Infof("prefix-table: removed prefix for %s: %s", ops.ExitRouter.Name, remove.Name)
-		delete(router.Prefixes, remove.Name.Hash())
+		delete(router.Prefixes, remove.Name.String())
 		dirty = true
 	}
 
 	return dirty
+}
+
+// Get the object name to fetch the next prefix table data.
+// If the difference between Known and Latest is greater than the threshold,
+// fetch the latest snapshot. Otherwise, fetch the next sequence number.
+func (r *PrefixTableRouter) GetNextDataName() enc.Name {
+	name := append(r.Name,
+		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
+		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
+	)
+	if r.Latest-r.Known > PREFIX_SNAP_THRESHOLD {
+		// no version - discover the latest snapshot
+		name = append(name, PREFIX_SNAP_COMP)
+	} else {
+		name = append(name,
+			enc.NewSequenceNumComponent(r.Known+1),
+			enc.NewVersionComponent(0), // immutable
+		)
+	}
+	return name
+}
+
+// Process the received prefix data. Returns if dirty.
+func (pt *PrefixTable) ApplyData(name enc.Name, data []byte, router *PrefixTableRouter) bool {
+	if len(name) < 2 {
+		log.Warnf("prefix-table: unexpected name length: %d", len(name))
+		return false
+	}
+
+	// Get sequence number from name
+	seqNo := name[len(name)-2]
+	if seqNo.Equal(PREFIX_SNAP_COMP) && name[len(name)-1].Typ == enc.TypeVersionNameComponent {
+		// version is sequence number for snapshot
+		seqNo = name[len(name)-1]
+	} else if seqNo.Typ != enc.TypeSequenceNumNameComponent {
+		// version is immutable, sequence number is in name
+		log.Warnf("prefix-table: unexpected sequence number type: %s", seqNo.Typ)
+		return false
+	}
+
+	// Parse the prefix data
+	ops, err := tlv.ParsePrefixOpList(enc.NewBufferReader(data), true)
+	if err != nil {
+		log.Warnf("prefix-table: failed to parse PrefixOpList: %+v", err)
+		return false
+	}
+
+	// Update the prefix table
+	router.Known = seqNo.NumberVal()
+	return pt.Apply(ops)
 }
 
 func (pt *PrefixTable) publishOp(content enc.Wire) {
@@ -162,7 +212,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 	}
 
 	// Create snapshot if needed
-	if seq-pt.snapshotAt >= PrefixTableSnapThreshold/2 {
+	if seq-pt.snapshotAt >= PREFIX_SNAP_THRESHOLD/2 {
 		pt.publishSnap()
 	}
 }
@@ -182,7 +232,7 @@ func (pt *PrefixTable) publishSnap() {
 	}
 
 	_, err := pt.client.Produce(object.ProduceArgs{
-		Name:    append(pt.config.PrefixTableDataPrefix(), PrefixTableSnap),
+		Name:    append(pt.config.PrefixTableDataPrefix(), PREFIX_SNAP_COMP),
 		Content: snap.Encode(),
 		Version: utils.IdPtr(pt.me.Latest),
 	})
