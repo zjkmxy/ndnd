@@ -25,8 +25,6 @@ type ProduceArgs struct {
 	Version *uint64
 	// time for which the object version can be cached (default 4s)
 	FreshnessPeriod time.Duration
-	// final expiry of the object (default 0 = no expiry)
-	Expiry time.Time // TODO: not implemented
 }
 
 // Produce and sign data, and insert into the client's store
