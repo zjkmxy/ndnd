@@ -31,9 +31,9 @@ func (n *Nfdc) ExecStatusGeneral(args []string) {
 	fmt.Println("General NFD status:")
 	n.statusPadding = 24
 	n.printStatusLine("version", status.NfdVersion)
-	n.printStatusLine("startTime", time.UnixMilli(int64(status.StartTimestamp)))
-	n.printStatusLine("currentTime", time.UnixMilli(int64(status.CurrentTimestamp)))
-	n.printStatusLine("uptime", time.Duration(status.CurrentTimestamp-status.StartTimestamp)*time.Millisecond)
+	n.printStatusLine("startTime", time.Unix(0, int64(status.StartTimestamp)))
+	n.printStatusLine("currentTime", time.Unix(0, int64(status.CurrentTimestamp)))
+	n.printStatusLine("uptime", (status.CurrentTimestamp - status.StartTimestamp))
 	n.printStatusLine("nNameTreeEntries", status.NNameTreeEntries)
 	n.printStatusLine("nFibEntries", status.NFibEntries)
 	n.printStatusLine("nPitEntries", status.NCsEntries)
