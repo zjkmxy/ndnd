@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
@@ -92,6 +94,7 @@ func (pc *PutChunks) run() {
 	}
 
 	// wait forever
-	// TODO: quit on SIGTERM, SIGINT or face failure
-	select {}
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
+	<-sigchan
 }
