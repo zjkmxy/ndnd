@@ -11,6 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/named-data/ndnd/std/object"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -20,6 +21,8 @@ type Router struct {
 	engine ndn.Engine
 	// config for this router
 	config *config.Config
+	// object client
+	client *object.Client
 	// nfd management thread
 	nfdc *nfdc.NfdMgmtThread
 	// single mutex for all operations
@@ -59,6 +62,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 	dv := &Router{
 		engine: engine,
 		config: config,
+		client: object.NewClient(engine, object.NewMemoryStore()),
 		nfdc:   nfdc.NewNfdMgmtThread(engine),
 		mutex:  sync.Mutex{},
 	}
@@ -74,7 +78,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 	// Create tables
 	dv.neighbors = table.NewNeighborTable(config, dv.nfdc)
 	dv.rib = table.NewRib(config)
-	dv.pfx = table.NewPrefixTable(config, engine, dv.pfxSvs)
+	dv.pfx = table.NewPrefixTable(config, dv.client, dv.pfxSvs)
 	dv.fib = table.NewFib(config, dv.nfdc)
 
 	return dv, nil
@@ -93,6 +97,10 @@ func (dv *Router) Start() (err error) {
 	dv.deadcheck = time.NewTicker(dv.config.RouterDeadInterval())
 	defer dv.heartbeat.Stop()
 	defer dv.deadcheck.Stop()
+
+	// Start object client
+	dv.client.Start()
+	defer dv.client.Stop()
 
 	// Start management thread
 	go dv.nfdc.Start()
@@ -174,15 +182,6 @@ func (dv *Router) register() (err error) {
 	err = dv.engine.AttachHandler(dv.config.AdvertisementDataPrefix(),
 		func(args ndn.InterestHandlerArgs) {
 			go dv.advertDataOnInterest(args)
-		})
-	if err != nil {
-		return err
-	}
-
-	// Prefix Data
-	err = dv.engine.AttachHandler(dv.config.PrefixTableDataPrefix(),
-		func(args ndn.InterestHandlerArgs) {
-			go dv.pfx.OnDataInterest(args)
 		})
 	if err != nil {
 		return err

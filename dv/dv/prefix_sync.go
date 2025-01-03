@@ -7,9 +7,8 @@ import (
 	"github.com/named-data/ndnd/dv/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
-	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/object"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 // Fetch all required prefix data
@@ -60,31 +59,26 @@ func (dv *Router) prefixDataFetch(nodeId enc.Name) {
 	// Fetch the prefix data
 	log.Debugf("prefixDataFetch: fetching prefix data for %s [%d => %d]", nodeId, router.Known, router.Latest)
 
-	cfg := &ndn.InterestConfig{
-		MustBeFresh: true,
-		Lifetime:    utils.IdPtr(4 * time.Second),
-		Nonce:       utils.ConvertNonce(dv.engine.Timer().Nonce()),
-	}
-
-	isSnap := router.Latest-router.Known > 100
+	// Prefix object for other router
 	name := append(nodeId,
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
 	)
-	if isSnap {
-		name = append(name, enc.NewStringComponent(enc.TypeKeywordNameComponent, "SNAP"))
-		cfg.CanBePrefix = true
+	if router.Latest-router.Known > table.PrefixTableSnapThreshold {
+		// no version - discover the latest snapshot
+		name = append(name, table.PrefixTableSnap)
 	} else {
-		name = append(name, enc.NewSequenceNumComponent(router.Known+1))
+		name = append(name,
+			enc.NewSequenceNumComponent(router.Known+1),
+			enc.NewVersionComponent(0), // immutable
+		)
 	}
 
-	interest, err := dv.engine.Spec().MakeInterest(name, cfg, nil, nil)
-	if err != nil {
-		log.Warnf("prefixDataFetch: failed to make Interest: %+v", err)
-		return
-	}
+	dv.client.Consume(name, func(state *object.ConsumeState) bool {
+		if !state.IsComplete() {
+			return true
+		}
 
-	err = dv.engine.Express(interest, func(args ndn.ExpressCallbackArgs) {
 		go func() {
 			// Done fetching, restart if needed
 			defer func() {
@@ -95,30 +89,22 @@ func (dv *Router) prefixDataFetch(nodeId enc.Name) {
 				go dv.prefixDataFetch(nodeId) // recheck
 			}()
 
-			// Sleep this goroutine if no data was received
-			if args.Result != ndn.InterestResultData {
-				log.Warnf("prefixDataFetch: failed to fetch prefix data %s: %d", interest.FinalName, args.Result)
-
-				// see advertDataFetch
-				if args.Result != ndn.InterestResultTimeout {
-					time.Sleep(2 * time.Second)
-				} else {
-					time.Sleep(100 * time.Millisecond)
-				}
+			// Wait before retry if there was a failure
+			if err := state.Error(); err != nil {
+				log.Warnf("prefixDataFetch: failed to fetch prefix data %s: %+v", name, err)
+				time.Sleep(1 * time.Second)
 				return
 			}
 
-			dv.processPrefixData(args.Data, router)
+			dv.processPrefixData(state.Name(), state.Content(), router)
 		}()
+
+		return true
 	})
-	if err != nil {
-		log.Warnf("prefixDataFetch: failed to express Interest: %+v", err)
-		return
-	}
 }
 
-func (dv *Router) processPrefixData(data ndn.Data, router *table.PrefixTableRouter) {
-	ops, err := tlv.ParsePrefixOpList(enc.NewWireReader(data.Content()), true)
+func (dv *Router) processPrefixData(name enc.Name, data []byte, router *table.PrefixTableRouter) {
+	ops, err := tlv.ParsePrefixOpList(enc.NewBufferReader(data), true)
 	if err != nil {
 		log.Warnf("prefixDataFetch: failed to parse PrefixOpList: %+v", err)
 		return
@@ -127,10 +113,13 @@ func (dv *Router) processPrefixData(data ndn.Data, router *table.PrefixTableRout
 	dv.mutex.Lock()
 	defer dv.mutex.Unlock()
 
-	// Update sequence number
-	dataName := data.Name()
-	seqNo := dataName[len(dataName)-1]
-	if seqNo.Typ != enc.TypeSequenceNumNameComponent {
+	// Get sequence number from name
+	seqNo := name[len(name)-2]
+	if seqNo.Equal(table.PrefixTableSnap) && name[len(name)-1].Typ == enc.TypeVersionNameComponent {
+		// version is sequence number for snapshot
+		seqNo = name[len(name)-1]
+	} else if seqNo.Typ != enc.TypeSequenceNumNameComponent {
+		// version is immutable, sequence number is in name
 		log.Warnf("prefixDataFetch: unexpected sequence number type: %s", seqNo.Typ)
 		return
 	}
@@ -138,7 +127,7 @@ func (dv *Router) processPrefixData(data ndn.Data, router *table.PrefixTableRout
 	// Update the prefix table
 	router.Known = seqNo.NumberVal()
 	if dv.pfx.Apply(ops) {
-		// Update the local fib if prefix table changed (very expensive)
-		go dv.fibUpdate()
+		// Update the local fib if prefix table changed
+		go dv.fibUpdate() // very expensive
 	}
 }

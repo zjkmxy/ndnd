@@ -67,6 +67,11 @@ func (c *Client) Engine() ndn.Engine {
 	return c.engine
 }
 
+// Get the underlying store
+func (c *Client) Store() ndn.Store {
+	return c.store
+}
+
 // Main goroutine for all client processing
 func (c *Client) run() {
 	for {

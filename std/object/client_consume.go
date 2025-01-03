@@ -42,7 +42,7 @@ type ConsumeState struct {
 
 // returns the name of the object being consumed
 func (a *ConsumeState) Name() enc.Name {
-	return a.name
+	return a.fetchName
 }
 
 // returns the error that occurred during fetching

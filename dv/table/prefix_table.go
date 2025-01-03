@@ -1,29 +1,27 @@
 package table
 
 import (
-	"sync"
-	"time"
-
 	"github.com/named-data/ndnd/dv/config"
 	"github.com/named-data/ndnd/dv/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
-	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/object"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	"github.com/named-data/ndnd/std/utils"
 )
 
+const PrefixTableSnapThreshold = 100
+
+var PrefixTableSnap = enc.NewStringComponent(enc.TypeKeywordNameComponent, "SNAP")
+
 type PrefixTable struct {
 	config *config.Config
-	engine ndn.Engine
+	client *object.Client
 	svs    *ndn_sync.SvSync
 
 	routers map[uint64]*PrefixTableRouter
 	me      *PrefixTableRouter
 
-	repo       map[uint64][]byte
-	repoMutex  sync.RWMutex
 	snapshotAt uint64
 }
 
@@ -41,19 +39,16 @@ type PrefixEntry struct {
 
 func NewPrefixTable(
 	config *config.Config,
-	engine ndn.Engine,
+	client *object.Client,
 	svs *ndn_sync.SvSync,
 ) *PrefixTable {
 	pt := &PrefixTable{
 		config: config,
-		engine: engine,
+		client: client,
 		svs:    svs,
 
 		routers: make(map[uint64]*PrefixTableRouter),
 		me:      nil,
-
-		repo:      make(map[uint64][]byte),
-		repoMutex: sync.RWMutex{},
 	}
 
 	pt.me = pt.GetRouter(config.RouterName())
@@ -155,12 +150,19 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 	pt.me.Known = seq
 	pt.me.Latest = seq
 
-	// Create the new data
-	name := append(pt.config.PrefixTableDataPrefix(), enc.NewSequenceNumComponent(seq))
-	pt.publish(name, content)
+	// Produce the operation
+	_, err := pt.client.Produce(object.ProduceArgs{
+		Name:    append(pt.config.PrefixTableDataPrefix(), enc.NewSequenceNumComponent(seq)),
+		Content: content,
+		Version: utils.IdPtr(uint64(0)), // immutable
+	})
+	if err != nil {
+		log.Errorf("prefix-table: failed to produce op: %v", err)
+		return
+	}
 
 	// Create snapshot if needed
-	if pt.snapshotAt-seq >= 100 {
+	if seq-pt.snapshotAt >= PrefixTableSnapThreshold/2 {
 		pt.publishSnap()
 	}
 }
@@ -179,59 +181,14 @@ func (pt *PrefixTable) publishSnap() {
 		})
 	}
 
-	// Store snapshot in repo
-	// TODO: this can be a segmented object
-	pt.snapshotAt = pt.me.Latest
-	snapPfx := append(pt.config.PrefixTableDataPrefix(),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "SNAP"))
-	snapName := append(snapPfx, enc.NewSequenceNumComponent(pt.snapshotAt))
-	pt.publish(snapName, snap.Encode())
-
-	// Point prefix to the snapshot
-	pt.repoMutex.Lock()
-	defer pt.repoMutex.Unlock()
-	pt.repo[snapPfx.Hash()] = pt.repo[snapName.Hash()]
-}
-
-func (pt *PrefixTable) publish(name enc.Name, content enc.Wire) {
-	// TODO: sign the prefix table data
-	signer := security.NewSha256Signer()
-
-	data, err := pt.engine.Spec().MakeData(
-		name,
-		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utils.IdPtr(1 * time.Second),
-		},
-		content,
-		signer)
+	_, err := pt.client.Produce(object.ProduceArgs{
+		Name:    append(pt.config.PrefixTableDataPrefix(), PrefixTableSnap),
+		Content: snap.Encode(),
+		Version: utils.IdPtr(pt.me.Latest),
+	})
 	if err != nil {
-		log.Warnf("prefix-table: publish failed to make data: %+v", err)
-		return
+		log.Errorf("prefix-table: failed to produce snap: %v", err)
 	}
 
-	// Store the data packet in our mem repo
-	pt.repoMutex.Lock()
-	defer pt.repoMutex.Unlock()
-	pt.repo[name.Hash()] = data.Wire.Join()
-}
-
-// Received prefix data Interest
-func (pt *PrefixTable) OnDataInterest(args ndn.InterestHandlerArgs) {
-	// TODO: remove old entries from repo
-
-	pt.repoMutex.RLock()
-	defer pt.repoMutex.RUnlock()
-
-	// Find exact match in repo
-	name := args.Interest.Name()
-	if data := pt.repo[name.Hash()]; data != nil {
-		err := args.Reply(enc.Wire{data})
-		if err != nil {
-			log.Warnf("prefix-table: failed to reply: %+v", err)
-		}
-		return
-	}
-
-	log.Warnf("prefix-table: repo failed to find data for for %s", name)
+	pt.snapshotAt = pt.me.Latest
 }
