@@ -286,9 +286,9 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 
 	// If NextHopFaceId set, forward to that face (if it exists) or drop
 	if packet.NextHopFaceID != nil {
-		if dispatch.GetFace(*packet.NextHopFaceID) != nil {
+		if face := dispatch.GetFace(*packet.NextHopFaceID); face != nil {
 			core.LogTrace(t, "NextHopFaceId is set for Interest ", packet.Name, " - dispatching directly to face")
-			dispatch.GetFace(*packet.NextHopFaceID).SendPacket(dispatch.OutPkt{
+			face.SendPacket(dispatch.OutPkt{
 				Pkt:      packet,
 				PitToken: packet.PitToken, // TODO: ??
 				InFace:   packet.IncomingFaceID,
