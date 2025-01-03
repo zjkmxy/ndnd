@@ -66,8 +66,8 @@ func (f *ForwarderStatusModule) general(interest *spec.Interest, pitToken []byte
 	// Generate new dataset
 	status := &mgmt.GeneralStatus{
 		NfdVersion:       core.Version,
-		StartTimestamp:   uint64(core.StartTimestamp.UnixNano() / 1000 / 1000),
-		CurrentTimestamp: uint64(time.Now().UnixNano() / 1000 / 1000),
+		StartTimestamp:   time.Duration(core.StartTimestamp.UnixNano()),
+		CurrentTimestamp: time.Duration(time.Now().UnixNano()),
 		NFibEntries:      uint64(len(table.FibStrategyTable.GetAllFIBEntries())),
 	}
 	// Don't set NNameTreeEntries because we don't use a NameTree

@@ -63,6 +63,8 @@ ndnd fw run yanfd.config.yml
 A full configuration example can be found in [fw/yanfd.sample.yml](fw/yanfd.sample.yml).
 Note that the default configuration may require root privileges to bind to multicast interfaces.
 
+Once started, you can use the [Forwarder Control](tools/nfdc/README.md) tool to manage faces and routes.
+
 ## 📡 Distance Vector Router
 
 The `ndnd/dv` package implements `ndn-dv`, an NDN Distance Vector routing daemon.
@@ -75,6 +77,8 @@ ndnd dv run dv.config.yml
 
 A full configuration example can be found in [dv/dv.sample.yml](dv/dv.sample.yml).
 Make sure the network and router name are correctly configured and the forwarder is running.
+
+Once started, you can use the [DV Control](tools/dvc/README.md) tool to create and destroy neighbor links.
 
 ## 📚 Standard Library
 

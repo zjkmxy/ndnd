@@ -13,6 +13,7 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	defn "github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
+	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -30,7 +31,7 @@ func MakeInternalTransport() *InternalTransport {
 	t.makeTransportBase(
 		defn.MakeInternalFaceURI(),
 		defn.MakeInternalFaceURI(),
-		PersistencyPersistent,
+		spec_mgmt.PersistencyPersistent,
 		defn.Local,
 		defn.PointToPoint,
 		defn.MaxNDNPacketSize)
@@ -59,12 +60,12 @@ func (t *InternalTransport) String() string {
 }
 
 // SetPersistency changes the persistency of the face.
-func (t *InternalTransport) SetPersistency(persistency Persistency) bool {
+func (t *InternalTransport) SetPersistency(persistency spec_mgmt.Persistency) bool {
 	if persistency == t.persistency {
 		return true
 	}
 
-	if persistency == PersistencyPersistent {
+	if persistency == spec_mgmt.PersistencyPersistent {
 		t.persistency = persistency
 		return true
 	}

@@ -41,7 +41,7 @@ type Config struct {
 	// Prefix Table Data Prefix
 	pfxDataPfxN enc.Name
 	// NLSR readvertise prefix
-	readvertisePfxN enc.Name
+	localPfxN enc.Name
 }
 
 func DefaultConfig() *Config {
@@ -103,7 +103,7 @@ func (c *Config) Parse() (err error) {
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
 	)
-	c.readvertisePfxN = append(Localhost,
+	c.localPfxN = append(Localhost,
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
 	)
 
@@ -142,8 +142,20 @@ func (c *Config) PrefixTableDataPrefix() enc.Name {
 	return c.pfxDataPfxN
 }
 
+func (c *Config) LocalPrefix() enc.Name {
+	return c.localPfxN
+}
+
 func (c *Config) ReadvertisePrefix() enc.Name {
-	return c.readvertisePfxN
+	return append(c.localPfxN,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
+	)
+}
+
+func (c *Config) StatusPrefix() enc.Name {
+	return append(c.localPfxN,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
+	)
 }
 
 func (c *Config) AdvertisementSyncInterval() time.Duration {

@@ -197,13 +197,22 @@ func (dv *Router) register() (err error) {
 		return err
 	}
 
+	// Router status
+	err = dv.engine.AttachHandler(dv.config.StatusPrefix(),
+		func(args ndn.InterestHandlerArgs) {
+			go dv.statusOnInterest(args)
+		})
+	if err != nil {
+		return err
+	}
+
 	// Register routes to forwarder
 	pfxs := []enc.Name{
 		dv.config.AdvertisementSyncPrefix(),
 		dv.config.AdvertisementDataPrefix(),
 		dv.config.PrefixTableSyncPrefix(),
 		dv.config.PrefixTableDataPrefix(),
-		dv.config.ReadvertisePrefix(),
+		dv.config.LocalPrefix(),
 	}
 	for _, prefix := range pfxs {
 		dv.nfdc.Exec(nfdc.NfdMgmtCmd{

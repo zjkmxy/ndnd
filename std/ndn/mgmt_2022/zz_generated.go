@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"strings"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 )
@@ -2917,7 +2918,7 @@ func (encoder *GeneralStatusEncoder) Init(value *GeneralStatus) {
 	}
 	l += uint(len(value.NfdVersion))
 	l += 1
-	switch x := value.StartTimestamp; {
+	switch x := uint64(value.StartTimestamp / time.Millisecond); {
 	case x <= 0xff:
 		l += 2
 	case x <= 0xffff:
@@ -2928,7 +2929,7 @@ func (encoder *GeneralStatusEncoder) Init(value *GeneralStatus) {
 		l += 9
 	}
 	l += 1
-	switch x := value.CurrentTimestamp; {
+	switch x := uint64(value.CurrentTimestamp / time.Millisecond); {
 	case x <= 0xff:
 		l += 2
 	case x <= 0xffff:
@@ -3233,7 +3234,7 @@ func (encoder *GeneralStatusEncoder) EncodeInto(value *GeneralStatus, buf []byte
 	pos += uint(len(value.NfdVersion))
 	buf[pos] = byte(129)
 	pos += 1
-	switch x := value.StartTimestamp; {
+	switch x := uint64(value.StartTimestamp / time.Millisecond); {
 	case x <= 0xff:
 		buf[pos] = 1
 		buf[pos+1] = byte(x)
@@ -3253,7 +3254,7 @@ func (encoder *GeneralStatusEncoder) EncodeInto(value *GeneralStatus, buf []byte
 	}
 	buf[pos] = byte(130)
 	pos += 1
-	switch x := value.CurrentTimestamp; {
+	switch x := uint64(value.CurrentTimestamp / time.Millisecond); {
 	case x <= 0xff:
 		buf[pos] = 1
 		buf[pos+1] = byte(x)
@@ -3813,38 +3814,46 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.ParseReader, ignore
 				if true {
 					handled = true
 					handled_StartTimestamp = true
-					value.StartTimestamp = uint64(0)
 					{
-						for i := 0; i < int(l); i++ {
-							x := byte(0)
-							x, err = reader.ReadByte()
-							if err != nil {
-								if err == io.EOF {
-									err = io.ErrUnexpectedEOF
+						timeInt := uint64(0)
+						timeInt = uint64(0)
+						{
+							for i := 0; i < int(l); i++ {
+								x := byte(0)
+								x, err = reader.ReadByte()
+								if err != nil {
+									if err == io.EOF {
+										err = io.ErrUnexpectedEOF
+									}
+									break
 								}
-								break
+								timeInt = uint64(timeInt<<8) | uint64(x)
 							}
-							value.StartTimestamp = uint64(value.StartTimestamp<<8) | uint64(x)
 						}
+						value.StartTimestamp = time.Duration(timeInt) * time.Millisecond
 					}
 				}
 			case 130:
 				if true {
 					handled = true
 					handled_CurrentTimestamp = true
-					value.CurrentTimestamp = uint64(0)
 					{
-						for i := 0; i < int(l); i++ {
-							x := byte(0)
-							x, err = reader.ReadByte()
-							if err != nil {
-								if err == io.EOF {
-									err = io.ErrUnexpectedEOF
+						timeInt := uint64(0)
+						timeInt = uint64(0)
+						{
+							for i := 0; i < int(l); i++ {
+								x := byte(0)
+								x, err = reader.ReadByte()
+								if err != nil {
+									if err == io.EOF {
+										err = io.ErrUnexpectedEOF
+									}
+									break
 								}
-								break
+								timeInt = uint64(timeInt<<8) | uint64(x)
 							}
-							value.CurrentTimestamp = uint64(value.CurrentTimestamp<<8) | uint64(x)
 						}
+						value.CurrentTimestamp = time.Duration(timeInt) * time.Millisecond
 					}
 				}
 			case 131:

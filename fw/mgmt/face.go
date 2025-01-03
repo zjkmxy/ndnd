@@ -141,12 +141,12 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		}
 
 		// Check face persistency
-		persistency := face.PersistencyPersistent
-		if params.FacePersistency != nil && (*params.FacePersistency == uint64(face.PersistencyPersistent) ||
-			*params.FacePersistency == uint64(face.PersistencyPermanent)) {
-			persistency = face.Persistency(*params.FacePersistency)
+		persistency := mgmt.PersistencyPersistent
+		if params.FacePersistency != nil && (*params.FacePersistency == uint64(mgmt.PersistencyPersistent) ||
+			*params.FacePersistency == uint64(mgmt.PersistencyPermanent)) {
+			persistency = mgmt.Persistency(*params.FacePersistency)
 		} else if params.FacePersistency != nil {
-			core.LogWarn(f, "Unacceptable persistency ", face.Persistency(*params.FacePersistency),
+			core.LogWarn(f, "Unacceptable persistency ", mgmt.Persistency(*params.FacePersistency),
 				" for UDP face specified in ControlParameters for ", interest.Name())
 			response = makeControlResponse(406, "Unacceptable persistency", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
@@ -167,7 +167,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		// Create new UDP face
 		transport, err := face.MakeUnicastUDPTransport(URI, nil, persistency)
 		if err != nil {
-			core.LogWarn(f, "Unable to create unicast UDP face with URI ", URI, ":", err.Error())
+			core.LogWarn(f, "Unable to create unicast UDP face with URI ", URI, ": ", err.Error())
 			response = makeControlResponse(406, "Transport error", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
@@ -231,12 +231,12 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		}
 
 		// Check face persistency
-		persistency := face.PersistencyPersistent
-		if params.FacePersistency != nil && (*params.FacePersistency == uint64(face.PersistencyPersistent) ||
-			*params.FacePersistency == uint64(face.PersistencyPermanent)) {
-			persistency = face.Persistency(*params.FacePersistency)
+		persistency := mgmt.PersistencyPersistent
+		if params.FacePersistency != nil && (*params.FacePersistency == uint64(mgmt.PersistencyPersistent) ||
+			*params.FacePersistency == uint64(mgmt.PersistencyPermanent)) {
+			persistency = mgmt.Persistency(*params.FacePersistency)
 		} else if params.FacePersistency != nil {
-			core.LogWarn(f, "Unacceptable persistency ", face.Persistency(*params.FacePersistency),
+			core.LogWarn(f, "Unacceptable persistency ", mgmt.Persistency(*params.FacePersistency),
 				" for UDP face specified in ControlParameters for ", interest.Name())
 			response = makeControlResponse(406, "Unacceptable persistency", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
@@ -372,16 +372,16 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 	}
 
 	if params.FacePersistency != nil {
-		if selectedFace.RemoteURI().Scheme() == "ether" && *params.FacePersistency != uint64(face.PersistencyPermanent) {
+		if selectedFace.RemoteURI().Scheme() == "ether" && *params.FacePersistency != uint64(mgmt.PersistencyPermanent) {
 			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
 			areParamsValid = false
 		} else if (selectedFace.RemoteURI().Scheme() == "udp4" || selectedFace.RemoteURI().Scheme() == "udp6") &&
-			*params.FacePersistency != uint64(face.PersistencyPersistent) &&
-			*params.FacePersistency != uint64(face.PersistencyPermanent) {
+			*params.FacePersistency != uint64(mgmt.PersistencyPersistent) &&
+			*params.FacePersistency != uint64(mgmt.PersistencyPermanent) {
 			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
 			areParamsValid = false
 		} else if selectedFace.LocalURI().Scheme() == "unix" &&
-			*params.FacePersistency != uint64(face.PersistencyPersistent) {
+			*params.FacePersistency != uint64(mgmt.PersistencyPersistent) {
 			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
 			areParamsValid = false
 		}
@@ -408,7 +408,7 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 	// Persistency
 	if params.FacePersistency != nil {
 		// Correctness of FacePersistency already validated
-		selectedFace.SetPersistency(face.Persistency(*params.FacePersistency))
+		selectedFace.SetPersistency(mgmt.Persistency(*params.FacePersistency))
 	}
 
 	options := selectedFace.(*face.NDNLPLinkService).Options()
@@ -503,8 +503,8 @@ func (f *FaceModule) destroy(interest *spec.Interest, pitToken []byte, inFace ui
 		return
 	}
 
-	if face.FaceTable.Get(*params.FaceId) != nil {
-		face.FaceTable.Remove(*params.FaceId)
+	if link := face.FaceTable.Get(*params.FaceId); link != nil {
+		link.Close()
 		core.LogInfo(f, "Destroyed face with FaceID=", *params.FaceId)
 	} else {
 		core.LogInfo(f, "Ignoring attempt to delete non-existent face with FaceID=", *params.FaceId)
@@ -550,11 +550,27 @@ func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
 		return
 	}
 	filterV, err := mgmt.ParseFaceQueryFilter(enc.NewBufferReader(interest.NameV[f.manager.prefixLength()+2].Val), true)
-	if err != nil {
+	if err != nil || filterV == nil || filterV.Val == nil {
 		return
 	}
 	filter := filterV.Val
 
+	// canonize URI if present in filter
+	var filterUri *defn.URI
+	if filter.Uri != nil {
+		filterUri = defn.DecodeURIString(*filter.Uri)
+		if filterUri == nil {
+			core.LogWarn(f, "Cannot decode URI in FaceQueryFilter ", filterUri)
+			return
+		}
+		err = filterUri.Canonize()
+		if err != nil {
+			core.LogWarn(f, "Cannot canonize URI in FaceQueryFilter ", filterUri)
+			return
+		}
+	}
+
+	// filter all faces to match filter
 	faces := face.FaceTable.GetAll()
 	matchingFaces := make([]int, 0)
 	for pos, face := range faces {
@@ -568,7 +584,7 @@ func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
 			continue
 		}
 
-		if filter.Uri != nil && *filter.Uri != face.RemoteURI().String() {
+		if filterUri != nil && filterUri.String() != face.RemoteURI().String() {
 			continue
 		}
 
@@ -592,7 +608,7 @@ func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
 	}
 
 	// We have to sort these or they appear in a strange order
-	//sort.Slice(matchingFaces, func(a int, b int) bool { return matchingFaces[a] < matchingFaces[b] })
+	sort.Slice(matchingFaces, func(a int, b int) bool { return matchingFaces[a] < matchingFaces[b] })
 
 	dataset := &mgmt.FaceStatusMsg{}
 	for _, pos := range matchingFaces {
