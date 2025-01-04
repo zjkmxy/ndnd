@@ -50,3 +50,8 @@ func (d *MemoryFifoDir) Evict(client *Client) error {
 		}
 	}
 }
+
+// Count returns the number of names in the directory.
+func (d *MemoryFifoDir) Count() int {
+	return len(d.list)
+}

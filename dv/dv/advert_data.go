@@ -18,7 +18,7 @@ func (dv *Router) advertGenerateNew() {
 	dv.advertSyncSeq++
 
 	// Produce the advertisement
-	_, err := dv.client.Produce(object.ProduceArgs{
+	name, err := dv.client.Produce(object.ProduceArgs{
 		Name:            dv.config.AdvertisementDataPrefix(),
 		Content:         dv.rib.Advert().Encode(),
 		Version:         utils.IdPtr(dv.advertSyncSeq),
@@ -27,6 +27,8 @@ func (dv *Router) advertGenerateNew() {
 	if err != nil {
 		log.Errorf("advert-data: failed to produce advertisement: %+v", err)
 	}
+	dv.advertDir.Push(name)
+	dv.advertDir.Evict(dv.client)
 
 	// Notify neighbors with sync for new advertisement
 	go dv.advertSyncSendInterest()

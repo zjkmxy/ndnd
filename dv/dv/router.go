@@ -46,6 +46,8 @@ type Router struct {
 
 	// advertisement sequence number for self
 	advertSyncSeq uint64
+	// object directory for advertisement data
+	advertDir *object.MemoryFifoDir
 	// prefix table svs instance
 	pfxSvs *ndn_sync.SvSync
 }
@@ -73,10 +75,11 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 			go dv.onPfxSyncUpdate(ssu)
 		})
 
-	// Set initial sequence numbers
+	// Initialize sync and dirs
 	now := uint64(time.Now().UnixMilli())
 	dv.advertSyncSeq = now
 	dv.pfxSvs.SetSeqNo(dv.config.RouterName(), now)
+	dv.advertDir = object.NewMemoryFifoDir(16) // keep last few advertisements
 
 	// Create tables
 	dv.neighbors = table.NewNeighborTable(config, dv.nfdc)
