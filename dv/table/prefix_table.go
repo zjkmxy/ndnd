@@ -23,6 +23,7 @@ type PrefixTable struct {
 	me      *PrefixTableRouter
 
 	snapshotAt uint64
+	objDir     *object.MemoryFifoDir
 }
 
 type PrefixTableRouter struct {
@@ -49,6 +50,9 @@ func NewPrefixTable(
 
 		routers: make(map[string]*PrefixTableRouter),
 		me:      nil,
+
+		snapshotAt: 0,
+		objDir:     object.NewMemoryFifoDir(3 * PREFIX_SNAP_THRESHOLD),
 	}
 
 	pt.me = pt.GetRouter(config.RouterName())
@@ -201,7 +205,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 	pt.me.Latest = seq
 
 	// Produce the operation
-	_, err := pt.client.Produce(object.ProduceArgs{
+	name, err := pt.client.Produce(object.ProduceArgs{
 		Name:    append(pt.config.PrefixTableDataPrefix(), enc.NewSequenceNumComponent(seq)),
 		Content: content,
 		Version: utils.IdPtr(uint64(0)), // immutable
@@ -210,6 +214,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 		log.Errorf("prefix-table: failed to produce op: %v", err)
 		return
 	}
+	pt.objDir.Push(name)
 
 	// Create snapshot if needed
 	if seq-pt.snapshotAt >= PREFIX_SNAP_THRESHOLD/2 {
@@ -218,6 +223,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 }
 
 func (pt *PrefixTable) publishSnap() {
+	// Encode the snapshot
 	snap := tlv.PrefixOpList{
 		ExitRouter:    &tlv.Destination{Name: pt.config.RouterName()},
 		PrefixOpReset: true,
@@ -231,7 +237,8 @@ func (pt *PrefixTable) publishSnap() {
 		})
 	}
 
-	_, err := pt.client.Produce(object.ProduceArgs{
+	// Produce the snapshot
+	name, err := pt.client.Produce(object.ProduceArgs{
 		Name:    append(pt.config.PrefixTableDataPrefix(), PREFIX_SNAP_COMP),
 		Content: snap.Encode(),
 		Version: utils.IdPtr(pt.me.Latest),
@@ -239,6 +246,9 @@ func (pt *PrefixTable) publishSnap() {
 	if err != nil {
 		log.Errorf("prefix-table: failed to produce snap: %v", err)
 	}
+	pt.objDir.Push(name)
+	pt.objDir.Evict(pt.client)
 
+	// Mark current snapshot time for next
 	pt.snapshotAt = pt.me.Latest
 }
