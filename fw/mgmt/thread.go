@@ -29,10 +29,15 @@ var NON_LOCAL_PREFIX = enc.Name{enc.LOCALHOP, NFD_COMP}
 
 // Thread Represents the management thread
 type Thread struct {
-	face      face.LinkService
-	transport *face.InternalTransport
-	modules   map[string]Module
-	timer     ndn.Timer
+	face       face.LinkService
+	transport  *face.InternalTransport
+	modules    map[string]Module
+	timer      ndn.Timer
+	datasetVer uint64
+}
+
+func (m *Thread) String() string {
+	return "Mgmt"
 }
 
 // MakeMgmtThread creates a new management thread.
@@ -57,48 +62,9 @@ func MakeMgmtThread() *Thread {
 	return m
 }
 
-func (m *Thread) String() string {
-	return "Mgmt"
-}
-
 func (m *Thread) registerModule(name string, module Module) {
 	m.modules[name] = module
 	module.registerManager(m)
-}
-
-func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
-	config := ndn.InterestConfig{
-		MustBeFresh: true,
-		Nonce:       utils.IdPtr(rand.Uint64()),
-	}
-	interest, err := spec.Spec{}.MakeInterest(
-		name, &config, params, sec.NewSha256IntSigner(m.timer))
-	if err != nil {
-		core.LogWarn(m, "Unable to encode Interest for ", name, ": ", err)
-		return
-	}
-
-	m.transport.Send(interest.Wire, nil, nil)
-	core.LogTrace(m, "Sent management Interest for ", interest.FinalName)
-}
-
-func (m *Thread) sendResponse(response *mgmt.ControlResponse, interest *spec.Interest, pitToken []byte, inFace uint64) {
-	encodedResponse := response.Encode()
-	data, err := spec.Spec{}.MakeData(interest.NameV,
-		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utils.IdPtr(time.Second),
-		},
-		encodedResponse,
-		sec.NewSha256Signer(),
-	)
-	if err != nil {
-		core.LogWarn(m, "Unable to encode ControlResponse Data for ", interest.Name(), ": ", err)
-		return
-	}
-
-	m.transport.Send(data.Wire, pitToken, &inFace)
-	core.LogTrace(m, "Sent ControlResponse for ", interest.Name())
 }
 
 // Run management thread
@@ -113,17 +79,20 @@ func (m *Thread) Run() {
 	}
 
 	for {
-		fragment, pitToken, inFace := m.transport.Receive()
-		if fragment == nil {
+		lpPkt := m.transport.Receive()
+		if lpPkt == nil {
 			// Indicates that internal face has quit, which means it's time for us to quit
 			core.LogInfo(m, "Face quit, so management quitting")
 			break
 		}
-		core.LogTrace(m, "Received block on face, IncomingFaceID=", inFace)
 
-		pkt, _, err := spec.ReadPacket(enc.NewWireReader(fragment))
+		if lpPkt.IncomingFaceId == nil || len(lpPkt.Fragment) == 0 {
+			core.LogWarn(m, "Received malformed packet on internal face, drop")
+			continue
+		}
+
+		pkt, _, err := spec.ReadPacket(enc.NewWireReader(lpPkt.Fragment))
 		if err != nil {
-			// Indicates that internal face has quit, which means it's time for us to quit
 			core.LogWarn(m, "Unable to decode internal packet, drop")
 			continue
 		}
@@ -133,7 +102,13 @@ func (m *Thread) Run() {
 			core.LogDebug(m, "Dropping received non-Interest packet")
 			continue
 		}
-		interest := pkt.Interest
+
+		// Create internal Interest object for easier handling
+		interest := &Interest{
+			Interest: *pkt.Interest,
+			pitToken: lpPkt.PitToken,
+			inFace:   lpPkt.IncomingFaceId,
+		}
 
 		// Ensure Interest name matches expectations
 		if len(interest.Name()) < len(LOCAL_PREFIX)+2 { // Module + Verb
@@ -150,15 +125,75 @@ func (m *Thread) Run() {
 		// Dispatch interest based on name
 		moduleName := interest.Name()[len(LOCAL_PREFIX)].String()
 		if module, ok := m.modules[moduleName]; ok {
-			module.handleIncomingInterest(interest, pitToken, inFace)
+			module.handleIncomingInterest(interest)
 		} else {
 			core.LogWarn(m, "Received management Interest for unknown module ", moduleName)
-			response := makeControlResponse(501, "Unknown module", nil)
-			if response == nil {
-				core.LogError(m, "Unable to encode control response")
-				continue
-			}
-			m.sendResponse(response, interest, pitToken, inFace)
+			m.sendCtrlResp(interest, 501, "Unknown module", nil)
 		}
 	}
+}
+
+func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
+	config := ndn.InterestConfig{
+		MustBeFresh: true,
+		Nonce:       utils.IdPtr(rand.Uint64()),
+	}
+	interest, err := spec.Spec{}.MakeInterest(name, &config, params, sec.NewSha256IntSigner(m.timer))
+	if err != nil {
+		core.LogWarn(m, "Unable to encode Interest for ", name, ": ", err)
+		return
+	}
+
+	m.transport.Send(&spec.LpPacket{Fragment: interest.Wire})
+	core.LogTrace(m, "Sent management Interest for ", interest.FinalName)
+}
+
+func (m *Thread) sendData(interest *Interest, name enc.Name, content enc.Wire) {
+	data, err := spec.Spec{}.MakeData(name,
+		&ndn.DataConfig{
+			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+			Freshness:   utils.IdPtr(time.Second),
+		},
+		content,
+		sec.NewSha256Signer(),
+	)
+	if err != nil {
+		core.LogWarn(m, "Unable to encode Data for ", interest.Name(), ": ", err)
+		return
+	}
+
+	m.transport.Send(&spec.LpPacket{
+		Fragment:      data.Wire,
+		PitToken:      interest.pitToken,
+		NextHopFaceId: interest.inFace,
+	})
+	core.LogTrace(m, "Sent management Data for ", name)
+}
+
+func (m *Thread) sendCtrlResp(interest *Interest, statusCode uint64, statusText string, params *mgmt.ControlArgs) {
+	if params == nil {
+		params = &mgmt.ControlArgs{}
+	}
+
+	res := &mgmt.ControlResponse{
+		Val: &mgmt.ControlResponseVal{
+			StatusCode: statusCode,
+			StatusText: statusText,
+			Params:     params,
+		},
+	}
+
+	m.sendData(interest, interest.Name(), res.Encode())
+}
+
+func (m *Thread) sendStatusDataset(interest *Interest, name enc.Name, dataset enc.Wire) {
+	// TODO: support segmented datasets
+	m.datasetVer++
+	segments := makeStatusDataset(name, m.datasetVer, dataset)
+
+	m.transport.Send(&spec.LpPacket{
+		Fragment:      segments,
+		PitToken:      interest.pitToken,
+		NextHopFaceId: interest.inFace,
+	})
 }

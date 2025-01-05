@@ -18,14 +18,12 @@ import (
 	"github.com/named-data/ndnd/fw/face"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
 
 // FaceModule is the module that handles Face Management.
 type FaceModule struct {
-	manager                *Thread
-	nextFaceDatasetVersion uint64
+	manager *Thread
 }
 
 func (f *FaceModule) String() string {
@@ -40,7 +38,7 @@ func (f *FaceModule) getManager() *Thread {
 	return f.manager
 }
 
-func (f *FaceModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (f *FaceModule) handleIncomingInterest(interest *Interest) {
 	// Only allow from /localhost
 	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
 		core.LogWarn(f, "Received face management Interest from non-local source - DROP")
@@ -51,58 +49,47 @@ func (f *FaceModule) handleIncomingInterest(interest *spec.Interest, pitToken []
 	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "create":
-		f.create(interest, pitToken, inFace)
+		f.create(interest)
 	case "update":
-		f.update(interest, pitToken, inFace)
+		f.update(interest)
 	case "destroy":
-		f.destroy(interest, pitToken, inFace)
+		f.destroy(interest)
 	case "list":
-		f.list(interest, pitToken, inFace)
+		f.list(interest)
 	case "query":
-		f.query(interest, pitToken, inFace)
+		f.query(interest)
 	default:
 		core.LogWarn(f, "Received Interest for non-existent verb '", verb, "'")
-		response := makeControlResponse(501, "Unknown verb", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 501, "Unknown verb", nil)
 		return
 	}
 }
 
-func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (f *FaceModule) create(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
-		// Name not long enough to contain ControlParameters
-		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	params := decodeControlParameters(f, interest)
 	if params == nil {
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	if params.Uri == nil {
-		core.LogWarn(f, "Missing URI in ControlParameters for ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	URI := defn.DecodeURIString(*params.Uri)
 	if URI == nil || URI.Canonize() != nil {
-		core.LogWarn(f, "Cannot canonize remote URI in ControlParameters for ", interest.Name())
-		response := makeControlResponse(406, "URI could not be canonized", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "URI could not be canonized", nil)
 		return
 	}
 
 	if (params.Flags != nil && params.Mask == nil) || (params.Flags == nil && params.Mask != nil) {
-		core.LogWarn(f, "Flags and Mask fields either both be present or both be not present")
-		response := makeControlResponse(409, "Incomplete Flags/Mask combination", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 409, "Incomplete Flags/Mask combination", nil)
 		return
 	}
 
@@ -113,8 +100,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 			existingFace.FaceID(), ", RemoteURI=", existingFace.RemoteURI())
 		responseParams := &mgmt.ControlArgs{}
 		f.fillFaceProperties(responseParams, existingFace)
-		response := makeControlResponse(409, "Conflicts with existing face", responseParams)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 409, "Conflicts with existing face", responseParams)
 		return
 	}
 
@@ -124,17 +110,13 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		// Validate that remote endpoint is an IP address
 		remoteAddr := net.ParseIP(URI.Path())
 		if remoteAddr == nil {
-			core.LogWarn(f, "Cannot create face with non-IP remote address ", URI)
-			response := makeControlResponse(406, "URI must be IP", nil)
-			f.manager.sendResponse(response, interest, pitToken, inFace)
+			f.manager.sendCtrlResp(interest, 406, "URI must be IP", nil)
 			return
 		}
 
 		// Validate that remote endpoint is a unicast address
 		if !(remoteAddr.IsGlobalUnicast() || remoteAddr.IsLinkLocalUnicast() || remoteAddr.IsLoopback()) {
-			core.LogWarn(f, "Cannot create unicast UDP face to non-unicast address ", URI)
-			response := makeControlResponse(406, "URI must be unicast", nil)
-			f.manager.sendResponse(response, interest, pitToken, inFace)
+			f.manager.sendCtrlResp(interest, 406, "URI must be unicast", nil)
 			return
 		}
 
@@ -144,10 +126,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 			*params.FacePersistency == uint64(mgmt.PersistencyPermanent)) {
 			persistency = mgmt.Persistency(*params.FacePersistency)
 		} else if params.FacePersistency != nil {
-			core.LogWarn(f, "Unacceptable persistency ", mgmt.Persistency(*params.FacePersistency),
-				" for UDP face specified in ControlParameters for ", interest.Name())
-			response := makeControlResponse(406, "Unacceptable persistency", nil)
-			f.manager.sendResponse(response, interest, pitToken, inFace)
+			f.manager.sendCtrlResp(interest, 406, "Unacceptable persistency", nil)
 			return
 		}
 
@@ -166,8 +145,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		transport, err := face.MakeUnicastUDPTransport(URI, nil, persistency)
 		if err != nil {
 			core.LogWarn(f, "Unable to create unicast UDP face with URI ", URI, ": ", err.Error())
-			response := makeControlResponse(406, "Transport error", nil)
-			f.manager.sendResponse(response, interest, pitToken, inFace)
+			f.manager.sendCtrlResp(interest, 406, "Transport error", nil)
 			return
 		}
 
@@ -214,17 +192,13 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		// Validate that remote endpoint is an IP address
 		remoteAddr := net.ParseIP(URI.Path())
 		if remoteAddr == nil {
-			core.LogWarn(f, "Cannot create face with non-IP remote address ", URI)
-			response := makeControlResponse(406, "URI must be IP", nil)
-			f.manager.sendResponse(response, interest, pitToken, inFace)
+			f.manager.sendCtrlResp(interest, 406, "URI must be IP", nil)
 			return
 		}
 
 		// Validate that remote endpoint is a unicast address
 		if !(remoteAddr.IsGlobalUnicast() || remoteAddr.IsLinkLocalUnicast() || remoteAddr.IsLoopback()) {
-			core.LogWarn(f, "Cannot create unicast TCP face to non-unicast address ", URI)
-			response := makeControlResponse(406, "URI must be unicast", nil)
-			f.manager.sendResponse(response, interest, pitToken, inFace)
+			f.manager.sendCtrlResp(interest, 406, "URI must be unicast", nil)
 			return
 		}
 
@@ -234,10 +208,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 			*params.FacePersistency == uint64(mgmt.PersistencyPermanent)) {
 			persistency = mgmt.Persistency(*params.FacePersistency)
 		} else if params.FacePersistency != nil {
-			core.LogWarn(f, "Unacceptable persistency ", mgmt.Persistency(*params.FacePersistency),
-				" for UDP face specified in ControlParameters for ", interest.Name())
-			response := makeControlResponse(406, "Unacceptable persistency", nil)
-			f.manager.sendResponse(response, interest, pitToken, inFace)
+			f.manager.sendCtrlResp(interest, 406, "Unacceptable persistency", nil)
 			return
 		}
 
@@ -256,8 +227,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		transport, err := face.MakeUnicastTCPTransport(URI, nil, persistency)
 		if err != nil {
 			core.LogWarn(f, "Unable to create unicast TCP face with URI ", URI, ":", err.Error())
-			response := makeControlResponse(406, "Transport error", nil)
-			f.manager.sendResponse(response, interest, pitToken, inFace)
+			f.manager.sendCtrlResp(interest, 406, "Transport error", nil)
 			return
 		}
 
@@ -302,46 +272,36 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		linkService = face.MakeNDNLPLinkService(transport, options)
 		linkService.Run(nil)
 	} else {
-		// Unsupported scheme
-		core.LogWarn(f, "Cannot create face with URI ", URI, ": Unsupported scheme ", URI)
-		response := makeControlResponse(406, "Unsupported scheme "+URI.Scheme(), nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 406, "Unsupported scheme "+URI.Scheme(), nil)
 		return
 	}
 
-	if linkService == nil {
-		// Internal failure --> 504
+	if linkService == nil { // Internal failure
 		core.LogWarn(f, "Transport error when creating face ", URI)
-		response := makeControlResponse(504, "Transport error when creating face", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 504, "Transport error when creating face", nil)
 		return
 	}
 
 	responseParams := &mgmt.ControlArgs{}
 	f.fillFaceProperties(responseParams, linkService)
-	response := makeControlResponse(200, "OK", responseParams)
-	f.manager.sendResponse(response, interest, pitToken, inFace)
+	f.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 
 	core.LogInfo(f, "Created face with URI ", URI)
 }
 
-func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (f *FaceModule) update(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
-		// Name not long enough to contain ControlParameters
-		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	params := decodeControlParameters(f, interest)
 	if params == nil {
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
-	faceID := inFace
+	faceID := *interest.inFace
 	if params.FaceId != nil && *params.FaceId != 0 {
 		faceID = *params.FaceId
 	}
@@ -353,17 +313,13 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 	selectedFace := face.FaceTable.Get(faceID)
 	if selectedFace == nil {
 		core.LogWarn(f, "Cannot update specified (or implicit) FaceID=", faceID, " because it does not exist")
-		response := makeControlResponse(404, "Face does not exist",
-			&mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 404, "Face does not exist", &mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
 		return
 	}
 
 	// Can't update null (or internal) faces via management
 	if selectedFace.RemoteURI().Scheme() == "null" || selectedFace.RemoteURI().Scheme() == "internal" {
-		response := makeControlResponse(401, "Face cannot be updated via management",
-			&mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 401, "Face cannot be updated via management", &mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
 		return
 	}
 
@@ -394,8 +350,7 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 	}
 
 	if !areParamsValid {
-		response := makeControlResponse(409, "ControlParameters are incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 409, "ControlParameters are incorrect", responseParams)
 		return
 	}
 
@@ -467,30 +422,23 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 	f.fillFaceProperties(responseParams, selectedFace)
 	responseParams.Uri = nil
 	responseParams.LocalUri = nil
-	response := makeControlResponse(200, "OK", responseParams)
-	f.manager.sendResponse(response, interest, pitToken, inFace)
+	f.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 }
 
-func (f *FaceModule) destroy(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (f *FaceModule) destroy(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
-		// Name not long enough to contain ControlParameters
-		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	params := decodeControlParameters(f, interest)
 	if params == nil {
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	if params.FaceId == nil {
-		core.LogWarn(f, "Missing FaceId in ControlParameters for ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect (missing FaceId)", nil)
 		return
 	}
 
@@ -501,11 +449,10 @@ func (f *FaceModule) destroy(interest *spec.Interest, pitToken []byte, inFace ui
 		core.LogInfo(f, "Ignoring attempt to delete non-existent face with FaceID=", *params.FaceId)
 	}
 
-	response := makeControlResponse(200, "OK", params)
-	f.manager.sendResponse(response, interest, pitToken, inFace)
+	f.manager.sendCtrlResp(interest, 200, "OK", params)
 }
 
-func (f *FaceModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
+func (f *FaceModule) list(interest *Interest) {
 	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
@@ -529,15 +476,10 @@ func (f *FaceModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "faces"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	)
-	segments := makeStatusDataset(name, f.nextFaceDatasetVersion, dataset.Encode())
-	f.manager.transport.Send(segments, pitToken, nil)
-
-	core.LogTrace(f, "Published face dataset version=", f.nextFaceDatasetVersion,
-		", containing ", len(segments), " segments")
-	f.nextFaceDatasetVersion++
+	f.manager.sendStatusDataset(interest, name, dataset.Encode())
 }
 
-func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
+func (f *FaceModule) query(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain FaceQueryFilter
 		core.LogWarn(f, "Missing FaceQueryFilter in ", interest.Name())
@@ -609,12 +551,7 @@ func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
 		dataset.Vals = append(dataset.Vals, f.createDataset(faces[pos]))
 	}
 
-	segments := makeStatusDataset(interest.Name(), f.nextFaceDatasetVersion, dataset.Encode())
-	f.manager.transport.Send(segments, pitToken, nil)
-
-	core.LogTrace(f, "Published face query dataset version=", f.nextFaceDatasetVersion,
-		", containing ", len(segments), " segments")
-	f.nextFaceDatasetVersion++
+	f.manager.sendStatusDataset(interest, interest.Name(), dataset.Encode())
 }
 
 func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStatus {

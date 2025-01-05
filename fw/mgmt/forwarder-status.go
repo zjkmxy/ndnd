@@ -16,13 +16,11 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 )
 
 // ForwarderStatusModule is the module that provide forwarder status information.
 type ForwarderStatusModule struct {
-	manager                   *Thread
-	nextGeneralDatasetVersion uint64
+	manager *Thread
 }
 
 func (f *ForwarderStatusModule) String() string {
@@ -37,7 +35,7 @@ func (f *ForwarderStatusModule) getManager() *Thread {
 	return f.manager
 }
 
-func (f *ForwarderStatusModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (f *ForwarderStatusModule) handleIncomingInterest(interest *Interest) {
 	// Only allow from /localhost
 	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
 		core.LogWarn(f, "Received forwarder status management Interest from non-local source - DROP")
@@ -48,16 +46,14 @@ func (f *ForwarderStatusModule) handleIncomingInterest(interest *spec.Interest, 
 	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "general":
-		f.general(interest, pitToken, inFace)
+		f.general(interest)
 	default:
-		core.LogWarn(f, "Received Interest for non-existent verb '", verb, "'")
-		response := makeControlResponse(501, "Unknown verb", nil)
-		f.manager.sendResponse(response, interest, pitToken, inFace)
+		f.manager.sendCtrlResp(interest, 501, "Unknown verb", nil)
 		return
 	}
 }
 
-func (f *ForwarderStatusModule) general(interest *spec.Interest, pitToken []byte, _ uint64) {
+func (f *ForwarderStatusModule) general(interest *Interest) {
 	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
@@ -82,16 +78,10 @@ func (f *ForwarderStatusModule) general(interest *spec.Interest, pitToken []byte
 		status.NSatisfiedInterests += thread.(*fw.Thread).NSatisfiedInterests
 		status.NUnsatisfiedInterests += thread.(*fw.Thread).NUnsatisfiedInterests
 	}
-	wire := status.Encode()
 
 	name := append(LOCAL_PREFIX,
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "general"),
 	)
-	segments := makeStatusDataset(name, f.nextGeneralDatasetVersion, wire)
-	f.manager.transport.Send(segments, pitToken, nil)
-
-	core.LogTrace(f, "Published forwarder status dataset version=", f.nextGeneralDatasetVersion,
-		", containing ", len(segments), " segments")
-	f.nextGeneralDatasetVersion++
+	f.manager.sendStatusDataset(interest, name, status.Encode())
 }

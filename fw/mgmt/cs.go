@@ -14,14 +14,12 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
 
 // ContentStoreModule is the module that handles Content Store Management.
 type ContentStoreModule struct {
-	manager            *Thread
-	nextDatasetVersion uint64
+	manager *Thread
 }
 
 func (c *ContentStoreModule) String() string {
@@ -36,7 +34,7 @@ func (c *ContentStoreModule) getManager() *Thread {
 	return c.manager
 }
 
-func (c *ContentStoreModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (c *ContentStoreModule) handleIncomingInterest(interest *Interest) {
 	// Only allow from /localhost
 	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
 		core.LogWarn(c, "Received CS management Interest from non-local source - DROP")
@@ -47,40 +45,36 @@ func (c *ContentStoreModule) handleIncomingInterest(interest *spec.Interest, pit
 	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "config":
-		c.config(interest, pitToken, inFace)
+		c.config(interest)
 	case "erase":
 		// TODO
-		//c.erase(interest, pitToken, inFace)
+		//c.erase(interest)
 	case "info":
-		c.info(interest, pitToken, inFace)
+		c.info(interest)
 	default:
 		core.LogWarn(c, "Received Interest for non-existent verb '", verb, "'")
-		response := makeControlResponse(501, "Unknown verb", nil)
-		c.manager.sendResponse(response, interest, pitToken, inFace)
+		c.manager.sendCtrlResp(interest, 501, "Unknown verb", nil)
 		return
 	}
 }
 
-func (c *ContentStoreModule) config(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (c *ContentStoreModule) config(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(c, "Missing ControlParameters in ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		c.manager.sendResponse(response, interest, pitToken, inFace)
+		c.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	params := decodeControlParameters(c, interest)
 	if params == nil {
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		c.manager.sendResponse(response, interest, pitToken, inFace)
+		c.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	if (params.Flags == nil && params.Mask != nil) || (params.Flags != nil && params.Mask == nil) {
 		core.LogWarn(c, "Flags and Mask fields must either both be present or both be not present")
-		response := makeControlResponse(409, "ControlParameters are incorrect", nil)
-		c.manager.sendResponse(response, interest, pitToken, inFace)
+		c.manager.sendCtrlResp(interest, 409, "ControlParameters are incorrect", nil)
 		return
 	}
 
@@ -103,14 +97,13 @@ func (c *ContentStoreModule) config(interest *spec.Interest, pitToken []byte, in
 		}
 	}
 
-	response := makeControlResponse(200, "OK", &mgmt.ControlArgs{
+	c.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Capacity: utils.IdPtr(uint64(table.CsCapacity())),
 		Flags:    utils.IdPtr(c.getFlags()),
 	})
-	c.manager.sendResponse(response, interest, pitToken, inFace)
 }
 
-func (c *ContentStoreModule) info(interest *spec.Interest, pitToken []byte, _ uint64) {
+func (c *ContentStoreModule) info(interest *Interest) {
 	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
@@ -133,12 +126,7 @@ func (c *ContentStoreModule) info(interest *spec.Interest, pitToken []byte, _ ui
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "cs"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "info"),
 	)
-	segments := makeStatusDataset(name, c.nextDatasetVersion, status.Encode())
-	c.manager.transport.Send(segments, pitToken, nil)
-
-	core.LogTrace(c, "Published forwarder status dataset version=", c.nextDatasetVersion,
-		", containing ", len(segments), " segments")
-	c.nextDatasetVersion++
+	c.manager.sendStatusDataset(interest, name, status.Encode())
 }
 
 func (c *ContentStoreModule) getFlags() uint64 {

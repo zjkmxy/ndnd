@@ -22,8 +22,7 @@ import (
 
 // RIBModule is the module that handles RIB Management.
 type RIBModule struct {
-	manager               *Thread
-	nextRIBDatasetVersion uint64
+	manager *Thread
 }
 
 func (r *RIBModule) String() string {
@@ -38,55 +37,46 @@ func (r *RIBModule) getManager() *Thread {
 	return r.manager
 }
 
-func (r *RIBModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (r *RIBModule) handleIncomingInterest(interest *Interest) {
 	// Dispatch by verb
 	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "register":
-		r.register(interest, pitToken, inFace)
+		r.register(interest)
 	case "unregister":
-		r.unregister(interest, pitToken, inFace)
+		r.unregister(interest)
 	case "announce":
-		r.announce(interest, pitToken, inFace)
+		r.announce(interest)
 	case "list":
-		r.list(interest, pitToken, inFace)
+		r.list(interest)
 	default:
-		core.LogWarn(r, "Received Interest for non-existent verb '", verb, "'")
-		response := makeControlResponse(501, "Unknown verb", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 501, "Unknown verb", nil)
 		return
 	}
 }
 
-func (r *RIBModule) register(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (r *RIBModule) register(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
-		// Name not long enough to contain ControlParameters
-		core.LogWarn(r, "Missing ControlParameters in ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	params := decodeControlParameters(r, interest)
 	if params == nil {
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	if params.Name == nil {
-		core.LogWarn(r, "Missing Name in ControlParameters for ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect (missing Name)", nil)
 		return
 	}
 
-	faceID := inFace
+	faceID := *interest.inFace
 	if params.FaceId != nil && *params.FaceId != 0 {
 		faceID = *params.FaceId
 		if face.FaceTable.Get(faceID) == nil {
-			response := makeControlResponse(410, "Face does not exist", nil)
-			r.manager.sendResponse(response, interest, pitToken, inFace)
+			r.manager.sendCtrlResp(interest, 410, "Face does not exist", nil)
 			return
 		}
 	}
@@ -136,34 +126,27 @@ func (r *RIBModule) register(interest *spec.Interest, pitToken []byte, inFace ui
 	if expirationPeriod != nil {
 		responseParams.ExpirationPeriod = utils.IdPtr(uint64(expirationPeriod.Milliseconds()))
 	}
-	response := makeControlResponse(200, "OK", responseParams)
-	r.manager.sendResponse(response, interest, pitToken, inFace)
+	r.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 }
 
-func (r *RIBModule) unregister(interest *spec.Interest, pitToken []byte, inFace uint64) {
+func (r *RIBModule) unregister(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
-		// Name not long enough to contain ControlParameters
-		core.LogWarn(r, "Missing ControlParameters in ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	params := decodeControlParameters(r, interest)
 	if params == nil {
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
 	if params.Name == nil {
-		core.LogWarn(r, "Missing Name in ControlParameters for ", interest.Name())
-		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect (missing Name)", nil)
 		return
 	}
 
-	faceID := inFace
+	faceID := *interest.inFace
 	if params.FaceId != nil && *params.FaceId != 0 {
 		faceID = *params.FaceId
 	}
@@ -174,53 +157,40 @@ func (r *RIBModule) unregister(interest *spec.Interest, pitToken []byte, inFace 
 	}
 	table.Rib.RemoveRouteEnc(params.Name, faceID, origin)
 
-	response := makeControlResponse(200, "OK", &mgmt.ControlArgs{
+	r.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,
 		FaceId: utils.IdPtr(faceID),
 		Origin: utils.IdPtr(origin),
 	})
-	r.manager.sendResponse(response, interest, pitToken, inFace)
 
 	core.LogInfo(r, "Removed route for Prefix=", params.Name, ", FaceID=", faceID, ", Origin=", origin)
 }
 
-func (r *RIBModule) announce(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-	if len(interest.Name()) != len(LOCAL_PREFIX)+3 ||
-		interest.Name()[len(LOCAL_PREFIX)+2].Typ != enc.TypeParametersSha256DigestComponent {
-		// Name not long enough to contain ControlParameters
-		core.LogWarn(r, "Name of Interest=", interest.Name(),
-			" is either too short or incorrectly formatted to be rib/announce")
-		response = makeControlResponse(400, "Name is incorrect", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+func (r *RIBModule) announce(interest *Interest) {
+	if len(interest.Name()) != len(LOCAL_PREFIX)+3 || interest.Name()[len(LOCAL_PREFIX)+2].Typ != enc.TypeParametersSha256DigestComponent {
+		r.manager.sendCtrlResp(interest, 400, "Name is incorrect", nil)
 		return
 	}
 
 	// Get PrefixAnnouncement
 	appParam := interest.AppParam()
 	if appParam.Length() == 0 {
-		core.LogWarn(r, "PrefixAnnouncement Interest=", interest.Name(), " missing PrefixAnnouncement")
-		response = makeControlResponse(400, "PrefixAnnouncement is missing", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 400, "PrefixAnnouncement is missing", nil)
 		return
 	}
 
 	data, _, err := spec.Spec{}.ReadData(enc.NewWireReader(appParam))
 	if err != nil {
-		core.LogWarn(r, "PrefixAnnouncement Interest=", interest.Name(), " has invalid PrefixAnnouncement")
-		response = makeControlResponse(400, "PrefixAnnouncement is invalid", nil)
-		r.manager.sendResponse(response, interest, pitToken, inFace)
+		r.manager.sendCtrlResp(interest, 400, "PrefixAnnouncement is invalid", nil)
 		return
 	}
 	if data != nil {
 	}
 
-	core.LogError(r, "YaNFD does not support PrefixAnnouncement")
-	response = makeControlResponse(501, "YaNFD does not support PrefixAnnouncement", nil)
-	r.manager.sendResponse(response, interest, pitToken, inFace)
+	r.manager.sendCtrlResp(interest, 501, "PrefixAnnouncement not implemented yet", nil)
 }
 
-func (r *RIBModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
+func (r *RIBModule) list(interest *Interest) {
 	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
@@ -253,9 +223,5 @@ func (r *RIBModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	)
-	segments := makeStatusDataset(name, r.nextRIBDatasetVersion, dataset.Encode())
-	r.manager.transport.Send(segments, pitToken, nil)
-	core.LogTrace(r, "Published RIB dataset version=", r.nextRIBDatasetVersion,
-		", containing ", len(segments), " segments")
-	r.nextRIBDatasetVersion++
+	r.manager.sendStatusDataset(interest, name, dataset.Encode())
 }

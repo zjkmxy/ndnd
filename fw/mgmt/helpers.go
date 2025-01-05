@@ -19,7 +19,7 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-func decodeControlParameters(m Module, interest *spec.Interest) *mgmt.ControlArgs {
+func decodeControlParameters(m Module, interest *Interest) *mgmt.ControlArgs {
 	paramVal := interest.Name()[len(LOCAL_PREFIX)+2].Val
 	params, err := mgmt.ParseControlParameters(enc.NewBufferReader(paramVal), true)
 	if err != nil {
@@ -27,20 +27,6 @@ func decodeControlParameters(m Module, interest *spec.Interest) *mgmt.ControlArg
 		return nil
 	}
 	return params.Val
-}
-
-func makeControlResponse(statusCode uint64, statusText string, params *mgmt.ControlArgs) *mgmt.ControlResponse {
-	if params == nil {
-		params = &mgmt.ControlArgs{}
-	}
-
-	return &mgmt.ControlResponse{
-		Val: &mgmt.ControlResponseVal{
-			StatusCode: statusCode,
-			StatusText: statusText,
-			Params:     params,
-		},
-	}
 }
 
 // makeStatusDataset creates a set of status dataset packets based upon the specified prefix, version,
