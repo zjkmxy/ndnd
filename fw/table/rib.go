@@ -24,12 +24,12 @@ type RibTable struct {
 
 // RibEntry represents an entry in the RIB table.
 type RibEntry struct {
-	component enc.Component
 	Name      enc.Name
+	component enc.Component
 	depth     int
 
 	parent   *RibEntry
-	children map[*RibEntry]bool
+	children map[uint64]*RibEntry
 
 	routes []*Route
 }
@@ -46,55 +46,56 @@ type Route struct {
 // Rib is the Routing Information Base.
 var Rib = RibTable{
 	root: RibEntry{
-		children: map[*RibEntry]bool{},
+		children: make(map[uint64]*RibEntry),
 	},
 }
 
 func (r *RibEntry) fillTreeToPrefixEnc(name enc.Name) *RibEntry {
 	entry := r.findLongestPrefixEntryEnc(name)
-	for depth := entry.depth + 1; depth <= len(name); depth++ {
+	for depth := entry.depth; depth < len(name); depth++ {
+		component := At(name, depth)
 		child := &RibEntry{
-			depth:     depth,
-			component: At(name, depth-1).Clone(),
+			Name:      name[:depth+1],
+			depth:     depth + 1,
+			component: component,
 			parent:    entry,
-			children:  map[*RibEntry]bool{},
+			children:  make(map[uint64]*RibEntry),
 		}
-		entry.children[child] = true
+		entry.children[component.Hash()] = child
 		entry = child
 	}
 	return entry
 }
 func (r *RibEntry) findExactMatchEntryEnc(name enc.Name) *RibEntry {
-	if len(name) > r.depth {
-		for child := range r.children {
-			if At(name, child.depth-1).Equal(child.component) {
-				return child.findExactMatchEntryEnc(name)
-			}
-		}
-	} else if len(name) == r.depth {
-		return r
+	match := r.findLongestPrefixEntryEnc(name)
+	if len(name) == len(match.Name) {
+		return match
 	}
 	return nil
 }
 
 func (r *RibEntry) findLongestPrefixEntryEnc(name enc.Name) *RibEntry {
 	if len(name) > r.depth {
-		for child := range r.children {
-			if At(name, child.depth-1).Equal(child.component) {
-				return child.findLongestPrefixEntryEnc(name)
-			}
+		if child := r.children[At(name, r.depth).Hash()]; child != nil {
+			return child.findLongestPrefixEntryEnc(name)
 		}
 	}
 	return r
 }
 
 func (r *RibEntry) pruneIfEmpty() {
-	for entry := r; entry.parent != nil && len(entry.children) == 0 && len(entry.routes) == 0; entry = entry.parent {
+	for entry := r; entry != nil && len(entry.children) == 0 && len(entry.routes) == 0; entry = entry.parent {
 		// Remove from parent's children
-		delete(entry.parent.children, entry)
+		if entry.parent != nil {
+			delete(entry.parent.children, entry.component.Hash())
+		}
+
+		// Unlink parent from child for inheritance pruning.
+		entry.parent = nil
 	}
 }
 
+// updateNexthopsEnc recursively updates the FIB nexthops under this entry.
 func (r *RibEntry) updateNexthopsEnc() {
 	FibStrategyTable.ClearNextHopsEnc(r.Name)
 
@@ -128,7 +129,7 @@ func (r *RibEntry) updateNexthopsEnc() {
 	}
 
 	// Trigger update for all children for inheritance
-	for child := range r.children {
+	for _, child := range r.children {
 		child.updateNexthopsEnc()
 	}
 }
@@ -138,11 +139,7 @@ func (r *RibTable) AddEncRoute(name enc.Name, route *Route) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	name = name.Clone()
-	node := r.root.fillTreeToPrefixEnc(name)
-	if node.Name == nil {
-		node.Name = name
-	}
+	node := r.root.fillTreeToPrefixEnc(name.Clone())
 
 	defer node.updateNexthopsEnc()
 
@@ -172,7 +169,7 @@ func (r *RibTable) GetAllEntries() []*RibEntry {
 		ribEntry := queue.Front().Value.(*RibEntry)
 		queue.Remove(queue.Front())
 		// Add all children to stack
-		for child := range ribEntry.children {
+		for _, child := range ribEntry.children {
 			queue.PushFront(child)
 		}
 
@@ -190,26 +187,30 @@ func (r *RibTable) RemoveRouteEnc(name enc.Name, faceID uint64, origin uint64) {
 	defer r.mutex.Unlock()
 
 	entry := r.root.findExactMatchEntryEnc(name)
-	if entry != nil {
-		for i, route := range entry.routes {
-			if route.FaceID == faceID && route.Origin == origin {
-				if i < len(entry.routes)-1 {
-					copy(entry.routes[i:], entry.routes[i+1:])
-				}
-				entry.routes = entry.routes[:len(entry.routes)-1]
-				readvertiseWithdraw(name, route)
-				break
-			}
-		}
-		entry.updateNexthopsEnc()
-		entry.pruneIfEmpty()
+	if entry == nil {
+		return
 	}
+
+	for i, route := range entry.routes {
+		if route.FaceID == faceID && route.Origin == origin {
+			if i < len(entry.routes)-1 {
+				copy(entry.routes[i:], entry.routes[i+1:])
+			}
+			entry.routes = entry.routes[:len(entry.routes)-1]
+			readvertiseWithdraw(name, route)
+			break
+		}
+	}
+
+	entry.pruneIfEmpty()
+	entry.updateNexthopsEnc() // recursive
 }
 
 func (r *RibTable) CleanUpFace(faceId uint64) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
+	// This currently walks the entire tree, but this can be optimized if needed
 	r.root.cleanUpFace(faceId)
 }
 
@@ -218,15 +219,11 @@ func (r *RibEntry) GetRoutes() []*Route {
 	return r.routes
 }
 
-// CleanUpFace removes the specified face from all entries. Used for clean-up after a face is destroyed.
+// CleanUpFace removes the specified face from all entries.
+// Used for clean-up after a face is destroyed.
 func (r *RibEntry) cleanUpFace(faceId uint64) {
-	// Recursively clean children
-	for child := range r.children {
+	for _, child := range r.children {
 		child.cleanUpFace(faceId)
-	}
-
-	if r.Name == nil {
-		return
 	}
 
 	for i, route := range r.routes {
@@ -236,11 +233,13 @@ func (r *RibEntry) cleanUpFace(faceId uint64) {
 			}
 			r.routes = r.routes[:len(r.routes)-1]
 			readvertiseWithdraw(r.Name, route)
-			break
+
+			// entry changed, check and update FIB
+			r.pruneIfEmpty()
+			r.updateNexthopsEnc() // recursive
+			return
 		}
 	}
-	r.updateNexthopsEnc()
-	r.pruneIfEmpty()
 }
 
 func (r *RibEntry) HasCaptureRoute() bool {
