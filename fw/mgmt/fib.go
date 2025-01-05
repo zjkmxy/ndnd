@@ -36,13 +36,13 @@ func (f *FIBModule) getManager() *Thread {
 
 func (f *FIBModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	// Only allow from /localhost
-	if !f.manager.localPrefix.IsPrefix(interest.Name()) {
+	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
 		core.LogWarn(f, "Received FIB management Interest from non-local source - DROP")
 		return
 	}
 
 	// Dispatch by verb
-	verb := interest.NameV[f.manager.prefixLength()+1].String()
+	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "add-nexthop":
 		f.add(interest, pitToken, inFace)
@@ -61,7 +61,7 @@ func (f *FIBModule) handleIncomingInterest(interest *spec.Interest, pitToken []b
 func (f *FIBModule) add(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
 
-	if len(interest.NameV) < f.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
 		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
@@ -112,7 +112,7 @@ func (f *FIBModule) add(interest *spec.Interest, pitToken []byte, inFace uint64)
 func (f *FIBModule) remove(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
 
-	if len(interest.NameV) < f.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
 		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
@@ -150,7 +150,7 @@ func (f *FIBModule) remove(interest *spec.Interest, pitToken []byte, inFace uint
 }
 
 func (f *FIBModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
-	if len(interest.NameV) > f.manager.prefixLength()+2 {
+	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
 	}
@@ -175,7 +175,10 @@ func (f *FIBModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
 		dataset.Entries = append(dataset.Entries, fibEntry)
 	}
 
-	name, _ := enc.NameFromStr(f.manager.localPrefix.String() + "/fib/list")
+	name := append(LOCAL_PREFIX,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "fib"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
+	)
 	segments := makeStatusDataset(name, f.nextFIBDatasetVersion, dataset.Encode())
 	f.manager.transport.Send(segments, pitToken, nil)
 

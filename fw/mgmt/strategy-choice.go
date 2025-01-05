@@ -29,12 +29,8 @@ func (s *StrategyChoiceModule) String() string {
 
 func (s *StrategyChoiceModule) registerManager(manager *Thread) {
 	s.manager = manager
-	s.strategyPrefix = make(enc.Name, len(s.manager.localPrefix)+1)
-	copy(s.strategyPrefix, s.manager.localPrefix)
-	s.strategyPrefix[len(s.manager.localPrefix)] = enc.Component{
-		Typ: enc.TypeGenericNameComponent,
-		Val: []byte("strategy"),
-	}
+	s.strategyPrefix = append(LOCAL_PREFIX,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy"))
 }
 
 func (s *StrategyChoiceModule) getManager() *Thread {
@@ -43,13 +39,13 @@ func (s *StrategyChoiceModule) getManager() *Thread {
 
 func (s *StrategyChoiceModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	// Only allow from /localhost
-	if !s.manager.localPrefix.IsPrefix(interest.NameV) {
+	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
 		core.LogWarn(s, "Received strategy management Interest from non-local source - DROP")
 		return
 	}
 
 	// Dispatch by verb
-	verb := interest.NameV[s.manager.prefixLength()+1].String()
+	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "set":
 		s.set(interest, pitToken, inFace)
@@ -68,7 +64,7 @@ func (s *StrategyChoiceModule) handleIncomingInterest(interest *spec.Interest, p
 func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
 
-	if len(interest.NameV) < s.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(s, "Missing ControlParameters in ", interest.Name())
 		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
@@ -167,7 +163,7 @@ func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inF
 func (s *StrategyChoiceModule) unset(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
 
-	if len(interest.NameV) < s.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(s, "Missing ControlParameters in ", interest.Name())
 		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
@@ -205,7 +201,7 @@ func (s *StrategyChoiceModule) unset(interest *spec.Interest, pitToken []byte, i
 }
 
 func (s *StrategyChoiceModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
-	if len(interest.NameV) > s.manager.prefixLength()+2 {
+	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
 	}
@@ -220,7 +216,11 @@ func (s *StrategyChoiceModule) list(interest *spec.Interest, pitToken []byte, _ 
 	}
 	strategyChoiceMsg := &mgmt.StrategyChoiceMsg{StrategyChoices: strategyChoiceList}
 	wire := strategyChoiceMsg.Encode()
-	name, _ := enc.NameFromStr(s.manager.localPrefix.String() + "/strategy-choice/list")
+
+	name := append(LOCAL_PREFIX,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy-choice"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
+	)
 	segments := makeStatusDataset(name, s.nextStrategyDatasetVersion, wire)
 	s.manager.transport.Send(segments, pitToken, nil)
 

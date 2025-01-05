@@ -23,30 +23,22 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
+var NFD_COMP = enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd")
+var LOCAL_PREFIX = enc.Name{enc.LOCALHOST, NFD_COMP}
+var NON_LOCAL_PREFIX = enc.Name{enc.LOCALHOP, NFD_COMP}
+
 // Thread Represents the management thread
 type Thread struct {
-	face           face.LinkService
-	transport      *face.InternalTransport
-	localPrefix    enc.Name
-	nonLocalPrefix enc.Name
-	modules        map[string]Module
-	timer          ndn.Timer
+	face      face.LinkService
+	transport *face.InternalTransport
+	modules   map[string]Module
+	timer     ndn.Timer
 }
 
 // MakeMgmtThread creates a new management thread.
 func MakeMgmtThread() *Thread {
 	m := new(Thread)
 	m.timer = basic_engine.NewTimer()
-
-	var err error
-	m.localPrefix, err = enc.NameFromStr("/localhost/nfd")
-	if err != nil {
-		core.LogFatal(m, "Unable to create name for management prefix: ", err)
-	}
-	m.nonLocalPrefix, err = enc.NameFromStr("/localhop/nfd")
-	if err != nil {
-		core.LogFatal(m, "Unable to create name for management prefix: ", err)
-	}
 
 	m.modules = make(map[string]Module)
 	m.registerModule("cs", new(ContentStoreModule))
@@ -72,10 +64,6 @@ func (m *Thread) String() string {
 func (m *Thread) registerModule(name string, module Module) {
 	m.modules[name] = module
 	module.registerManager(m)
-}
-
-func (m *Thread) prefixLength() int {
-	return len(m.localPrefix)
 }
 
 func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
@@ -152,11 +140,11 @@ func (m *Thread) Run() {
 		interest := pkt.Interest
 
 		// Ensure Interest name matches expectations
-		if len(interest.NameV) < len(m.localPrefix)+2 { // Module + Verb
+		if len(interest.Name()) < len(LOCAL_PREFIX)+2 { // Module + Verb
 			core.LogInfo(m, "Control command name ", interest.Name().String(), " has unexpected number of components - DROP")
 			continue
 		}
-		if !m.localPrefix.IsPrefix(interest.NameV) && !m.nonLocalPrefix.IsPrefix(interest.Name()) {
+		if !LOCAL_PREFIX.IsPrefix(interest.Name()) && !NON_LOCAL_PREFIX.IsPrefix(interest.Name()) {
 			core.LogInfo(m, "Control command name ", interest.Name(), " has unexpected prefix - DROP")
 			continue
 		}
@@ -164,7 +152,7 @@ func (m *Thread) Run() {
 		core.LogTrace(m, "Received management Interest ", interest.Name())
 
 		// Dispatch interest based on name
-		moduleName := interest.NameV[len(m.localPrefix)].String()
+		moduleName := interest.Name()[len(LOCAL_PREFIX)].String()
 		if module, ok := m.modules[moduleName]; ok {
 			module.handleIncomingInterest(interest, pitToken, inFace)
 		} else {

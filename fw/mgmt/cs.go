@@ -37,13 +37,13 @@ func (c *ContentStoreModule) getManager() *Thread {
 
 func (c *ContentStoreModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	// Only allow from /localhost
-	if !c.manager.localPrefix.IsPrefix(interest.NameV) {
+	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
 		core.LogWarn(c, "Received CS management Interest from non-local source - DROP")
 		return
 	}
 
 	// Dispatch by verb
-	verb := interest.NameV[c.manager.prefixLength()+1].String()
+	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "config":
 		c.config(interest, pitToken, inFace)
@@ -66,7 +66,7 @@ func (c *ContentStoreModule) handleIncomingInterest(interest *spec.Interest, pit
 func (c *ContentStoreModule) config(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
 
-	if len(interest.NameV) < c.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(c, "Missing ControlParameters in ", interest.Name())
 		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
@@ -116,7 +116,7 @@ func (c *ContentStoreModule) config(interest *spec.Interest, pitToken []byte, in
 }
 
 func (c *ContentStoreModule) info(interest *spec.Interest, pitToken []byte, _ uint64) {
-	if len(interest.NameV) > c.manager.prefixLength()+2 {
+	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
 	}
@@ -136,7 +136,10 @@ func (c *ContentStoreModule) info(interest *spec.Interest, pitToken []byte, _ ui
 	// TODO fill other fields
 
 	wire := status.Encode()
-	name, _ := enc.NameFromStr(c.manager.localPrefix.String() + "/cs/info")
+	name := append(LOCAL_PREFIX,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "cs"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "info"),
+	)
 	segments := makeStatusDataset(name, c.nextDatasetVersion, wire)
 	c.manager.transport.Send(segments, pitToken, nil)
 

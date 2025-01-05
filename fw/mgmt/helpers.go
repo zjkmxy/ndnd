@@ -25,7 +25,7 @@ const (
 )
 
 func decodeControlParameters(m Module, interest *spec.Interest) *mgmt.ControlArgs {
-	paramVal := interest.NameV[m.getManager().prefixLength()+2].Val
+	paramVal := interest.Name()[len(LOCAL_PREFIX)+2].Val
 	params, err := mgmt.ParseControlParameters(enc.NewBufferReader(paramVal), true)
 	if err != nil {
 		core.LogWarn(m, "Could not decode ControlParameters in ", interest.Name(), ": ", err)

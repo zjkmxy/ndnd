@@ -42,13 +42,13 @@ func (f *FaceModule) getManager() *Thread {
 
 func (f *FaceModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	// Only allow from /localhost
-	if !f.manager.localPrefix.IsPrefix(interest.NameV) {
+	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
 		core.LogWarn(f, "Received face management Interest from non-local source - DROP")
 		return
 	}
 
 	// Dispatch by verb
-	verb := interest.NameV[f.manager.prefixLength()+1].String()
+	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "create":
 		f.create(interest, pitToken, inFace)
@@ -71,7 +71,7 @@ func (f *FaceModule) handleIncomingInterest(interest *spec.Interest, pitToken []
 func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
 
-	if len(interest.NameV) < f.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
 		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
@@ -329,7 +329,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
 
-	if len(interest.NameV) < f.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
 		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
@@ -481,7 +481,7 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 func (f *FaceModule) destroy(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	var response *mgmt.ControlResponse
 
-	if len(interest.NameV) < f.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
 		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
@@ -515,7 +515,7 @@ func (f *FaceModule) destroy(interest *spec.Interest, pitToken []byte, inFace ui
 }
 
 func (f *FaceModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
-	if len(interest.NameV) > f.manager.prefixLength()+2 {
+	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
 	}
@@ -534,7 +534,10 @@ func (f *FaceModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
 		dataset.Vals = append(dataset.Vals, f.createDataset(faces[pos]))
 	}
 
-	name, _ := enc.NameFromStr(f.manager.localPrefix.String() + "/faces/list")
+	name := append(LOCAL_PREFIX,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "faces"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
+	)
 	segments := makeStatusDataset(name, f.nextFaceDatasetVersion, dataset.Encode())
 	f.manager.transport.Send(segments, pitToken, nil)
 
@@ -544,12 +547,12 @@ func (f *FaceModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {
 }
 
 func (f *FaceModule) query(interest *spec.Interest, pitToken []byte, _ uint64) {
-	if len(interest.NameV) < f.manager.prefixLength()+3 {
+	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain FaceQueryFilter
 		core.LogWarn(f, "Missing FaceQueryFilter in ", interest.Name())
 		return
 	}
-	filterV, err := mgmt.ParseFaceQueryFilter(enc.NewBufferReader(interest.NameV[f.manager.prefixLength()+2].Val), true)
+	filterV, err := mgmt.ParseFaceQueryFilter(enc.NewBufferReader(interest.Name()[len(LOCAL_PREFIX)+2].Val), true)
 	if err != nil || filterV == nil || filterV.Val == nil {
 		return
 	}

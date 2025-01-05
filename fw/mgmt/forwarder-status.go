@@ -39,13 +39,13 @@ func (f *ForwarderStatusModule) getManager() *Thread {
 
 func (f *ForwarderStatusModule) handleIncomingInterest(interest *spec.Interest, pitToken []byte, inFace uint64) {
 	// Only allow from /localhost
-	if !f.manager.localPrefix.IsPrefix(interest.NameV) {
+	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
 		core.LogWarn(f, "Received forwarder status management Interest from non-local source - DROP")
 		return
 	}
 
 	// Dispatch by verb
-	verb := interest.NameV[f.manager.prefixLength()+1].String()
+	verb := interest.Name()[len(LOCAL_PREFIX)+1].String()
 	switch verb {
 	case "general":
 		f.general(interest, pitToken, inFace)
@@ -58,7 +58,7 @@ func (f *ForwarderStatusModule) handleIncomingInterest(interest *spec.Interest, 
 }
 
 func (f *ForwarderStatusModule) general(interest *spec.Interest, pitToken []byte, _ uint64) {
-	if len(interest.NameV) > f.manager.prefixLength()+2 {
+	if len(interest.Name()) > len(LOCAL_PREFIX)+2 {
 		// Ignore because contains version and/or segment components
 		return
 	}
@@ -84,7 +84,10 @@ func (f *ForwarderStatusModule) general(interest *spec.Interest, pitToken []byte
 	}
 	wire := status.Encode()
 
-	name, _ := enc.NameFromStr(f.manager.localPrefix.String() + "/status/general")
+	name := append(LOCAL_PREFIX,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "general"),
+	)
 	segments := makeStatusDataset(name, f.nextGeneralDatasetVersion, wire)
 	f.manager.transport.Send(segments, pitToken, nil)
 
