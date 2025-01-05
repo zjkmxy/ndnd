@@ -107,15 +107,11 @@ func (m *Thread) Run() {
 
 	// Create and register Internal transport
 	m.face, m.transport = face.RegisterInternalTransport()
-	faces, err := enc.NameFromStr("/localhost/nfd")
-	if err != nil {
-		core.LogFatal(m, "Unable to create name for management prefix: ", err)
-	}
-	table.FibStrategyTable.InsertNextHopEnc(faces, m.face.FaceID(), 0)
+	table.FibStrategyTable.InsertNextHopEnc(LOCAL_PREFIX, m.face.FaceID(), 0)
 	if enableLocalhopManagement {
-		add1, _ := enc.NameFromStr("/localhop/nfd")
-		table.FibStrategyTable.InsertNextHopEnc(add1, m.face.FaceID(), 0)
+		table.FibStrategyTable.InsertNextHopEnc(NON_LOCAL_PREFIX, m.face.FaceID(), 0)
 	}
+
 	for {
 		fragment, pitToken, inFace := m.transport.Receive()
 		if fragment == nil {
@@ -128,7 +124,7 @@ func (m *Thread) Run() {
 		pkt, _, err := spec.ReadPacket(enc.NewWireReader(fragment))
 		if err != nil {
 			// Indicates that internal face has quit, which means it's time for us to quit
-			core.LogInfo(m, "Unable to decode internal packet, drop")
+			core.LogWarn(m, "Unable to decode internal packet, drop")
 			continue
 		}
 
@@ -141,11 +137,11 @@ func (m *Thread) Run() {
 
 		// Ensure Interest name matches expectations
 		if len(interest.Name()) < len(LOCAL_PREFIX)+2 { // Module + Verb
-			core.LogInfo(m, "Control command name ", interest.Name().String(), " has unexpected number of components - DROP")
+			core.LogWarn(m, "Control command name ", interest.Name(), " has unexpected number of components - DROP")
 			continue
 		}
 		if !LOCAL_PREFIX.IsPrefix(interest.Name()) && !NON_LOCAL_PREFIX.IsPrefix(interest.Name()) {
-			core.LogInfo(m, "Control command name ", interest.Name(), " has unexpected prefix - DROP")
+			core.LogWarn(m, "Control command name ", interest.Name(), " has unexpected prefix - DROP")
 			continue
 		}
 
