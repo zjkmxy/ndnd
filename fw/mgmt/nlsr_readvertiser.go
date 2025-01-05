@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/named-data/ndnd/fw/core"
-	"github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
@@ -53,7 +52,8 @@ func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
 		Val: &spec_mgmt.ControlArgs{Name: name},
 	}
 
-	cmd := enc.Name{enc.LOCALHOST, defn.NLSR_COMP,
+	cmd := enc.Name{enc.LOCALHOST,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "register"),
 		enc.NewBytesComponent(enc.TypeGenericNameComponent, nameParams.Encode().Join()),
@@ -88,7 +88,8 @@ func (r *NlsrReadvertiser) Withdraw(name enc.Name, route *table.Route) {
 		Val: &spec_mgmt.ControlArgs{Name: name},
 	}
 
-	cmd := enc.Name{enc.LOCALHOST, defn.NLSR_COMP,
+	cmd := enc.Name{enc.LOCALHOST,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "unregister"),
 		enc.NewBytesComponent(enc.TypeGenericNameComponent, nameParams.Encode().Join()),

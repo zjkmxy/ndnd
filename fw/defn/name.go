@@ -2,18 +2,14 @@ package defn
 
 import enc "github.com/named-data/ndnd/std/encoding"
 
-var NFD_COMP = enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd")
-var STRATEGY_COMP = enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy")
-var NLSR_COMP = enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr")
-
 // Localhost prefix for NFD
-var LOCAL_PREFIX = enc.Name{enc.LOCALHOST, NFD_COMP}
+var LOCAL_PREFIX = enc.Name{enc.LOCALHOST, enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd")}
 
 // Non-local prefix for NFD
-var NON_LOCAL_PREFIX = enc.Name{enc.LOCALHOP, NFD_COMP}
+var NON_LOCAL_PREFIX = enc.Name{enc.LOCALHOP, enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd")}
 
 // Prefix for all stratgies
-var STRATEGY_PREFIX = append(LOCAL_PREFIX, STRATEGY_COMP)
+var STRATEGY_PREFIX = append(LOCAL_PREFIX, enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy"))
 
 // Default forwarding strategy name
 var DEFAULT_STRATEGY = append(STRATEGY_PREFIX,
