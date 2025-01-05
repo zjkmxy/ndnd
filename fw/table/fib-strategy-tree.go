@@ -11,6 +11,7 @@ import (
 	"container/list"
 	"sync"
 
+	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
@@ -36,10 +37,10 @@ func newFibStrategyTableTree() {
 	FibStrategyTable = new(FibStrategyTree)
 	fibStrategyTableTree := FibStrategyTable.(*FibStrategyTree)
 	fibStrategyTableTree.root = new(fibStrategyTreeEntry)
+
 	// Root component will be nil since it represents zero components
 	fibStrategyTableTree.root.component = enc.Component{}
-	base, _ := enc.NameFromStr("/localhost/nfd/strategy/best-route/v=1")
-	fibStrategyTableTree.root.strategy = base
+	fibStrategyTableTree.root.strategy = defn.DEFAULT_STRATEGY
 	fibStrategyTableTree.root.name = enc.Name{}
 	fibStrategyTableTree.fibPrefixes = make(map[uint64]*fibStrategyTreeEntry)
 }

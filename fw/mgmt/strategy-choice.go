@@ -9,6 +9,7 @@ package mgmt
 
 import (
 	"github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/fw"
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -17,8 +18,7 @@ import (
 
 // StrategyChoiceModule is the module that handles Strategy Choice Management.
 type StrategyChoiceModule struct {
-	manager        *Thread
-	strategyPrefix enc.Name
+	manager *Thread
 }
 
 func (s *StrategyChoiceModule) String() string {
@@ -27,8 +27,6 @@ func (s *StrategyChoiceModule) String() string {
 
 func (s *StrategyChoiceModule) registerManager(manager *Thread) {
 	s.manager = manager
-	s.strategyPrefix = append(LOCAL_PREFIX,
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy"))
 }
 
 func (s *StrategyChoiceModule) getManager() *Thread {
@@ -79,13 +77,13 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 		return
 	}
 
-	if !s.strategyPrefix.IsPrefix(params.Strategy.Name) {
+	if !defn.STRATEGY_PREFIX.IsPrefix(params.Strategy.Name) {
 		core.LogWarn(s, "Invalid Strategy=", params.Strategy.Name)
 		s.manager.sendCtrlResp(interest, 404, "Invalid strategy", nil)
 		return
 	}
 
-	strategyName := params.Strategy.Name[len(s.strategyPrefix)].String()
+	strategyName := params.Strategy.Name[len(defn.STRATEGY_PREFIX)].String()
 	availableVersions, ok := fw.StrategyVersions[strategyName]
 	if !ok {
 		core.LogWarn(s, "Unknown Strategy=", params.Strategy)
@@ -100,15 +98,15 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 			strategyVersion = version
 		}
 	}
-	if len(params.Strategy.Name) > len(s.strategyPrefix)+1 && params.Strategy.Name[len(s.strategyPrefix)+1].Typ != enc.TypeVersionNameComponent {
-		core.LogWarn(s, "Invalid Version=", params.Strategy.Name[len(s.strategyPrefix)+1], " for Strategy=", params.Strategy)
+	if len(params.Strategy.Name) > len(defn.STRATEGY_PREFIX)+1 && params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1].Typ != enc.TypeVersionNameComponent {
+		core.LogWarn(s, "Invalid Version=", params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1], " for Strategy=", params.Strategy)
 		s.manager.sendCtrlResp(interest, 404, "Unknown strategy version", nil)
 		return
-	} else if len(params.Strategy.Name) > len(s.strategyPrefix)+1 {
-		strategyVersionBytes := params.Strategy.Name[len(s.strategyPrefix)+1].Val
+	} else if len(params.Strategy.Name) > len(defn.STRATEGY_PREFIX)+1 {
+		strategyVersionBytes := params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1].Val
 		strategyVersion, _, err := enc.ParseNat(strategyVersionBytes)
 		if err != nil {
-			core.LogWarn(s, "Invalid Version=", params.Strategy.Name[len(s.strategyPrefix)+1], " for Strategy=", params.Strategy)
+			core.LogWarn(s, "Invalid Version=", params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1], " for Strategy=", params.Strategy)
 			s.manager.sendCtrlResp(interest, 404, "Invalid strategy version", nil)
 			return
 		}

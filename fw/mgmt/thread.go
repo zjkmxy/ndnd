@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/face"
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -23,9 +24,8 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-var NFD_COMP = enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd")
-var LOCAL_PREFIX = enc.Name{enc.LOCALHOST, NFD_COMP}
-var NON_LOCAL_PREFIX = enc.Name{enc.LOCALHOP, NFD_COMP}
+var LOCAL_PREFIX = defn.LOCAL_PREFIX
+var NON_LOCAL_PREFIX = defn.NON_LOCAL_PREFIX
 
 // Thread Represents the management thread
 type Thread struct {

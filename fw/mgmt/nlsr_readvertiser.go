@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
@@ -48,11 +49,15 @@ func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
 		Cost:   utils.IdPtr(route.Cost),
 	}
 
-	iparams := &spec_mgmt.ControlParameters{
+	nameParams := &spec_mgmt.ControlParameters{
 		Val: &spec_mgmt.ControlArgs{Name: name},
 	}
-	cmd, _ := enc.NameFromStr("/localhost/nlsr/rib/register")
-	cmd = append(cmd, enc.NewBytesComponent(enc.TypeGenericNameComponent, iparams.Encode().Join()))
+
+	cmd := enc.Name{enc.LOCALHOST, defn.NLSR_COMP,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "register"),
+		enc.NewBytesComponent(enc.TypeGenericNameComponent, nameParams.Encode().Join()),
+	}
 
 	r.m.sendInterest(cmd, params.Encode())
 }
@@ -79,11 +84,15 @@ func (r *NlsrReadvertiser) Withdraw(name enc.Name, route *table.Route) {
 		Origin: utils.IdPtr(route.Origin),
 	}
 
-	iparams := &spec_mgmt.ControlParameters{
+	nameParams := &spec_mgmt.ControlParameters{
 		Val: &spec_mgmt.ControlArgs{Name: name},
 	}
-	cmd, _ := enc.NameFromStr("/localhost/nlsr/rib/unregister")
-	cmd = append(cmd, enc.NewBytesComponent(enc.TypeGenericNameComponent, iparams.Encode().Join()))
+
+	cmd := enc.Name{enc.LOCALHOST, defn.NLSR_COMP,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "unregister"),
+		enc.NewBytesComponent(enc.TypeGenericNameComponent, nameParams.Encode().Join()),
+	}
 
 	r.m.sendInterest(cmd, params.Encode())
 }
