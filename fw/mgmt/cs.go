@@ -15,6 +15,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 // ContentStoreModule is the module that handles Content Store Management.
@@ -61,26 +62,24 @@ func (c *ContentStoreModule) handleIncomingInterest(interest *spec.Interest, pit
 }
 
 func (c *ContentStoreModule) config(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(c, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		c.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(c, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		c.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if (params.Flags == nil && params.Mask != nil) || (params.Flags != nil && params.Mask == nil) {
 		core.LogWarn(c, "Flags and Mask fields must either both be present or both be not present")
-		response = makeControlResponse(409, "ControlParameters are incorrect", nil)
+		response := makeControlResponse(409, "ControlParameters are incorrect", nil)
 		c.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -104,12 +103,10 @@ func (c *ContentStoreModule) config(interest *spec.Interest, pitToken []byte, in
 		}
 	}
 
-	responseParams := map[string]any{
-		"Capacity": uint64(table.CsCapacity()),
-		"Flags":    c.getFlags(),
-	}
-
-	response = makeControlResponse(200, "OK", responseParams)
+	response := makeControlResponse(200, "OK", &mgmt.ControlArgs{
+		Capacity: utils.IdPtr(uint64(table.CsCapacity())),
+		Flags:    utils.IdPtr(c.getFlags()),
+	})
 	c.manager.sendResponse(response, interest, pitToken, inFace)
 }
 

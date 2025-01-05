@@ -69,26 +69,24 @@ func (f *FaceModule) handleIncomingInterest(interest *spec.Interest, pitToken []
 }
 
 func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(f, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.Uri == nil {
 		core.LogWarn(f, "Missing URI in ControlParameters for ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -96,14 +94,14 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 	URI := defn.DecodeURIString(*params.Uri)
 	if URI == nil || URI.Canonize() != nil {
 		core.LogWarn(f, "Cannot canonize remote URI in ControlParameters for ", interest.Name())
-		response = makeControlResponse(406, "URI could not be canonized", nil)
+		response := makeControlResponse(406, "URI could not be canonized", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if (params.Flags != nil && params.Mask == nil) || (params.Flags == nil && params.Mask != nil) {
 		core.LogWarn(f, "Flags and Mask fields either both be present or both be not present")
-		response = makeControlResponse(409, "Incomplete Flags/Mask combination", nil)
+		response := makeControlResponse(409, "Incomplete Flags/Mask combination", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -113,9 +111,9 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 	if existingFace != nil {
 		core.LogWarn(f, "Cannot create face ", URI, ": Conflicts with existing face FaceID=",
 			existingFace.FaceID(), ", RemoteURI=", existingFace.RemoteURI())
-		responseParams := map[string]any{}
+		responseParams := &mgmt.ControlArgs{}
 		f.fillFaceProperties(responseParams, existingFace)
-		response = makeControlResponse(409, "Conflicts with existing face", responseParams)
+		response := makeControlResponse(409, "Conflicts with existing face", responseParams)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -127,7 +125,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		remoteAddr := net.ParseIP(URI.Path())
 		if remoteAddr == nil {
 			core.LogWarn(f, "Cannot create face with non-IP remote address ", URI)
-			response = makeControlResponse(406, "URI must be IP", nil)
+			response := makeControlResponse(406, "URI must be IP", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -135,7 +133,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		// Validate that remote endpoint is a unicast address
 		if !(remoteAddr.IsGlobalUnicast() || remoteAddr.IsLinkLocalUnicast() || remoteAddr.IsLoopback()) {
 			core.LogWarn(f, "Cannot create unicast UDP face to non-unicast address ", URI)
-			response = makeControlResponse(406, "URI must be unicast", nil)
+			response := makeControlResponse(406, "URI must be unicast", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -148,7 +146,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		} else if params.FacePersistency != nil {
 			core.LogWarn(f, "Unacceptable persistency ", mgmt.Persistency(*params.FacePersistency),
 				" for UDP face specified in ControlParameters for ", interest.Name())
-			response = makeControlResponse(406, "Unacceptable persistency", nil)
+			response := makeControlResponse(406, "Unacceptable persistency", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -168,7 +166,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		transport, err := face.MakeUnicastUDPTransport(URI, nil, persistency)
 		if err != nil {
 			core.LogWarn(f, "Unable to create unicast UDP face with URI ", URI, ": ", err.Error())
-			response = makeControlResponse(406, "Transport error", nil)
+			response := makeControlResponse(406, "Transport error", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -217,7 +215,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		remoteAddr := net.ParseIP(URI.Path())
 		if remoteAddr == nil {
 			core.LogWarn(f, "Cannot create face with non-IP remote address ", URI)
-			response = makeControlResponse(406, "URI must be IP", nil)
+			response := makeControlResponse(406, "URI must be IP", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -225,7 +223,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		// Validate that remote endpoint is a unicast address
 		if !(remoteAddr.IsGlobalUnicast() || remoteAddr.IsLinkLocalUnicast() || remoteAddr.IsLoopback()) {
 			core.LogWarn(f, "Cannot create unicast TCP face to non-unicast address ", URI)
-			response = makeControlResponse(406, "URI must be unicast", nil)
+			response := makeControlResponse(406, "URI must be unicast", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -238,7 +236,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		} else if params.FacePersistency != nil {
 			core.LogWarn(f, "Unacceptable persistency ", mgmt.Persistency(*params.FacePersistency),
 				" for UDP face specified in ControlParameters for ", interest.Name())
-			response = makeControlResponse(406, "Unacceptable persistency", nil)
+			response := makeControlResponse(406, "Unacceptable persistency", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -258,7 +256,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 		transport, err := face.MakeUnicastTCPTransport(URI, nil, persistency)
 		if err != nil {
 			core.LogWarn(f, "Unable to create unicast TCP face with URI ", URI, ":", err.Error())
-			response = makeControlResponse(406, "Transport error", nil)
+			response := makeControlResponse(406, "Transport error", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -306,7 +304,7 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 	} else {
 		// Unsupported scheme
 		core.LogWarn(f, "Cannot create face with URI ", URI, ": Unsupported scheme ", URI)
-		response = makeControlResponse(406, "Unsupported scheme "+URI.Scheme(), nil)
+		response := makeControlResponse(406, "Unsupported scheme "+URI.Scheme(), nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -314,32 +312,31 @@ func (f *FaceModule) create(interest *spec.Interest, pitToken []byte, inFace uin
 	if linkService == nil {
 		// Internal failure --> 504
 		core.LogWarn(f, "Transport error when creating face ", URI)
-		response = makeControlResponse(504, "Transport error when creating face", nil)
+		response := makeControlResponse(504, "Transport error when creating face", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
-	core.LogInfo(f, "Created face with URI ", URI)
-	responseParams := map[string]any{}
+	responseParams := &mgmt.ControlArgs{}
 	f.fillFaceProperties(responseParams, linkService)
-	response = makeControlResponse(200, "OK", responseParams)
+	response := makeControlResponse(200, "OK", responseParams)
 	f.manager.sendResponse(response, interest, pitToken, inFace)
+
+	core.LogInfo(f, "Created face with URI ", URI)
 }
 
 func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(f, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -350,155 +347,149 @@ func (f *FaceModule) update(interest *spec.Interest, pitToken []byte, inFace uin
 	}
 
 	// Validate parameters
-
-	responseParams := map[string]any{}
+	responseParams := &mgmt.ControlArgs{}
 	areParamsValid := true
 
 	selectedFace := face.FaceTable.Get(faceID)
 	if selectedFace == nil {
 		core.LogWarn(f, "Cannot update specified (or implicit) FaceID=", faceID, " because it does not exist")
-		responseParams["FaceId"] = uint64(faceID)
-		response = makeControlResponse(404, "Face does not exist", responseParams)
+		response := makeControlResponse(404, "Face does not exist",
+			&mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	// Can't update null (or internal) faces via management
 	if selectedFace.RemoteURI().Scheme() == "null" || selectedFace.RemoteURI().Scheme() == "internal" {
-		responseParams["FaceId"] = uint64(faceID)
-		response = makeControlResponse(401, "Face cannot be updated via management", responseParams)
+		response := makeControlResponse(401, "Face cannot be updated via management",
+			&mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.FacePersistency != nil {
 		if selectedFace.RemoteURI().Scheme() == "ether" && *params.FacePersistency != uint64(mgmt.PersistencyPermanent) {
-			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
+			responseParams.FacePersistency = params.FacePersistency
 			areParamsValid = false
 		} else if (selectedFace.RemoteURI().Scheme() == "udp4" || selectedFace.RemoteURI().Scheme() == "udp6") &&
 			*params.FacePersistency != uint64(mgmt.PersistencyPersistent) &&
 			*params.FacePersistency != uint64(mgmt.PersistencyPermanent) {
-			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
+			responseParams.FacePersistency = params.FacePersistency
 			areParamsValid = false
 		} else if selectedFace.LocalURI().Scheme() == "unix" &&
 			*params.FacePersistency != uint64(mgmt.PersistencyPersistent) {
-			responseParams["FacePersistency"] = uint64(*params.FacePersistency)
+			responseParams.FacePersistency = params.FacePersistency
 			areParamsValid = false
 		}
 	}
 
 	if (params.Flags != nil && params.Mask == nil) || (params.Flags == nil && params.Mask != nil) {
-		core.LogWarn(f, "Flags and Mask fields must either both be present or both be not present")
 		if params.Flags != nil {
-			responseParams["Flags"] = uint64(*params.Flags)
+			responseParams.Flags = params.Flags
 		}
 		if params.Mask != nil {
-			responseParams["Mask"] = uint64(*params.Mask)
+			responseParams.Mask = params.Mask
 		}
 		areParamsValid = false
 	}
 
 	if !areParamsValid {
-		response = makeControlResponse(409, "ControlParameters are incorrect", nil)
+		response := makeControlResponse(409, "ControlParameters are incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	// Actually perform face updates
+
 	// Persistency
 	if params.FacePersistency != nil {
 		// Correctness of FacePersistency already validated
 		selectedFace.SetPersistency(mgmt.Persistency(*params.FacePersistency))
 	}
 
-	options := selectedFace.(*face.NDNLPLinkService).Options()
+	// Set NDNLP link service options
+	if lpLinkService := selectedFace.(*face.NDNLPLinkService); lpLinkService != nil {
+		options := lpLinkService.Options()
 
-	// Congestion
-	if params.BaseCongestionMarkInterval != nil &&
-		time.Duration(*params.BaseCongestionMarkInterval)*time.Nanosecond != options.BaseCongestionMarkingInterval {
-		options.BaseCongestionMarkingInterval = time.Duration(*params.BaseCongestionMarkInterval) * time.Nanosecond
-		core.LogInfo(f, "FaceID=", faceID, ", BaseCongestionMarkingInterval=", options.BaseCongestionMarkingInterval)
-	}
-
-	if params.DefaultCongestionThreshold != nil &&
-		*params.DefaultCongestionThreshold != options.DefaultCongestionThresholdBytes {
-		options.DefaultCongestionThresholdBytes = *params.DefaultCongestionThreshold
-		core.LogInfo(f, "FaceID=", faceID, ", DefaultCongestionThreshold=", options.DefaultCongestionThresholdBytes, "B")
-	}
-
-	// MTU
-	if params.Mtu != nil {
-		oldMTU := selectedFace.MTU()
-		newMTU := int(*params.Mtu)
-		if *params.Mtu > defn.MaxNDNPacketSize {
-			newMTU = defn.MaxNDNPacketSize
+		// Congestion
+		if params.BaseCongestionMarkInterval != nil &&
+			time.Duration(*params.BaseCongestionMarkInterval)*time.Nanosecond != options.BaseCongestionMarkingInterval {
+			options.BaseCongestionMarkingInterval = time.Duration(*params.BaseCongestionMarkInterval) * time.Nanosecond
+			core.LogInfo(f, "FaceID=", faceID, ", BaseCongestionMarkingInterval=", options.BaseCongestionMarkingInterval)
 		}
-		selectedFace.SetMTU(newMTU)
-		core.LogInfo(f, "FaceID=", faceID, ", MTU ", oldMTU, " -> ", newMTU)
-	}
 
-	// Flags
-	if params.Flags != nil {
-		// Presence of mask already validated
-		flags := *params.Flags
-		mask := *params.Mask
+		if params.DefaultCongestionThreshold != nil &&
+			*params.DefaultCongestionThreshold != options.DefaultCongestionThresholdBytes {
+			options.DefaultCongestionThresholdBytes = *params.DefaultCongestionThreshold
+			core.LogInfo(f, "FaceID=", faceID, ", DefaultCongestionThreshold=", options.DefaultCongestionThresholdBytes, "B")
+		}
 
-		if mask&face.FaceFlagLocalFields > 0 {
-			// Update LocalFieldsEnabled
-			if flags&face.FaceFlagLocalFields > 0 {
-				core.LogInfo(f, "FaceID=", faceID, ", Enabling local fields")
-				options.IsConsumerControlledForwardingEnabled = true
-				options.IsIncomingFaceIndicationEnabled = true
-				options.IsLocalCachePolicyEnabled = true
-			} else {
-				core.LogInfo(f, "FaceID=", faceID, ", Disabling local fields")
-				options.IsConsumerControlledForwardingEnabled = false
-				options.IsIncomingFaceIndicationEnabled = false
-				options.IsLocalCachePolicyEnabled = false
+		// MTU
+		if params.Mtu != nil {
+			oldMTU := selectedFace.MTU()
+			newMTU := min(int(*params.Mtu), defn.MaxNDNPacketSize)
+			selectedFace.SetMTU(newMTU)
+			core.LogInfo(f, "FaceID=", faceID, ", MTU ", oldMTU, " -> ", newMTU)
+		}
+
+		// Flags
+		if params.Mask != nil && params.Flags != nil {
+			flags := *params.Flags
+			mask := *params.Mask
+
+			if mask&face.FaceFlagLocalFields > 0 {
+				if flags&face.FaceFlagLocalFields > 0 {
+					core.LogInfo(f, "FaceID=", faceID, ", Enabling local fields")
+					options.IsConsumerControlledForwardingEnabled = true
+					options.IsIncomingFaceIndicationEnabled = true
+					options.IsLocalCachePolicyEnabled = true
+				} else {
+					core.LogInfo(f, "FaceID=", faceID, ", Disabling local fields")
+					options.IsConsumerControlledForwardingEnabled = false
+					options.IsIncomingFaceIndicationEnabled = false
+					options.IsLocalCachePolicyEnabled = false
+				}
+			}
+
+			if mask&face.FaceFlagCongestionMarking > 0 {
+				options.IsCongestionMarkingEnabled = flags&face.FaceFlagCongestionMarking > 0
+				if flags&face.FaceFlagCongestionMarking > 0 {
+					core.LogInfo(f, "FaceID=", faceID, ", Enabling congestion marking")
+				} else {
+					core.LogInfo(f, "FaceID=", faceID, ", Disabling congestion marking")
+				}
 			}
 		}
 
-		if mask&face.FaceFlagCongestionMarking > 0 {
-			// Update CongestionMarkingEnabled
-			options.IsCongestionMarkingEnabled = flags&face.FaceFlagCongestionMarking > 0
-			if flags&face.FaceFlagCongestionMarking > 0 {
-				core.LogInfo(f, "FaceID=", faceID, ", Enabling congestion marking")
-			} else {
-				core.LogInfo(f, "FaceID=", faceID, ", Disabling congestion marking")
-			}
-		}
+		lpLinkService.SetOptions(options)
 	}
-
-	selectedFace.(*face.NDNLPLinkService).SetOptions(options)
 
 	f.fillFaceProperties(responseParams, selectedFace)
-	delete(responseParams, "Uri")
-	delete(responseParams, "LocalUri")
-	response = makeControlResponse(200, "OK", responseParams)
+	responseParams.Uri = nil
+	responseParams.LocalUri = nil
+	response := makeControlResponse(200, "OK", responseParams)
 	f.manager.sendResponse(response, interest, pitToken, inFace)
 }
 
 func (f *FaceModule) destroy(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(f, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.FaceId == nil {
 		core.LogWarn(f, "Missing FaceId in ControlParameters for ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -510,7 +501,7 @@ func (f *FaceModule) destroy(interest *spec.Interest, pitToken []byte, inFace ui
 		core.LogInfo(f, "Ignoring attempt to delete non-existent face with FaceID=", *params.FaceId)
 	}
 
-	response = makeControlResponse(200, "OK", params.ToDict())
+	response := makeControlResponse(200, "OK", params)
 	f.manager.sendResponse(response, interest, pitToken, inFace)
 }
 
@@ -666,17 +657,18 @@ func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStat
 	return faceDataset
 }
 
-func (f *FaceModule) fillFaceProperties(params map[string]any, selectedFace face.LinkService) {
-	params["FaceId"] = uint64(selectedFace.FaceID())
-	params["Uri"] = selectedFace.RemoteURI().String()
-	params["LocalUri"] = selectedFace.LocalURI().String()
-	params["FacePersistency"] = uint64(selectedFace.Persistency())
-	params["Mtu"] = uint64(selectedFace.MTU())
-	params["Flags"] = 0
+func (f *FaceModule) fillFaceProperties(params *mgmt.ControlArgs, selectedFace face.LinkService) {
+	params.FaceId = utils.IdPtr(selectedFace.FaceID())
+	params.Uri = utils.IdPtr(selectedFace.RemoteURI().String())
+	params.LocalUri = utils.IdPtr(selectedFace.LocalURI().String())
+	params.FacePersistency = utils.IdPtr(uint64(selectedFace.Persistency()))
+	params.Mtu = utils.IdPtr(uint64(selectedFace.MTU()))
+	params.Flags = utils.IdPtr(uint64(0))
+
 	if linkService, ok := selectedFace.(*face.NDNLPLinkService); ok {
 		options := linkService.Options()
-		params["BaseCongestionMarkInterval"] = uint64(options.BaseCongestionMarkingInterval.Nanoseconds())
-		params["DefaultCongestionThreshold"] = options.DefaultCongestionThresholdBytes
-		params["Flags"] = uint64(options.Flags())
+		params.BaseCongestionMarkInterval = utils.IdPtr(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
+		params.DefaultCongestionThreshold = utils.IdPtr(options.DefaultCongestionThresholdBytes)
+		params.Flags = utils.IdPtr(uint64(options.Flags()))
 	}
 }

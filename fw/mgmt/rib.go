@@ -59,26 +59,24 @@ func (r *RIBModule) handleIncomingInterest(interest *spec.Interest, pitToken []b
 }
 
 func (r *RIBModule) register(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(r, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		r.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(r, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		r.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.Name == nil {
 		core.LogWarn(r, "Missing Name in ControlParameters for ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		r.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -87,7 +85,7 @@ func (r *RIBModule) register(interest *spec.Interest, pitToken []byte, inFace ui
 	if params.FaceId != nil && *params.FaceId != 0 {
 		faceID = *params.FaceId
 		if face.FaceTable.Get(faceID) == nil {
-			response = makeControlResponse(410, "Face does not exist", nil)
+			response := makeControlResponse(410, "Face does not exist", nil)
 			r.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -128,41 +126,39 @@ func (r *RIBModule) register(interest *spec.Interest, pitToken []byte, inFace ui
 		core.LogInfo(r, "Created route for Prefix=", params.Name, ", FaceID=", faceID, ", Origin=", origin,
 			", Cost=", cost, ", Flags=0x", strconv.FormatUint(flags, 16))
 	}
-	responseParams := map[string]any{
-		"Name":   params.Name,
-		"FaceId": faceID,
-		"Origin": origin,
-		"Cost":   cost,
-		"Flags":  flags,
+	responseParams := &mgmt.ControlArgs{
+		Name:   params.Name,
+		FaceId: utils.IdPtr(faceID),
+		Origin: utils.IdPtr(origin),
+		Cost:   utils.IdPtr(cost),
+		Flags:  utils.IdPtr(flags),
 	}
 	if expirationPeriod != nil {
-		responseParams["ExpirationPeriod"] = uint64(expirationPeriod.Milliseconds())
+		responseParams.ExpirationPeriod = utils.IdPtr(uint64(expirationPeriod.Milliseconds()))
 	}
-	response = makeControlResponse(200, "OK", responseParams)
+	response := makeControlResponse(200, "OK", responseParams)
 	r.manager.sendResponse(response, interest, pitToken, inFace)
 }
 
 func (r *RIBModule) unregister(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(r, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		r.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(r, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		r.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.Name == nil {
 		core.LogWarn(r, "Missing Name in ControlParameters for ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		r.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -178,14 +174,14 @@ func (r *RIBModule) unregister(interest *spec.Interest, pitToken []byte, inFace 
 	}
 	table.Rib.RemoveRouteEnc(params.Name, faceID, origin)
 
-	core.LogInfo(r, "Removed route for Prefix=", params.Name, ", FaceID=", faceID, ", Origin=", origin)
-	responseParams := map[string]any{
-		"Name":   params.Name,
-		"FaceId": faceID,
-		"Origin": origin,
-	}
-	response = makeControlResponse(200, "OK", responseParams)
+	response := makeControlResponse(200, "OK", &mgmt.ControlArgs{
+		Name:   params.Name,
+		FaceId: utils.IdPtr(faceID),
+		Origin: utils.IdPtr(origin),
+	})
 	r.manager.sendResponse(response, interest, pitToken, inFace)
+
+	core.LogInfo(r, "Removed route for Prefix=", params.Name, ", FaceID=", faceID, ", Origin=", origin)
 }
 
 func (r *RIBModule) announce(interest *spec.Interest, pitToken []byte, inFace uint64) {

@@ -14,6 +14,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 // FIBModule is the module that handles FIB Management.
@@ -59,26 +60,24 @@ func (f *FIBModule) handleIncomingInterest(interest *spec.Interest, pitToken []b
 }
 
 func (f *FIBModule) add(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(f, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.Name == nil {
 		core.LogWarn(f, "Missing Name in ControlParameters for ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -87,7 +86,7 @@ func (f *FIBModule) add(interest *spec.Interest, pitToken []byte, inFace uint64)
 	if params.FaceId != nil && *params.FaceId != 0 {
 		faceID = *params.FaceId
 		if face.FaceTable.Get(faceID) == nil {
-			response = makeControlResponse(410, "Face does not exist", nil)
+			response := makeControlResponse(410, "Face does not exist", nil)
 			f.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -100,36 +99,34 @@ func (f *FIBModule) add(interest *spec.Interest, pitToken []byte, inFace uint64)
 	table.FibStrategyTable.InsertNextHopEnc(params.Name, faceID, cost)
 
 	core.LogInfo(f, "Created nexthop for ", params.Name, " to FaceID=", faceID, "with Cost=", cost)
-	responseParams := map[string]any{
-		"Name":   params.Name,
-		"FaceId": faceID,
-		"Cost":   cost,
-	}
-	response = makeControlResponse(200, "OK", responseParams)
+
+	response := makeControlResponse(200, "OK", &mgmt.ControlArgs{
+		Name:   params.Name,
+		FaceId: utils.IdPtr(faceID),
+		Cost:   utils.IdPtr(cost),
+	})
 	f.manager.sendResponse(response, interest, pitToken, inFace)
 }
 
 func (f *FIBModule) remove(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(f, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(f, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.Name == nil {
 		core.LogWarn(f, "Missing Name in ControlParameters for ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		f.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -141,11 +138,11 @@ func (f *FIBModule) remove(interest *spec.Interest, pitToken []byte, inFace uint
 	table.FibStrategyTable.RemoveNextHopEnc(params.Name, faceID)
 
 	core.LogInfo(f, "Removed nexthop for ", params.Name, " to FaceID=", faceID)
-	responseParams := map[string]any{
-		"Name":   params.Name,
-		"FaceId": faceID,
-	}
-	response = makeControlResponse(200, "OK", responseParams)
+
+	response := makeControlResponse(200, "OK", &mgmt.ControlArgs{
+		Name:   params.Name,
+		FaceId: utils.IdPtr(faceID),
+	})
 	f.manager.sendResponse(response, interest, pitToken, inFace)
 }
 

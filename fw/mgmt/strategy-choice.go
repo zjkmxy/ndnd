@@ -62,40 +62,38 @@ func (s *StrategyChoiceModule) handleIncomingInterest(interest *spec.Interest, p
 }
 
 func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inFace uint64) {
-	var response *mgmt.ControlResponse
-
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
 		core.LogWarn(s, "Missing ControlParameters in ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		s.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	params := decodeControlParameters(s, interest)
 	if params == nil {
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		s.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.Name == nil {
 		core.LogWarn(s, "Missing Name in ControlParameters for ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		s.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if params.Strategy == nil {
 		core.LogWarn(s, "Missing Strategy in ControlParameters for ", interest.Name())
-		response = makeControlResponse(400, "ControlParameters is incorrect", nil)
+		response := makeControlResponse(400, "ControlParameters is incorrect", nil)
 		s.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
 
 	if !s.strategyPrefix.IsPrefix(params.Strategy.Name) {
 		core.LogWarn(s, "Unknown Strategy=", params.Strategy.Name, " in ControlParameters for Interest=", interest.Name())
-		response = makeControlResponse(404, "Unknown strategy", nil)
+		response := makeControlResponse(404, "Unknown strategy", nil)
 		s.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -104,7 +102,7 @@ func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inF
 	availableVersions, ok := fw.StrategyVersions[strategyName]
 	if !ok {
 		core.LogWarn(s, "Unknown Strategy=", params.Strategy, " in ControlParameters for Interest=", interest.Name())
-		response = makeControlResponse(404, "Unknown strategy", nil)
+		response := makeControlResponse(404, "Unknown strategy", nil)
 		s.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	}
@@ -120,7 +118,7 @@ func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inF
 		params.Strategy.Name[len(s.strategyPrefix)+1].Typ != enc.TypeVersionNameComponent {
 		core.LogWarn(s, "Unknown Version=", params.Strategy.Name[len(s.strategyPrefix)+1],
 			" for Strategy=", params.Strategy, " in ControlParameters for Interest=", interest.Name())
-		response = makeControlResponse(404, "Unknown strategy version", nil)
+		response := makeControlResponse(404, "Unknown strategy version", nil)
 		s.manager.sendResponse(response, interest, pitToken, inFace)
 		return
 	} else if len(params.Strategy.Name) > len(s.strategyPrefix)+1 {
@@ -129,7 +127,7 @@ func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inF
 		if err != nil {
 			core.LogWarn(s, "Unknown Version=", params.Strategy.Name[len(s.strategyPrefix)+1],
 				" for Strategy=", params.Strategy, " in ControlParameters for Interest=", interest.Name())
-			response = makeControlResponse(404, "Unknown strategy version", nil)
+			response := makeControlResponse(404, "Unknown strategy version", nil)
 			s.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -142,7 +140,7 @@ func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inF
 		if !foundMatchingVersion {
 			core.LogWarn(s, "Unknown Version=", strategyVersion, " for Strategy=", params.Strategy,
 				" in ControlParameters for Interest=", interest.Name())
-			response = makeControlResponse(404, "Unknown strategy version", nil)
+			response := makeControlResponse(404, "Unknown strategy version", nil)
 			s.manager.sendResponse(response, interest, pitToken, inFace)
 			return
 		}
@@ -152,12 +150,13 @@ func (s *StrategyChoiceModule) set(interest *spec.Interest, pitToken []byte, inF
 	}
 	table.FibStrategyTable.SetStrategyEnc(params.Name, params.Strategy.Name)
 
-	core.LogInfo(s, "Set strategy for Name=", params.Name, " to Strategy=", params.Strategy.Name)
-	responseParams := map[string]any{}
-	responseParams["Name"] = params.Name
-	responseParams["Strategy"] = params.Strategy
-	response = makeControlResponse(200, "OK", responseParams)
+	response := makeControlResponse(200, "OK", &mgmt.ControlArgs{
+		Name:     params.Name,
+		Strategy: params.Strategy,
+	})
 	s.manager.sendResponse(response, interest, pitToken, inFace)
+
+	core.LogInfo(s, "Set strategy for Name=", params.Name, " to Strategy=", params.Strategy.Name)
 }
 
 func (s *StrategyChoiceModule) unset(interest *spec.Interest, pitToken []byte, inFace uint64) {
@@ -193,11 +192,12 @@ func (s *StrategyChoiceModule) unset(interest *spec.Interest, pitToken []byte, i
 	}
 	table.FibStrategyTable.UnSetStrategyEnc(params.Name)
 
-	core.LogInfo(s, "Unset Strategy for Name=", params.Name)
-	responseParams := map[string]any{}
-	responseParams["Name"] = params.Name
-	response = makeControlResponse(200, "OK", responseParams)
+	response = makeControlResponse(200, "OK", &mgmt.ControlArgs{
+		Name: params.Name,
+	})
 	s.manager.sendResponse(response, interest, pitToken, inFace)
+
+	core.LogInfo(s, "Unset Strategy for Name=", params.Name)
 }
 
 func (s *StrategyChoiceModule) list(interest *spec.Interest, pitToken []byte, _ uint64) {

@@ -29,21 +29,17 @@ func decodeControlParameters(m Module, interest *spec.Interest) *mgmt.ControlArg
 	return params.Val
 }
 
-func makeControlResponse(statusCode uint64, statusText string, args map[string]any) *mgmt.ControlResponse {
-	if args == nil {
-		args = map[string]any{}
+func makeControlResponse(statusCode uint64, statusText string, params *mgmt.ControlArgs) *mgmt.ControlResponse {
+	if params == nil {
+		params = &mgmt.ControlArgs{}
 	}
-	ret, err := mgmt.DictToControlArgs(args)
-	if err != nil {
-		return nil
-	} else {
-		return &mgmt.ControlResponse{
-			Val: &mgmt.ControlResponseVal{
-				StatusCode: statusCode,
-				StatusText: statusText,
-				Params:     ret,
-			},
-		}
+
+	return &mgmt.ControlResponse{
+		Val: &mgmt.ControlResponseVal{
+			StatusCode: statusCode,
+			StatusText: statusText,
+			Params:     params,
+		},
 	}
 }
 
