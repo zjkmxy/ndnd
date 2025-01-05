@@ -94,9 +94,6 @@ type Config struct {
 	} `json:"mgmt"`
 
 	Tables struct {
-		// Size of queues in the table system
-		QueueSize int `json:"queue_size"`
-
 		ContentStore struct {
 			// Capacity of each forwarding thread's content store (in number of Data packets). Note that the
 			// total capacity of all content stores in the forwarder will be the number of threads
@@ -174,8 +171,6 @@ func DefaultConfig() *Config {
 	c.Fw.LockThreadsToCores = false
 
 	c.Mgmt.AllowLocalhop = false
-
-	c.Tables.QueueSize = 1024
 
 	c.Tables.ContentStore.Capacity = 1024
 	c.Tables.ContentStore.Admit = true

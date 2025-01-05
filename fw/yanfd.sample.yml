@@ -70,8 +70,6 @@ mgmt:
   allow_localhop: false
 
 tables:
-  # Size of queues in the table system
-  queue_size: 1024
 
   content_store:
     # Capacity of each forwarding thread's content store (in number of Data packets). Note that the

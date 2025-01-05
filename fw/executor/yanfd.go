@@ -86,8 +86,7 @@ func (y *YaNFD) Start() {
 	y.profiler.Start()
 
 	// Initialize FIB table
-	fibTableAlgorithm := core.GetConfig().Tables.Fib.Algorithm
-	table.CreateFIBTable(fibTableAlgorithm)
+	table.CreateFIBTable(core.GetConfig().Tables.Fib.Algorithm)
 
 	// Create null face
 	face.MakeNullLinkService(face.MakeNullTransport()).Run(nil)

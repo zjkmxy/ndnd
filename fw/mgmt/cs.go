@@ -52,9 +52,6 @@ func (c *ContentStoreModule) handleIncomingInterest(interest *spec.Interest, pit
 		//c.erase(interest, pitToken, inFace)
 	case "info":
 		c.info(interest, pitToken, inFace)
-	case "query":
-		// TODO
-		//c.query(interest, pitToken, inFace)
 	default:
 		core.LogWarn(c, "Received Interest for non-existent verb '", verb, "'")
 		response := makeControlResponse(501, "Unknown verb", nil)
@@ -93,24 +90,25 @@ func (c *ContentStoreModule) config(interest *spec.Interest, pitToken []byte, in
 		table.SetCsCapacity(int(*params.Capacity))
 	}
 
-	/*if params.Flags != nil {
-		if *params.Mask&0x01 > 0 {
-			// CS_ENABLE_ADMIT
-			// TODO
+	if params.Mask != nil && params.Flags != nil {
+		if *params.Mask&CsFlagEnableAdmit > 0 {
+			val := *params.Flags&CsFlagEnableAdmit > 0
+			core.LogInfo(c, "Setting CS admit flag to ", val)
+			table.SetCsAdmit(val)
 		}
 
-		if *params.Mask&0x02 > 0 {
-			// CS_ENABLE_SERVE
-			// TODO
+		if *params.Mask&CsFlagEnableServe > 0 {
+			val := *params.Flags&CsFlagEnableServe > 0
+			core.LogInfo(c, "Setting CS serve flag to ", val)
+			table.SetCsServe(val)
 		}
-	}*/
+	}
 
 	responseParams := map[string]any{
-		"Flags": uint64(0),
+		"Capacity": uint64(table.CsCapacity()),
+		"Flags":    c.getFlags(),
 	}
-	if params.Capacity != nil {
-		responseParams["Capacity"] = *params.Capacity
-	}
+
 	response = makeControlResponse(200, "OK", responseParams)
 	c.manager.sendResponse(response, interest, pitToken, inFace)
 }
@@ -125,7 +123,7 @@ func (c *ContentStoreModule) info(interest *spec.Interest, pitToken []byte, _ ui
 	status := mgmt.CsInfoMsg{
 		CsInfo: &mgmt.CsInfo{
 			Capacity:   uint64(table.CsCapacity()),
-			Flags:      CsFlagEnableAdmit | CsFlagEnableServe,
+			Flags:      c.getFlags(),
 			NCsEntries: 0,
 		},
 	}
@@ -133,17 +131,26 @@ func (c *ContentStoreModule) info(interest *spec.Interest, pitToken []byte, _ ui
 		thread := dispatch.GetFWThread(threadID)
 		status.CsInfo.NCsEntries += uint64(thread.GetNumCsEntries())
 	}
-	// TODO fill other fields
 
-	wire := status.Encode()
 	name := append(LOCAL_PREFIX,
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "cs"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "info"),
 	)
-	segments := makeStatusDataset(name, c.nextDatasetVersion, wire)
+	segments := makeStatusDataset(name, c.nextDatasetVersion, status.Encode())
 	c.manager.transport.Send(segments, pitToken, nil)
 
 	core.LogTrace(c, "Published forwarder status dataset version=", c.nextDatasetVersion,
 		", containing ", len(segments), " segments")
 	c.nextDatasetVersion++
+}
+
+func (c *ContentStoreModule) getFlags() uint64 {
+	flags := uint64(0)
+	if table.CsAdmit() {
+		flags |= CsFlagEnableAdmit
+	}
+	if table.CsServe() {
+		flags |= CsFlagEnableServe
+	}
+	return flags
 }
