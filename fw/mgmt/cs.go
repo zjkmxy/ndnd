@@ -91,14 +91,14 @@ func (c *ContentStoreModule) config(interest *spec.Interest, pitToken []byte, in
 	}
 
 	if params.Mask != nil && params.Flags != nil {
-		if *params.Mask&CsFlagEnableAdmit > 0 {
-			val := *params.Flags&CsFlagEnableAdmit > 0
+		if *params.Mask&mgmt.CsEnableAdmit > 0 {
+			val := *params.Flags&mgmt.CsEnableAdmit > 0
 			core.LogInfo(c, "Setting CS admit flag to ", val)
 			table.SetCsAdmit(val)
 		}
 
-		if *params.Mask&CsFlagEnableServe > 0 {
-			val := *params.Flags&CsFlagEnableServe > 0
+		if *params.Mask&mgmt.CsEnableServe > 0 {
+			val := *params.Flags&mgmt.CsEnableServe > 0
 			core.LogInfo(c, "Setting CS serve flag to ", val)
 			table.SetCsServe(val)
 		}
@@ -147,10 +147,10 @@ func (c *ContentStoreModule) info(interest *spec.Interest, pitToken []byte, _ ui
 func (c *ContentStoreModule) getFlags() uint64 {
 	flags := uint64(0)
 	if table.CsAdmit() {
-		flags |= CsFlagEnableAdmit
+		flags |= mgmt.CsEnableAdmit
 	}
 	if table.CsServe() {
-		flags |= CsFlagEnableServe
+		flags |= mgmt.CsEnableAdmit
 	}
 	return flags
 }

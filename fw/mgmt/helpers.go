@@ -19,11 +19,6 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-const (
-	CsFlagEnableAdmit = 1
-	CsFlagEnableServe = 2
-)
-
 func decodeControlParameters(m Module, interest *spec.Interest) *mgmt.ControlArgs {
 	paramVal := interest.Name()[len(LOCAL_PREFIX)+2].Val
 	params, err := mgmt.ParseControlParameters(enc.NewBufferReader(paramVal), true)
