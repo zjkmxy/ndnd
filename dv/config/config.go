@@ -79,29 +79,29 @@ func (c *Config) Parse() (err error) {
 	}
 
 	// Create name table
-	c.advSyncPfxN = append(enc.Name{enc.LOCALHOP}, append(c.networkNameN,
+	c.advSyncPfxN = enc.LOCALHOP.Append(c.networkNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADS"),
 	)...)
-	c.advSyncActivePfxN = append(c.advSyncPfxN,
+	c.advSyncActivePfxN = c.advSyncPfxN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ACT"),
 	)
-	c.advSyncPassivePfxN = append(c.advSyncPfxN,
+	c.advSyncPassivePfxN = c.advSyncPfxN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PSV"),
 	)
-	c.advDataPfxN = append(enc.Name{enc.LOCALHOP}, append(c.routerNameN,
+	c.advDataPfxN = enc.LOCALHOP.Append(c.routerNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
 	)...)
-	c.pfxSyncPfxN = append(c.networkNameN,
+	c.pfxSyncPfxN = c.networkNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFS"),
 	)
-	c.pfxDataPfxN = append(c.routerNameN,
+	c.pfxDataPfxN = c.routerNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
 	)
-	c.localPfxN = append(enc.Name{enc.LOCALHOST},
+	c.localPfxN = enc.LOCALHOST.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
 	)
 
@@ -145,13 +145,13 @@ func (c *Config) LocalPrefix() enc.Name {
 }
 
 func (c *Config) ReadvertisePrefix() enc.Name {
-	return append(c.localPfxN,
+	return c.localPfxN.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
 	)
 }
 
 func (c *Config) StatusPrefix() enc.Name {
-	return append(c.localPfxN,
+	return c.localPfxN.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
 	)
 }

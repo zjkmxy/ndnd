@@ -153,7 +153,7 @@ func (f *FIBModule) list(interest *Interest) {
 		dataset.Entries = append(dataset.Entries, fibEntry)
 	}
 
-	name := append(LOCAL_PREFIX,
+	name := LOCAL_PREFIX.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "fib"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	)

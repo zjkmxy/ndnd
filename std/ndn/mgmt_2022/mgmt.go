@@ -23,9 +23,9 @@ func (mgmt *MgmtConfig) MakeCmd(module string, cmd string,
 
 	var name enc.Name
 	if mgmt.local {
-		name = append(name, enc.LOCALHOST)
+		name = enc.Name{enc.LOCALHOST}
 	} else {
-		name = append(name, enc.LOCALHOP)
+		name = enc.Name{enc.LOCALHOP}
 	}
 
 	name = append(name,

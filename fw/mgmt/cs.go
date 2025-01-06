@@ -122,7 +122,7 @@ func (c *ContentStoreModule) info(interest *Interest) {
 		status.CsInfo.NCsEntries += uint64(thread.GetNumCsEntries())
 	}
 
-	name := append(LOCAL_PREFIX,
+	name := LOCAL_PREFIX.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "cs"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "info"),
 	)

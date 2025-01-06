@@ -472,7 +472,7 @@ func (f *FaceModule) list(interest *Interest) {
 		dataset.Vals = append(dataset.Vals, f.createDataset(faces[pos]))
 	}
 
-	name := append(LOCAL_PREFIX,
+	name := LOCAL_PREFIX.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "faces"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	)

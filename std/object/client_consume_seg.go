@@ -122,9 +122,7 @@ func (s *rrSegFetcher) doCheck() {
 
 	// queue outgoing interest for the next segment
 	args := ExpressRArgs{
-		Name: append(state.fetchName,
-			enc.NewSegmentComponent(seg),
-		),
+		Name: state.fetchName.Append(enc.NewSegmentComponent(seg)),
 		Config: &ndn.InterestConfig{
 			MustBeFresh: false,
 		},

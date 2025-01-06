@@ -218,8 +218,7 @@ func (r *RIBModule) list(interest *Interest) {
 		dataset.Entries = append(dataset.Entries, ribEntry)
 	}
 
-	name := append(
-		interest.Name()[:len(LOCAL_PREFIX)],
+	name := interest.Name()[:len(LOCAL_PREFIX)].Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	)

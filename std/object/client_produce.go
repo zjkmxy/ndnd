@@ -61,7 +61,7 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 		FinalBlockID: &finalBlockId,
 	}
 
-	basename := append(args.Name.Clone(), enc.NewVersionComponent(version))
+	basename := args.Name.Append(enc.NewVersionComponent(version))
 
 	// use a transaction to ensure the entire object is written
 	store.Begin()
@@ -69,7 +69,7 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 
 	var seg uint64
 	for seg = 0; seg <= lastSeg; seg++ {
-		name := append(basename.Clone(), enc.NewSegmentComponent(seg))
+		name := basename.Append(enc.NewSegmentComponent(seg))
 
 		segContent := enc.Wire{}
 		segContentSize := 0
@@ -106,7 +106,7 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 
 	if !args.NoMetadata {
 		// write metadata packet
-		name := append(args.Name.Clone(),
+		name := args.Name.Append(
 			rdr.METADATA,
 			enc.NewVersionComponent(version),
 			enc.NewSegmentComponent(0),
@@ -158,7 +158,7 @@ func (c *Client) Remove(name enc.Name) error {
 	// Remove RDR metadata if we have a version
 	// If there is no version, we removed this anyway in the previous step
 	if version := name[len(name)-1]; version.Typ == enc.TypeVersionNameComponent {
-		err = c.store.Remove(append(name[:len(name)-1], rdr.METADATA, version), true)
+		err = c.store.Remove(name[:len(name)-1].Append(rdr.METADATA, version), true)
 		if err != nil {
 			return err
 		}

@@ -79,7 +79,7 @@ func (f *ForwarderStatusModule) general(interest *Interest) {
 		status.NUnsatisfiedInterests += thread.(*fw.Thread).NUnsatisfiedInterests
 	}
 
-	name := append(LOCAL_PREFIX,
+	name := LOCAL_PREFIX.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "general"),
 	)

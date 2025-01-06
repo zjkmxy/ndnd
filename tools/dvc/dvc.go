@@ -64,13 +64,11 @@ func RunDvLinkCreate(nfdcTree *utils.CmdTree) func([]string) {
 		status := dvGetStatus() // will panic if fail
 
 		// /localhop/<network>/32=DV/32=ADS/32=ACT
-		name := enc.Name{enc.NewStringComponent(enc.TypeGenericNameComponent, "localhop")}
-		name = append(name, status.NetworkName.Name...)
-		name = append(name,
+		name := enc.LOCALHOP.Append(status.NetworkName.Name.Append(
 			enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 			enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADS"),
 			enc.NewStringComponent(enc.TypeKeywordNameComponent, "ACT"),
-		)
+		)...)
 
 		nfdcTree.Execute([]string{
 			"nfdc", "route", "add",

@@ -43,7 +43,7 @@ func (dv *Router) advertDataFetch(nodeId enc.Name, seqNo uint64) {
 	}
 
 	// Fetch the advertisement
-	advName := append(enc.Name{enc.LOCALHOP}, append(nodeId,
+	advName := enc.LOCALHOP.Append(nodeId.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
 		enc.NewVersionComponent(seqNo),

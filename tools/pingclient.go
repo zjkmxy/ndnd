@@ -55,7 +55,7 @@ func (pc *PingClient) usage() {
 }
 
 func (pc *PingClient) send(seq uint64) {
-	name := append(pc.name, enc.NewSequenceNumComponent(seq))
+	name := pc.name.Append(enc.NewSequenceNumComponent(seq))
 
 	cfg := &ndn.InterestConfig{
 		Lifetime: utils.IdPtr(time.Duration(pc.timeout) * time.Millisecond),
@@ -148,8 +148,7 @@ func (pc *PingClient) run() {
 		log.Fatalf("Invalid prefix: %s", pc.args[1])
 	}
 	pc.prefix = prefixN
-	pc.name = append(prefixN,
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
+	pc.name = prefixN.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
 
 	// initialize sequence number
 	if pc.seq == 0 {
