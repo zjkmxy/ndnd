@@ -230,7 +230,7 @@ func (m *Thread) sendStatusDataset(interest *Interest, name enc.Name, dataset en
 
 	// Get first segment from object name
 	segment, err := m.store.Get(append(objName, enc.NewSegmentComponent(0)), false)
-	if err != nil {
+	if err != nil || segment == nil {
 		core.LogWarn(m, "Unable to get first segment of status dataset: ", err)
 		return
 	}
