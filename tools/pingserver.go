@@ -48,8 +48,7 @@ func (ps *PingServer) run() {
 	if err != nil {
 		log.Fatalf("Invalid prefix: %s", ps.args[1])
 	}
-	ps.name = append(prefix,
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
+	ps.name = prefix.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
 
 	ps.app = engine.NewBasicEngine(engine.NewDefaultFace())
 	err = ps.app.Start()

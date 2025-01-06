@@ -123,7 +123,7 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 		}
 	} else {
 		// Add missing version information to strategy name
-		params.Strategy.Name = append(params.Strategy.Name, enc.NewVersionComponent(strategyVersion))
+		params.Strategy.Name = params.Strategy.Name.Append(enc.NewVersionComponent(strategyVersion))
 	}
 	table.FibStrategyTable.SetStrategyEnc(params.Name, params.Strategy.Name)
 
@@ -181,7 +181,7 @@ func (s *StrategyChoiceModule) list(interest *Interest) {
 	}
 	dataset := &mgmt.StrategyChoiceMsg{StrategyChoices: choices}
 
-	name := append(LOCAL_PREFIX,
+	name := LOCAL_PREFIX.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy-choice"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	)

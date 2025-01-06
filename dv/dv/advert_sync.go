@@ -29,7 +29,7 @@ func (dv *Router) advertSyncSendInterest() (err error) {
 
 func (dv *Router) advertSyncSendInterestImpl(prefix enc.Name) (err error) {
 	// SVS v2 Sync Interest
-	syncName := append(prefix, enc.NewVersionComponent(2))
+	syncName := prefix.Append(enc.NewVersionComponent(2))
 
 	// Sync Interest parameters for SVS
 	cfg := &ndn.InterestConfig{

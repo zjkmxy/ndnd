@@ -127,7 +127,7 @@ func (ns *NeighborState) delete() {
 }
 
 func (ns *NeighborState) localRoute() enc.Name {
-	return append(enc.Name{enc.LOCALHOP}, append(ns.Name,
+	return enc.LOCALHOP.Append(ns.Name.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 	)...)
 }

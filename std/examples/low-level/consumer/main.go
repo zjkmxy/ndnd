@@ -24,7 +24,7 @@ func main() {
 	defer app.Stop()
 
 	name, _ := enc.NameFromStr("/example/testApp/randomData")
-	name = append(name, enc.NewTimestampComponent(utils.MakeTimestamp(time.Now())))
+	name = name.Append(enc.NewTimestampComponent(utils.MakeTimestamp(time.Now())))
 
 	intCfg := &ndn.InterestConfig{
 		MustBeFresh: true,

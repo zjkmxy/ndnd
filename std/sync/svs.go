@@ -289,7 +289,7 @@ func (s *SvSync) sendSyncInterest() {
 	}()
 
 	// SVS v2 Sync Interest
-	syncName := append(s.groupPrefix, enc.NewVersionComponent(2))
+	syncName := s.groupPrefix.Append(enc.NewVersionComponent(2))
 
 	// Sync Interest parameters for SVS
 	cfg := &ndn.InterestConfig{

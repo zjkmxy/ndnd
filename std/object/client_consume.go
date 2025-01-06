@@ -144,7 +144,7 @@ func (c *Client) fetchMetadata(
 ) {
 	log.Debugf("consume: fetching object metadata %s", name)
 	args := ExpressRArgs{
-		Name: append(name, rdr.METADATA),
+		Name: name.Append(rdr.METADATA),
 		Config: &ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,

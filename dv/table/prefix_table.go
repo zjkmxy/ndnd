@@ -152,7 +152,7 @@ func (pt *PrefixTable) Apply(ops *tlv.PrefixOpList) (dirty bool) {
 // If the difference between Known and Latest is greater than the threshold,
 // fetch the latest snapshot. Otherwise, fetch the next sequence number.
 func (r *PrefixTableRouter) GetNextDataName() enc.Name {
-	name := append(r.Name,
+	name := r.Name.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
 	)
@@ -206,7 +206,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 
 	// Produce the operation
 	name, err := pt.client.Produce(object.ProduceArgs{
-		Name:    append(pt.config.PrefixTableDataPrefix(), enc.NewSequenceNumComponent(seq)),
+		Name:    pt.config.PrefixTableDataPrefix().Append(enc.NewSequenceNumComponent(seq)),
 		Content: content,
 		Version: utils.IdPtr(uint64(0)), // immutable
 	})
@@ -239,7 +239,7 @@ func (pt *PrefixTable) publishSnap() {
 
 	// Produce the snapshot
 	name, err := pt.client.Produce(object.ProduceArgs{
-		Name:    append(pt.config.PrefixTableDataPrefix(), PREFIX_SNAP_COMP),
+		Name:    pt.config.PrefixTableDataPrefix().Append(PREFIX_SNAP_COMP),
 		Content: snap.Encode(),
 		Version: utils.IdPtr(pt.me.Latest),
 	})
