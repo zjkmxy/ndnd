@@ -192,12 +192,8 @@ func NameFromBytes(buf []byte) (Name, error) {
 	return ret, nil
 }
 
-// Append appends one or more components to a name in a new memory space.
-// Calls to Append() should not be chained since these are relatively expensive.
-// Instead, specify all components to be appended in a single call.
-//
-// Note: this does *not* copy the underlying components, so direct changes to the
-// components will affect the returned Name.
+// Append appends one or more components to a shallow copy of the name.
+// Using this function is recommended over the in-built `append`.
 func (n Name) Append(rest ...Component) Name {
 	ret := make(Name, len(n)+len(rest))
 	copy(ret, n)
