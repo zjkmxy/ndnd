@@ -194,11 +194,8 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 
 	// copy the data into the buffer
 	state.content[segNum] = args.Data.Content().Join()
-
-	// empty data is not allowed
-	if len(state.content[segNum]) == 0 {
-		state.finalizeError(fmt.Errorf("consume: empty data segment %d", segNum))
-		return
+	if state.content[segNum] == nil { // never
+		panic("[BUG] consume: nil data segment")
 	}
 
 	// if this is the first outstanding segment, move windows

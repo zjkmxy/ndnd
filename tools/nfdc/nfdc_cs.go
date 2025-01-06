@@ -20,7 +20,7 @@ func (n *Nfdc) ExecCsInfo(args []string) {
 		return
 	}
 
-	status, err := mgmt.ParseCsInfoMsg(enc.NewWireReader(data), true)
+	status, err := mgmt.ParseCsInfoMsg(enc.NewBufferReader(data), true)
 	if err != nil || status.CsInfo == nil {
 		fmt.Fprintf(os.Stderr, "Error parsing CS info: %+v\n", err)
 		return

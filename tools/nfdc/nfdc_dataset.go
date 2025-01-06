@@ -1,41 +1,34 @@
 package nfdc
 
 import (
-	"fmt"
-	"time"
-
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/object"
 )
 
-func (n *Nfdc) fetchStatusDataset(suffix enc.Name) (enc.Wire, error) {
-	// TODO: segmented fetch once supported by fw/mgmt
-	name := n.GetPrefix().Append(suffix...)
-	config := &ndn.InterestConfig{
-		MustBeFresh: true,
-		CanBePrefix: true,
-		Lifetime:    utils.IdPtr(time.Second),
-		Nonce:       utils.ConvertNonce(n.engine.Timer().Nonce()),
-	}
-	interest, err := n.engine.Spec().MakeInterest(name, config, nil, nil)
-	if err != nil {
-		return nil, err
-	}
+func (n *Nfdc) fetchStatusDataset(suffix enc.Name) ([]byte, error) {
+	// consume-only client, no need for a store
+	client := object.NewClient(n.engine, nil)
+	client.Start()
+	defer client.Stop()
 
-	ch := make(chan ndn.ExpressCallbackArgs)
-	err = n.engine.Express(interest, func(args ndn.ExpressCallbackArgs) {
-		ch <- args
-		close(ch)
+	ch := make(chan *object.ConsumeState)
+	client.ConsumeExt(object.ConsumeExtArgs{
+		Name:       n.GetPrefix().Append(suffix...),
+		NoMetadata: true, // NFD has no RDR metadata
+		Callback: func(status *object.ConsumeState) bool {
+			if !status.IsComplete() {
+				return true
+			}
+			ch <- status
+			close(ch)
+			return true
+		},
 	})
-	if err != nil {
-		return nil, err
-	}
 
 	res := <-ch
-	if res.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("interest failed: %d", res.Result)
+	if err := res.Error(); err != nil {
+		return nil, err
 	}
 
-	return res.Data.Content(), nil
+	return res.Content(), nil
 }
