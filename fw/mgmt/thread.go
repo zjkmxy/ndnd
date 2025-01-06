@@ -20,6 +20,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/object"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -29,11 +30,13 @@ var NON_LOCAL_PREFIX = defn.NON_LOCAL_PREFIX
 
 // Thread Represents the management thread
 type Thread struct {
-	face       face.LinkService
-	transport  *face.InternalTransport
-	modules    map[string]Module
-	timer      ndn.Timer
-	datasetVer uint64
+	face      face.LinkService
+	transport *face.InternalTransport
+	modules   map[string]Module
+	timer     ndn.Timer
+
+	store  ndn.Store
+	objDir *object.MemoryFifoDir
 }
 
 func (m *Thread) String() string {
@@ -42,10 +45,13 @@ func (m *Thread) String() string {
 
 // MakeMgmtThread creates a new management thread.
 func MakeMgmtThread() *Thread {
-	m := new(Thread)
-	m.timer = basic_engine.NewTimer()
+	m := &Thread{
+		modules: make(map[string]Module),
+		timer:   basic_engine.NewTimer(),
+		store:   object.NewMemoryStore(),
+		objDir:  object.NewMemoryFifoDir(32),
+	}
 
-	m.modules = make(map[string]Module)
 	m.registerModule("cs", new(ContentStoreModule))
 	m.registerModule("faces", new(FaceModule))
 	m.registerModule("fib", new(FIBModule))
@@ -122,6 +128,18 @@ func (m *Thread) Run() {
 
 		core.LogTrace(m, "Received management Interest ", interest.Name())
 
+		// Look for any matching data in object store.
+		// We only use exact match here since RDR is unnecessary.
+		segment, err := m.store.Get(interest.Name(), false)
+		if err == nil && segment != nil {
+			m.transport.Send(&spec.LpPacket{
+				Fragment:      enc.Wire{segment},
+				PitToken:      interest.pitToken,
+				NextHopFaceId: interest.inFace,
+			})
+			continue
+		}
+
 		// Dispatch interest based on name
 		moduleName := interest.Name()[len(LOCAL_PREFIX)].String()
 		if module, ok := m.modules[moduleName]; ok {
@@ -133,6 +151,7 @@ func (m *Thread) Run() {
 	}
 }
 
+// Send an Interest to the internal transport
 func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
 	config := ndn.InterestConfig{
 		MustBeFresh: true,
@@ -148,6 +167,7 @@ func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
 	core.LogTrace(m, "Sent management Interest for ", interest.FinalName)
 }
 
+// Send a Data packet to the internal transport
 func (m *Thread) sendData(interest *Interest, name enc.Name, content enc.Wire) {
 	data, err := spec.Spec{}.MakeData(name,
 		&ndn.DataConfig{
@@ -170,6 +190,7 @@ func (m *Thread) sendData(interest *Interest, name enc.Name, content enc.Wire) {
 	core.LogTrace(m, "Sent management Data for ", name)
 }
 
+// Send a ControlResponse Data packet to the internal transport
 func (m *Thread) sendCtrlResp(interest *Interest, statusCode uint64, statusText string, params *mgmt.ControlArgs) {
 	if params == nil {
 		params = &mgmt.ControlArgs{}
@@ -186,13 +207,36 @@ func (m *Thread) sendCtrlResp(interest *Interest, statusCode uint64, statusText 
 	m.sendData(interest, interest.Name(), res.Encode())
 }
 
+// Create a segmented status dataset and send the first segment to the internal transport
 func (m *Thread) sendStatusDataset(interest *Interest, name enc.Name, dataset enc.Wire) {
-	// TODO: support segmented datasets
-	m.datasetVer++
-	segments := makeStatusDataset(name, m.datasetVer, dataset)
+	objName, err := object.Produce(object.ProduceArgs{
+		Name:            name,
+		Content:         dataset,
+		FreshnessPeriod: time.Millisecond,
+		NoMetadata:      true,
+	}, m.store, sec.NewSha256Signer())
+	if err != nil {
+		core.LogWarn(m, "Unable to produce status dataset: ", err)
+		return
+	}
+	m.objDir.Push(objName)
+
+	// Evict oldest object if we have too many
+	if old := m.objDir.Pop(); old != nil {
+		if err := m.store.Remove(old, true); err != nil {
+			core.LogWarn(m, "Unable to clean up old status dataset: ", err)
+		}
+	}
+
+	// Get first segment from object name
+	segment, err := m.store.Get(append(objName, enc.NewSegmentComponent(0)), false)
+	if err != nil {
+		core.LogWarn(m, "Unable to get first segment of status dataset: ", err)
+		return
+	}
 
 	m.transport.Send(&spec.LpPacket{
-		Fragment:      segments,
+		Fragment:      enc.Wire{segment},
 		PitToken:      interest.pitToken,
 		NextHopFaceId: interest.inFace,
 	})

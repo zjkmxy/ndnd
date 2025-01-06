@@ -25,19 +25,15 @@ type ProduceArgs struct {
 	Version *uint64
 	// time for which the object version can be cached (default 4s)
 	FreshnessPeriod time.Duration
+	// do not create metadata packet
+	NoMetadata bool
 }
 
 // Produce and sign data, and insert into a store
 // This function does not rely on the engine or client, so it can also be used in YaNFD
 func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, error) {
 	content := args.Content
-	contentSize := 0
-	for _, c := range content {
-		contentSize += len(c)
-	}
-	if contentSize == 0 {
-		return nil, errors.New("cannot produce empty object")
-	}
+	contentSize := content.Length()
 
 	now := time.Now().UnixNano()
 	if now < 0 { // > 1970
@@ -53,7 +49,10 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 		args.FreshnessPeriod = 4 * time.Second
 	}
 
-	lastSeg := uint64((contentSize - 1) / pSegmentSize)
+	lastSeg := uint64(0)
+	if contentSize > 0 {
+		lastSeg = uint64((contentSize - 1) / pSegmentSize)
+	}
 	finalBlockId := enc.NewSegmentComponent(lastSeg)
 
 	cfg := &ndn.DataConfig{
@@ -62,15 +61,15 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 		FinalBlockID: &finalBlockId,
 	}
 
-	basename := append(args.Name, enc.NewVersionComponent(version))
+	basename := append(args.Name.Clone(), enc.NewVersionComponent(version))
 
 	// use a transaction to ensure the entire object is written
 	store.Begin()
 	defer store.Commit()
 
 	var seg uint64
-	for seg = 0; len(content) > 0; seg++ {
-		name := append(basename, enc.NewSegmentComponent(seg))
+	for seg = 0; seg <= lastSeg; seg++ {
+		name := append(basename.Clone(), enc.NewSegmentComponent(seg))
 
 		segContent := enc.Wire{}
 		segContentSize := 0
@@ -105,8 +104,9 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 		}
 	}
 
-	{ // write metadata packet
-		name := append(args.Name,
+	if !args.NoMetadata {
+		// write metadata packet
+		name := append(args.Name.Clone(),
 			rdr.METADATA,
 			enc.NewVersionComponent(version),
 			enc.NewSegmentComponent(0),
@@ -130,7 +130,8 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 	return basename, nil
 }
 
-// Produce and sign data, and insert into the client's store
+// Produce and sign data, and insert into the client's store.
+// The input data will be freed as the object is segmented.
 func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
 	// TODO: sign the data
 	signer := sec.NewSha256Signer()

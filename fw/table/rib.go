@@ -53,7 +53,7 @@ var Rib = RibTable{
 func (r *RibEntry) fillTreeToPrefixEnc(name enc.Name) *RibEntry {
 	entry := r.findLongestPrefixEntryEnc(name)
 	for depth := entry.depth; depth < len(name); depth++ {
-		component := At(name, depth)
+		component := At(name, depth).Clone()
 		child := &RibEntry{
 			Name:      name[:depth+1],
 			depth:     depth + 1,
