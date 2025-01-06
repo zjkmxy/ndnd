@@ -74,7 +74,7 @@ func (n *Nfdc) preprocessArg(
 				os.Exit(1)
 			}
 
-			status, err := mgmt.ParseFaceStatusMsg(enc.NewWireReader(dataset), true)
+			status, err := mgmt.ParseFaceStatusMsg(enc.NewBufferReader(dataset), true)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error parsing face status: %+v\n", err)
 				os.Exit(1)

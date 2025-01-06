@@ -22,7 +22,7 @@ func (n *Nfdc) ExecFaceList(args []string) {
 		return
 	}
 
-	status, err := mgmt.ParseFaceStatusMsg(enc.NewWireReader(data), true)
+	status, err := mgmt.ParseFaceStatusMsg(enc.NewBufferReader(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing face status: %+v\n", err)
 		return

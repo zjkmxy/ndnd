@@ -239,7 +239,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	}
 
 	// Get strategy for name
-	strategyName := table.FibStrategyTable.FindStrategyEnc(interest.NameV)
+	strategyName := table.FibStrategyTable.FindStrategyEnc(interest.Name())
 	strategy := t.strategies[strategyName.Hash()]
 
 	// Add in-record and determine if already pending
@@ -278,7 +278,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 
 		// Add the previous nonce to the dead nonce list to prevent further looping
 		// TODO: review this design, not specified in NFD dev guide
-		t.deadNonceList.Insert(interest.NameV, prevNonce)
+		t.deadNonceList.Insert(interest.Name(), prevNonce)
 	}
 
 	// Update PIT entry expiration timer
@@ -300,7 +300,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	}
 
 	// Use forwarding hint if present
-	lookupName := interest.NameV
+	lookupName := interest.Name()
 	if fhName != nil {
 		lookupName = fhName
 	}
