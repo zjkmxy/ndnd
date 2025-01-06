@@ -52,10 +52,11 @@ var Rib = RibTable{
 
 func (r *RibEntry) fillTreeToPrefixEnc(name enc.Name) *RibEntry {
 	entry := r.findLongestPrefixEntryEnc(name)
+
 	for depth := entry.depth; depth < len(name); depth++ {
 		component := At(name, depth).Clone()
 		child := &RibEntry{
-			Name:      name[:depth+1],
+			Name:      name[:depth+1].Clone(),
 			depth:     depth + 1,
 			component: component,
 			parent:    entry,
@@ -139,7 +140,7 @@ func (r *RibTable) AddEncRoute(name enc.Name, route *Route) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	node := r.root.fillTreeToPrefixEnc(name.Clone())
+	node := r.root.fillTreeToPrefixEnc(name)
 
 	defer node.updateNexthopsEnc()
 
