@@ -208,12 +208,12 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 		}
 
 		if state.wnd[1] == state.segCnt {
-			log.Debugf("consume: %s completed", state.name)
+			log.Debugf("consume: %s completed", state.args.Name)
 			state.complete = true
 			s.remove(state)
 		}
 
-		state.callback(state) // progress
+		state.args.Callback(state) // progress
 	}
 
 	// if segNum%1000 == 0 {

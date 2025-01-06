@@ -20,10 +20,8 @@ type ConsumeCallback func(status *ConsumeState) bool
 
 // arguments for the consume callback
 type ConsumeState struct {
-	// name of the object being consumed.
-	name enc.Name
-	// callback
-	callback ConsumeCallback
+	// original arguments
+	args ConsumeExtArgs
 	// error that occurred during fetching
 	err error
 	// raw data contents.
@@ -85,19 +83,33 @@ func (a *ConsumeState) finalizeError(err error) {
 	if !a.complete {
 		a.err = err
 		a.complete = true
-		a.callback(a)
+		a.args.Callback(a)
 	}
 }
 
 func (c *Client) Consume(name enc.Name, callback ConsumeCallback) {
+	c.ConsumeExt(ConsumeExtArgs{Name: name, Callback: callback})
+}
+
+type ConsumeExtArgs struct {
+	// name of the object to consume
+	Name enc.Name
+	// callback when data is available
+	Callback ConsumeCallback
+}
+
+func (c *Client) ConsumeExt(args ConsumeExtArgs) {
+	// clone the name for good measure
+	args.Name = args.Name.Clone()
+
+	// create new consume state
 	c.consumeObject(&ConsumeState{
-		name:      name,
-		callback:  callback,
+		args:      args,
 		err:       nil,
 		content:   make(enc.Wire, 0), // just in case
 		complete:  false,
 		meta:      nil,
-		fetchName: name,
+		fetchName: args.Name,
 		wnd:       [3]int{0, 0},
 		segCnt:    -1,
 	})
