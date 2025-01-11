@@ -315,6 +315,11 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	// Filter the nexthops that are allowed for this Interest
 	allowedNexthops := make([]*table.FibNextHopEntry, 0, len(nexthops))
 	for _, nexthop := range nexthops {
+		// Exclude incoming face
+		if nexthop.Nexthop == packet.IncomingFaceID {
+			continue
+		}
+
 		// Exclude non-local faces for localhop enforcement
 		if localFacesOnly {
 			if face := dispatch.GetFace(nexthop.Nexthop); face != nil && face.Scope() != defn.Local {
@@ -324,8 +329,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 
 		// Exclude faces that have an in-record for this interest
 		// TODO: unclear where NFD dev guide specifies such behavior (if any)
-		record := pitEntry.InRecords()[nexthop.Nexthop]
-		if record == nil || nexthop.Nexthop == incomingFace.FaceID() {
+		if pitEntry.InRecords()[nexthop.Nexthop] == nil {
 			allowedNexthops = append(allowedNexthops, nexthop)
 		}
 	}
