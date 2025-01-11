@@ -7,7 +7,9 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	svs_2024 "github.com/named-data/ndnd/std/ndn/svs_2024"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	spec_svs "github.com/named-data/ndnd/std/ndn/svs_2024"
+	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -28,30 +30,38 @@ func (dv *Router) advertSyncSendInterest() (err error) {
 }
 
 func (dv *Router) advertSyncSendInterestImpl(prefix enc.Name) (err error) {
-	// SVS v2 Sync Interest
-	syncName := prefix.Append(enc.NewVersionComponent(2))
-
-	// Sync Interest parameters for SVS
-	cfg := &ndn.InterestConfig{
-		MustBeFresh: true,
-		Lifetime:    utils.IdPtr(1 * time.Millisecond),
-		Nonce:       utils.ConvertNonce(dv.engine.Timer().Nonce()),
-		HopLimit:    utils.IdPtr(uint(2)), // use localhop w/ this
-	}
+	// SVS v3 Sync Data
+	syncName := prefix.Append(enc.NewVersionComponent(3))
 
 	// State Vector for our group
-	sv := &svs_2024.StateVectorAppParam{
-		StateVector: &svs_2024.StateVector{
-			Entries: []*svs_2024.StateVectorEntry{{
+	sv := &spec_svs.SvsData{
+		StateVector: &spec_svs.StateVector{
+			Entries: []*spec_svs.StateVectorEntry{{
 				Name:  dv.config.RouterName(),
 				SeqNo: dv.advertSyncSeq,
 			}},
 		},
 	}
 
-	// TODO: sign the sync interest
+	// TODO: sign the sync data
+	signer := sec.NewSha256Signer()
 
-	interest, err := dv.engine.Spec().MakeInterest(syncName, cfg, sv.Encode(), nil)
+	dataCfg := &ndn.DataConfig{
+		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+	}
+	data, err := dv.engine.Spec().MakeData(syncName, dataCfg, sv.Encode(), signer)
+	if err != nil {
+		log.Errorf("SvSync: sendSyncInterest failed make data: %+v", err)
+		return
+	}
+
+	// Make SVS Sync Interest
+	intCfg := &ndn.InterestConfig{
+		Lifetime: utils.IdPtr(1 * time.Second),
+		Nonce:    utils.ConvertNonce(dv.engine.Timer().Nonce()),
+		HopLimit: utils.IdPtr(uint(2)), // use localhop w/ this
+	}
+	interest, err := dv.engine.Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
 	if err != nil {
 		return err
 	}
@@ -66,21 +76,34 @@ func (dv *Router) advertSyncSendInterestImpl(prefix enc.Name) (err error) {
 }
 
 func (dv *Router) advertSyncOnInterest(args ndn.InterestHandlerArgs, active bool) {
-	// Check if app param is present
-	if args.Interest.AppParam() == nil {
-		log.Warn("advertSyncOnInterest: received Sync Interest with no AppParam, ignoring")
-		return
-	}
-
 	// If there is no incoming face ID, we can't use this
 	if args.IncomingFaceId == nil {
 		log.Warn("advertSyncOnInterest: received Sync Interest with no incoming face ID, ignoring")
 		return
 	}
 
+	// Check if app param is present
+	if args.Interest.AppParam() == nil {
+		log.Warn("advertSyncOnInterest: received Sync Interest with no AppParam, ignoring")
+		return
+	}
+
+	// Decode Sync Data
+	pkt, _, err := spec.ReadPacket(enc.NewWireReader(args.Interest.AppParam()))
+	if err != nil {
+		log.Warnf("advertSyncOnInterest: failed to parse Sync Data: %+v", err)
+		return
+	}
+	if pkt.Data == nil {
+		log.Warnf("advertSyncOnInterest: no Sync Data, ignoring")
+		return
+	}
+
 	// TODO: verify signature on Sync Interest
 
-	params, err := svs_2024.ParseStateVectorAppParam(enc.NewWireReader(args.Interest.AppParam()), true)
+	// Decode state vector
+	svWire := pkt.Data.Content()
+	params, err := spec_svs.ParseSvsData(enc.NewWireReader(svWire), false)
 	if err != nil || params.StateVector == nil {
 		log.Warnf("advertSyncOnInterest: failed to parse StateVec: %+v", err)
 		return

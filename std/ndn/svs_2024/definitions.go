@@ -5,7 +5,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
-type StateVectorAppParam struct {
+type SvsData struct {
 	//+field:struct:StateVector
 	StateVector *StateVector `tlv:"0xc9"`
 }

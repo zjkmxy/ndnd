@@ -12,7 +12,9 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	stlv "github.com/named-data/ndnd/std/ndn/svs_2024"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	spec_svs "github.com/named-data/ndnd/std/ndn/svs_2024"
+	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -36,7 +38,7 @@ type SvSync struct {
 	suppress bool
 	merge    map[uint64]uint64
 
-	recvSv chan *stlv.StateVector
+	recvSv chan *spec_svs.StateVector
 }
 
 type SvSyncUpdate struct {
@@ -70,7 +72,7 @@ func NewSvSync(
 		suppress: false,
 		merge:    make(map[uint64]uint64),
 
-		recvSv: make(chan *stlv.StateVector, 128),
+		recvSv: make(chan *spec_svs.StateVector, 128),
 	}
 }
 
@@ -161,7 +163,7 @@ func (s *SvSync) hashName(name enc.Name) uint64 {
 	return hash
 }
 
-func (s *SvSync) onReceiveStateVector(sv *stlv.StateVector) {
+func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -285,20 +287,29 @@ func (s *SvSync) sendSyncInterest() {
 		return s.encodeSv()
 	}()
 
-	// SVS v2 Sync Interest
-	syncName := s.groupPrefix.Append(enc.NewVersionComponent(2))
+	// SVS v3 Sync Data
+	syncName := s.groupPrefix.Append(enc.NewVersionComponent(3))
 
-	// Sync Interest parameters for SVS
-	cfg := &ndn.InterestConfig{
+	// TODO: sign the sync data
+	signer := sec.NewSha256Signer()
+
+	dataCfg := &ndn.DataConfig{
+		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+	}
+	data, err := s.engine.Spec().MakeData(syncName, dataCfg, svWire, signer)
+	if err != nil {
+		log.Errorf("SvSync: sendSyncInterest failed make data: %+v", err)
+		return
+	}
+
+	// Make SVS Sync Interest
+	intCfg := &ndn.InterestConfig{
 		Lifetime: utils.IdPtr(1 * time.Second),
 		Nonce:    utils.ConvertNonce(s.engine.Timer().Nonce()),
 	}
-
-	// TODO: sign the sync interest
-
-	interest, err := s.engine.Spec().MakeInterest(syncName, cfg, svWire, nil)
+	interest, err := s.engine.Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
 	if err != nil {
-		log.Errorf("SvSync: sendSyncInterest failed make: %+v", err)
+		log.Errorf("SvSync: sendSyncInterest failed make interest: %+v", err)
 		return
 	}
 
@@ -320,11 +331,22 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 		return
 	}
 
-	// TODO: verify signature on Sync Interest
+	// Decode Sync Data
+	pkt, _, err := spec.ReadPacket(enc.NewWireReader(interest.AppParam()))
+	if err != nil {
+		log.Warnf("SvSync: onSyncInterest failed to parse SyncData: %+v", err)
+		return
+	}
+	if pkt.Data == nil {
+		log.Warnf("SvSync: onSyncInterest no Data, ignoring")
+		return
+	}
+
+	// TODO: verify signature on Sync Data
 
 	// Decode state vector
-	raw := enc.Wire{interest.AppParam().Join()}
-	params, err := stlv.ParseStateVectorAppParam(enc.NewWireReader(raw), false)
+	svWire := pkt.Data.Content().Join()
+	params, err := spec_svs.ParseSvsData(enc.NewBufferReader(svWire), false)
 	if err != nil || params.StateVector == nil {
 		log.Warnf("SvSync: onSyncInterest failed to parse StateVec: %+v", err)
 		return
@@ -335,9 +357,9 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 
 // Call with mutex locked
 func (s *SvSync) encodeSv() enc.Wire {
-	entries := make([]*stlv.StateVectorEntry, 0, len(s.state))
+	entries := make([]*spec_svs.StateVectorEntry, 0, len(s.state))
 	for nameHash, seqNo := range s.state {
-		entries = append(entries, &stlv.StateVectorEntry{
+		entries = append(entries, &spec_svs.StateVectorEntry{
 			Name:  s.names[nameHash],
 			SeqNo: seqNo,
 		})
@@ -348,8 +370,8 @@ func (s *SvSync) encodeSv() enc.Wire {
 		return entries[i].Name.Compare(entries[j].Name) < 0
 	})
 
-	params := stlv.StateVectorAppParam{
-		StateVector: &stlv.StateVector{Entries: entries},
+	params := spec_svs.SvsData{
+		StateVector: &spec_svs.StateVector{Entries: entries},
 	}
 
 	return params.Encode()

@@ -8,17 +8,17 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
-type StateVectorAppParamEncoder struct {
+type SvsDataEncoder struct {
 	length uint
 
 	StateVector_encoder StateVectorEncoder
 }
 
-type StateVectorAppParamParsingContext struct {
+type SvsDataParsingContext struct {
 	StateVector_context StateVectorParsingContext
 }
 
-func (encoder *StateVectorAppParamEncoder) Init(value *StateVectorAppParam) {
+func (encoder *SvsDataEncoder) Init(value *SvsData) {
 	if value.StateVector != nil {
 		encoder.StateVector_encoder.Init(value.StateVector)
 	}
@@ -42,11 +42,11 @@ func (encoder *StateVectorAppParamEncoder) Init(value *StateVectorAppParam) {
 
 }
 
-func (context *StateVectorAppParamParsingContext) Init() {
+func (context *SvsDataParsingContext) Init() {
 	context.StateVector_context.Init()
 }
 
-func (encoder *StateVectorAppParamEncoder) EncodeInto(value *StateVectorAppParam, buf []byte) {
+func (encoder *SvsDataEncoder) EncodeInto(value *SvsData, buf []byte) {
 
 	pos := uint(0)
 
@@ -77,7 +77,7 @@ func (encoder *StateVectorAppParamEncoder) EncodeInto(value *StateVectorAppParam
 	}
 }
 
-func (encoder *StateVectorAppParamEncoder) Encode(value *StateVectorAppParam) enc.Wire {
+func (encoder *SvsDataEncoder) Encode(value *SvsData) enc.Wire {
 
 	wire := make(enc.Wire, 1)
 	wire[0] = make([]byte, encoder.length)
@@ -87,7 +87,7 @@ func (encoder *StateVectorAppParamEncoder) Encode(value *StateVectorAppParam) en
 	return wire
 }
 
-func (context *StateVectorAppParamParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*StateVectorAppParam, error) {
+func (context *SvsDataParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*SvsData, error) {
 	if reader == nil {
 		return nil, enc.ErrBufferOverflow
 	}
@@ -97,7 +97,7 @@ func (context *StateVectorAppParamParsingContext) Parse(reader enc.ParseReader, 
 	progress := -1
 	_ = progress
 
-	value := &StateVectorAppParam{}
+	value := &SvsData{}
 	var err error
 	var startPos int
 	for {
@@ -154,18 +154,18 @@ func (context *StateVectorAppParamParsingContext) Parse(reader enc.ParseReader, 
 	return value, nil
 }
 
-func (value *StateVectorAppParam) Encode() enc.Wire {
-	encoder := StateVectorAppParamEncoder{}
+func (value *SvsData) Encode() enc.Wire {
+	encoder := SvsDataEncoder{}
 	encoder.Init(value)
 	return encoder.Encode(value)
 }
 
-func (value *StateVectorAppParam) Bytes() []byte {
+func (value *SvsData) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStateVectorAppParam(reader enc.ParseReader, ignoreCritical bool) (*StateVectorAppParam, error) {
-	context := StateVectorAppParamParsingContext{}
+func ParseSvsData(reader enc.ParseReader, ignoreCritical bool) (*SvsData, error) {
+	context := SvsDataParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }
