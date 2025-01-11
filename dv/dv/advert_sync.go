@@ -8,7 +8,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v2"
+	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -37,8 +37,11 @@ func (dv *Router) advertSyncSendInterestImpl(prefix enc.Name) (err error) {
 	sv := &spec_svs.SvsData{
 		StateVector: &spec_svs.StateVector{
 			Entries: []*spec_svs.StateVectorEntry{{
-				Name:  dv.config.RouterName(),
-				SeqNo: dv.advertSyncSeq,
+				Name: dv.config.RouterName(),
+				SeqNoEntries: []*spec_svs.SeqNoEntry{{
+					BootstrapTime: dv.advertBootTime,
+					SeqNo:         dv.advertSyncSeq,
+				}},
 			}},
 		},
 	}
@@ -124,18 +127,23 @@ func (dv *Router) advertSyncOnInterest(args ndn.InterestHandlerArgs, active bool
 	}
 
 	// There should only be one entry in the StateVector, but check all anyway
-	for _, entry := range params.StateVector.Entries {
+	for _, node := range params.StateVector.Entries {
+		if len(node.SeqNoEntries) < 1 {
+			log.Warnf("advertSyncOnInterest: no SeqNoEntries in StateVectorEntry")
+			continue
+		}
+		entry := node.SeqNoEntries[0]
+
 		// Parse name from entry
-		nName := entry.Name
-		if nName == nil {
+		if node.Name == nil {
 			log.Warnf("advertSyncOnInterest: failed to parse neighbor name: %+v", err)
 			continue
 		}
 
 		// Check if the entry is newer than what we know
-		ns := dv.neighbors.Get(nName)
+		ns := dv.neighbors.Get(node.Name)
 		if ns != nil {
-			if ns.AdvertSeq >= entry.SeqNo {
+			if ns.AdvertBoot >= entry.BootstrapTime && ns.AdvertSeq >= entry.SeqNo {
 				// Nothing has changed, skip
 				markRecvPing(ns)
 				continue
@@ -144,13 +152,14 @@ func (dv *Router) advertSyncOnInterest(args ndn.InterestHandlerArgs, active bool
 			// Create new neighbor entry cause none found
 			// This is the ONLY place where neighbors are created
 			// In all other places, quit if not found
-			ns = dv.neighbors.Add(nName)
+			ns = dv.neighbors.Add(node.Name)
 		}
 
 		markRecvPing(ns)
+		ns.AdvertBoot = entry.BootstrapTime
 		ns.AdvertSeq = entry.SeqNo
 
-		go dv.advertDataFetch(nName, entry.SeqNo)
+		go dv.advertDataFetch(node.Name, entry.BootstrapTime, entry.SeqNo)
 	}
 
 	// Update FIB if needed

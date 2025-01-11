@@ -27,6 +27,8 @@ type NeighborState struct {
 
 	// neighbor name
 	Name enc.Name
+	// advertisement boot time for neighbor
+	AdvertBoot uint64
 	// advertisement sequence number for neighbor
 	AdvertSeq uint64
 	// most recent advertisement

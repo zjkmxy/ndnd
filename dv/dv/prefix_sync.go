@@ -24,13 +24,21 @@ func (dv *Router) prefixDataFetchAll() {
 
 // Received prefix sync update
 func (dv *Router) onPfxSyncUpdate(ssu ndn_sync.SvSyncUpdate) {
-	// Update the prefix table
 	dv.mutex.Lock()
-	dv.pfx.GetRouter(ssu.Name).Latest = ssu.High
-	dv.mutex.Unlock()
+	defer dv.mutex.Unlock()
+
+	// Update the prefix table
+	r := dv.pfx.GetRouter(ssu.Name)
+	if ssu.Boot > r.BootTime {
+		r.BootTime = ssu.Boot
+		r.Known = 0 // new boot
+	} else if ssu.Boot < r.BootTime {
+		return // old update
+	}
+	r.Latest = ssu.High
 
 	// Start a fetching thread (if needed)
-	dv.prefixDataFetch(ssu.Name)
+	go dv.prefixDataFetch(ssu.Name)
 }
 
 // Fetch prefix data
