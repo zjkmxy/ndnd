@@ -82,7 +82,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 
 	// Initialize sync and dirs
 	dv.advertBootTime = uint64(time.Now().Unix())
-	dv.advertDir = object.NewMemoryFifoDir(16) // keep last few advertisements
+	dv.advertDir = object.NewMemoryFifoDir(32) // keep last few advertisements
 
 	// Create tables
 	dv.neighbors = table.NewNeighborTable(config, dv.nfdc)
