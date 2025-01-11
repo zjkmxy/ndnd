@@ -71,18 +71,17 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		mutex:  sync.Mutex{},
 	}
 
+	// Initialize sync and dirs
+	dv.advertBootTime = uint64(time.Now().Unix())
+	dv.advertDir = object.NewMemoryFifoDir(32) // keep last few advertisements
+
 	// Create sync groups
 	dv.pfxSvs = ndn_sync.NewSvSync(ndn_sync.SvSyncOpts{
 		Engine:      engine,
 		GroupPrefix: config.PrefixTableSyncPrefix(),
-		OnUpdate: func(ssu ndn_sync.SvSyncUpdate) {
-			go dv.onPfxSyncUpdate(ssu)
-		},
+		OnUpdate:    func(ssu ndn_sync.SvSyncUpdate) { go dv.onPfxSyncUpdate(ssu) },
+		BootTime:    dv.advertBootTime,
 	})
-
-	// Initialize sync and dirs
-	dv.advertBootTime = uint64(time.Now().Unix())
-	dv.advertDir = object.NewMemoryFifoDir(32) // keep last few advertisements
 
 	// Create tables
 	dv.neighbors = table.NewNeighborTable(config, dv.nfdc)
@@ -159,8 +158,8 @@ func (dv *Router) configureFace() (err error) {
 		Module: "faces",
 		Cmd:    "update",
 		Args: &mgmt.ControlArgs{
-			Mask:  utils.IdPtr(uint64(0x01)),
-			Flags: utils.IdPtr(uint64(0x01)),
+			Mask:  utils.IdPtr(mgmt.FaceFlagLocalFieldsEnabled),
+			Flags: utils.IdPtr(mgmt.FaceFlagLocalFieldsEnabled),
 		},
 		Retries: -1,
 	})
