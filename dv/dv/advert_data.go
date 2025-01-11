@@ -83,18 +83,18 @@ func (dv *Router) advertDataHandler(nName enc.Name, seqNo uint64, data []byte) {
 	// Check if this is the latest advertisement
 	ns := dv.neighbors.Get(nName)
 	if ns == nil {
-		log.Warnf("advert-handler: unknown advertisement %s", nName)
+		log.Warnf("advert-data: unknown advertisement %s", nName)
 		return
 	}
 	if ns.AdvertSeq != seqNo {
-		log.Debugf("advert-handler: old advertisement for %s (%d != %d)", nName, ns.AdvertSeq, seqNo)
+		log.Debugf("advert-data: old advertisement for %s (%d != %d)", nName, ns.AdvertSeq, seqNo)
 		return
 	}
 
 	// Parse the advertisement
 	advert, err := tlv.ParseAdvertisement(enc.NewBufferReader(data), false)
 	if err != nil {
-		log.Errorf("advert-handler: failed to parse advertisement: %+v", err)
+		log.Errorf("advert-data: failed to parse advertisement: %+v", err)
 		return
 	}
 

@@ -17,13 +17,13 @@ func (dv *Router) advertSyncSendInterest() (err error) {
 	// Sync Interests for our outgoing connections
 	err = dv.advertSyncSendInterestImpl(dv.config.AdvertisementSyncActivePrefix())
 	if err != nil {
-		log.Warnf("advertSyncSendInterest: failed to send active sync interest: %+v", err)
+		log.Warnf("advert-sync: failed to send active sync interest: %+v", err)
 	}
 
 	// Sync Interests for incoming connections
 	err = dv.advertSyncSendInterestImpl(dv.config.AdvertisementSyncPassivePrefix())
 	if err != nil {
-		log.Warnf("advertSyncSendInterest: failed to send passive sync interest: %+v", err)
+		log.Warnf("advert-sync: failed to send passive sync interest: %+v", err)
 	}
 
 	return err
@@ -54,7 +54,7 @@ func (dv *Router) advertSyncSendInterestImpl(prefix enc.Name) (err error) {
 	}
 	data, err := dv.engine.Spec().MakeData(syncName, dataCfg, sv.Encode(), signer)
 	if err != nil {
-		log.Errorf("SvSync: sendSyncInterest failed make data: %+v", err)
+		log.Errorf("advert-sync: sendSyncInterest failed make data: %+v", err)
 		return
 	}
 
@@ -81,24 +81,24 @@ func (dv *Router) advertSyncSendInterestImpl(prefix enc.Name) (err error) {
 func (dv *Router) advertSyncOnInterest(args ndn.InterestHandlerArgs, active bool) {
 	// If there is no incoming face ID, we can't use this
 	if args.IncomingFaceId == nil {
-		log.Warn("advertSyncOnInterest: received Sync Interest with no incoming face ID, ignoring")
+		log.Warn("advert-sync: received Sync Interest with no incoming face ID, ignoring")
 		return
 	}
 
 	// Check if app param is present
 	if args.Interest.AppParam() == nil {
-		log.Warn("advertSyncOnInterest: received Sync Interest with no AppParam, ignoring")
+		log.Warn("advert-sync: received Sync Interest with no AppParam, ignoring")
 		return
 	}
 
 	// Decode Sync Data
 	pkt, _, err := spec.ReadPacket(enc.NewWireReader(args.Interest.AppParam()))
 	if err != nil {
-		log.Warnf("advertSyncOnInterest: failed to parse Sync Data: %+v", err)
+		log.Warnf("advert-sync: failed to parse Sync Data: %+v", err)
 		return
 	}
 	if pkt.Data == nil {
-		log.Warnf("advertSyncOnInterest: no Sync Data, ignoring")
+		log.Warnf("advert-sync: no Sync Data, ignoring")
 		return
 	}
 
@@ -108,7 +108,7 @@ func (dv *Router) advertSyncOnInterest(args ndn.InterestHandlerArgs, active bool
 	svWire := pkt.Data.Content()
 	params, err := spec_svs.ParseSvsData(enc.NewWireReader(svWire), false)
 	if err != nil || params.StateVector == nil {
-		log.Warnf("advertSyncOnInterest: failed to parse StateVec: %+v", err)
+		log.Warnf("advert-sync: failed to parse StateVec: %+v", err)
 		return
 	}
 
@@ -121,22 +121,22 @@ func (dv *Router) advertSyncOnInterest(args ndn.InterestHandlerArgs, active bool
 	markRecvPing := func(ns *table.NeighborState) {
 		err, faceDirty := ns.RecvPing(*args.IncomingFaceId, active)
 		if err != nil {
-			log.Warnf("advertSyncOnInterest: failed to update neighbor: %+v", err)
+			log.Warnf("advert-sync: failed to update neighbor: %+v", err)
 		}
 		fibDirty = fibDirty || faceDirty
 	}
 
 	// There should only be one entry in the StateVector, but check all anyway
 	for _, node := range params.StateVector.Entries {
-		if len(node.SeqNoEntries) < 1 {
-			log.Warnf("advertSyncOnInterest: no SeqNoEntries in StateVectorEntry")
-			continue
+		if len(node.SeqNoEntries) != 1 {
+			log.Warnf("advert-sync: unexpected %d SeqNoEntries for %s, ignoring", len(node.SeqNoEntries), node.Name)
+			return
 		}
 		entry := node.SeqNoEntries[0]
 
 		// Parse name from entry
 		if node.Name == nil {
-			log.Warnf("advertSyncOnInterest: failed to parse neighbor name: %+v", err)
+			log.Warnf("advert-sync: failed to parse neighbor name: %+v", err)
 			continue
 		}
 

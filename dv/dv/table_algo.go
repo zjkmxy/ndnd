@@ -69,7 +69,7 @@ func (dv *Router) checkDeadNeighbors() {
 	for _, ns := range dv.neighbors.GetAll() {
 		// Check if the neighbor is entirely dead
 		if ns.IsDead() {
-			log.Infof("checkDeadNeighbors: neighbor %s is dead", ns.Name.String())
+			log.Infof("table-algo: neighbor %s is dead", ns.Name.String())
 
 			// This is the ONLY place that can remove neighbors
 			dv.neighbors.Remove(ns.Name)
@@ -90,7 +90,7 @@ func (dv *Router) checkDeadNeighbors() {
 
 // Update the FIB
 func (dv *Router) fibUpdate() {
-	log.Debugf("Sychronizing updates to forwarding table")
+	log.Debugf("table-algo: sychronizing updates to forwarding table")
 
 	dv.mutex.Lock()
 	defer dv.mutex.Unlock()
