@@ -41,8 +41,12 @@ func main() {
 
 	// Start SVS instance
 	group, _ := enc.NameFromStr("/ndn/svs")
-	svsync := sync.NewSvSync(app, group, func(ssu sync.SvSyncUpdate) {
-		logger.Infof("Received update: %+v", ssu)
+	svsync := sync.NewSvSync(sync.SvSyncOpts{
+		Engine:      app,
+		GroupPrefix: group,
+		OnUpdate: func(ssu sync.SvSyncUpdate) {
+			logger.Infof("Received update: %+v", ssu)
+		},
 	})
 
 	// Register group prefix route

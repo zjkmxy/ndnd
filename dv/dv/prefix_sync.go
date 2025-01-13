@@ -17,27 +17,32 @@ func (dv *Router) prefixDataFetchAll() {
 	for _, e := range dv.rib.Entries() {
 		router := dv.pfx.GetRouter(e.Name())
 		if router != nil && router.Known < router.Latest {
-			go dv.prefixDataFetch(e.Name())
+			dv.prefixDataFetch(e.Name())
 		}
 	}
 }
 
 // Received prefix sync update
 func (dv *Router) onPfxSyncUpdate(ssu ndn_sync.SvSyncUpdate) {
-	// Update the prefix table
 	dv.mutex.Lock()
-	dv.pfx.GetRouter(ssu.Name).Latest = ssu.High
-	dv.mutex.Unlock()
+	defer dv.mutex.Unlock()
+
+	// Update the prefix table
+	r := dv.pfx.GetRouter(ssu.Name)
+	if ssu.Boot > r.BootTime {
+		r.BootTime = ssu.Boot
+		r.Known = 0 // new boot
+	} else if ssu.Boot < r.BootTime {
+		return // old update
+	}
+	r.Latest = ssu.High
 
 	// Start a fetching thread (if needed)
 	dv.prefixDataFetch(ssu.Name)
 }
 
-// Fetch prefix data
+// Fetch prefix data (call with lock held)
 func (dv *Router) prefixDataFetch(nName enc.Name) {
-	dv.mutex.Lock()
-	defer dv.mutex.Unlock()
-
 	// Check if the RIB has this destination
 	if !dv.rib.Has(nName) {
 		return
@@ -78,7 +83,7 @@ func (dv *Router) prefixDataFetch(nName enc.Name) {
 
 			// Done fetching, restart if needed
 			router.Fetching = false
-			go dv.prefixDataFetch(nName)
+			dv.prefixDataFetch(nName)
 		}()
 
 		return true

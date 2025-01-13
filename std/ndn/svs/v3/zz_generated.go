@@ -8,17 +8,17 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
-type StateVectorAppParamEncoder struct {
+type SvsDataEncoder struct {
 	length uint
 
 	StateVector_encoder StateVectorEncoder
 }
 
-type StateVectorAppParamParsingContext struct {
+type SvsDataParsingContext struct {
 	StateVector_context StateVectorParsingContext
 }
 
-func (encoder *StateVectorAppParamEncoder) Init(value *StateVectorAppParam) {
+func (encoder *SvsDataEncoder) Init(value *SvsData) {
 	if value.StateVector != nil {
 		encoder.StateVector_encoder.Init(value.StateVector)
 	}
@@ -42,11 +42,11 @@ func (encoder *StateVectorAppParamEncoder) Init(value *StateVectorAppParam) {
 
 }
 
-func (context *StateVectorAppParamParsingContext) Init() {
+func (context *SvsDataParsingContext) Init() {
 	context.StateVector_context.Init()
 }
 
-func (encoder *StateVectorAppParamEncoder) EncodeInto(value *StateVectorAppParam, buf []byte) {
+func (encoder *SvsDataEncoder) EncodeInto(value *SvsData, buf []byte) {
 
 	pos := uint(0)
 
@@ -77,7 +77,7 @@ func (encoder *StateVectorAppParamEncoder) EncodeInto(value *StateVectorAppParam
 	}
 }
 
-func (encoder *StateVectorAppParamEncoder) Encode(value *StateVectorAppParam) enc.Wire {
+func (encoder *SvsDataEncoder) Encode(value *SvsData) enc.Wire {
 
 	wire := make(enc.Wire, 1)
 	wire[0] = make([]byte, encoder.length)
@@ -87,7 +87,7 @@ func (encoder *StateVectorAppParamEncoder) Encode(value *StateVectorAppParam) en
 	return wire
 }
 
-func (context *StateVectorAppParamParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*StateVectorAppParam, error) {
+func (context *SvsDataParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*SvsData, error) {
 	if reader == nil {
 		return nil, enc.ErrBufferOverflow
 	}
@@ -97,7 +97,7 @@ func (context *StateVectorAppParamParsingContext) Parse(reader enc.ParseReader, 
 	progress := -1
 	_ = progress
 
-	value := &StateVectorAppParam{}
+	value := &SvsData{}
 	var err error
 	var startPos int
 	for {
@@ -154,18 +154,18 @@ func (context *StateVectorAppParamParsingContext) Parse(reader enc.ParseReader, 
 	return value, nil
 }
 
-func (value *StateVectorAppParam) Encode() enc.Wire {
-	encoder := StateVectorAppParamEncoder{}
+func (value *SvsData) Encode() enc.Wire {
+	encoder := SvsDataEncoder{}
 	encoder.Init(value)
 	return encoder.Encode(value)
 }
 
-func (value *StateVectorAppParam) Bytes() []byte {
+func (value *SvsData) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStateVectorAppParam(reader enc.ParseReader, ignoreCritical bool) (*StateVectorAppParam, error) {
-	context := StateVectorAppParamParsingContext{}
+func ParseSvsData(reader enc.ParseReader, ignoreCritical bool) (*SvsData, error) {
+	context := SvsDataParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }
@@ -403,10 +403,14 @@ func ParseStateVector(reader enc.ParseReader, ignoreCritical bool) (*StateVector
 type StateVectorEntryEncoder struct {
 	length uint
 
-	Name_length uint
+	Name_length             uint
+	SeqNoEntries_subencoder []struct {
+		SeqNoEntries_encoder SeqNoEntryEncoder
+	}
 }
 
 type StateVectorEntryParsingContext struct {
+	SeqNoEntries_context SeqNoEntryParsingContext
 }
 
 func (encoder *StateVectorEntryEncoder) Init(value *StateVectorEntry) {
@@ -414,6 +418,29 @@ func (encoder *StateVectorEntryEncoder) Init(value *StateVectorEntry) {
 		encoder.Name_length = 0
 		for _, c := range value.Name {
 			encoder.Name_length += uint(c.EncodingLength())
+		}
+	}
+	{
+		SeqNoEntries_l := len(value.SeqNoEntries)
+		encoder.SeqNoEntries_subencoder = make([]struct {
+			SeqNoEntries_encoder SeqNoEntryEncoder
+		}, SeqNoEntries_l)
+		for i := 0; i < SeqNoEntries_l; i++ {
+			pseudoEncoder := &encoder.SeqNoEntries_subencoder[i]
+			pseudoValue := struct {
+				SeqNoEntries *SeqNoEntry
+			}{
+				SeqNoEntries: value.SeqNoEntries[i],
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.SeqNoEntries != nil {
+					encoder.SeqNoEntries_encoder.Init(value.SeqNoEntries)
+				}
+				_ = encoder
+				_ = value
+			}
 		}
 	}
 
@@ -432,16 +459,35 @@ func (encoder *StateVectorEntryEncoder) Init(value *StateVectorEntry) {
 		}
 		l += encoder.Name_length
 	}
-	l += 1
-	switch x := value.SeqNo; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
+	if value.SeqNoEntries != nil {
+		for seq_i, seq_v := range value.SeqNoEntries {
+			pseudoEncoder := &encoder.SeqNoEntries_subencoder[seq_i]
+			pseudoValue := struct {
+				SeqNoEntries *SeqNoEntry
+			}{
+				SeqNoEntries: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.SeqNoEntries != nil {
+					l += 1
+					switch x := encoder.SeqNoEntries_encoder.length; {
+					case x <= 0xfc:
+						l += 1
+					case x <= 0xffff:
+						l += 3
+					case x <= 0xffffffff:
+						l += 5
+					default:
+						l += 9
+					}
+					l += encoder.SeqNoEntries_encoder.length
+				}
+				_ = encoder
+				_ = value
+			}
+		}
 	}
 	encoder.length = l
 
@@ -449,6 +495,7 @@ func (encoder *StateVectorEntryEncoder) Init(value *StateVectorEntry) {
 
 func (context *StateVectorEntryParsingContext) Init() {
 
+	context.SeqNoEntries_context.Init()
 }
 
 func (encoder *StateVectorEntryEncoder) EncodeInto(value *StateVectorEntry, buf []byte) {
@@ -479,25 +526,46 @@ func (encoder *StateVectorEntryEncoder) EncodeInto(value *StateVectorEntry, buf 
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
 	}
-	buf[pos] = byte(204)
-	pos += 1
-	switch x := value.SeqNo; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
+	if value.SeqNoEntries != nil {
+		for seq_i, seq_v := range value.SeqNoEntries {
+			pseudoEncoder := &encoder.SeqNoEntries_subencoder[seq_i]
+			pseudoValue := struct {
+				SeqNoEntries *SeqNoEntry
+			}{
+				SeqNoEntries: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.SeqNoEntries != nil {
+					buf[pos] = byte(210)
+					pos += 1
+					switch x := encoder.SeqNoEntries_encoder.length; {
+					case x <= 0xfc:
+						buf[pos] = byte(x)
+						pos += 1
+					case x <= 0xffff:
+						buf[pos] = 0xfd
+						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
+						pos += 3
+					case x <= 0xffffffff:
+						buf[pos] = 0xfe
+						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
+						pos += 5
+					default:
+						buf[pos] = 0xff
+						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
+						pos += 9
+					}
+					if encoder.SeqNoEntries_encoder.length > 0 {
+						encoder.SeqNoEntries_encoder.EncodeInto(value.SeqNoEntries, buf[pos:])
+						pos += encoder.SeqNoEntries_encoder.length
+					}
+				}
+				_ = encoder
+				_ = value
+			}
+		}
 	}
 }
 
@@ -517,7 +585,7 @@ func (context *StateVectorEntryParsingContext) Parse(reader enc.ParseReader, ign
 	}
 
 	var handled_Name bool = false
-	var handled_SeqNo bool = false
+	var handled_SeqNoEntries bool = false
 
 	progress := -1
 	_ = progress
@@ -569,7 +637,223 @@ func (context *StateVectorEntryParsingContext) Parse(reader enc.ParseReader, ign
 						err = enc.ErrBufferOverflow
 					}
 				}
-			case 204:
+			case 210:
+				if true {
+					handled = true
+					handled_SeqNoEntries = true
+					if value.SeqNoEntries == nil {
+						value.SeqNoEntries = make([]*SeqNoEntry, 0)
+					}
+					{
+						pseudoValue := struct {
+							SeqNoEntries *SeqNoEntry
+						}{}
+						{
+							value := &pseudoValue
+							value.SeqNoEntries, err = context.SeqNoEntries_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+							_ = value
+						}
+						value.SeqNoEntries = append(value.SeqNoEntries, pseudoValue.SeqNoEntries)
+					}
+					progress--
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_Name && err == nil {
+		value.Name = nil
+	}
+	if !handled_SeqNoEntries && err == nil {
+		// sequence - skip
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *StateVectorEntry) Encode() enc.Wire {
+	encoder := StateVectorEntryEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *StateVectorEntry) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseStateVectorEntry(reader enc.ParseReader, ignoreCritical bool) (*StateVectorEntry, error) {
+	context := StateVectorEntryParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type SeqNoEntryEncoder struct {
+	length uint
+}
+
+type SeqNoEntryParsingContext struct {
+}
+
+func (encoder *SeqNoEntryEncoder) Init(value *SeqNoEntry) {
+
+	l := uint(0)
+	l += 1
+	switch x := value.BootstrapTime; {
+	case x <= 0xff:
+		l += 2
+	case x <= 0xffff:
+		l += 3
+	case x <= 0xffffffff:
+		l += 5
+	default:
+		l += 9
+	}
+	l += 1
+	switch x := value.SeqNo; {
+	case x <= 0xff:
+		l += 2
+	case x <= 0xffff:
+		l += 3
+	case x <= 0xffffffff:
+		l += 5
+	default:
+		l += 9
+	}
+	encoder.length = l
+
+}
+
+func (context *SeqNoEntryParsingContext) Init() {
+
+}
+
+func (encoder *SeqNoEntryEncoder) EncodeInto(value *SeqNoEntry, buf []byte) {
+
+	pos := uint(0)
+
+	buf[pos] = byte(212)
+	pos += 1
+	switch x := value.BootstrapTime; {
+	case x <= 0xff:
+		buf[pos] = 1
+		buf[pos+1] = byte(x)
+		pos += 2
+	case x <= 0xffff:
+		buf[pos] = 2
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
+		pos += 3
+	case x <= 0xffffffff:
+		buf[pos] = 4
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
+		pos += 5
+	default:
+		buf[pos] = 8
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
+		pos += 9
+	}
+	buf[pos] = byte(214)
+	pos += 1
+	switch x := value.SeqNo; {
+	case x <= 0xff:
+		buf[pos] = 1
+		buf[pos+1] = byte(x)
+		pos += 2
+	case x <= 0xffff:
+		buf[pos] = 2
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
+		pos += 3
+	case x <= 0xffffffff:
+		buf[pos] = 4
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
+		pos += 5
+	default:
+		buf[pos] = 8
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
+		pos += 9
+	}
+}
+
+func (encoder *SeqNoEntryEncoder) Encode(value *SeqNoEntry) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *SeqNoEntryParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*SeqNoEntry, error) {
+	if reader == nil {
+		return nil, enc.ErrBufferOverflow
+	}
+
+	var handled_BootstrapTime bool = false
+	var handled_SeqNo bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &SeqNoEntry{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = enc.ReadTLNum(reader)
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 212:
+				if true {
+					handled = true
+					handled_BootstrapTime = true
+					value.BootstrapTime = uint64(0)
+					{
+						for i := 0; i < int(l); i++ {
+							x := byte(0)
+							x, err = reader.ReadByte()
+							if err != nil {
+								if err == io.EOF {
+									err = io.ErrUnexpectedEOF
+								}
+								break
+							}
+							value.BootstrapTime = uint64(value.BootstrapTime<<8) | uint64(x)
+						}
+					}
+				}
+			case 214:
 				if true {
 					handled = true
 					handled_SeqNo = true
@@ -606,11 +890,11 @@ func (context *StateVectorEntryParsingContext) Parse(reader enc.ParseReader, ign
 	startPos = reader.Pos()
 	err = nil
 
-	if !handled_Name && err == nil {
-		value.Name = nil
+	if !handled_BootstrapTime && err == nil {
+		err = enc.ErrSkipRequired{Name: "BootstrapTime", TypeNum: 212}
 	}
 	if !handled_SeqNo && err == nil {
-		err = enc.ErrSkipRequired{Name: "SeqNo", TypeNum: 204}
+		err = enc.ErrSkipRequired{Name: "SeqNo", TypeNum: 214}
 	}
 
 	if err != nil {
@@ -620,18 +904,18 @@ func (context *StateVectorEntryParsingContext) Parse(reader enc.ParseReader, ign
 	return value, nil
 }
 
-func (value *StateVectorEntry) Encode() enc.Wire {
-	encoder := StateVectorEntryEncoder{}
+func (value *SeqNoEntry) Encode() enc.Wire {
+	encoder := SeqNoEntryEncoder{}
 	encoder.Init(value)
 	return encoder.Encode(value)
 }
 
-func (value *StateVectorEntry) Bytes() []byte {
+func (value *SeqNoEntry) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStateVectorEntry(reader enc.ParseReader, ignoreCritical bool) (*StateVectorEntry, error) {
-	context := StateVectorEntryParsingContext{}
+func ParseSeqNoEntry(reader enc.ParseReader, ignoreCritical bool) (*SeqNoEntry, error) {
+	context := SeqNoEntryParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }

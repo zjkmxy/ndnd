@@ -19,7 +19,9 @@ func (dv *Router) advertGenerateNew() {
 
 	// Produce the advertisement
 	name, err := dv.client.Produce(object.ProduceArgs{
-		Name:            dv.config.AdvertisementDataPrefix(),
+		Name: dv.config.AdvertisementDataPrefix().Append(
+			enc.NewTimestampComponent(dv.advertBootTime),
+		),
 		Content:         dv.rib.Advert().Encode(),
 		Version:         utils.IdPtr(dv.advertSyncSeq),
 		FreshnessPeriod: 10 * time.Second,
@@ -34,11 +36,11 @@ func (dv *Router) advertGenerateNew() {
 	go dv.advertSyncSendInterest()
 }
 
-func (dv *Router) advertDataFetch(nName enc.Name, seqNo uint64) {
+func (dv *Router) advertDataFetch(nName enc.Name, bootTime uint64, seqNo uint64) {
 	// debounce; wait before fetching, then check if this is still the latest
 	// sequence number known for this neighbor
 	time.Sleep(10 * time.Millisecond)
-	if ns := dv.neighbors.Get(nName); ns == nil || ns.AdvertSeq != seqNo {
+	if ns := dv.neighbors.Get(nName); ns == nil || ns.AdvertBoot != bootTime || ns.AdvertSeq != seqNo {
 		return
 	}
 
@@ -46,6 +48,7 @@ func (dv *Router) advertDataFetch(nName enc.Name, seqNo uint64) {
 	advName := enc.LOCALHOP.Append(nName.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
+		enc.NewTimestampComponent(bootTime),
 		enc.NewVersionComponent(seqNo),
 	)...)
 
@@ -59,7 +62,7 @@ func (dv *Router) advertDataFetch(nName enc.Name, seqNo uint64) {
 			if fetchErr != nil {
 				log.Warnf("advert-data: failed to fetch advertisement %s: %+v", state.Name(), fetchErr)
 				time.Sleep(1 * time.Second) // wait on error
-				dv.advertDataFetch(nName, seqNo)
+				dv.advertDataFetch(nName, bootTime, seqNo)
 				return
 			}
 
@@ -80,18 +83,18 @@ func (dv *Router) advertDataHandler(nName enc.Name, seqNo uint64, data []byte) {
 	// Check if this is the latest advertisement
 	ns := dv.neighbors.Get(nName)
 	if ns == nil {
-		log.Warnf("advert-handler: unknown advertisement %s", nName)
+		log.Warnf("advert-data: unknown advertisement %s", nName)
 		return
 	}
 	if ns.AdvertSeq != seqNo {
-		log.Debugf("advert-handler: old advertisement for %s (%d != %d)", nName, ns.AdvertSeq, seqNo)
+		log.Debugf("advert-data: old advertisement for %s (%d != %d)", nName, ns.AdvertSeq, seqNo)
 		return
 	}
 
 	// Parse the advertisement
 	advert, err := tlv.ParseAdvertisement(enc.NewBufferReader(data), false)
 	if err != nil {
-		log.Errorf("advert-handler: failed to parse advertisement: %+v", err)
+		log.Errorf("advert-data: failed to parse advertisement: %+v", err)
 		return
 	}
 

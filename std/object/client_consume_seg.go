@@ -78,40 +78,51 @@ func (s *rrSegFetcher) doCheck() {
 		return
 	}
 
-	// we have a lock, so this has to break at some point
+	// check all states for a workable one
 	var state *ConsumeState = nil
-	var first *ConsumeState = nil
-	for {
-		state = s.next()
-		if state == nil {
+	for i := 0; i < len(s.streams); i++ {
+		check := s.next()
+		if check == nil {
 			return // nothing to do here
 		}
 
-		if first == nil {
-			first = state
-		} else if state == first {
-			return // we've gone full circle
-		}
-
-		if state.complete {
+		if check.complete {
 			// lazy remove completed streams
-			s.remove(state)
+			s.remove(check)
+
+			// check if this was the last one
+			if len(s.streams) == 0 {
+				s.rrIndex = 0
+				return
+			}
+
+			// check this index again
+			s.rrIndex--
+			if s.rrIndex < 0 {
+				s.rrIndex = len(s.streams) - 1
+			}
 			continue
 		}
 
 		// if we don't know the segment count, wait for the first segment
-		if state.segCnt == -1 && state.wnd[2] > 0 {
-			// log.Infof("seg-fetcher: state wnd full for %s", state.fetchName)
+		if check.segCnt == -1 && check.wnd[2] > 0 {
+			// log.Infof("seg-fetcher: state wnd full for %s", check.fetchName)
 			continue
 		}
 
 		// all interests are out
-		if state.segCnt > 0 && state.wnd[2] >= state.segCnt {
-			// log.Infof("seg-fetcher: all interests are out for %s", state.fetchName)
+		if check.segCnt > 0 && check.wnd[2] >= check.segCnt {
+			// log.Infof("seg-fetcher: all interests are out for %s", check.fetchName)
 			continue
 		}
 
+		state = check
 		break // found a state to work on
+	}
+
+	// exit if there's nothing to work on
+	if state == nil {
+		return
 	}
 
 	// update window parameters

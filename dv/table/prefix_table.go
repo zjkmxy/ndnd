@@ -29,6 +29,7 @@ type PrefixTable struct {
 type PrefixTableRouter struct {
 	Name     enc.Name
 	Fetching bool
+	BootTime uint64
 	Known    uint64
 	Latest   uint64
 	Prefixes map[string]*PrefixEntry
@@ -56,9 +57,8 @@ func NewPrefixTable(
 	}
 
 	pt.me = pt.GetRouter(config.RouterName())
-	pt.me.Known = svs.GetSeqNo(config.RouterName())
-	pt.me.Latest = pt.me.Known
-	pt.publishSnap()
+	pt.me.BootTime = svs.GetBootTime()
+	pt.Reset()
 
 	return pt
 }
@@ -74,6 +74,17 @@ func (pt *PrefixTable) GetRouter(name enc.Name) *PrefixTableRouter {
 		pt.routers[hash] = router
 	}
 	return router
+}
+
+func (pt *PrefixTable) Reset() {
+	log.Infof("prefix-table: reset")
+	pt.me.Prefixes = make(map[string]*PrefixEntry)
+
+	op := tlv.PrefixOpList{
+		ExitRouter:    &tlv.Destination{Name: pt.config.RouterName()},
+		PrefixOpReset: true,
+	}
+	pt.publishOp(op.Encode())
 }
 
 func (pt *PrefixTable) Announce(name enc.Name) {
@@ -161,6 +172,7 @@ func (r *PrefixTableRouter) GetNextDataName() enc.Name {
 		name = append(name, PREFIX_SNAP_COMP)
 	} else {
 		name = append(name,
+			enc.NewTimestampComponent(r.BootTime),
 			enc.NewSequenceNumComponent(r.Known+1),
 			enc.NewVersionComponent(0), // immutable
 		)
@@ -206,7 +218,10 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 
 	// Produce the operation
 	name, err := pt.client.Produce(object.ProduceArgs{
-		Name:    pt.config.PrefixTableDataPrefix().Append(enc.NewSequenceNumComponent(seq)),
+		Name: pt.config.PrefixTableDataPrefix().Append(
+			enc.NewTimestampComponent(pt.svs.GetBootTime()),
+			enc.NewSequenceNumComponent(seq),
+		),
 		Content: content,
 		Version: utils.IdPtr(uint64(0)), // immutable
 	})

@@ -10,7 +10,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	stlv "github.com/named-data/ndnd/std/ndn/svs_2024"
+	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v2"
 	"github.com/named-data/ndnd/std/schema"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -51,8 +51,8 @@ type SvsNode struct {
 	missChan        chan MissingData
 	stopChan        chan struct{}
 
-	localSv   stlv.StateVector
-	aggSv     stlv.StateVector
+	localSv   spec_svs.StateVector
+	aggSv     spec_svs.StateVector
 	state     SyncState
 	selfSeq   uint64
 	ownPrefix enc.Name
@@ -98,7 +98,7 @@ func CreateSvsNode(node *schema.Node) schema.NodeImpl {
 	return ret
 }
 
-func findSvsEntry(v *stlv.StateVector, name enc.Name) int {
+func findSvsEntry(v *spec_svs.StateVector, name enc.Name) int {
 	// This is less efficient but enough for a demo.
 	for i, n := range v.Entries {
 		if name.Equal(n.Name) {
@@ -111,7 +111,7 @@ func findSvsEntry(v *stlv.StateVector, name enc.Name) int {
 func (n *SvsNode) onSyncInt(event *schema.Event) any {
 	mNotifNode := event.Target
 	logger := mNotifNode.Logger("SvsNode") // the path will be the subchild
-	remoteSv, err := stlv.ParseStateVector(enc.NewWireReader(event.Content), true)
+	remoteSv, err := spec_svs.ParseStateVector(enc.NewWireReader(event.Content), true)
 	if err != nil {
 		logger.Error("Unable to parse state vector. Drop.")
 	}
@@ -126,7 +126,7 @@ func (n *SvsNode) onSyncInt(event *schema.Event) any {
 	for _, cur := range remoteSv.Entries {
 		li := findSvsEntry(&n.localSv, cur.Name)
 		if li == -1 {
-			n.localSv.Entries = append(n.localSv.Entries, &stlv.StateVectorEntry{
+			n.localSv.Entries = append(n.localSv.Entries, &spec_svs.StateVectorEntry{
 				Name:  cur.Name,
 				SeqNo: cur.SeqNo,
 			})
@@ -185,7 +185,7 @@ func (n *SvsNode) onSyncInt(event *schema.Event) any {
 		// Set the aggregation timer
 		if n.state == SyncSteady {
 			n.state = SyncSuppression
-			n.aggSv = stlv.StateVector{Entries: make([]*stlv.StateVectorEntry, len(remoteSv.Entries))}
+			n.aggSv = spec_svs.StateVector{Entries: make([]*spec_svs.StateVectorEntry, len(remoteSv.Entries))}
 			copy(n.aggSv.Entries, remoteSv.Entries)
 			n.cancelSyncTimer()
 			n.cancelSyncTimer = n.timer.Schedule(n.getAggIntv(), n.onSyncTimer)
@@ -211,11 +211,11 @@ func (n *SvsNode) MySequence() uint64 {
 	return n.selfSeq
 }
 
-func (n *SvsNode) aggregate(remoteSv *stlv.StateVector) {
+func (n *SvsNode) aggregate(remoteSv *spec_svs.StateVector) {
 	for _, cur := range remoteSv.Entries {
 		li := findSvsEntry(&n.aggSv, cur.Name)
 		if li == -1 {
-			n.aggSv.Entries = append(n.aggSv.Entries, &stlv.StateVectorEntry{
+			n.aggSv.Entries = append(n.aggSv.Entries, &spec_svs.StateVectorEntry{
 				Name:  cur.Name,
 				SeqNo: cur.SeqNo,
 			})
@@ -306,8 +306,8 @@ func (n *SvsNode) onAttach(event *schema.Event) any {
 
 	// OnMissingData callback
 
-	n.localSv = stlv.StateVector{Entries: make([]*stlv.StateVectorEntry, 0)}
-	n.aggSv = stlv.StateVector{Entries: make([]*stlv.StateVectorEntry, 0)}
+	n.localSv = spec_svs.StateVector{Entries: make([]*spec_svs.StateVectorEntry, 0)}
+	n.aggSv = spec_svs.StateVector{Entries: make([]*spec_svs.StateVectorEntry, 0)}
 	// n.onMiss = schema.NewEvent[*SvsOnMissingEvent]()
 	n.state = SyncSteady
 	n.missChan = make(chan MissingData, n.ChannelSize)
@@ -321,7 +321,7 @@ func (n *SvsNode) onAttach(event *schema.Event) any {
 
 	// initialize localSv
 	// TODO: this demo does not consider recovery from off-line. Should be done via ENV and storage policy.
-	n.localSv.Entries = append(n.localSv.Entries, &stlv.StateVectorEntry{
+	n.localSv.Entries = append(n.localSv.Entries, &spec_svs.StateVectorEntry{
 		Name:  n.SelfName,
 		SeqNo: 0,
 	})

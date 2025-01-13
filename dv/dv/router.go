@@ -44,6 +44,8 @@ type Router struct {
 	// forwarding table
 	fib *table.Fib
 
+	// advertisement boot time for self
+	advertBootTime uint64
 	// advertisement sequence number for self
 	advertSyncSeq uint64
 	// object directory for advertisement data
@@ -69,17 +71,17 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		mutex:  sync.Mutex{},
 	}
 
-	// Create sync groups
-	dv.pfxSvs = ndn_sync.NewSvSync(engine, config.PrefixTableSyncPrefix(),
-		func(ssu ndn_sync.SvSyncUpdate) {
-			go dv.onPfxSyncUpdate(ssu)
-		})
-
 	// Initialize sync and dirs
-	now := uint64(time.Now().UnixMilli())
-	dv.advertSyncSeq = now
-	dv.pfxSvs.SetSeqNo(dv.config.RouterName(), now)
-	dv.advertDir = object.NewMemoryFifoDir(16) // keep last few advertisements
+	dv.advertBootTime = uint64(time.Now().Unix())
+	dv.advertDir = object.NewMemoryFifoDir(32) // keep last few advertisements
+
+	// Create sync groups
+	dv.pfxSvs = ndn_sync.NewSvSync(ndn_sync.SvSyncOpts{
+		Engine:      engine,
+		GroupPrefix: config.PrefixTableSyncPrefix(),
+		OnUpdate:    func(ssu ndn_sync.SvSyncUpdate) { go dv.onPfxSyncUpdate(ssu) },
+		BootTime:    dv.advertBootTime,
+	})
 
 	// Create tables
 	dv.neighbors = table.NewNeighborTable(config, dv.nfdc)
@@ -156,8 +158,8 @@ func (dv *Router) configureFace() (err error) {
 		Module: "faces",
 		Cmd:    "update",
 		Args: &mgmt.ControlArgs{
-			Mask:  utils.IdPtr(uint64(0x01)),
-			Flags: utils.IdPtr(uint64(0x01)),
+			Mask:  utils.IdPtr(mgmt.FaceFlagLocalFieldsEnabled),
+			Flags: utils.IdPtr(mgmt.FaceFlagLocalFieldsEnabled),
 		},
 		Retries: -1,
 	})
