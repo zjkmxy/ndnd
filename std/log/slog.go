@@ -55,7 +55,7 @@ func (l *Logger) log(t any, msg string, level Level, v ...any) {
 	}
 
 	// Get source information if debug logs
-	if level <= LevelDebug {
+	if l.level <= LevelDebug {
 		if pc, _, _, ok := runtime.Caller(2); ok {
 			if f := runtime.FuncForPC(pc); f != nil {
 				v = append(v, slog.SourceKey, f.Name())
