@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"runtime"
+	"strings"
 )
 
 type Logger struct {
@@ -49,27 +50,32 @@ func (l *Logger) Level() Level {
 }
 
 // Generic level message.
-func (l *Logger) log(t any, msg string, level Level, v ...any) {
+func (l *Logger) log(t Tag, msg string, level Level, v ...any) {
 	if l.level > level {
 		return
 	}
 
-	// Get source information if debug logs
-	if l.level <= LevelDebug {
+	// Get source information
+	var source string
+	if l.level <= LevelDebug || t == nil {
 		if pc, _, _, ok := runtime.Caller(2); ok {
 			if f := runtime.FuncForPC(pc); f != nil {
-				v = append(v, slog.SourceKey, f.Name())
+				source = f.Name()
 			}
 		}
 	}
 
-	// Get tag
+	// Keep source information if debug
+	if l.level <= LevelDebug {
+		v = append(v, slog.SourceKey, source)
+	}
+
+	// Get tag or use source as tag
 	if t != nil {
-		if tag, ok := t.(Tag); ok {
-			v = append([]any{"tag", tag.String()}, v...)
-		} else {
-			v = append([]any{"tag", t}, v...)
-		}
+		v = append([]any{"tag", t.String()}, v...)
+	} else if source != "" {
+		parts := strings.Split(source, "/")
+		v = append([]any{"tag", parts[len(parts)-1]}, v...)
 	}
 
 	// Log the message
@@ -77,32 +83,32 @@ func (l *Logger) log(t any, msg string, level Level, v ...any) {
 }
 
 // Trace level message.
-func (l *Logger) Trace(t any, msg string, v ...any) {
+func (l *Logger) Trace(t Tag, msg string, v ...any) {
 	l.log(t, msg, LevelTrace, v...)
 }
 
 // Debug level message.
-func (l *Logger) Debug(t any, msg string, v ...any) {
+func (l *Logger) Debug(t Tag, msg string, v ...any) {
 	l.log(t, msg, LevelDebug, v...)
 }
 
 // Info level message.
-func (l *Logger) Info(t any, msg string, v ...any) {
+func (l *Logger) Info(t Tag, msg string, v ...any) {
 	l.log(t, msg, LevelInfo, v...)
 }
 
 // Warn level message.
-func (l *Logger) Warn(t any, msg string, v ...any) {
+func (l *Logger) Warn(t Tag, msg string, v ...any) {
 	l.log(t, msg, LevelWarn, v...)
 }
 
 // Error level message.
-func (l *Logger) Error(t any, msg string, v ...any) {
+func (l *Logger) Error(t Tag, msg string, v ...any) {
 	l.log(t, msg, LevelError, v...)
 }
 
 // Fatal level message, followed by an exit.
-func (l *Logger) Fatal(t any, msg string, v ...any) {
+func (l *Logger) Fatal(t Tag, msg string, v ...any) {
 	l.log(t, msg, LevelFatal, v...)
 }
 

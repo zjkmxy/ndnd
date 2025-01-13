@@ -103,7 +103,7 @@ func AcceptUnicastTCPTransport(
 	var success bool
 	t.conn, success = remoteConn.(*net.TCPConn)
 	if !success {
-		core.LogError("UnicastTCPTransport", "Specified connection ", remoteConn, " is not a net.TCPConn")
+		core.Log.Error(t, "Specified connection is not a net.TCPConn", "conn", remoteConn)
 		return nil, errors.New("specified connection is not a net.TCPConn")
 	}
 	t.running.Store(true)
@@ -143,7 +143,7 @@ func (t *UnicastTCPTransport) SetPersistency(persistency spec_mgmt.Persistency) 
 func (t *UnicastTCPTransport) GetSendQueueSize() uint64 {
 	rawConn, err := t.conn.SyscallConn()
 	if err != nil {
-		core.LogWarn(t, "Unable to get raw connection to get socket length: ", err)
+		core.Log.Warn(t, "Unable to get raw connection to get socket length", "err", err)
 	}
 	return impl.SyscallGetSocketSendQueueSize(rawConn)
 }
@@ -186,7 +186,7 @@ func (t *UnicastTCPTransport) reconnect() {
 		remote := net.JoinHostPort(t.remoteURI.Path(), strconv.Itoa(int(t.remoteURI.Port())))
 		conn, err := t.dialer.Dial(t.remoteURI.Scheme(), remote)
 		if err != nil {
-			core.LogWarn(t, "Unable to connect to remote endpoint [", attempt, "]: ", err)
+			core.Log.Warn(t, "Unable to connect to remote endpoint", "err", err, "attempt", attempt)
 			time.Sleep(5 * time.Second) // TODO: configurable
 			continue
 		}
@@ -211,13 +211,13 @@ func (t *UnicastTCPTransport) sendFrame(frame []byte) {
 	}
 
 	if len(frame) > t.MTU() {
-		core.LogWarn(t, "Attempted to send frame larger than MTU - DROP")
+		core.Log.Warn(t, "Attempted to send frame larger than MTU")
 		return
 	}
 
 	_, err := t.conn.Write(frame)
 	if err != nil {
-		core.LogWarn(t, "Unable to send on socket - DROP")
+		core.Log.Warn(t, "Unable to send on socket")
 		t.CloseConn() // receive might restart if needed
 		return
 	}
@@ -242,7 +242,7 @@ func (t *UnicastTCPTransport) runReceive() {
 				break // EOF
 			}
 
-			core.LogWarn(t, "Unable to read from socket (", err, ") - Face DOWN")
+			core.Log.Warn(t, "Unable to read from socket - Face DOWN", "err", err)
 		}
 
 		// Persistent faces will reconnect, otherwise close

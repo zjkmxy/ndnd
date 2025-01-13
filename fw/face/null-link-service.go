@@ -46,5 +46,5 @@ func (l *NullLinkService) Run(initial []byte) {
 
 func (l *NullLinkService) handleIncomingFrame(frame []byte) {
 	// Do nothing
-	core.LogDebug(l, "Received frame on null link service - DROP")
+	core.Log.Debug(l, "Received frame on null link service - DROP")
 }

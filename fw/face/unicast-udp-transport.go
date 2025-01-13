@@ -103,7 +103,7 @@ func (t *UnicastUDPTransport) SetPersistency(persistency spec_mgmt.Persistency) 
 func (t *UnicastUDPTransport) GetSendQueueSize() uint64 {
 	rawConn, err := t.conn.SyscallConn()
 	if err != nil {
-		core.LogWarn(t, "Unable to get raw connection to get socket length: ", err)
+		core.Log.Warn(t, "Unable to get raw connection to get socket length", "err", err)
 	}
 	return impl.SyscallGetSocketSendQueueSize(rawConn)
 }
@@ -114,13 +114,13 @@ func (t *UnicastUDPTransport) sendFrame(frame []byte) {
 	}
 
 	if len(frame) > t.MTU() {
-		core.LogWarn(t, "Attempted to send frame larger than MTU - DROP")
+		core.Log.Warn(t, "Attempted to send frame larger than MTU")
 		return
 	}
 
 	_, err := t.conn.Write(frame)
 	if err != nil {
-		core.LogWarn(t, "Unable to send on socket - DROP and Face DOWN")
+		core.Log.Warn(t, "Unable to send on socket - Face DOWN")
 		t.Close()
 		return
 	}
@@ -142,7 +142,7 @@ func (t *UnicastUDPTransport) runReceive() {
 		return strings.Contains(err.Error(), "connection refused")
 	})
 	if err != nil && t.running.Load() {
-		core.LogWarn(t, "Unable to read from socket (", err, ") - Face DOWN")
+		core.Log.Warn(t, "Unable to read from socket - Face DOWN", "err", err)
 	}
 }
 

@@ -26,7 +26,7 @@ func (p *Profiler) Start() (err error) {
 	if p.config.CpuProfile != "" {
 		p.cpuFile, err = os.Create(p.config.CpuProfile)
 		if err != nil {
-			core.LogFatal(p, "Unable to open output file for CPU profile: ", err)
+			core.Log.Fatal(p, "Unable to open output file for CPU profile", "err", err)
 		}
 
 		core.Log.Info(p, "Profiling CPU", "out", p.config.CpuProfile)
@@ -46,10 +46,10 @@ func (p *Profiler) Stop() {
 	if p.block != nil {
 		blockProfileFile, err := os.Create(p.config.BlockProfile)
 		if err != nil {
-			core.LogFatal(p, "Unable to open output file for block profile: ", err)
+			core.Log.Fatal(p, "Unable to open output file for block profile", "err", err)
 		}
 		if err := p.block.WriteTo(blockProfileFile, 0); err != nil {
-			core.LogFatal(p, "Unable to write block profile: ", err)
+			core.Log.Fatal(p, "Unable to write block profile", "err", err)
 		}
 		blockProfileFile.Close()
 	}
@@ -57,14 +57,14 @@ func (p *Profiler) Stop() {
 	if p.config.MemProfile != "" {
 		memProfileFile, err := os.Create(p.config.MemProfile)
 		if err != nil {
-			core.LogFatal(p, "Unable to open output file for memory profile: ", err)
+			core.Log.Fatal(p, "Unable to open output file for memory profile", "err", err)
 		}
 		defer memProfileFile.Close()
 
 		core.Log.Info(p, "Profiling memory", "out", p.config.MemProfile)
 		runtime.GC()
 		if err := pprof.WriteHeapProfile(memProfileFile); err != nil {
-			core.LogFatal(p, "Unable to write memory profile: ", err)
+			core.Log.Fatal(p, "Unable to write memory profile", "err", err)
 		}
 	}
 

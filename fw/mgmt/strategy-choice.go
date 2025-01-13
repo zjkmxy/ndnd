@@ -36,7 +36,7 @@ func (s *StrategyChoiceModule) getManager() *Thread {
 func (s *StrategyChoiceModule) handleIncomingInterest(interest *Interest) {
 	// Only allow from /localhost
 	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
-		core.LogWarn(s, "Received strategy management Interest from non-local source - DROP")
+		core.Log.Warn(s, "Received strategy management Interest from non-local source - DROP")
 		return
 	}
 
@@ -78,7 +78,7 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 	}
 
 	if !defn.STRATEGY_PREFIX.IsPrefix(params.Strategy.Name) {
-		core.LogWarn(s, "Invalid Strategy=", params.Strategy.Name)
+		core.Log.Warn(s, "Invalid strategy", "strategy", params.Strategy.Name)
 		s.manager.sendCtrlResp(interest, 404, "Invalid strategy", nil)
 		return
 	}
@@ -86,7 +86,7 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 	strategyName := params.Strategy.Name[len(defn.STRATEGY_PREFIX)].String()
 	availableVersions, ok := fw.StrategyVersions[strategyName]
 	if !ok {
-		core.LogWarn(s, "Unknown Strategy=", params.Strategy)
+		core.Log.Warn(s, "Unknown strategy", "strategy", params.Strategy.Name)
 		s.manager.sendCtrlResp(interest, 404, "Unknown strategy", nil)
 		return
 	}
@@ -99,14 +99,14 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 		}
 	}
 	if len(params.Strategy.Name) > len(defn.STRATEGY_PREFIX)+1 && params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1].Typ != enc.TypeVersionNameComponent {
-		core.LogWarn(s, "Invalid Version=", params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1], " for Strategy=", params.Strategy)
+		core.Log.Warn(s, "Unknown strategy version", "strategy", params.Strategy.Name, "version", params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1])
 		s.manager.sendCtrlResp(interest, 404, "Unknown strategy version", nil)
 		return
 	} else if len(params.Strategy.Name) > len(defn.STRATEGY_PREFIX)+1 {
 		strategyVersionBytes := params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1].Val
 		strategyVersion, _, err := enc.ParseNat(strategyVersionBytes)
 		if err != nil {
-			core.LogWarn(s, "Invalid Version=", params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1], " for Strategy=", params.Strategy)
+			core.Log.Warn(s, "Invalid strategy version", "strategy", params.Strategy.Name, "version", params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1])
 			s.manager.sendCtrlResp(interest, 404, "Invalid strategy version", nil)
 			return
 		}
@@ -117,7 +117,7 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 			}
 		}
 		if !foundMatchingVersion {
-			core.LogWarn(s, "Unknown Version=", strategyVersion, " for Strategy=", params.Strategy)
+			core.Log.Warn(s, "Unknown strategy version", "strategy", params.Strategy.Name, "version", strategyVersion)
 			s.manager.sendCtrlResp(interest, 404, "Unknown strategy version", nil)
 			return
 		}

@@ -96,7 +96,7 @@ func (y *YaNFD) Start() {
 
 	// Create forwarding threads
 	if fw.NumFwThreads < 1 || fw.NumFwThreads > fw.MaxFwThreads {
-		core.LogFatal(y, "Number of forwarding threads must be in range [1, ", fw.MaxFwThreads, "]")
+		core.Log.Fatal(y, "Number of forwarding threads out of range", "range", fmt.Sprintf("[1, %d]", fw.MaxFwThreads))
 		os.Exit(2)
 	}
 	fw.Threads = make([]*fw.Thread, fw.NumFwThreads)
@@ -164,7 +164,7 @@ func (y *YaNFD) Start() {
 	if core.GetConfig().Faces.Udp.EnabledMulticast {
 		ifaces, err := net.Interfaces()
 		if err != nil {
-			core.LogError(y, "Unable to access network interfaces: ", err)
+			core.Log.Error(y, "Unable to access network interfaces", "err", err)
 		}
 
 		for _, iface := range ifaces {
@@ -191,7 +191,7 @@ func (y *YaNFD) Start() {
 				if !addr.(*net.IPNet).IP.IsLoopback() {
 					multicastUDPTransport, err := face.MakeMulticastUDPTransport(defn.DecodeURIString(uri))
 					if err != nil {
-						core.LogError(y, "Unable to create MulticastUDPTransport for ", uri, ": ", err)
+						core.Log.Error(y, "Unable to create MulticastUDPTransport", "uri", uri, "err", err)
 						continue
 					}
 
@@ -211,12 +211,12 @@ func (y *YaNFD) Start() {
 	if core.GetConfig().Faces.Unix.Enabled {
 		unixListener, err := face.MakeUnixStreamListener(defn.MakeUnixFaceURI(face.UnixSocketPath))
 		if err != nil {
-			core.LogError(y, "Unable to create Unix stream listener at ", face.UnixSocketPath, ": ", err)
+			core.Log.Error(y, "Unable to create Unix stream listener", "path", face.UnixSocketPath, "err", err)
 		} else {
 			listenerCount++
 			go unixListener.Run()
 			y.unixListener = unixListener
-			core.Log.Info(y, "Created Unix stream listener", "uri", face.UnixSocketPath)
+			core.Log.Info(y, "Created unix stream listener", "uri", face.UnixSocketPath)
 		}
 	}
 
@@ -232,7 +232,7 @@ func (y *YaNFD) Start() {
 
 		wsListener, err := face.NewWebSocketListener(cfg)
 		if err != nil {
-			core.LogError(y, "Unable to create WebSocket Listener", "cfg", cfg, "err", err)
+			core.Log.Error(y, "Unable to create WebSocket Listener", "cfg", cfg, "err", err)
 		} else {
 			listenerCount++
 			go wsListener.Run()
@@ -243,7 +243,7 @@ func (y *YaNFD) Start() {
 
 	// Check if any faces were created
 	if listenerCount <= 0 {
-		core.LogFatal(y, "No face or listener is successfully created. Quit.")
+		core.Log.Fatal(y, "No face or listener is successfully created. Quit.")
 		os.Exit(2)
 	}
 }

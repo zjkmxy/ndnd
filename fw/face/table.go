@@ -43,7 +43,7 @@ func (t *Table) Add(face LinkService) {
 	face.SetFaceID(faceID)
 	t.faces.Store(faceID, face)
 	dispatch.AddFace(faceID, face)
-	core.LogDebug(t, "Registered FaceID=", faceID)
+	core.Log.Debug(t, "Registered face", "faceid", faceID)
 }
 
 // Get gets the face with the specified ID (if any) from the face table.
@@ -84,7 +84,7 @@ func (t *Table) Remove(id uint64) {
 	t.faces.Delete(id)
 	dispatch.RemoveFace(id)
 	table.Rib.CleanUpFace(id)
-	core.Log.Info(t, "Unregistered FaceID", "faceid", id)
+	core.Log.Info(t, "Unregistered face", "faceid", id)
 }
 
 // ExpirationHandler stops the faces that have expired

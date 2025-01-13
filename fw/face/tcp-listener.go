@@ -61,7 +61,7 @@ func (l *TCPListener) Run() {
 	var err error
 	l.conn, err = listenConfig.Listen(context.Background(), l.localURI.Scheme(), remote)
 	if err != nil {
-		core.LogError(l, "Unable to start TCP listener: ", err)
+		core.Log.Error(l, "Unable to start TCP listener", "err", err)
 		return
 	}
 
@@ -72,13 +72,13 @@ func (l *TCPListener) Run() {
 			if errors.Is(err, net.ErrClosed) {
 				return
 			}
-			core.LogWarn(l, "Unable to accept connection: ", err)
+			core.Log.Warn(l, "Unable to accept connection", "err", err)
 			continue
 		}
 
 		newTransport, err := AcceptUnicastTCPTransport(remoteConn, l.localURI, mgmt_2022.PersistencyPersistent)
 		if err != nil {
-			core.LogError(l, "Failed to create new unicast TCP transport: ", err)
+			core.Log.Error(l, "Failed to create new unicast TCP transport", "err", err)
 			continue
 		}
 

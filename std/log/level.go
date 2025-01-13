@@ -43,6 +43,8 @@ func (level Level) String() string {
 		return "WARN"
 	case LevelError:
 		return "ERROR"
+	case LevelFatal:
+		return "FATAL"
 	default:
 		return "UNKNOWN"
 	}

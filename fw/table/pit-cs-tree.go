@@ -73,7 +73,7 @@ func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	case "lru":
 		pitCs.csReplacement = NewCsLRU(pitCs)
 	default:
-		core.LogFatal(pitCs, "Unknown CS replacement policy ", csReplacementPolicy)
+		core.Log.Fatal(nil, "Unknown CS replacement policy", "policy", csReplacementPolicy)
 	}
 	pitCs.csMap = make(map[uint64]*nameTreeCsEntry)
 

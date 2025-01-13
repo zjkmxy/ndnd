@@ -99,7 +99,7 @@ func (l *WebSocketListener) Run() {
 		err = l.server.ListenAndServeTLS("", "")
 	}
 	if !errors.Is(err, http.ErrServerClosed) {
-		core.LogFatal(l, "Unable to start listener: ", err)
+		core.Log.Fatal(l, "Unable to start listener", "err", err)
 	}
 }
 

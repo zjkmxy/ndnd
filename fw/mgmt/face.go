@@ -41,7 +41,7 @@ func (f *FaceModule) getManager() *Thread {
 func (f *FaceModule) handleIncomingInterest(interest *Interest) {
 	// Only allow from /localhost
 	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
-		core.LogWarn(f, "Received face management Interest from non-local source - DROP")
+		core.Log.Warn(f, "Received face management Interest from non-local source - DROP")
 		return
 	}
 
@@ -59,7 +59,7 @@ func (f *FaceModule) handleIncomingInterest(interest *Interest) {
 	case "query":
 		f.query(interest)
 	default:
-		core.LogWarn(f, "Received Interest for non-existent verb '", verb, "'")
+		core.Log.Warn(f, "Received Interest for non-existent verb", "verb", verb)
 		f.manager.sendCtrlResp(interest, 501, "Unknown verb", nil)
 		return
 	}
@@ -96,8 +96,8 @@ func (f *FaceModule) create(interest *Interest) {
 	// Ensure does not conflict with existing face
 	existingFace := face.FaceTable.GetByURI(URI)
 	if existingFace != nil {
-		core.LogWarn(f, "Cannot create face ", URI, ": Conflicts with existing face FaceID=",
-			existingFace.FaceID(), ", RemoteURI=", existingFace.RemoteURI())
+		core.Log.Warn(f, "Cannot create face, conflicts with existing face",
+			"faceid", existingFace.FaceID(), "uri", existingFace.RemoteURI())
 		responseParams := &mgmt.ControlArgs{}
 		f.fillFaceProperties(responseParams, existingFace)
 		f.manager.sendCtrlResp(interest, 409, "Conflicts with existing face", responseParams)
@@ -144,7 +144,7 @@ func (f *FaceModule) create(interest *Interest) {
 		// Create new UDP face
 		transport, err := face.MakeUnicastUDPTransport(URI, nil, persistency)
 		if err != nil {
-			core.LogWarn(f, "Unable to create unicast UDP face with URI ", URI, ": ", err.Error())
+			core.Log.Warn(f, "Unable to create unicast UDP face", "uri", URI, "err", err)
 			f.manager.sendCtrlResp(interest, 406, "Transport error", nil)
 			return
 		}
@@ -226,7 +226,7 @@ func (f *FaceModule) create(interest *Interest) {
 		// Create new TCP face
 		transport, err := face.MakeUnicastTCPTransport(URI, nil, persistency)
 		if err != nil {
-			core.LogWarn(f, "Unable to create unicast TCP face with URI ", URI, ":", err.Error())
+			core.Log.Warn(f, "Unable to create unicast TCP face", "uri", URI, "err", err)
 			f.manager.sendCtrlResp(interest, 406, "Transport error", nil)
 			return
 		}
@@ -277,7 +277,7 @@ func (f *FaceModule) create(interest *Interest) {
 	}
 
 	if linkService == nil { // Internal failure
-		core.LogWarn(f, "Transport error when creating face ", URI)
+		core.Log.Warn(f, "Transport error when creating face", "uri", URI)
 		f.manager.sendCtrlResp(interest, 504, "Transport error when creating face", nil)
 		return
 	}
@@ -312,7 +312,7 @@ func (f *FaceModule) update(interest *Interest) {
 
 	selectedFace := face.FaceTable.Get(faceID)
 	if selectedFace == nil {
-		core.LogWarn(f, "Cannot update specified (or implicit) FaceID=", faceID, " because it does not exist")
+		core.Log.Warn(f, "Cannot update specified (or implicit) face because it does not exist", "faceid", faceID)
 		f.manager.sendCtrlResp(interest, 404, "Face does not exist", &mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
 		return
 	}
@@ -482,7 +482,7 @@ func (f *FaceModule) list(interest *Interest) {
 func (f *FaceModule) query(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain FaceQueryFilter
-		core.LogWarn(f, "Missing FaceQueryFilter in ", interest.Name())
+		core.Log.Warn(f, "Missing FaceQueryFilter", "name", interest.Name())
 		return
 	}
 	filterV, err := mgmt.ParseFaceQueryFilter(enc.NewBufferReader(interest.Name()[len(LOCAL_PREFIX)+2].Val), true)
@@ -496,12 +496,12 @@ func (f *FaceModule) query(interest *Interest) {
 	if filter.Uri != nil {
 		filterUri = defn.DecodeURIString(*filter.Uri)
 		if filterUri == nil {
-			core.LogWarn(f, "Cannot decode URI in FaceQueryFilter ", filterUri)
+			core.Log.Warn(f, "Cannot decode URI in FaceQueryFilter", "uri", filterUri)
 			return
 		}
 		err = filterUri.Canonize()
 		if err != nil {
-			core.LogWarn(f, "Cannot canonize URI in FaceQueryFilter ", filterUri)
+			core.Log.Warn(f, "Cannot canonize URI in FaceQueryFilter", "uri", filterUri)
 			return
 		}
 	}

@@ -10,8 +10,6 @@ import (
 	"github.com/named-data/ndnd/std/sync"
 )
 
-const TAG = "svs"
-
 func main() {
 	// Before running this example, make sure the strategy is correctly setup
 	// to multicast for the /ndn/svs prefix. For example, using the following:
@@ -35,7 +33,7 @@ func main() {
 	app := engine.NewBasicEngine(engine.NewDefaultFace())
 	err = app.Start()
 	if err != nil {
-		logger.Fatal(TAG, "Unable to start engine", "err", err)
+		logger.Fatal(nil, "Unable to start engine", "err", err)
 		return
 	}
 	defer app.Stop()
@@ -46,21 +44,21 @@ func main() {
 		Engine:      app,
 		GroupPrefix: group,
 		OnUpdate: func(ssu sync.SvSyncUpdate) {
-			logger.Info(TAG, "Received update", "update", ssu)
+			logger.Info(nil, "Received update", "update", ssu)
 		},
 	})
 
 	// Register group prefix route
 	err = app.RegisterRoute(group)
 	if err != nil {
-		logger.Error(TAG, "Unable to register route", "err", err)
+		logger.Error(nil, "Unable to register route", "err", err)
 		return
 	}
 	defer app.UnregisterRoute(group)
 
 	err = svsync.Start()
 	if err != nil {
-		logger.Error(TAG, "Unable to create SvSync", "err", err)
+		logger.Error(nil, "Unable to create SvSync", "err", err)
 		return
 	}
 
@@ -69,6 +67,6 @@ func main() {
 
 	for range ticker.C {
 		seq := svsync.IncrSeqNo(name)
-		logger.Info(TAG, "Published new sequence number", "seq", seq)
+		logger.Info(nil, "Published new sequence number", "seq", seq)
 	}
 }

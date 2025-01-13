@@ -57,15 +57,15 @@ func (l *UnixStreamListener) Run() {
 	// Create listener
 	var err error
 	if l.conn, err = net.Listen(l.localURI.Scheme(), sockPath); err != nil {
-		core.LogFatal(l, "Unable to start Unix stream listener: ", err)
+		core.Log.Fatal(l, "Unable to start Unix stream listener", "err", err)
 	}
 
 	// Set permissions to allow all local apps to communicate with us
 	if err := os.Chmod(sockPath, os.ModePerm); err != nil {
-		core.LogFatal(l, "Unable to change permissions on Unix stream listener: ", err)
+		core.Log.Fatal(l, "Unable to change permissions on Unix stream listener", "err", err)
 	}
 
-	core.Log.Info(l, "Listening")
+	core.Log.Info(l, "Listening for connections")
 
 	// Run accept loop
 	for !core.ShouldQuit {
@@ -74,20 +74,20 @@ func (l *UnixStreamListener) Run() {
 			if errors.Is(err, net.ErrClosed) {
 				return
 			}
-			core.LogWarn(l, "Unable to accept connection: ", err)
+			core.Log.Warn(l, "Unable to accept connection", "err", err)
 			return
 		}
 
 		remoteURI := defn.MakeFDFaceURI(l.nextFD)
 		l.nextFD++
 		if !remoteURI.IsCanonical() {
-			core.LogWarn(l, "Unable to create face from ", remoteURI, " as remote URI is not canonical")
+			core.Log.Warn(l, "Unable to create face remote URI is not canonical", "uri", remoteURI)
 			continue
 		}
 
 		newTransport, err := MakeUnixStreamTransport(remoteURI, l.localURI, newConn)
 		if err != nil {
-			core.LogError(l, "Failed to create new Unix stream transport: ", err)
+			core.Log.Error(l, "Failed to create new Unix stream transport", "err", err)
 			continue
 		}
 

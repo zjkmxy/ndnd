@@ -24,7 +24,7 @@ func InstantiateStrategies(fwThread *Thread) map[uint64]Strategy {
 		strategy := strategyType()
 		strategy.Instantiate(fwThread)
 		strategies[strategy.GetName().Hash()] = strategy
-		core.LogDebug("StrategyLoader", "Instantiated Strategy=", strategy.GetName(), " for Thread=", fwThread.GetID())
+		core.Log.Debug(nil, "Instantiated Strategy", "strategy", strategy.GetName(), "thread", fwThread.GetID())
 	}
 
 	return strategies

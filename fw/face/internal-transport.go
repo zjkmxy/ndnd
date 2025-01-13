@@ -84,7 +84,7 @@ func (t *InternalTransport) Send(lpPkt *spec.LpPacket) {
 	encoder.Init(pkt)
 	lpPacketWire := encoder.Encode(pkt)
 	if lpPacketWire == nil {
-		core.LogWarn(t, "Unable to encode block to send - DROP")
+		core.Log.Warn(t, "Unable to encode block to send")
 		return
 	}
 	t.sendQueue <- lpPacketWire.Join()
@@ -95,13 +95,13 @@ func (t *InternalTransport) Receive() *spec.LpPacket {
 	for frame := range t.recvQueue {
 		packet, _, err := spec.ReadPacket(enc.NewBufferReader(frame))
 		if err != nil {
-			core.LogWarn(t, "Unable to decode received block - DROP: ", err)
+			core.Log.Warn(t, "Unable to decode received block", "err", err)
 			continue
 		}
 
 		lpPkt := packet.LpPacket
 		if packet.LpPacket == nil || lpPkt.Fragment.Length() == 0 {
-			core.LogWarn(t, "Received empty fragment - DROP")
+			core.Log.Warn(t, "Received empty fragment")
 			continue
 		}
 
@@ -113,7 +113,7 @@ func (t *InternalTransport) Receive() *spec.LpPacket {
 
 func (t *InternalTransport) sendFrame(frame []byte) {
 	if len(frame) > t.MTU() {
-		core.LogWarn(t, "Attempted to send frame larger than MTU - DROP")
+		core.Log.Warn(t, "Attempted to send frame larger than MTU")
 		return
 	}
 
@@ -127,7 +127,7 @@ func (t *InternalTransport) sendFrame(frame []byte) {
 func (t *InternalTransport) runReceive() {
 	for frame := range t.sendQueue {
 		if len(frame) > defn.MaxNDNPacketSize {
-			core.LogWarn(t, "Component trying to send too much data - DROP")
+			core.Log.Warn(t, "Caller trying to send too much data")
 			continue
 		}
 

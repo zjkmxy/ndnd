@@ -124,7 +124,7 @@ func (t *MulticastUDPTransport) SetPersistency(persistency spec_mgmt.Persistency
 func (t *MulticastUDPTransport) GetSendQueueSize() uint64 {
 	rawConn, err := t.recvConn.SyscallConn()
 	if err != nil {
-		core.LogWarn(t, "Unable to get raw connection to get socket length: ", err)
+		core.Log.Warn(t, "Unable to get raw connection to get socket length", "err", err)
 	}
 	return impl.SyscallGetSocketSendQueueSize(rawConn)
 }
@@ -135,19 +135,19 @@ func (t *MulticastUDPTransport) sendFrame(frame []byte) {
 	}
 
 	if len(frame) > t.MTU() {
-		core.LogWarn(t, "Attempted to send frame larger than MTU - DROP")
+		core.Log.Warn(t, "Attempted to send frame larger than MTU")
 		return
 	}
 
 	_, err := t.sendConn.Write(frame)
 	if err != nil {
-		core.LogWarn(t, "Unable to send on socket - DROP")
+		core.Log.Warn(t, "Unable to send on socket")
 
 		// Re-create the socket if connection is still running
 		if t.running.Load() {
 			err = t.connectSend()
 			if err != nil {
-				core.LogError(t, "Unable to re-create send connection: ", err)
+				core.Log.Error(t, "Unable to re-create send connection", "err", err)
 				return
 			}
 		}
@@ -169,10 +169,10 @@ func (t *MulticastUDPTransport) runReceive() {
 		})
 		if err != nil && t.running.Load() {
 			// Re-create the socket if connection is still running
-			core.LogWarn(t, "Unable to read from socket (", err, ") - Face DOWN")
+			core.Log.Warn(t, "Unable to read from socket - Face DOWN", "err", err)
 			err = t.connectRecv()
 			if err != nil {
-				core.LogError(t, "Unable to re-create receive connection: ", err)
+				core.Log.Error(t, "Unable to re-create receive connection", "err", err)
 				return
 			}
 		}
