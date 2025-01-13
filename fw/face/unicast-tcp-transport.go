@@ -251,7 +251,7 @@ func (t *UnicastTCPTransport) runReceive() {
 			return // do not continue
 		}
 
-		core.LogInfo(t, "Connected socket - Face UP")
+		core.Log.Info(t, "Connected socket - Face UP")
 		t.running.Store(true)
 	}
 }

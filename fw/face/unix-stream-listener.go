@@ -65,7 +65,7 @@ func (l *UnixStreamListener) Run() {
 		core.LogFatal(l, "Unable to change permissions on Unix stream listener: ", err)
 	}
 
-	core.LogInfo(l, "Listening")
+	core.Log.Info(l, "Listening")
 
 	// Run accept loop
 	for !core.ShouldQuit {
@@ -91,7 +91,7 @@ func (l *UnixStreamListener) Run() {
 			continue
 		}
 
-		core.LogInfo(l, "Accepting new Unix stream face ", remoteURI)
+		core.Log.Info(l, "Accepting new Unix stream face", "uri", remoteURI)
 		options := MakeNDNLPLinkServiceOptions()
 		options.IsFragmentationEnabled = false // reliable stream
 		MakeNDNLPLinkService(newTransport, options).Run(nil)

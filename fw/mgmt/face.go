@@ -286,7 +286,7 @@ func (f *FaceModule) create(interest *Interest) {
 	f.fillFaceProperties(responseParams, linkService)
 	f.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 
-	core.LogInfo(f, "Created face with URI ", URI)
+	core.Log.Info(f, "Created face ", "uri", URI)
 }
 
 func (f *FaceModule) update(interest *Interest) {
@@ -370,13 +370,13 @@ func (f *FaceModule) update(interest *Interest) {
 		if params.BaseCongestionMarkInterval != nil &&
 			time.Duration(*params.BaseCongestionMarkInterval)*time.Nanosecond != options.BaseCongestionMarkingInterval {
 			options.BaseCongestionMarkingInterval = time.Duration(*params.BaseCongestionMarkInterval) * time.Nanosecond
-			core.LogInfo(f, "FaceID=", faceID, ", BaseCongestionMarkingInterval=", options.BaseCongestionMarkingInterval)
+			core.Log.Info(f, "Set BaseCongestionMarkingInterval", "faceid", faceID, "value", options.BaseCongestionMarkingInterval)
 		}
 
 		if params.DefaultCongestionThreshold != nil &&
 			*params.DefaultCongestionThreshold != options.DefaultCongestionThresholdBytes {
 			options.DefaultCongestionThresholdBytes = *params.DefaultCongestionThreshold
-			core.LogInfo(f, "FaceID=", faceID, ", DefaultCongestionThreshold=", options.DefaultCongestionThresholdBytes, "B")
+			core.Log.Info(f, "Set DefaultCongestionThreshold", "faceid", faceID, "value", options.DefaultCongestionThresholdBytes)
 		}
 
 		// MTU
@@ -384,7 +384,7 @@ func (f *FaceModule) update(interest *Interest) {
 			oldMTU := selectedFace.MTU()
 			newMTU := min(int(*params.Mtu), defn.MaxNDNPacketSize)
 			selectedFace.SetMTU(newMTU)
-			core.LogInfo(f, "FaceID=", faceID, ", MTU ", oldMTU, " -> ", newMTU)
+			core.Log.Info(f, "Set MTU", "faceid", faceID, "value", newMTU, "old", oldMTU)
 		}
 
 		// Flags
@@ -394,12 +394,12 @@ func (f *FaceModule) update(interest *Interest) {
 
 			if mask&face.FaceFlagLocalFields > 0 {
 				if flags&face.FaceFlagLocalFields > 0 {
-					core.LogInfo(f, "FaceID=", faceID, ", Enabling local fields")
+					core.Log.Info(f, "Enable local fields", "faceid", faceID)
 					options.IsConsumerControlledForwardingEnabled = true
 					options.IsIncomingFaceIndicationEnabled = true
 					options.IsLocalCachePolicyEnabled = true
 				} else {
-					core.LogInfo(f, "FaceID=", faceID, ", Disabling local fields")
+					core.Log.Info(f, "Disable local fields", "faceid", faceID)
 					options.IsConsumerControlledForwardingEnabled = false
 					options.IsIncomingFaceIndicationEnabled = false
 					options.IsLocalCachePolicyEnabled = false
@@ -409,9 +409,9 @@ func (f *FaceModule) update(interest *Interest) {
 			if mask&face.FaceFlagCongestionMarking > 0 {
 				options.IsCongestionMarkingEnabled = flags&face.FaceFlagCongestionMarking > 0
 				if flags&face.FaceFlagCongestionMarking > 0 {
-					core.LogInfo(f, "FaceID=", faceID, ", Enabling congestion marking")
+					core.Log.Info(f, "Enable congestion marking", "faceid", faceID)
 				} else {
-					core.LogInfo(f, "FaceID=", faceID, ", Disabling congestion marking")
+					core.Log.Info(f, "Disable congestion marking", "faceid", faceID)
 				}
 			}
 		}
@@ -444,9 +444,9 @@ func (f *FaceModule) destroy(interest *Interest) {
 
 	if link := face.FaceTable.Get(*params.FaceId); link != nil {
 		link.Close()
-		core.LogInfo(f, "Destroyed face with FaceID=", *params.FaceId)
+		core.Log.Info(f, "Destroyed face", "faceid", *params.FaceId)
 	} else {
-		core.LogInfo(f, "Ignoring attempt to delete non-existent face with FaceID=", *params.FaceId)
+		core.Log.Info(f, "Ignoring attempt to delete non-existent face", "faceid", *params.FaceId)
 	}
 
 	f.manager.sendCtrlResp(interest, 200, "OK", params)

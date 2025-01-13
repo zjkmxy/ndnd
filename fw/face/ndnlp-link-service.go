@@ -205,7 +205,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 	var fragments []*spec.LpPacket
 	if len(wire) > effectiveMtu {
 		if !l.options.IsFragmentationEnabled {
-			core.LogInfo(l, "Attempted to send frame over MTU on link without fragmentation - DROP")
+			core.Log.Info(l, "Attempted to send frame over MTU on link without fragmentation - DROP")
 			return
 		}
 

@@ -87,7 +87,7 @@ func (f *FIBModule) add(interest *Interest) {
 	}
 	table.FibStrategyTable.InsertNextHopEnc(params.Name, faceID, cost)
 
-	core.LogInfo(f, "Created nexthop for ", params.Name, " to FaceID=", faceID, "with Cost=", cost)
+	core.Log.Info(f, "Created nexthop", "name", params.Name, "faceid", faceID, "cost", cost)
 
 	f.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,
@@ -119,7 +119,7 @@ func (f *FIBModule) remove(interest *Interest) {
 	}
 	table.FibStrategyTable.RemoveNextHopEnc(params.Name, faceID)
 
-	core.LogInfo(f, "Removed nexthop for ", params.Name, " to FaceID=", faceID)
+	core.Log.Info(f, "Removed nexthop", "name", params.Name, "faceid", faceID)
 
 	f.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,

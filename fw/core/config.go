@@ -189,7 +189,7 @@ func DefaultConfig() *Config {
 
 func LoadConfig(cfg *Config, basedir string) {
 	if cfg == nil {
-		LogFatal("Config", "Config is nil")
+		panic("config is nil")
 	}
 	config = cfg
 	baseDir = basedir

@@ -37,8 +37,6 @@ func (ps *PingServer) usage() {
 }
 
 func (ps *PingServer) run() {
-	log.SetLevel(log.InfoLevel)
-
 	if len(ps.args) < 2 {
 		ps.usage()
 		os.Exit(3)

@@ -27,8 +27,6 @@ func (cc *CatChunks) usage() {
 }
 
 func (cc *CatChunks) run() {
-	log.SetLevel(log.InfoLevel)
-
 	if len(cc.args) < 2 {
 		cc.usage()
 		os.Exit(3)

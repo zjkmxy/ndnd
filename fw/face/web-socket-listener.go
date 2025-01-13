@@ -110,7 +110,7 @@ func (l *WebSocketListener) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newTransport := NewWebSocketTransport(l.localURI, c)
-	core.LogInfo(l, "Accepting new WebSocket face ", newTransport.RemoteURI())
+	core.Log.Info(l, "Accepting new WebSocket face", "uri", newTransport.RemoteURI())
 
 	options := MakeNDNLPLinkServiceOptions()
 	options.IsFragmentationEnabled = false // reliable stream
@@ -118,6 +118,6 @@ func (l *WebSocketListener) handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (l *WebSocketListener) Close() {
-	core.LogInfo(l, "Stopping listener")
+	core.Log.Info(l, "Stopping listener")
 	l.server.Shutdown(context.TODO())
 }

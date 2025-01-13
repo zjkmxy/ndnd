@@ -100,7 +100,7 @@ func (l *UDPListener) Run() {
 			continue
 		}
 
-		core.LogInfo(l, "Accepting new UDP face ", newTransport.RemoteURI())
+		core.Log.Info(l, "Accepting new UDP face", "uri", newTransport.RemoteURI())
 		MakeNDNLPLinkService(newTransport, MakeNDNLPLinkServiceOptions()).Run(recvBuf[:readSize])
 	}
 }

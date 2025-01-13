@@ -75,7 +75,7 @@ func (m *Thread) registerModule(name string, module Module) {
 
 // Run management thread
 func (m *Thread) Run() {
-	core.LogInfo(m, "Starting management thread")
+	core.Log.Info(m, "Starting management thread")
 
 	// Create and register Internal transport
 	m.face, m.transport = face.RegisterInternalTransport()
@@ -88,7 +88,7 @@ func (m *Thread) Run() {
 		lpPkt := m.transport.Receive()
 		if lpPkt == nil {
 			// Indicates that internal face has quit, which means it's time for us to quit
-			core.LogInfo(m, "Face quit, so management quitting")
+			core.Log.Info(m, "Face quit, so management quitting")
 			break
 		}
 

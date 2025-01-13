@@ -50,10 +50,6 @@ type Engine struct {
 	fibLock sync.Mutex
 	pitLock sync.Mutex
 
-	// log is used to log events, with "module=DefaultEngine". Need apex/log initialized.
-	// Use WithField to set "name=".
-	log *log.Entry
-
 	// mgmtConf is the configuration for the management protocol.
 	mgmtConf *mgmt.MgmtConfig
 
@@ -102,14 +98,14 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 	var incomingFaceId *uint64 = nil
 	var raw enc.Wire = nil
 
-	if e.log.Level <= log.TraceLevel {
+	if log.HasTrace() {
 		wire := reader.Range(0, reader.Length())
-		e.log.Tracef("Received packet bytes: %v", wire.Join())
+		log.Trace("received packet bytes", "wire", wire.Join())
 	}
 
 	pkt, ctx, err := spec.ReadPacket(reader)
 	if err != nil {
-		e.log.Errorf("Failed to parse packet: %v", err)
+		log.Errorf("failed to parse packet", "err", err)
 		// Recoverable error. Should continue.
 		return nil
 	}
@@ -118,7 +114,7 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 	if pkt.LpPacket != nil {
 		lpPkt := pkt.LpPacket
 		if lpPkt.FragIndex != nil || lpPkt.FragCount != nil {
-			e.log.Warnf("Fragmented LpPackets are not supported. Drop.")
+			log.Warn("fragmented LpPackets are not supported - DROP")
 			return nil
 		}
 		// Parse the inner packet.
@@ -129,10 +125,10 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 			pkt, ctx, err = spec.ReadPacket(enc.NewWireReader(raw))
 		}
 		if err != nil || (pkt.Data == nil) == (pkt.Interest == nil) {
-			e.log.Errorf("Failed to parse packet in LpPacket: %v", err)
-			if e.log.Level <= log.TraceLevel {
+			log.Errorf("failed to parse packet in LpPacket", "err", err)
+			if log.HasTrace() {
 				wire := reader.Range(0, reader.Length())
-				e.log.Tracef("Failed packet bytes: %v", wire.Join())
+				log.Trace("failed packet bytes", "wire", wire.Join())
 			}
 			// Recoverable error. Should continue.
 			return nil
@@ -149,18 +145,16 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 	// Now pkt is either Data or Interest (including Nack).
 	if nackReason != spec.NackReasonNone {
 		if pkt.Interest == nil {
-			e.log.Errorf("Received nack for an Data")
+			log.Error("received nack for an Data")
 			return nil
 		}
-		if e.log.Level <= log.TraceLevel {
-			e.log.WithField("name", pkt.Interest.NameV.String()).
-				Tracef("Nack received for %v", nackReason)
+		if log.HasTrace() {
+			log.Trace("nack received", "reason", nackReason, "name", pkt.Interest.Name())
 		}
 		e.onNack(pkt.Interest.NameV, nackReason)
 	} else if pkt.Interest != nil {
-		if e.log.Level <= log.TraceLevel {
-			e.log.WithField("name", pkt.Interest.NameV.String()).
-				Trace("Interest received.")
+		if log.HasTrace() {
+			log.Trace("interest received", "name", pkt.Interest.Name())
 		}
 		e.onInterest(ndn.InterestHandlerArgs{
 			Interest:       pkt.Interest,
@@ -170,14 +164,13 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 			IncomingFaceId: incomingFaceId,
 		})
 	} else if pkt.Data != nil {
-		if e.log.Level <= log.TraceLevel {
-			e.log.WithField("name", pkt.Data.NameV.String()).
-				Trace("Data received.")
+		if log.HasTrace() {
+			log.Trace("data received", "name", pkt.Data.Name())
 		}
 		// PitToken is not used for now
 		e.onData(pkt.Data, ctx.Data_context.SigCovered(), raw, pitToken)
 	} else {
-		log.Fatalf("Unreachable. Check spec implementation.")
+		panic("unexpected packet type")
 	}
 	return nil
 }
@@ -212,7 +205,7 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 		return nil
 	}()
 	if handler == nil {
-		e.log.WithField("name", name.String()).Warn("No handler. Drop.")
+		log.Warn("no handler for interest", "name", name)
 		return
 	}
 
@@ -220,11 +213,11 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 	args.Reply = func(encodedData enc.Wire) error {
 		now := e.timer.Now()
 		if args.Deadline.Before(now) {
-			e.log.WithField("name", name).Warn("Deadline exceeded. Drop.")
+			log.Warn("deadline exceeded - DROP", "name", name)
 			return ndn.ErrDeadlineExceed
 		}
 		if !e.face.IsRunning() {
-			e.log.WithField("name", name).Error("Cannot send through a closed face. Drop.")
+			log.Error("cannot send through a closed face - DROP", "name", name)
 			return ndn.ErrFaceDown
 		}
 		if args.PitToken != nil {
@@ -257,7 +250,7 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 
 	n := e.pit.PrefixMatch(pkt.NameV)
 	if n == nil {
-		e.log.WithField("name", pkt.NameV.String()).Warn("Received Data for an unknown interest. Drop.")
+		log.Warn("received data for an unknown interest - DROP", "name", pkt.Name())
 		return
 	}
 
@@ -318,7 +311,7 @@ func (e *Engine) onNack(name enc.Name, reason uint64) {
 	defer e.pitLock.Unlock()
 	n := e.pit.ExactMatch(name)
 	if n == nil {
-		e.log.WithField("name", name.String()).Warn("Received Nack for an unknown interest. Drop.")
+		log.Warn("received Nack for an unknown interest - DROP", "name", name)
 		return
 	}
 	for _, entry := range n.Value() {
@@ -329,14 +322,14 @@ func (e *Engine) onNack(name enc.Name, reason uint64) {
 				NackReason: reason,
 			})
 		} else {
-			e.log.Fatalf("PIT has empty entry. This should not happen. Please check the implementation.")
+			panic("[BUG] PIT has empty entry")
 		}
 	}
 	n.Delete()
 }
 
 func (e *Engine) onError(err error) error {
-	e.log.Errorf("error on face, quit: %v", err)
+	log.Error("error on face", "err", err)
 	// TODO: Handle Interest cancellation
 	return err
 }
@@ -413,7 +406,7 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 							NackReason: spec.NackReasonNone,
 						})
 					} else {
-						e.log.Fatalf("PIT has empty entry. This should not happen. Please check the implementation.")
+						panic("[BUG] PIT has empty entry")
 					}
 				}
 			}
@@ -436,10 +429,9 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 	// Send interest
 	err := e.face.Send(interest.Wire)
 	if err != nil {
-		e.log.Errorf("Failed to send Interest: %v", err)
-	} else if e.log.Level <= log.TraceLevel {
-		e.log.WithField("name", finalName.String()).
-			Trace("Interest sent.")
+		log.Error("failed to send interest", "err", err)
+	} else if log.HasTrace() {
+		log.Trace("interest sent", "name", finalName)
 	}
 
 	return err
@@ -515,12 +507,10 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 func (e *Engine) RegisterRoute(prefix enc.Name) error {
 	_, err := e.ExecMgmtCmd("rib", "register", &mgmt.ControlArgs{Name: prefix})
 	if err != nil {
-		e.log.WithField("name", prefix.String()).
-			Errorf("Failed to register prefix: %v", err)
+		log.Error("failed to register prefix", "err", err, "name", prefix)
 		return err
 	} else {
-		e.log.WithField("name", prefix.String()).
-			Info("Prefix registered.")
+		log.Info("prefix registered", "name", prefix)
 	}
 	return nil
 }
@@ -528,12 +518,10 @@ func (e *Engine) RegisterRoute(prefix enc.Name) error {
 func (e *Engine) UnregisterRoute(prefix enc.Name) error {
 	_, err := e.ExecMgmtCmd("rib", "unregister", &mgmt.ControlArgs{Name: prefix})
 	if err != nil {
-		e.log.WithField("name", prefix.String()).
-			Errorf("Failed to register prefix: %v", err)
+		log.Error("failed to unregister prefix", "err", err, "name", prefix)
 		return err
 	} else {
-		e.log.WithField("name", prefix.String()).
-			Info("Prefix registered.")
+		log.Info("prefix unregistered", "name", prefix)
 	}
 	return nil
 }
@@ -542,15 +530,12 @@ func NewEngine(face face.Face, timer ndn.Timer, cmdSigner ndn.Signer, cmdChecker
 	if face == nil || timer == nil || cmdSigner == nil || cmdChecker == nil {
 		return nil
 	}
-	logger := log.WithField("module", "basic_engine")
-	logger.Level = log.InfoLevel
 	mgmtCfg := mgmt.NewConfig(face.IsLocal(), cmdSigner, spec.Spec{})
 	return &Engine{
 		face:       face,
 		timer:      timer,
 		mgmtConf:   mgmtCfg,
 		cmdChecker: cmdChecker,
-		log:        logger,
 		fib:        NewNameTrie[fibEntry](),
 		pit:        NewNameTrie[pitEntry](),
 		fibLock:    sync.Mutex{},

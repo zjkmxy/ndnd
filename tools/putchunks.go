@@ -29,8 +29,6 @@ func (pc *PutChunks) usage() {
 }
 
 func (pc *PutChunks) run() {
-	log.SetLevel(log.InfoLevel)
-
 	if len(pc.args) < 2 {
 		pc.usage()
 		os.Exit(3)

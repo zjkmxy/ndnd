@@ -121,8 +121,6 @@ func (pc *PingClient) stats() {
 }
 
 func (pc *PingClient) run() {
-	log.SetLevel(log.InfoLevel)
-
 	flagset := flag.NewFlagSet("ping", flag.ExitOnError)
 	flagset.Usage = func() {
 		pc.usage()

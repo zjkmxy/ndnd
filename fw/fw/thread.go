@@ -112,7 +112,7 @@ func (t *Thread) GetNumCsEntries() int {
 
 // TellToQuit tells the forwarding thread to quit
 func (t *Thread) TellToQuit() {
-	core.LogInfo(t, "Told to quit")
+	core.Log.Info(t, "Told to quit")
 	t.shouldQuit <- true
 }
 
@@ -140,7 +140,7 @@ func (t *Thread) Run() {
 
 	t.deadNonceList.Ticker.Stop()
 
-	core.LogInfo(t, "Stopping thread")
+	core.Log.Info(t, "Stopping thread")
 	t.HasQuit <- true
 }
 
@@ -294,7 +294,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 				InFace:   packet.IncomingFaceID,
 			})
 		} else {
-			core.LogInfo(t, "Non-existent face specified in NextHopFaceId for Interest ", packet.Name, " - DROP")
+			core.Log.Info(t, "Non-existent face specified in NextHopFaceId for Interest ", packet.Name, " - DROP")
 		}
 		return
 	}

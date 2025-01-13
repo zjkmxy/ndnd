@@ -65,7 +65,7 @@ func NewYaNFD(config *YaNFDConfig) *YaNFD {
 
 	// Initialize config file
 	core.LoadConfig(config.Config, config.BaseDir)
-	core.InitializeLogger(config.LogFile)
+	core.OpenLogger(config.LogFile)
 	face.Configure()
 	fw.Configure()
 	table.Configure()
@@ -80,7 +80,7 @@ func NewYaNFD(config *YaNFDConfig) *YaNFD {
 // Start runs YaNFD. Note: this function may exit the program when there is error.
 // This function is non-blocking.
 func (y *YaNFD) Start() {
-	core.LogInfo(y, "Starting YaNFD")
+	core.Log.Info(y, "Starting NDN forwarder")
 
 	// Start profiler
 	y.profiler.Start()
@@ -126,12 +126,12 @@ func (y *YaNFD) Start() {
 			uri := fmt.Sprintf("udp://%s", udpAddr)
 			udpListener, err := face.MakeUDPListener(defn.DecodeURIString(uri))
 			if err != nil {
-				core.LogError(y, "Unable to create UDP listener for ", uri, ": ", err)
+				core.Log.Error(y, "Unable to create UDP listener", "uri", uri, "err", err)
 			} else {
 				listenerCount++
 				go udpListener.Run()
 				y.udpListeners = append(y.udpListeners, udpListener)
-				core.LogInfo(y, "Created unicast UDP listener for ", uri)
+				core.Log.Info(y, "Created unicast UDP listener", "uri", uri)
 			}
 		}
 	}
@@ -150,12 +150,12 @@ func (y *YaNFD) Start() {
 			uri := fmt.Sprintf("tcp://%s", tcpAddr)
 			tcpListener, err := face.MakeTCPListener(defn.DecodeURIString(uri))
 			if err != nil {
-				core.LogError(y, "Unable to create TCP listener for ", uri, ": ", err)
+				core.Log.Error(y, "Unable to create TCP listener", "uri", uri, "err", err)
 			} else {
 				listenerCount++
 				go tcpListener.Run()
 				y.tcpListeners = append(y.tcpListeners, tcpListener)
-				core.LogInfo(y, "Created unicast TCP listener for ", uri)
+				core.Log.Info(y, "Created unicast TCP listener", "uri", uri)
 			}
 		}
 	}
@@ -169,13 +169,13 @@ func (y *YaNFD) Start() {
 
 		for _, iface := range ifaces {
 			if iface.Flags&net.FlagUp == 0 {
-				core.LogInfo(y, "Skipping interface ", iface.Name, " because not up")
+				core.Log.Info(y, "Skipping interface because not up", "iface", iface.Name)
 				continue
 			}
 
 			addrs, err := iface.Addrs()
 			if err != nil {
-				core.LogError(y, "Unable to access addresses on network interface ", iface.Name, ": ", err)
+				core.Log.Error(y, "Unable to access addresses on network interface", "iface", iface.Name, "err", err)
 				continue
 			}
 
@@ -201,7 +201,7 @@ func (y *YaNFD) Start() {
 					).Run(nil)
 
 					listenerCount++
-					core.LogInfo(y, "Created multicast UDP face for ", uri)
+					core.Log.Info(y, "Created multicast UDP face", "uri", uri)
 				}
 			}
 		}
@@ -216,7 +216,7 @@ func (y *YaNFD) Start() {
 			listenerCount++
 			go unixListener.Run()
 			y.unixListener = unixListener
-			core.LogInfo(y, "Created Unix stream listener for ", face.UnixSocketPath)
+			core.Log.Info(y, "Created Unix stream listener", "uri", face.UnixSocketPath)
 		}
 	}
 
@@ -232,12 +232,12 @@ func (y *YaNFD) Start() {
 
 		wsListener, err := face.NewWebSocketListener(cfg)
 		if err != nil {
-			core.LogError(y, "Unable to create ", cfg, ": ", err)
+			core.LogError(y, "Unable to create WebSocket Listener", "cfg", cfg, "err", err)
 		} else {
 			listenerCount++
 			go wsListener.Run()
 			y.wsListener = wsListener
-			core.LogInfo(y, "Created ", cfg)
+			core.Log.Info(y, "Created WebSocket listener", "uri", cfg.URL().String())
 		}
 	}
 
@@ -250,7 +250,7 @@ func (y *YaNFD) Start() {
 
 // Stop shuts down YaNFD.
 func (y *YaNFD) Stop() {
-	core.LogInfo(y, "Forwarder shutting down ...")
+	core.Log.Info(y, "Stopping NDN forwarder")
 	core.ShouldQuit = true
 
 	// Stop profiler
@@ -288,4 +288,7 @@ func (y *YaNFD) Stop() {
 	for _, fw := range fw.Threads {
 		<-fw.HasQuit
 	}
+
+	// Close log file
+	core.CloseLogger()
 }

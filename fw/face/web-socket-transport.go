@@ -75,14 +75,14 @@ func (t *WebSocketTransport) runReceive() {
 	defer t.Close()
 
 	for {
-		mt, message, e := t.c.ReadMessage()
-		if e != nil {
-			if websocket.IsCloseError(e) {
+		mt, message, err := t.c.ReadMessage()
+		if err != nil {
+			if websocket.IsCloseError(err) {
 				// gracefully closed
-			} else if websocket.IsUnexpectedCloseError(e) {
-				core.LogInfo(t, "WebSocket closed unexpectedly (", e, ") - DROP and Face DOWN")
+			} else if websocket.IsUnexpectedCloseError(err) {
+				core.Log.Info(t, "WebSocket closed unexpectedly - DROP and Face DOWN", "err", err)
 			} else {
-				core.LogWarn(t, "Unable to read from WebSocket (", e, ") - DROP and Face DOWN")
+				core.LogWarn(t, "Unable to read from WebSocket - DROP and Face DOWN", "err", err)
 			}
 			return
 		}

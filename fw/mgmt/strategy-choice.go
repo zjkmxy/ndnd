@@ -132,7 +132,7 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 		Strategy: params.Strategy,
 	})
 
-	core.LogInfo(s, "Set strategy for Name=", params.Name, " to Strategy=", params.Strategy.Name)
+	core.Log.Info(s, "Set strategy", "name", params.Name, "strategy", params.Strategy.Name)
 }
 
 func (s *StrategyChoiceModule) unset(interest *Interest) {
@@ -158,7 +158,7 @@ func (s *StrategyChoiceModule) unset(interest *Interest) {
 	}
 
 	table.FibStrategyTable.UnSetStrategyEnc(params.Name)
-	core.LogInfo(s, "Unset Strategy for Name=", params.Name)
+	core.Log.Info(s, "Unset Strategy", "name", params.Name)
 
 	s.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{Name: params.Name})
 }

@@ -10,6 +10,8 @@ import (
 	"github.com/named-data/ndnd/std/sync"
 )
 
+const TAG = "svs"
+
 func main() {
 	// Before running this example, make sure the strategy is correctly setup
 	// to multicast for the /ndn/svs prefix. For example, using the following:
@@ -17,8 +19,7 @@ func main() {
 	//   ndnd fw strategy set prefix=/ndn/svs strategy=/localhost/nfd/strategy/multicast
 	//
 
-	log.SetLevel(log.InfoLevel)
-	logger := log.WithField("module", "main")
+	logger := log.NewText(os.Stderr)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("Usage: %s <name>", os.Args[0])
@@ -34,7 +35,7 @@ func main() {
 	app := engine.NewBasicEngine(engine.NewDefaultFace())
 	err = app.Start()
 	if err != nil {
-		logger.Fatalf("Unable to start engine: %+v", err)
+		logger.Fatal(TAG, "Unable to start engine", "err", err)
 		return
 	}
 	defer app.Stop()
@@ -45,21 +46,21 @@ func main() {
 		Engine:      app,
 		GroupPrefix: group,
 		OnUpdate: func(ssu sync.SvSyncUpdate) {
-			logger.Infof("Received update: %+v", ssu)
+			logger.Info(TAG, "Received update", "update", ssu)
 		},
 	})
 
 	// Register group prefix route
 	err = app.RegisterRoute(group)
 	if err != nil {
-		logger.Errorf("Unable to register route: %+v", err)
+		logger.Error(TAG, "Unable to register route", "err", err)
 		return
 	}
 	defer app.UnregisterRoute(group)
 
 	err = svsync.Start()
 	if err != nil {
-		logger.Errorf("Unable to create SvSync: %+v", err)
+		logger.Error(TAG, "Unable to create SvSync", "err", err)
 		return
 	}
 
@@ -67,7 +68,7 @@ func main() {
 	ticker := time.NewTicker(3 * time.Second)
 
 	for range ticker.C {
-		new := svsync.IncrSeqNo(name)
-		logger.Infof("Published new sequence number: %d", new)
+		seq := svsync.IncrSeqNo(name)
+		logger.Info(TAG, "Published new sequence number", "seq", seq)
 	}
 }

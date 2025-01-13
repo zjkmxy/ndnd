@@ -33,10 +33,10 @@ func (r *NlsrReadvertiser) String() string {
 
 func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
 	if route.Origin != uint64(spec_mgmt.RouteOriginClient) {
-		core.LogDebug(r, "skip advertise=", name, " origin=", route.Origin)
+		core.LogDebug(r, "skip advertise", "name", name, "origin", route.Origin)
 		return
 	}
-	core.LogInfo(r, "advertise=", name)
+	core.Log.Info(r, "advertise", "name", name)
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -74,10 +74,10 @@ func (r *NlsrReadvertiser) Withdraw(name enc.Name, route *table.Route) {
 	nhash := name.Hash()
 	r.advertised[nhash] -= 1
 	if r.advertised[nhash] > 0 {
-		core.LogDebug(r, "skip withdraw=", name, " still advertised")
+		core.LogDebug(r, "skip withdraw (still advertised)", "name", name)
 		return
 	}
-	core.LogInfo(r, "withdraw=", name)
+	core.Log.Info(r, "withdraw", "name", name)
 
 	params := &spec_mgmt.ControlArgs{
 		Name:   name,

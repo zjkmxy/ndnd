@@ -79,20 +79,20 @@ func (c *ContentStoreModule) config(interest *Interest) {
 	}
 
 	if params.Capacity != nil {
-		core.LogInfo(c, "Setting CS capacity to ", *params.Capacity)
+		core.Log.Info(c, "Setting CS capacity", "capacity", *params.Capacity)
 		table.SetCsCapacity(int(*params.Capacity))
 	}
 
 	if params.Mask != nil && params.Flags != nil {
 		if *params.Mask&mgmt.CsEnableAdmit > 0 {
 			val := *params.Flags&mgmt.CsEnableAdmit > 0
-			core.LogInfo(c, "Setting CS admit flag to ", val)
+			core.Log.Info(c, "Setting CS admit flag", "value", val)
 			table.SetCsAdmit(val)
 		}
 
 		if *params.Mask&mgmt.CsEnableServe > 0 {
 			val := *params.Flags&mgmt.CsEnableServe > 0
-			core.LogInfo(c, "Setting CS serve flag to ", val)
+			core.Log.Info(c, "Setting CS serve flag", "value", val)
 			table.SetCsServe(val)
 		}
 	}
