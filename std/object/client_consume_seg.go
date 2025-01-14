@@ -40,7 +40,7 @@ func newRrSegFetcher(client *Client) rrSegFetcher {
 
 // log identifier
 func (s *rrSegFetcher) String() string {
-	return "seg-fetcher"
+	return "client-seg"
 }
 
 // add a stream to the fetch queue
