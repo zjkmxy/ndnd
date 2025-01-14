@@ -9,10 +9,15 @@ import (
 )
 
 // Map representation of the state vector.
-type svMap map[string][]spec_svs.SeqNoEntry
+type SvMap map[string][]spec_svs.SeqNoEntry
+
+// Create a new state vector map.
+func NewSvMap(size int) SvMap {
+	return make(SvMap, size)
+}
 
 // Get seq entry for a bootstrap time.
-func (m svMap) get(hash string, btime uint64) spec_svs.SeqNoEntry {
+func (m SvMap) Get(hash string, btime uint64) spec_svs.SeqNoEntry {
 	for _, entry := range m[hash] {
 		if entry.BootstrapTime == btime {
 			return entry
@@ -25,7 +30,7 @@ func (m svMap) get(hash string, btime uint64) spec_svs.SeqNoEntry {
 }
 
 // Set seq entry for a bootstrap time.
-func (m svMap) set(hash string, btime uint64, seq uint64) {
+func (m SvMap) Set(hash string, btime uint64, seq uint64) {
 	for i, entry := range m[hash] {
 		if entry.BootstrapTime == btime {
 			m[hash][i].SeqNo = seq
@@ -43,7 +48,7 @@ func (m svMap) set(hash string, btime uint64, seq uint64) {
 
 // Check if a svHashMap is newer than another.
 // If existOnly is true, only check if the other has all entries.
-func (m svMap) isNewerThan(other svMap, existOnly bool) bool {
+func (m SvMap) IsNewerThan(other SvMap, existOnly bool) bool {
 	for hash, entries := range m {
 		for _, entry := range entries {
 			foundOther := false
@@ -63,7 +68,7 @@ func (m svMap) isNewerThan(other svMap, existOnly bool) bool {
 	return false
 }
 
-func (m svMap) tlv() *spec_svs.StateVector {
+func (m SvMap) Encode() *spec_svs.StateVector {
 	entries := make([]*spec_svs.StateVectorEntry, 0, len(m))
 	for hash, seqEntrs := range m {
 		seqEntrPtrs := make([]*spec_svs.SeqNoEntry, 0, len(seqEntrs))

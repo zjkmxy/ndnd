@@ -26,11 +26,11 @@ type SvSync struct {
 	ticker  *time.Ticker
 
 	mutex sync.Mutex
-	state svMap
+	state SvMap
 	mtime map[string]time.Time
 
 	suppress bool
-	merge    svMap
+	merge    SvMap
 
 	recvSv chan *spec_svs.StateVector
 }
@@ -87,11 +87,11 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 		ticker:  time.NewTicker(1 * time.Second),
 
 		mutex: sync.Mutex{},
-		state: make(svMap),
+		state: NewSvMap(0),
 		mtime: make(map[string]time.Time),
 
 		suppress: false,
-		merge:    make(svMap),
+		merge:    NewSvMap(0),
 
 		recvSv: make(chan *spec_svs.StateVector, 128),
 	}
@@ -151,14 +151,14 @@ func (s *SvSync) SetSeqNo(name enc.Name, seqNo uint64) error {
 
 	hash := name.String()
 
-	entry := s.state.get(hash, s.o.BootTime)
+	entry := s.state.Get(hash, s.o.BootTime)
 	if seqNo <= entry.SeqNo {
 		return errors.New("SvSync: seqNo must be greater than previous")
 	}
 
 	// [Spec] When the node generates a new publication,
 	// immediately emit a Sync Interest
-	s.state.set(hash, s.o.BootTime, seqNo)
+	s.state.Set(hash, s.o.BootTime, seqNo)
 	go s.sendSyncInterest()
 
 	return nil
@@ -172,8 +172,8 @@ func (s *SvSync) IncrSeqNo(name enc.Name) uint64 {
 
 	hash := name.String()
 
-	entry := s.state.get(hash, s.o.BootTime)
-	s.state.set(hash, s.o.BootTime, entry.SeqNo+1)
+	entry := s.state.Get(hash, s.o.BootTime)
+	s.state.Set(hash, s.o.BootTime, entry.SeqNo+1)
 
 	// [Spec] When the node generates a new publication,
 	// immediately emit a Sync Interest
@@ -192,13 +192,13 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 
 	isOutdated := false
 	canDrop := true
-	recvSv := make(svMap, len(sv.Entries))
+	recvSv := NewSvMap(len(sv.Entries))
 
 	for _, node := range sv.Entries {
 		hash := node.Name.String()
 
 		for _, entry := range node.SeqNoEntries {
-			recvSv.set(hash, entry.BootstrapTime, entry.SeqNo)
+			recvSv.Set(hash, entry.BootstrapTime, entry.SeqNo)
 
 			// [SPEC] If any received BootstrapTime is more than 86400s in the
 			// future compared to current time, the entire state vector SHOULD be ignored.
@@ -208,11 +208,11 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 			}
 
 			// Get existing state vector entry
-			known := s.state.get(hash, entry.BootstrapTime)
+			known := s.state.Get(hash, entry.BootstrapTime)
 			if entry.SeqNo > known.SeqNo {
 				// [Spec] If the incoming state vector is newer,
 				// update the local state vector.
-				s.state.set(hash, entry.BootstrapTime, entry.SeqNo)
+				s.state.Set(hash, entry.BootstrapTime, entry.SeqNo)
 
 				// [Spec] Store the current timestamp as the last update
 				// time for each updated node.
@@ -240,9 +240,9 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 			if s.suppress {
 				// [Spec] For every incoming Sync Interest, aggregate
 				// the state vector into a MergedStateVector.
-				known := s.merge.get(hash, entry.BootstrapTime)
+				known := s.merge.Get(hash, entry.BootstrapTime)
 				if entry.SeqNo > known.SeqNo {
-					s.merge.set(hash, entry.BootstrapTime, entry.SeqNo)
+					s.merge.Set(hash, entry.BootstrapTime, entry.SeqNo)
 				}
 			}
 		}
@@ -250,7 +250,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 
 	// The above checks each node in the incoming state vector, but
 	// does not check if a node is missing from the incoming state vector.
-	if !isOutdated && s.state.isNewerThan(recvSv, true) {
+	if !isOutdated && s.state.IsNewerThan(recvSv, true) {
 		isOutdated = true
 		canDrop = false
 	}
@@ -268,7 +268,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	// [Spec] Incoming Sync Interest is outdated.
 	// [Spec] Move to Suppression State.
 	s.suppress = true
-	s.merge = make(svMap, len(s.state))
+	s.merge = make(SvMap, len(s.state))
 
 	// [Spec] When entering Suppression State, reset
 	// the Sync Interest timer to SuppressionTimeout
@@ -282,7 +282,7 @@ func (s *SvSync) timerExpired() {
 	// [Spec] Suppression State
 	if s.suppress {
 		// [Spec] If MergedStateVector is up-to-date; no inconsistency.
-		if !s.state.isNewerThan(s.merge, false) {
+		if !s.state.IsNewerThan(s.merge, false) {
 			s.enterSteadyState()
 			return
 		}
@@ -308,7 +308,7 @@ func (s *SvSync) sendSyncInterest() {
 		// [Spec*] Sending always triggers Steady State
 		s.enterSteadyState()
 
-		return s.state.tlv()
+		return s.state.Encode()
 	}()
 	svWire := (&spec_svs.SvsData{StateVector: sv}).Encode()
 
