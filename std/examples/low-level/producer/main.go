@@ -54,7 +54,7 @@ func onInterest(args ndn.InterestHandlerArgs) {
 }
 
 func main() {
-	app := engine.NewBasicEngine(engine.NewDefaultFace())
+	app = engine.NewBasicEngine(engine.NewDefaultFace())
 	err := app.Start()
 	if err != nil {
 		logger.Fatal(nil, "Unable to start engine", "err", err)

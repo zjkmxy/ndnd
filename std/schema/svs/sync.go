@@ -59,6 +59,10 @@ type SvsNode struct {
 	notifNode *schema.Node
 }
 
+func (n *SvsNode) String() string {
+	return "svs-node"
+}
+
 func (n *SvsNode) NodeImplTrait() schema.NodeImpl {
 	return n
 }
@@ -109,11 +113,9 @@ func findSvsEntry(v *spec_svs.StateVector, name enc.Name) int {
 }
 
 func (n *SvsNode) onSyncInt(event *schema.Event) any {
-	mNotifNode := event.Target
-	logger := mNotifNode.Logger("SvsNode") // the path will be the subchild
 	remoteSv, err := spec_svs.ParseStateVector(enc.NewWireReader(event.Content), true)
 	if err != nil {
-		logger.Error("Unable to parse state vector. Drop.")
+		log.Error(n, "Unable to parse state vector - DROP", "err", err)
 	}
 
 	// If append() is called on localSv slice, a lock is necessary
@@ -137,7 +139,7 @@ func (n *SvsNode) onSyncInt(event *schema.Event) any {
 				EndSeq:   cur.SeqNo + 1,
 			}
 		} else if n.localSv.Entries[li].SeqNo < cur.SeqNo {
-			log.Debugf("Missing data for: [%d]: %d < %d", cur.Name, n.localSv.Entries[li].SeqNo, cur.SeqNo)
+			log.Debug(n, "Missing data found", "name", cur.Name, "local", n.localSv.Entries[li].SeqNo, "cur", cur.SeqNo)
 			n.missChan <- MissingData{
 				Name:     cur.Name,
 				StartSeq: n.localSv.Entries[li].SeqNo + 1,
@@ -146,7 +148,7 @@ func (n *SvsNode) onSyncInt(event *schema.Event) any {
 			n.localSv.Entries[li].SeqNo = cur.SeqNo
 			// needFetch = true
 		} else if n.localSv.Entries[li].SeqNo > cur.SeqNo {
-			log.Debugf("Outdated remote on: [%d]: %d < %d", cur.Name, cur.SeqNo, n.localSv.Entries[li].SeqNo)
+			log.Debug(n, "Outdated remote on", "name", cur.Name, "local", n.localSv.Entries[li].SeqNo, "cur", cur.SeqNo)
 			needNotif = true
 		}
 	}
@@ -267,8 +269,6 @@ func (n *SvsNode) NewData(mNode schema.MatchedNode, content enc.Wire) enc.Wire {
 	n.dataLock.Lock()
 	defer n.dataLock.Unlock()
 
-	logger := mNode.Logger("SvsNode")
-
 	n.selfSeq++
 	newDataName := make(enc.Name, len(n.ownPrefix)+1)
 	copy(newDataName, n.ownPrefix)
@@ -281,10 +281,10 @@ func (n *SvsNode) NewData(mNode schema.MatchedNode, content enc.Wire) enc.Wire {
 			n.localSv.Entries[li].SeqNo = n.selfSeq
 		}
 		n.state = SyncSteady
-		logger.Debugf("NewData generated w/ seq=%d", n.selfSeq)
+		log.Debug(n, "NewData generated", "seq", n.selfSeq)
 		n.expressStateVec()
 	} else {
-		logger.Errorf("Failed to provide seq=%d", n.selfSeq)
+		log.Error(n, "Failed to provide", "seq", n.selfSeq)
 		n.selfSeq--
 	}
 	return ret
@@ -388,13 +388,13 @@ func init() {
 			"NewData": func(mNode schema.MatchedNode, args ...any) any {
 				if len(args) != 1 {
 					err := fmt.Errorf("SvsNode.NewData requires 1 arguments but got %d", len(args))
-					mNode.Logger("SvsNode").Error(err.Error())
+					log.Error(mNode.Node, err.Error())
 					return err
 				}
 				content, ok := args[0].(enc.Wire)
 				if !ok && args[0] != nil {
 					err := ndn.ErrInvalidValue{Item: "content", Value: args[0]}
-					mNode.Logger("SvsNode").Error(err.Error())
+					log.Error(mNode.Node, err.Error())
 					return err
 				}
 				return schema.QueryInterface[*SvsNode](mNode.Node).NewData(mNode, content)
@@ -402,7 +402,7 @@ func init() {
 			"MissingDataChannel": func(mNode schema.MatchedNode, args ...any) any {
 				if len(args) != 0 {
 					err := fmt.Errorf("SvsNode.MissingDataChannel requires 0 arguments but got %d", len(args))
-					mNode.Logger("SvsNode").Error(err.Error())
+					log.Error(mNode.Node, err.Error())
 					return err
 				}
 				return schema.QueryInterface[*SvsNode](mNode.Node).MissingDataChannel()
@@ -410,7 +410,7 @@ func init() {
 			"MySequence": func(mNode schema.MatchedNode, args ...any) any {
 				if len(args) != 0 {
 					err := fmt.Errorf("SvsNode.MySequence requires 0 arguments but got %d", len(args))
-					mNode.Logger("SvsNode").Error(err.Error())
+					log.Error(mNode.Node, err.Error())
 					return err
 				}
 				return schema.QueryInterface[*SvsNode](mNode.Node).MySequence()
@@ -418,19 +418,19 @@ func init() {
 			"GetDataName": func(mNode schema.MatchedNode, args ...any) any {
 				if len(args) != 2 {
 					err := fmt.Errorf("SvsNode.GetDataName requires 2 arguments but got %d", len(args))
-					mNode.Logger("SvsNode").Error(err.Error())
+					log.Error(mNode.Node, err.Error())
 					return err
 				}
 				nodeId, ok := args[0].([]byte)
 				if !ok && args[0] != nil {
 					err := ndn.ErrInvalidValue{Item: "nodeId", Value: args[0]}
-					mNode.Logger("SvsNode").Error(err.Error())
+					log.Error(mNode.Node, err.Error())
 					return err
 				}
 				seq, ok := args[1].(uint64)
 				if !ok && args[1] != nil {
 					err := ndn.ErrInvalidValue{Item: "seq", Value: args[1]}
-					mNode.Logger("SvsNode").Error(err.Error())
+					log.Error(mNode.Node, err.Error())
 					return err
 				}
 				return schema.QueryInterface[*SvsNode](mNode.Node).GetDataName(mNode, nodeId, seq)
