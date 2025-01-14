@@ -143,19 +143,19 @@ func (pt *PrefixTable) Apply(ops *tlv.PrefixOpList) (dirty bool) {
 	router := pt.GetRouter(ops.ExitRouter.Name)
 
 	if ops.PrefixOpReset {
-		log.Info(pt, "Reset prefixes for remote", "router", ops.ExitRouter.Name)
+		log.Info(pt, "Reset remote prefixes", "router", ops.ExitRouter.Name)
 		router.Prefixes = make(map[string]*PrefixEntry)
 		dirty = true
 	}
 
 	for _, add := range ops.PrefixOpAdds {
-		log.Info(pt, "Add prefix for remote", "router", ops.ExitRouter.Name, "name", add.Name)
+		log.Info(pt, "Add remote prefix", "router", ops.ExitRouter.Name, "name", add.Name)
 		router.Prefixes[add.Name.String()] = &PrefixEntry{Name: add.Name}
 		dirty = true
 	}
 
 	for _, remove := range ops.PrefixOpRemoves {
-		log.Info(pt, "Remove prefix for remote", "router", ops.ExitRouter.Name, "name", remove.Name)
+		log.Info(pt, "Remove remote prefix", "router", ops.ExitRouter.Name, "name", remove.Name)
 		delete(router.Prefixes, remove.Name.String())
 		dirty = true
 	}
