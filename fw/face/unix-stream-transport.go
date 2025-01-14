@@ -27,7 +27,7 @@ type UnixStreamTransport struct {
 func MakeUnixStreamTransport(remoteURI *defn.URI, localURI *defn.URI, conn net.Conn) (*UnixStreamTransport, error) {
 	// Validate URIs
 	if !remoteURI.IsCanonical() || remoteURI.Scheme() != "fd" || !localURI.IsCanonical() || localURI.Scheme() != "unix" {
-		return nil, core.ErrNotCanonical
+		return nil, defn.ErrNotCanonical
 	}
 
 	t := new(UnixStreamTransport)

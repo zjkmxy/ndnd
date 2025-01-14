@@ -89,7 +89,7 @@ func (t *Table) Remove(id uint64) {
 
 // ExpirationHandler stops the faces that have expired
 func (t *Table) ExpirationHandler() {
-	for {
+	for !core.ShouldQuit {
 		// Check for expired faces every 10 seconds
 		time.Sleep(10 * time.Second)
 

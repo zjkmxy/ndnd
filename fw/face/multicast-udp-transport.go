@@ -34,7 +34,7 @@ func MakeMulticastUDPTransport(localURI *defn.URI) (*MulticastUDPTransport, erro
 	// Validate local URI
 	localURI.Canonize()
 	if !localURI.IsCanonical() || (localURI.Scheme() != "udp4" && localURI.Scheme() != "udp6") {
-		return nil, core.ErrNotCanonical
+		return nil, defn.ErrNotCanonical
 	}
 
 	// Get remote Uri

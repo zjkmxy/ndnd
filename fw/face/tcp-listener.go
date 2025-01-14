@@ -30,7 +30,7 @@ type TCPListener struct {
 func MakeTCPListener(localURI *defn.URI) (*TCPListener, error) {
 	localURI.Canonize()
 	if !localURI.IsCanonical() || (localURI.Scheme() != "tcp4" && localURI.Scheme() != "tcp6") {
-		return nil, core.ErrNotCanonical
+		return nil, defn.ErrNotCanonical
 	}
 
 	l := new(TCPListener)

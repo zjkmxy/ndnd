@@ -44,7 +44,7 @@ func MakeUnicastTCPTransport(
 	// Validate URIs.
 	if !remoteURI.IsCanonical() ||
 		(remoteURI.Scheme() != "tcp4" && remoteURI.Scheme() != "tcp6") {
-		return nil, core.ErrNotCanonical
+		return nil, defn.ErrNotCanonical
 	}
 	if localURI != nil {
 		return nil, errors.New("do not specify localURI for TCP")

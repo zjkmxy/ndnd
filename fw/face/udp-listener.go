@@ -30,7 +30,7 @@ type UDPListener struct {
 func MakeUDPListener(localURI *defn.URI) (*UDPListener, error) {
 	localURI.Canonize()
 	if !localURI.IsCanonical() || (localURI.Scheme() != "udp4" && localURI.Scheme() != "udp6") {
-		return nil, core.ErrNotCanonical
+		return nil, defn.ErrNotCanonical
 	}
 
 	l := new(UDPListener)

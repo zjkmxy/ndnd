@@ -38,12 +38,12 @@ func MakeUnicastUDPTransport(
 ) (*UnicastUDPTransport, error) {
 	// Validate remote URI
 	if remoteURI == nil || !remoteURI.IsCanonical() || (remoteURI.Scheme() != "udp4" && remoteURI.Scheme() != "udp6") {
-		return nil, core.ErrNotCanonical
+		return nil, defn.ErrNotCanonical
 	}
 
 	// Validate local URI
 	if localURI != nil && (!localURI.IsCanonical() || remoteURI.Scheme() != localURI.Scheme()) {
-		return nil, core.ErrNotCanonical
+		return nil, defn.ErrNotCanonical
 	}
 
 	// Construct transport

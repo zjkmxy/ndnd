@@ -30,7 +30,7 @@ type UnixStreamListener struct {
 func MakeUnixStreamListener(localURI *defn.URI) (*UnixStreamListener, error) {
 	localURI.Canonize()
 	if !localURI.IsCanonical() || localURI.Scheme() != "unix" {
-		return nil, core.ErrNotCanonical
+		return nil, defn.ErrNotCanonical
 	}
 
 	return &UnixStreamListener{
