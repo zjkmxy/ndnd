@@ -82,7 +82,7 @@ func (n *SegmentedNode) Provide(mNode schema.MatchedNode, content enc.Wire, need
 		pktContent := enc.Wire{}
 		remSize := n.SegmentSize
 		for remSize > 0 && wireIdx < len(content) && bufferIdx < len(content[wireIdx]) {
-			curSize := int(utils.Min(uint64(len(content[wireIdx])-bufferIdx), remSize))
+			curSize := int(min(uint64(len(content[wireIdx])-bufferIdx), remSize))
 			pktContent = append(pktContent, content[wireIdx][bufferIdx:bufferIdx+curSize])
 			bufferIdx += curSize
 			remSize -= uint64(curSize)

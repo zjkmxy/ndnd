@@ -222,7 +222,7 @@ func (n *SvsNode) aggregate(remoteSv *spec_svs.StateVector) {
 				SeqNo: cur.SeqNo,
 			})
 		} else {
-			n.aggSv.Entries[li].SeqNo = utils.Max(n.aggSv.Entries[li].SeqNo, cur.SeqNo)
+			n.aggSv.Entries[li].SeqNo = max(n.aggSv.Entries[li].SeqNo, cur.SeqNo)
 		}
 	}
 }
@@ -312,7 +312,7 @@ func (n *SvsNode) onAttach(event *schema.Event) any {
 	n.state = SyncSteady
 	n.missChan = make(chan MissingData, n.ChannelSize)
 	// The first sync Interest should be sent out ASAP
-	n.cancelSyncTimer = n.timer.Schedule(utils.Min(n.getSyncIntv(), 100*time.Millisecond), n.onSyncTimer)
+	n.cancelSyncTimer = n.timer.Schedule(min(n.getSyncIntv(), 100*time.Millisecond), n.onSyncTimer)
 
 	n.stopChan = make(chan struct{}, 1)
 	if len(n.OnMissingData.Val()) > 0 {

@@ -5,8 +5,6 @@ import (
 	"hash"
 	"io"
 	"strings"
-
-	"github.com/named-data/ndnd/std/utils"
 )
 
 type Name []Component
@@ -204,7 +202,7 @@ func (n Name) Append(rest ...Component) Name {
 }
 
 func (n Name) Compare(rhs Name) int {
-	for i := 0; i < utils.Min(len(n), len(rhs)); i++ {
+	for i := 0; i < min(len(n), len(rhs)); i++ {
 		if ret := n[i].Compare(rhs[i]); ret != 0 {
 			return ret
 		}
@@ -220,7 +218,7 @@ func (n Name) Compare(rhs Name) int {
 }
 
 func (n NamePattern) Compare(rhs NamePattern) int {
-	for i := 0; i < utils.Min(len(n), len(rhs)); i++ {
+	for i := 0; i < min(len(n), len(rhs)); i++ {
 		if ret := n[i].Compare(rhs[i]); ret != 0 {
 			return ret
 		}
