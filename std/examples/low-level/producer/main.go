@@ -18,7 +18,6 @@ import (
 
 var app ndn.Engine
 var pib *sec_pib.SqlitePib
-var logger = log.Default()
 
 func onInterest(args ndn.InterestHandlerArgs) {
 	interest := args.Interest
@@ -40,12 +39,12 @@ func onInterest(args ndn.InterestHandlerArgs) {
 		enc.Wire{content},
 		signer)
 	if err != nil {
-		logger.Error(nil, "Unable to encode data", "err", err)
+		log.Error(nil, "Unable to encode data", "err", err)
 		return
 	}
 	err = args.Reply(data.Wire)
 	if err != nil {
-		logger.Error(nil, "Unable to reply with data", "err", err)
+		log.Error(nil, "Unable to reply with data", "err", err)
 		return
 	}
 	fmt.Printf("<< D: %s\n", interest.Name().String())
@@ -57,7 +56,7 @@ func main() {
 	app = engine.NewBasicEngine(engine.NewDefaultFace())
 	err := app.Start()
 	if err != nil {
-		logger.Fatal(nil, "Unable to start engine", "err", err)
+		log.Fatal(nil, "Unable to start engine", "err", err)
 		return
 	}
 	defer app.Stop()
@@ -69,12 +68,12 @@ func main() {
 	prefix, _ := enc.NameFromStr("/example/testApp")
 	err = app.AttachHandler(prefix, onInterest)
 	if err != nil {
-		logger.Error(nil, "Unable to register handler", "err", err)
+		log.Error(nil, "Unable to register handler", "err", err)
 		return
 	}
 	err = app.RegisterRoute(prefix)
 	if err != nil {
-		logger.Error(nil, "Unable to register route", "err", err)
+		log.Error(nil, "Unable to register route", "err", err)
 		return
 	}
 
@@ -82,5 +81,5 @@ func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 	receivedSig := <-sigChannel
-	logger.Info(nil, "Received signal - exiting", "signal", receivedSig)
+	log.Info(nil, "Received signal - exiting", "signal", receivedSig)
 }

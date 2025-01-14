@@ -99,5 +99,6 @@ func (pc *PutChunks) run() {
 	// wait forever
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
-	<-sigchan
+	receivedSig := <-sigchan
+	log.Info(nil, "Received signal - exiting", "signal", receivedSig)
 }

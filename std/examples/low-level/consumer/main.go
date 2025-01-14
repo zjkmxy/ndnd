@@ -11,13 +11,11 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-var logger = log.Default()
-
 func main() {
 	app := engine.NewBasicEngine(engine.NewDefaultFace())
 	err := app.Start()
 	if err != nil {
-		logger.Fatal(nil, "Unable to start engine", "err", err)
+		log.Fatal(nil, "Unable to start engine", "err", err)
 		return
 	}
 	defer app.Stop()
@@ -32,7 +30,7 @@ func main() {
 	}
 	interest, err := app.Spec().MakeInterest(name, intCfg, nil, nil)
 	if err != nil {
-		logger.Error(nil, "Unable to make Interest", "err", err)
+		log.Error(nil, "Unable to make Interest", "err", err)
 		return
 	}
 
@@ -55,7 +53,7 @@ func main() {
 			ch <- struct{}{}
 		})
 	if err != nil {
-		logger.Error(nil, "Unable to send Interest", "err", err)
+		log.Error(nil, "Unable to send Interest", "err", err)
 		return
 	}
 
