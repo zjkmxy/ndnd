@@ -24,7 +24,7 @@ type ForwarderStatusModule struct {
 }
 
 func (f *ForwarderStatusModule) String() string {
-	return "ForwarderStatusMgmt"
+	return "mgmt-status"
 }
 
 func (f *ForwarderStatusModule) registerManager(manager *Thread) {
@@ -38,7 +38,7 @@ func (f *ForwarderStatusModule) getManager() *Thread {
 func (f *ForwarderStatusModule) handleIncomingInterest(interest *Interest) {
 	// Only allow from /localhost
 	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
-		core.LogWarn(f, "Received forwarder status management Interest from non-local source - DROP")
+		core.Log.Warn(f, "Received forwarder status management Interest from non-local source - DROP")
 		return
 	}
 

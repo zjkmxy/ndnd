@@ -23,7 +23,7 @@ type ContentStoreModule struct {
 }
 
 func (c *ContentStoreModule) String() string {
-	return "ContentStoreMgmt"
+	return "mgmt-cs"
 }
 
 func (c *ContentStoreModule) registerManager(manager *Thread) {
@@ -37,7 +37,7 @@ func (c *ContentStoreModule) getManager() *Thread {
 func (c *ContentStoreModule) handleIncomingInterest(interest *Interest) {
 	// Only allow from /localhost
 	if !LOCAL_PREFIX.IsPrefix(interest.Name()) {
-		core.LogWarn(c, "Received CS management Interest from non-local source - DROP")
+		core.Log.Warn(c, "Received CS management Interest from non-local source")
 		return
 	}
 
@@ -52,7 +52,7 @@ func (c *ContentStoreModule) handleIncomingInterest(interest *Interest) {
 	case "info":
 		c.info(interest)
 	default:
-		core.LogWarn(c, "Received Interest for non-existent verb '", verb, "'")
+		core.Log.Warn(c, "Received Interest for non-existent verb", "verb", verb)
 		c.manager.sendCtrlResp(interest, 501, "Unknown verb", nil)
 		return
 	}
@@ -61,7 +61,7 @@ func (c *ContentStoreModule) handleIncomingInterest(interest *Interest) {
 func (c *ContentStoreModule) config(interest *Interest) {
 	if len(interest.Name()) < len(LOCAL_PREFIX)+3 {
 		// Name not long enough to contain ControlParameters
-		core.LogWarn(c, "Missing ControlParameters in ", interest.Name())
+		core.Log.Warn(c, "Missing ControlParameters", "name", interest.Name())
 		c.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
@@ -73,26 +73,26 @@ func (c *ContentStoreModule) config(interest *Interest) {
 	}
 
 	if (params.Flags == nil && params.Mask != nil) || (params.Flags != nil && params.Mask == nil) {
-		core.LogWarn(c, "Flags and Mask fields must either both be present or both be not present")
+		core.Log.Warn(c, "Flags and Mask fields must either both be present or both be not present")
 		c.manager.sendCtrlResp(interest, 409, "ControlParameters are incorrect", nil)
 		return
 	}
 
 	if params.Capacity != nil {
-		core.LogInfo(c, "Setting CS capacity to ", *params.Capacity)
+		core.Log.Info(c, "Setting CS capacity", "capacity", *params.Capacity)
 		table.SetCsCapacity(int(*params.Capacity))
 	}
 
 	if params.Mask != nil && params.Flags != nil {
 		if *params.Mask&mgmt.CsEnableAdmit > 0 {
 			val := *params.Flags&mgmt.CsEnableAdmit > 0
-			core.LogInfo(c, "Setting CS admit flag to ", val)
+			core.Log.Info(c, "Setting CS admit flag", "value", val)
 			table.SetCsAdmit(val)
 		}
 
 		if *params.Mask&mgmt.CsEnableServe > 0 {
 			val := *params.Flags&mgmt.CsEnableServe > 0
-			core.LogInfo(c, "Setting CS serve flag to ", val)
+			core.Log.Info(c, "Setting CS serve flag", "value", val)
 			table.SetCsServe(val)
 		}
 	}

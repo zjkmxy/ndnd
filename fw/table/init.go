@@ -58,10 +58,10 @@ func Configure() {
 	for _, region := range producerRegions {
 		name, err := enc.NameFromStr(region)
 		if err != nil {
-			core.LogFatal("NetworkRegionTable", "Could not add name=", region, " to table: ", err)
+			core.Log.Fatal(nil, "Could not add producer region", "name", region, "err", err)
 		}
 		NetworkRegion.Add(name)
-		core.LogDebug("NetworkRegionTable", "Added name=", region, " to table")
+		core.Log.Debug(nil, "Added producer region", "name", region)
 	}
 }
 
@@ -73,7 +73,7 @@ func CreateFIBTable(algo string) {
 	case "nametree":
 		newFibStrategyTableTree()
 	default:
-		core.LogFatal("CreateFIBTable", "Unrecognized FIB table algorithm specified: ", algo)
+		core.Log.Fatal(nil, "Unknown FIB table algorithm", "algo", algo)
 	}
 }
 

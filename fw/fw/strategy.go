@@ -8,7 +8,7 @@
 package fw
 
 import (
-	"strconv"
+	"fmt"
 
 	"github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/table"
@@ -65,7 +65,7 @@ func (s *StrategyBase) NewStrategyBase(
 }
 
 func (s *StrategyBase) String() string {
-	return s.strategyLogName + "-v" + strconv.FormatUint(s.version, 10) + "-Thread" + strconv.Itoa(s.threadID)
+	return fmt.Sprintf("%s (v=%d t=%d)", s.strategyLogName, s.version, s.threadID)
 }
 
 // GetName returns the name of strategy, including version information.

@@ -35,7 +35,7 @@ func init() {
 func (s *BestRoute) Instantiate(fwThread *Thread) {
 	s.NewStrategyBase(fwThread, enc.Component{
 		Typ: enc.TypeGenericNameComponent, Val: []byte("best-route"),
-	}, 1, "BestRoute")
+	}, 1, "bestroute")
 }
 
 func (s *BestRoute) AfterContentStoreHit(
@@ -43,7 +43,7 @@ func (s *BestRoute) AfterContentStoreHit(
 	pitEntry table.PitEntry,
 	inFace uint64,
 ) {
-	core.LogTrace(s, "AfterContentStoreHit: Forwarding content store hit Data=", packet.Name, " to FaceID=", inFace)
+	core.Log.Trace(s, "AfterContentStoreHit", "name", packet.Name, "faceid", inFace)
 	s.SendData(packet, pitEntry, inFace, 0) // 0 indicates ContentStore is source
 }
 
@@ -52,9 +52,9 @@ func (s *BestRoute) AfterReceiveData(
 	pitEntry table.PitEntry,
 	inFace uint64,
 ) {
-	core.LogTrace(s, "AfterReceiveData: Data=", ", ", len(pitEntry.InRecords()), " In-Records")
+	core.Log.Trace(s, "AfterReceiveData", "name", packet.Name, "inrecords", len(pitEntry.InRecords()))
 	for faceID := range pitEntry.InRecords() {
-		core.LogTrace(s, "AfterReceiveData: Forwarding Data=", packet.Name, " to FaceID=", faceID)
+		core.Log.Trace(s, "Forwarding Data", "name", packet.Name, "faceid", faceID)
 		s.SendData(packet, pitEntry, faceID, inFace)
 	}
 }
@@ -66,7 +66,7 @@ func (s *BestRoute) AfterReceiveInterest(
 	nexthops []*table.FibNextHopEntry,
 ) {
 	if len(nexthops) == 0 {
-		core.LogDebug(s, "AfterReceiveInterest: No nexthop for Interest=", packet.Name, " - DROP")
+		core.Log.Debug(s, "No nexthop found - DROP", "name", packet.Name)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (s *BestRoute) AfterReceiveInterest(
 	for _, outRecord := range pitEntry.OutRecords() {
 		if outRecord.LatestNonce != *packet.L3.Interest.NonceV &&
 			outRecord.LatestTimestamp.Add(BestRouteSuppressionTime).After(time.Now()) {
-			core.LogDebug(s, "AfterReceiveInterest: Suppressed Interest=", packet.Name, " - DROP")
+			core.Log.Debug(s, "Suppressed Interest - DROP", "name", packet.Name)
 			return
 		}
 	}
@@ -83,13 +83,13 @@ func (s *BestRoute) AfterReceiveInterest(
 	// Sort nexthops by cost and send to best-possible nexthop
 	sort.Slice(nexthops, func(i, j int) bool { return nexthops[i].Cost < nexthops[j].Cost })
 	for _, nh := range nexthops {
-		core.LogTrace(s, "AfterReceiveInterest: Forwarding Interest=", packet.Name, " to FaceID=", nh.Nexthop)
+		core.Log.Trace(s, "Forwarding Interest", "name", packet.Name, "faceid", nh.Nexthop)
 		if sent := s.SendInterest(packet, pitEntry, nh.Nexthop, inFace); sent {
 			return
 		}
 	}
 
-	core.LogDebug(s, "AfterReceiveInterest: No usable nexthop for Interest=", packet.Name, " - DROP")
+	core.Log.Debug(s, "No usable nexthop for Interest - DROP", "name", packet.Name)
 }
 
 func (s *BestRoute) BeforeSatisfyInterest(pitEntry table.PitEntry, inFace uint64) {

@@ -38,9 +38,14 @@ func newRrSegFetcher(client *Client) rrSegFetcher {
 	}
 }
 
+// log identifier
+func (s *rrSegFetcher) String() string {
+	return "client-seg"
+}
+
 // add a stream to the fetch queue
 func (s *rrSegFetcher) add(state *ConsumeState) {
-	log.Debugf("consume: adding %s to fetch queue", state.fetchName)
+	log.Debug(s, "Adding stream to fetch queue", "name", state.fetchName)
 	s.streams = append(s.streams, state)
 	s.queueCheck()
 }
@@ -216,7 +221,7 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 		}
 
 		if state.wnd[1] == state.segCnt {
-			log.Debugf("consume: %s completed", state.args.Name)
+			log.Debug(s, "Stream completed successfully", "name", state.fetchName)
 			state.complete = true
 			s.remove(state)
 		}
