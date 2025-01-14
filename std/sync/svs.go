@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	rand "math/rand/v2"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,8 +27,7 @@ type SvSync struct {
 
 	mutex sync.Mutex
 	state svMap
-	names map[uint64]enc.Name
-	mtime map[uint64]time.Time
+	mtime map[string]time.Time
 
 	suppress bool
 	merge    svMap
@@ -90,8 +88,7 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 
 		mutex: sync.Mutex{},
 		state: make(svMap),
-		names: make(map[uint64]enc.Name),
-		mtime: make(map[uint64]time.Time),
+		mtime: make(map[string]time.Time),
 
 		suppress: false,
 		merge:    make(svMap),
@@ -152,7 +149,7 @@ func (s *SvSync) SetSeqNo(name enc.Name, seqNo uint64) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	hash := s.hashName(name)
+	hash := name.String()
 
 	entry := s.state.get(hash, s.o.BootTime)
 	if seqNo <= entry.SeqNo {
@@ -173,7 +170,7 @@ func (s *SvSync) IncrSeqNo(name enc.Name) uint64 {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	hash := s.hashName(name)
+	hash := name.String()
 
 	entry := s.state.get(hash, s.o.BootTime)
 	s.state.set(hash, s.o.BootTime, entry.SeqNo+1)
@@ -189,14 +186,6 @@ func (s *SvSync) GetBootTime() uint64 {
 	return s.o.BootTime
 }
 
-func (s *SvSync) hashName(name enc.Name) uint64 {
-	hash := name.Hash()
-	if _, ok := s.names[hash]; !ok {
-		s.names[hash] = name.Clone()
-	}
-	return hash
-}
-
 func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -206,7 +195,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	recvSv := make(svMap, len(sv.Entries))
 
 	for _, node := range sv.Entries {
-		hash := s.hashName(node.Name)
+		hash := node.Name.String()
 
 		for _, entry := range node.SeqNoEntries {
 			recvSv.set(hash, entry.BootstrapTime, entry.SeqNo)
@@ -312,15 +301,16 @@ func (s *SvSync) sendSyncInterest() {
 	}
 
 	// Critical section
-	svWire := func() enc.Wire {
+	sv := func() *spec_svs.StateVector {
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
 
 		// [Spec*] Sending always triggers Steady State
 		s.enterSteadyState()
 
-		return s.encodeSv()
+		return s.state.tlv()
 	}()
+	svWire := (&spec_svs.SvsData{StateVector: sv}).Encode()
 
 	// SVS v3 Sync Data
 	syncName := s.o.GroupPrefix.Append(enc.NewVersionComponent(3))
@@ -388,35 +378,6 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 	}
 
 	s.recvSv <- params.StateVector
-}
-
-// Call with mutex locked
-func (s *SvSync) encodeSv() enc.Wire {
-	entries := make([]*spec_svs.StateVectorEntry, 0, len(s.state))
-	for nameHash, seqEntrs := range s.state {
-		seqEntrPtrs := make([]*spec_svs.SeqNoEntry, 0, len(seqEntrs))
-		for _, e := range seqEntrs {
-			if e.SeqNo > 0 {
-				seqEntrPtrs = append(seqEntrPtrs, &e)
-			}
-		}
-
-		entries = append(entries, &spec_svs.StateVectorEntry{
-			Name:         s.names[nameHash],
-			SeqNoEntries: seqEntrPtrs,
-		})
-	}
-
-	// Sort entries by in the NDN canonical order
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Name.Compare(entries[j].Name) < 0
-	})
-
-	params := spec_svs.SvsData{
-		StateVector: &spec_svs.StateVector{Entries: entries},
-	}
-
-	return params.Encode()
 }
 
 // Call with mutex locked
