@@ -92,7 +92,7 @@ func MakeUnicastUDPTransport(
 }
 
 func (t *UnicastUDPTransport) String() string {
-	return fmt.Sprintf("UnicastUDPTransport, FaceID=%d, RemoteURI=%s, LocalURI=%s", t.faceID, t.remoteURI, t.localURI)
+	return fmt.Sprintf("unicast-udp-transport (face=%d remote=%s local=%s)", t.faceID, t.remoteURI, t.localURI)
 }
 
 func (t *UnicastUDPTransport) SetPersistency(persistency spec_mgmt.Persistency) bool {

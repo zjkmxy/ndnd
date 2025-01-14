@@ -63,6 +63,10 @@ func NewPrefixTable(
 	return pt
 }
 
+func (pt *PrefixTable) String() string {
+	return "dv-prefix"
+}
+
 func (pt *PrefixTable) GetRouter(name enc.Name) *PrefixTableRouter {
 	hash := name.String()
 	router := pt.routers[hash]
@@ -77,7 +81,7 @@ func (pt *PrefixTable) GetRouter(name enc.Name) *PrefixTableRouter {
 }
 
 func (pt *PrefixTable) Reset() {
-	log.Infof("prefix-table: reset")
+	log.Info(pt, "Reset table")
 	pt.me.Prefixes = make(map[string]*PrefixEntry)
 
 	op := tlv.PrefixOpList{
@@ -88,7 +92,7 @@ func (pt *PrefixTable) Reset() {
 }
 
 func (pt *PrefixTable) Announce(name enc.Name) {
-	log.Infof("prefix-table: announcing %s", name)
+	log.Info(pt, "Announce prefix", "name", name)
 	hash := name.String()
 
 	// Skip if matching entry already exists
@@ -111,7 +115,7 @@ func (pt *PrefixTable) Announce(name enc.Name) {
 }
 
 func (pt *PrefixTable) Withdraw(name enc.Name) {
-	log.Infof("prefix-table: withdrawing %s", name)
+	log.Info(pt, "Withdraw prefix", "name", name)
 	hash := name.String()
 
 	// Check if entry does not exist
@@ -132,26 +136,26 @@ func (pt *PrefixTable) Withdraw(name enc.Name) {
 // Applies ops from a list. Returns if dirty.
 func (pt *PrefixTable) Apply(ops *tlv.PrefixOpList) (dirty bool) {
 	if ops.ExitRouter == nil || len(ops.ExitRouter.Name) == 0 {
-		log.Error("prefix-table: received PrefixOpList has no ExitRouter")
+		log.Error(pt, "Received PrefixOpList has no ExitRouter")
 		return false
 	}
 
 	router := pt.GetRouter(ops.ExitRouter.Name)
 
 	if ops.PrefixOpReset {
-		log.Infof("prefix-table: reset prefix table for %s", ops.ExitRouter.Name)
+		log.Info(pt, "Reset prefixes for remote", "router", ops.ExitRouter.Name)
 		router.Prefixes = make(map[string]*PrefixEntry)
 		dirty = true
 	}
 
 	for _, add := range ops.PrefixOpAdds {
-		log.Infof("prefix-table: added prefix for %s: %s", ops.ExitRouter.Name, add.Name)
+		log.Info(pt, "Add prefix for remote", "router", ops.ExitRouter.Name, "name", add.Name)
 		router.Prefixes[add.Name.String()] = &PrefixEntry{Name: add.Name}
 		dirty = true
 	}
 
 	for _, remove := range ops.PrefixOpRemoves {
-		log.Infof("prefix-table: removed prefix for %s: %s", ops.ExitRouter.Name, remove.Name)
+		log.Info(pt, "Remove prefix for remote", "router", ops.ExitRouter.Name, "name", remove.Name)
 		delete(router.Prefixes, remove.Name.String())
 		dirty = true
 	}
@@ -183,7 +187,7 @@ func (r *PrefixTableRouter) GetNextDataName() enc.Name {
 // Process the received prefix data. Returns if dirty.
 func (pt *PrefixTable) ApplyData(name enc.Name, data []byte, router *PrefixTableRouter) bool {
 	if len(name) < 2 {
-		log.Warnf("prefix-table: unexpected name length: %d", len(name))
+		log.Warn(pt, "Unexpected name length", "len", len(name))
 		return false
 	}
 
@@ -194,14 +198,14 @@ func (pt *PrefixTable) ApplyData(name enc.Name, data []byte, router *PrefixTable
 		seqNo = name[len(name)-1]
 	} else if seqNo.Typ != enc.TypeSequenceNumNameComponent {
 		// version is immutable, sequence number is in name
-		log.Warnf("prefix-table: unexpected sequence number type: %s", seqNo.Typ)
+		log.Warn(pt, "Unexpected sequence number type", "type", seqNo.Typ)
 		return false
 	}
 
 	// Parse the prefix data
 	ops, err := tlv.ParsePrefixOpList(enc.NewBufferReader(data), true)
 	if err != nil {
-		log.Warnf("prefix-table: failed to parse PrefixOpList: %+v", err)
+		log.Warn(pt, "Failed to parse PrefixOpList", "err", err)
 		return false
 	}
 
@@ -226,7 +230,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 		Version: utils.IdPtr(uint64(0)), // immutable
 	})
 	if err != nil {
-		log.Errorf("prefix-table: failed to produce op: %v", err)
+		log.Error(pt, "Failed to produce op", "err", err)
 		return
 	}
 	pt.objDir.Push(name)
@@ -259,7 +263,7 @@ func (pt *PrefixTable) publishSnap() {
 		Version: utils.IdPtr(pt.me.Latest),
 	})
 	if err != nil {
-		log.Errorf("prefix-table: failed to produce snap: %v", err)
+		log.Error(pt, "Failed to produce snap", "err", err)
 	}
 	pt.objDir.Push(name)
 	pt.objDir.Evict(pt.client)

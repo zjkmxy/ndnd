@@ -22,7 +22,7 @@ type FIBModule struct {
 }
 
 func (f *FIBModule) String() string {
-	return "FIBMgmt"
+	return "mgmt-fib"
 }
 
 func (f *FIBModule) registerManager(manager *Thread) {

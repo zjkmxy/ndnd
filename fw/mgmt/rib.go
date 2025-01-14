@@ -26,7 +26,7 @@ type RIBModule struct {
 }
 
 func (r *RIBModule) String() string {
-	return "RIBMgmt"
+	return "mgmt-rib"
 }
 
 func (r *RIBModule) registerManager(manager *Thread) {

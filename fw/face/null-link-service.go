@@ -8,8 +8,6 @@
 package face
 
 import (
-	"strconv"
-
 	"github.com/named-data/ndnd/fw/core"
 )
 
@@ -25,14 +23,6 @@ func MakeNullLinkService(transport transport) *NullLinkService {
 	l.transport = transport
 	l.transport.setLinkService(l)
 	return l
-}
-
-func (l *NullLinkService) String() string {
-	if l.transport != nil {
-		return "NullLinkService, " + l.transport.String()
-	}
-
-	return "NullLinkService, FaceID=" + strconv.FormatUint(l.faceID, 10)
 }
 
 // Run runs the NullLinkService.

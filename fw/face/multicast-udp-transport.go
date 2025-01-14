@@ -105,7 +105,7 @@ func (t *MulticastUDPTransport) connectRecv() error {
 }
 
 func (t *MulticastUDPTransport) String() string {
-	return fmt.Sprintf("MulticastUDPTransport, FaceID=%d, RemoteURI=%s, LocalURI=%s", t.faceID, t.remoteURI, t.localURI)
+	return fmt.Sprintf("multicast-udp-transport (faceid=%d remote=%s local=%s)", t.faceID, t.remoteURI, t.localURI)
 }
 
 func (t *MulticastUDPTransport) SetPersistency(persistency spec_mgmt.Persistency) bool {

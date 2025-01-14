@@ -27,7 +27,7 @@ type FaceModule struct {
 }
 
 func (f *FaceModule) String() string {
-	return "FaceMgmt"
+	return "mgmt-face"
 }
 
 func (f *FaceModule) registerManager(manager *Thread) {

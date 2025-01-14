@@ -9,6 +9,7 @@ package face
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"path"
@@ -40,7 +41,7 @@ func MakeUnixStreamListener(localURI *defn.URI) (*UnixStreamListener, error) {
 }
 
 func (l *UnixStreamListener) String() string {
-	return "UnixStreamListener, " + l.localURI.String()
+	return fmt.Sprintf("unix-stream-listener (%s)", l.localURI)
 }
 
 func (l *UnixStreamListener) Run() {
@@ -87,11 +88,11 @@ func (l *UnixStreamListener) Run() {
 
 		newTransport, err := MakeUnixStreamTransport(remoteURI, l.localURI, newConn)
 		if err != nil {
-			core.Log.Error(l, "Failed to create new Unix stream transport", "err", err)
+			core.Log.Error(l, "Failed to create new unix stream transport", "err", err)
 			continue
 		}
 
-		core.Log.Info(l, "Accepting new Unix stream face", "uri", remoteURI)
+		core.Log.Info(l, "Accepting new unix stream face", "uri", remoteURI)
 		options := MakeNDNLPLinkServiceOptions()
 		options.IsFragmentationEnabled = false // reliable stream
 		MakeNDNLPLinkService(newTransport, options).Run(nil)

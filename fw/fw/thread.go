@@ -9,8 +9,8 @@ package fw
 
 import (
 	"encoding/binary"
+	"fmt"
 	"runtime"
-	"strconv"
 
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/fw/defn"
@@ -92,7 +92,7 @@ func NewThread(id int) *Thread {
 }
 
 func (t *Thread) String() string {
-	return "FwThread-" + strconv.Itoa(t.threadID)
+	return fmt.Sprintf("fw-thread-%d", t.threadID)
 }
 
 // GetID returns the ID of the forwarding thread

@@ -10,7 +10,6 @@ package face
 import (
 	"math"
 	"runtime"
-	"strconv"
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
@@ -94,14 +93,6 @@ func MakeNDNLPLinkService(transport transport, options NDNLPLinkServiceOptions) 
 	l.outFrame = make([]byte, defn.MaxNDNPacketSize)
 
 	return l
-}
-
-func (l *NDNLPLinkService) String() string {
-	if l.transport != nil {
-		return "NDNLPLinkService, " + l.transport.String()
-	}
-
-	return "NDNLPLinkService, FaceID=" + strconv.FormatUint(l.faceID, 10)
 }
 
 // Options gets the settings of the NDNLPLinkService.

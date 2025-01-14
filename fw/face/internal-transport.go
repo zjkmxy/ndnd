@@ -8,7 +8,7 @@
 package face
 
 import (
-	"strconv"
+	"fmt"
 
 	"github.com/named-data/ndnd/fw/core"
 	defn "github.com/named-data/ndnd/fw/defn"
@@ -54,8 +54,7 @@ func RegisterInternalTransport() (LinkService, *InternalTransport) {
 }
 
 func (t *InternalTransport) String() string {
-	return "InternalTransport, FaceID=" + strconv.FormatUint(t.faceID, 10) +
-		", RemoteURI=" + t.remoteURI.String() + ", LocalURI=" + t.localURI.String()
+	return fmt.Sprintf("internal-transport (faceid=%d remote=%s local=%s)", t.faceID, t.remoteURI, t.localURI)
 }
 
 // SetPersistency changes the persistency of the face.

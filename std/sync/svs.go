@@ -2,6 +2,7 @@ package sync
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	rand "math/rand/v2"
 	"sort"
@@ -97,6 +98,11 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 
 		recvSv: make(chan *spec_svs.StateVector, 128),
 	}
+}
+
+// Instance log identifier
+func (s *SvSync) String() string {
+	return fmt.Sprintf("svs (%s)", s.o.GroupPrefix)
 }
 
 // Start the SV Sync instance.
@@ -208,7 +214,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 			// [SPEC] If any received BootstrapTime is more than 86400s in the
 			// future compared to current time, the entire state vector SHOULD be ignored.
 			if entry.BootstrapTime > uint64(time.Now().Unix())+86400 {
-				log.Warnf("SvSync: dropping state vector with far future BootstrapTime: %d", entry.BootstrapTime)
+				log.Warn(s, "Dropping state vector with far future BootstrapTime: %d", entry.BootstrapTime)
 				return
 			}
 
@@ -327,7 +333,7 @@ func (s *SvSync) sendSyncInterest() {
 	}
 	data, err := s.o.Engine.Spec().MakeData(syncName, dataCfg, svWire, signer)
 	if err != nil {
-		log.Errorf("SvSync: sendSyncInterest failed make data: %+v", err)
+		log.Error(s, "sendSyncInterest failed make data", "err", err)
 		return
 	}
 
@@ -338,14 +344,14 @@ func (s *SvSync) sendSyncInterest() {
 	}
 	interest, err := s.o.Engine.Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
 	if err != nil {
-		log.Errorf("SvSync: sendSyncInterest failed make interest: %+v", err)
+		log.Error(s, "sendSyncInterest failed make interest", "err", err)
 		return
 	}
 
 	// [Spec] Sync Ack Policy - Do not acknowledge Sync Interests
 	err = s.o.Engine.Express(interest, nil)
 	if err != nil {
-		log.Errorf("SvSync: sendSyncInterest failed express: %+v", err)
+		log.Error(s, "sendSyncInterest failed express", "err", err)
 	}
 }
 
@@ -356,18 +362,18 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 
 	// Check if app param is present
 	if interest.AppParam() == nil {
-		log.Debug("SvSync: onSyncInterest no AppParam, ignoring")
+		log.Debug(s, "onSyncInterest no AppParam, ignoring")
 		return
 	}
 
 	// Decode Sync Data
 	pkt, _, err := spec.ReadPacket(enc.NewWireReader(interest.AppParam()))
 	if err != nil {
-		log.Warnf("SvSync: onSyncInterest failed to parse SyncData: %+v", err)
+		log.Warn(s, "onSyncInterest failed to parse SyncData", "err", err)
 		return
 	}
 	if pkt.Data == nil {
-		log.Warnf("SvSync: onSyncInterest no Data, ignoring")
+		log.Warn(s, "onSyncInterest no Data, ignoring")
 		return
 	}
 
@@ -377,7 +383,7 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 	svWire := pkt.Data.Content().Join()
 	params, err := spec_svs.ParseSvsData(enc.NewBufferReader(svWire), false)
 	if err != nil || params.StateVector == nil {
-		log.Warnf("SvSync: onSyncInterest failed to parse StateVec: %+v", err)
+		log.Warn(s, "onSyncInterest failed to parse StateVec", "err", err)
 		return
 	}
 

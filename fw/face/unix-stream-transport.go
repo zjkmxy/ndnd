@@ -41,7 +41,7 @@ func MakeUnixStreamTransport(remoteURI *defn.URI, localURI *defn.URI, conn net.C
 }
 
 func (t *UnixStreamTransport) String() string {
-	return fmt.Sprintf("UnixStreamTransport, FaceID=%d, RemoteURI=%s, LocalURI=%s", t.faceID, t.remoteURI, t.localURI)
+	return fmt.Sprintf("unix-stream-transport (faceid=%d remote=%s local=%s)", t.faceID, t.remoteURI, t.localURI)
 }
 
 // SetPersistency changes the persistency of the face.

@@ -9,7 +9,7 @@ package face
 
 import (
 	"encoding/binary"
-	"strconv"
+	"fmt"
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
@@ -75,10 +75,10 @@ type linkServiceBase struct {
 
 func (l *linkServiceBase) String() string {
 	if l.transport != nil {
-		return "LinkService, " + l.transport.String()
+		return fmt.Sprintf("link-service (%s)", l.transport)
 	}
 
-	return "LinkService, FaceID=" + strconv.FormatUint(l.faceID, 10)
+	return fmt.Sprintf("link-service (faceid=%d)", l.faceID)
 }
 
 func (l *linkServiceBase) SetFaceID(faceID uint64) {

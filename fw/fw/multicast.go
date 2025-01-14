@@ -33,7 +33,7 @@ func init() {
 func (s *Multicast) Instantiate(fwThread *Thread) {
 	s.NewStrategyBase(fwThread, enc.Component{
 		Typ: enc.TypeGenericNameComponent, Val: []byte("multicast"),
-	}, 1, "Multicast")
+	}, 1, "multicast")
 }
 
 func (s *Multicast) AfterContentStoreHit(

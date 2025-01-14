@@ -44,12 +44,8 @@ type Router struct {
 	// forwarding table
 	fib *table.Fib
 
-	// advertisement boot time for self
-	advertBootTime uint64
-	// advertisement sequence number for self
-	advertSyncSeq uint64
-	// object directory for advertisement data
-	advertDir *object.MemoryFifoDir
+	// advertisement module
+	advert advertModule
 	// prefix table svs instance
 	pfxSvs *ndn_sync.SvSync
 }
@@ -71,16 +67,20 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		mutex:  sync.Mutex{},
 	}
 
-	// Initialize sync and dirs
-	dv.advertBootTime = uint64(time.Now().Unix())
-	dv.advertDir = object.NewMemoryFifoDir(32) // keep last few advertisements
+	// Initialize advertisement module
+	dv.advert = advertModule{
+		dv:       dv,
+		bootTime: uint64(time.Now().Unix()),
+		seq:      0,
+		objDir:   object.NewMemoryFifoDir(32), // keep last few advertisements
+	}
 
 	// Create sync groups
 	dv.pfxSvs = ndn_sync.NewSvSync(ndn_sync.SvSyncOpts{
 		Engine:      engine,
 		GroupPrefix: config.PrefixTableSyncPrefix(),
 		OnUpdate:    func(ssu ndn_sync.SvSyncUpdate) { go dv.onPfxSyncUpdate(ssu) },
-		BootTime:    dv.advertBootTime,
+		BootTime:    dv.advert.bootTime,
 	})
 
 	// Create tables
@@ -92,10 +92,15 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 	return dv, nil
 }
 
+// Log identifier for the DV router.
+func (dv *Router) String() string {
+	return "dv-router"
+}
+
 // Start the DV router. Blocks until Stop() is called.
 func (dv *Router) Start() (err error) {
-	log.Infof("Starting DV router")
-	defer log.Infof("Stopping DV router")
+	log.Info(dv, "Starting router")
+	defer log.Info(dv, "Stopping router")
 
 	// Initialize channels
 	dv.stop = make(chan bool, 1)
@@ -132,12 +137,12 @@ func (dv *Router) Start() (err error) {
 
 	// Add self to the RIB and make initial advertisement
 	dv.rib.Set(dv.config.RouterName(), dv.config.RouterName(), 0)
-	dv.advertGenerateNew()
+	dv.advert.generate()
 
 	for {
 		select {
 		case <-dv.heartbeat.C:
-			dv.advertSyncSendInterest()
+			dv.advert.sendSyncInterest()
 		case <-dv.deadcheck.C:
 			dv.checkDeadNeighbors()
 		case <-dv.stop:
@@ -172,7 +177,7 @@ func (dv *Router) register() (err error) {
 	// Advertisement Sync (active)
 	err = dv.engine.AttachHandler(dv.config.AdvertisementSyncActivePrefix(),
 		func(args ndn.InterestHandlerArgs) {
-			go dv.advertSyncOnInterest(args, true)
+			go dv.advert.OnSyncInterest(args, true)
 		})
 	if err != nil {
 		return err
@@ -181,7 +186,7 @@ func (dv *Router) register() (err error) {
 	// Advertisement Sync (passive)
 	err = dv.engine.AttachHandler(dv.config.AdvertisementSyncPassivePrefix(),
 		func(args ndn.InterestHandlerArgs) {
-			go dv.advertSyncOnInterest(args, false)
+			go dv.advert.OnSyncInterest(args, false)
 		})
 	if err != nil {
 		return err

@@ -19,7 +19,7 @@ func NewProfiler(config *YaNFDConfig) *Profiler {
 }
 
 func (p *Profiler) String() string {
-	return "Profiler"
+	return "profiler"
 }
 
 func (p *Profiler) Start() (err error) {

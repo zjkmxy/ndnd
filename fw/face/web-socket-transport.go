@@ -40,7 +40,7 @@ func NewWebSocketTransport(localURI *defn.URI, c *websocket.Conn) (t *WebSocketT
 }
 
 func (t *WebSocketTransport) String() string {
-	return fmt.Sprintf("WebSocketTransport, FaceID=%d, RemoteURI=%s, LocalURI=%s", t.faceID, t.remoteURI, t.localURI)
+	return fmt.Sprintf("web-socket-transport (faceid=%d remote=%s local=%s)", t.faceID, t.remoteURI, t.localURI)
 }
 
 func (t *WebSocketTransport) SetPersistency(persistency spec_mgmt.Persistency) bool {

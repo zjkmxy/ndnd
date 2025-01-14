@@ -49,7 +49,7 @@ type YaNFD struct {
 }
 
 func (y *YaNFD) String() string {
-	return "YaNFD"
+	return "yanfd"
 }
 
 // NewYaNFD creates a YaNFD. Don't call this function twice.

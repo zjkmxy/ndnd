@@ -132,7 +132,7 @@ func AcceptUnicastTCPTransport(
 }
 
 func (t *UnicastTCPTransport) String() string {
-	return fmt.Sprintf("UnicastTCPTransport, FaceID=%d, RemoteURI=%s, LocalURI=%s", t.faceID, t.remoteURI, t.localURI)
+	return fmt.Sprintf("unicast-tcp-transport (faceid=%d remote=%s local=%s)", t.faceID, t.remoteURI, t.localURI)
 }
 
 func (t *UnicastTCPTransport) SetPersistency(persistency spec_mgmt.Persistency) bool {

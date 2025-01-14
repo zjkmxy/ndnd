@@ -5,6 +5,7 @@ package basic
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -57,6 +58,10 @@ type Engine struct {
 	cmdChecker ndn.SigChecker
 }
 
+func (e *Engine) String() string {
+	return "BasicEngine"
+}
+
 func (e *Engine) EngineTrait() ndn.Engine {
 	return e
 }
@@ -98,14 +103,14 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 	var incomingFaceId *uint64 = nil
 	var raw enc.Wire = nil
 
-	if log.HasTrace() {
+	if hasLogTrace() {
 		wire := reader.Range(0, reader.Length())
-		log.Trace("received packet bytes", "wire", wire.Join())
+		log.Trace(e, "Received packet bytes", "wire", hex.EncodeToString(wire.Join()))
 	}
 
 	pkt, ctx, err := spec.ReadPacket(reader)
 	if err != nil {
-		log.Errorf("failed to parse packet", "err", err)
+		log.Error(e, "Failed to parse packet", "err", err)
 		// Recoverable error. Should continue.
 		return nil
 	}
@@ -114,7 +119,7 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 	if pkt.LpPacket != nil {
 		lpPkt := pkt.LpPacket
 		if lpPkt.FragIndex != nil || lpPkt.FragCount != nil {
-			log.Warn("fragmented LpPackets are not supported - DROP")
+			log.Warn(e, "Fragmented LpPackets are not supported - DROP")
 			return nil
 		}
 		// Parse the inner packet.
@@ -125,10 +130,10 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 			pkt, ctx, err = spec.ReadPacket(enc.NewWireReader(raw))
 		}
 		if err != nil || (pkt.Data == nil) == (pkt.Interest == nil) {
-			log.Errorf("failed to parse packet in LpPacket", "err", err)
-			if log.HasTrace() {
+			log.Error(e, "Failed to parse packet in LpPacket", "err", err)
+			if hasLogTrace() {
 				wire := reader.Range(0, reader.Length())
-				log.Trace("failed packet bytes", "wire", wire.Join())
+				log.Trace(e, "Failed to parse packet bytes", "wire", hex.EncodeToString(wire.Join()))
 			}
 			// Recoverable error. Should continue.
 			return nil
@@ -145,17 +150,13 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 	// Now pkt is either Data or Interest (including Nack).
 	if nackReason != spec.NackReasonNone {
 		if pkt.Interest == nil {
-			log.Error("received nack for an Data")
+			log.Error(e, "Nack received for non-Interest", "reason", nackReason)
 			return nil
 		}
-		if log.HasTrace() {
-			log.Trace("nack received", "reason", nackReason, "name", pkt.Interest.Name())
-		}
+		log.Trace(e, "Nack received", "reason", nackReason, "name", pkt.Interest.Name())
 		e.onNack(pkt.Interest.NameV, nackReason)
 	} else if pkt.Interest != nil {
-		if log.HasTrace() {
-			log.Trace("interest received", "name", pkt.Interest.Name())
-		}
+		log.Trace(e, "Interest received", "name", pkt.Interest.Name())
 		e.onInterest(ndn.InterestHandlerArgs{
 			Interest:       pkt.Interest,
 			RawInterest:    raw,
@@ -164,9 +165,7 @@ func (e *Engine) onPacket(reader enc.ParseReader) error {
 			IncomingFaceId: incomingFaceId,
 		})
 	} else if pkt.Data != nil {
-		if log.HasTrace() {
-			log.Trace("data received", "name", pkt.Data.Name())
-		}
+		log.Trace(e, "Data received", "name", pkt.Data.Name())
 		// PitToken is not used for now
 		e.onData(pkt.Data, ctx.Data_context.SigCovered(), raw, pitToken)
 	} else {
@@ -205,7 +204,7 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 		return nil
 	}()
 	if handler == nil {
-		log.Warn("no handler for interest", "name", name)
+		log.Warn(e, "No handler for interest", "name", name)
 		return
 	}
 
@@ -213,11 +212,11 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 	args.Reply = func(encodedData enc.Wire) error {
 		now := e.timer.Now()
 		if args.Deadline.Before(now) {
-			log.Warn("deadline exceeded - DROP", "name", name)
+			log.Warn(e, "Deadline exceeded - DROP", "name", name)
 			return ndn.ErrDeadlineExceed
 		}
 		if !e.face.IsRunning() {
-			log.Error("cannot send through a closed face - DROP", "name", name)
+			log.Error(e, "Cannot send through a closed face - DROP", "name", name)
 			return ndn.ErrFaceDown
 		}
 		if args.PitToken != nil {
@@ -250,7 +249,7 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 
 	n := e.pit.PrefixMatch(pkt.NameV)
 	if n == nil {
-		log.Warn("received data for an unknown interest - DROP", "name", pkt.Name())
+		log.Warn(e, "Received data for an unknown interest - DROP", "name", pkt.Name())
 		return
 	}
 
@@ -311,7 +310,7 @@ func (e *Engine) onNack(name enc.Name, reason uint64) {
 	defer e.pitLock.Unlock()
 	n := e.pit.ExactMatch(name)
 	if n == nil {
-		log.Warn("received Nack for an unknown interest - DROP", "name", name)
+		log.Warn(e, "Received Nack for an unknown interest - DROP", "name", name)
 		return
 	}
 	for _, entry := range n.Value() {
@@ -329,7 +328,7 @@ func (e *Engine) onNack(name enc.Name, reason uint64) {
 }
 
 func (e *Engine) onError(err error) error {
-	log.Error("error on face", "err", err)
+	log.Error(e, "Error on face", "err", err)
 	// TODO: Handle Interest cancellation
 	return err
 }
@@ -429,11 +428,10 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 	// Send interest
 	err := e.face.Send(interest.Wire)
 	if err != nil {
-		log.Error("failed to send interest", "err", err)
-	} else if log.HasTrace() {
-		log.Trace("interest sent", "name", finalName)
+		log.Error(e, "Failed to send interest", "err", err)
 	}
 
+	log.Trace(e, "Interest sent", "name", finalName)
 	return err
 }
 
@@ -507,10 +505,10 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 func (e *Engine) RegisterRoute(prefix enc.Name) error {
 	_, err := e.ExecMgmtCmd("rib", "register", &mgmt.ControlArgs{Name: prefix})
 	if err != nil {
-		log.Error("failed to register prefix", "err", err, "name", prefix)
+		log.Error(e, "Failed to register prefix", "err", err, "name", prefix)
 		return err
 	} else {
-		log.Info("prefix registered", "name", prefix)
+		log.Info(e, "Prefix registered", "name", prefix)
 	}
 	return nil
 }
@@ -518,10 +516,10 @@ func (e *Engine) RegisterRoute(prefix enc.Name) error {
 func (e *Engine) UnregisterRoute(prefix enc.Name) error {
 	_, err := e.ExecMgmtCmd("rib", "unregister", &mgmt.ControlArgs{Name: prefix})
 	if err != nil {
-		log.Error("failed to unregister prefix", "err", err, "name", prefix)
+		log.Error(e, "Failed to unregister prefix", "err", err, "name", prefix)
 		return err
 	} else {
-		log.Info("prefix unregistered", "name", prefix)
+		log.Info(e, "Prefix unregistered", "name", prefix)
 	}
 	return nil
 }
@@ -541,4 +539,8 @@ func NewEngine(face face.Face, timer ndn.Timer, cmdSigner ndn.Signer, cmdChecker
 		fibLock:    sync.Mutex{},
 		pitLock:    sync.Mutex{},
 	}
+}
+
+func hasLogTrace() bool {
+	return log.Default().Level() <= log.LevelTrace
 }

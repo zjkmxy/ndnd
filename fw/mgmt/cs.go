@@ -23,7 +23,7 @@ type ContentStoreModule struct {
 }
 
 func (c *ContentStoreModule) String() string {
-	return "ContentStoreMgmt"
+	return "mgmt-cs"
 }
 
 func (c *ContentStoreModule) registerManager(manager *Thread) {

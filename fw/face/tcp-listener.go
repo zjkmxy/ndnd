@@ -40,7 +40,7 @@ func MakeTCPListener(localURI *defn.URI) (*TCPListener, error) {
 }
 
 func (l *TCPListener) String() string {
-	return fmt.Sprintf("TCPListener, %s", l.localURI)
+	return fmt.Sprintf("tcp-listener (%s)", l.localURI)
 }
 
 func (l *TCPListener) Run() {

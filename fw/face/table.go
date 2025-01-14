@@ -34,7 +34,7 @@ func init() {
 }
 
 func (t *Table) String() string {
-	return "FaceTable"
+	return "face-table"
 }
 
 // Add adds a face to the face table.

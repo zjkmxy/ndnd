@@ -10,66 +10,31 @@ func Default() *Logger {
 }
 
 // Trace level message.
-func Trace(msg string, v ...any) {
-	defaultLogger.log(nil, msg, LevelTrace, v...)
+func Trace(t Tag, msg string, v ...any) {
+	defaultLogger.log(t, msg, LevelTrace, v...)
 }
 
 // Debug level message.
-func Debug(msg string, v ...any) {
-	defaultLogger.log(nil, msg, LevelDebug, v...)
+func Debug(t Tag, msg string, v ...any) {
+	defaultLogger.log(t, msg, LevelDebug, v...)
 }
 
 // Info level message.
-func Info(msg string, v ...any) {
-	defaultLogger.Info(nil, msg, v...)
+func Info(t Tag, msg string, v ...any) {
+	defaultLogger.log(t, msg, LevelInfo, v...)
 }
 
 // Warn level message.
-func Warn(msg string, v ...any) {
-	defaultLogger.Warn(nil, msg, v...)
+func Warn(t Tag, msg string, v ...any) {
+	defaultLogger.log(t, msg, LevelWarn, v...)
 }
 
 // Error level message.
-func Error(msg string, v ...any) {
-	defaultLogger.Error(nil, msg, v...)
+func Error(t Tag, msg string, v ...any) {
+	defaultLogger.log(t, msg, LevelError, v...)
 }
 
 // Fatal level message, followed by an exit.
-func Fatal(msg string, v ...any) {
-	defaultLogger.Fatal(nil, msg, v...)
-}
-
-// Tracef level formatted message.
-func Tracef(msg string, v ...any) {
-	defaultLogger.Trace(nil, msg, v...)
-}
-
-// Debugf level formatted message.
-func Debugf(msg string, v ...any) {
-	defaultLogger.Debug(nil, msg, v...)
-}
-
-// Infof level formatted message.
-func Infof(msg string, v ...any) {
-	defaultLogger.Info(nil, msg, v...)
-}
-
-// Warnf level formatted message.
-func Warnf(msg string, v ...any) {
-	defaultLogger.Warn(nil, msg, v...)
-}
-
-// Errorf level formatted message.
-func Errorf(msg string, v ...any) {
-	defaultLogger.Error(nil, msg, v...)
-}
-
-// Fatalf level formatted message, followed by an exit.
-func Fatalf(msg string, v ...any) {
-	defaultLogger.Fatal(nil, msg, v...)
-}
-
-// HasTrace returns if trace level is enabled.
-func HasTrace() bool {
-	return defaultLogger.level <= LevelTrace
+func Fatal(t Tag, msg string, v ...any) {
+	defaultLogger.log(t, msg, LevelFatal, v...)
 }

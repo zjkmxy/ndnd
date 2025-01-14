@@ -22,7 +22,7 @@ type StrategyChoiceModule struct {
 }
 
 func (s *StrategyChoiceModule) String() string {
-	return "StrategyChoiceMgmt"
+	return "mgmt-strategy"
 }
 
 func (s *StrategyChoiceModule) registerManager(manager *Thread) {

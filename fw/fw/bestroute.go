@@ -35,7 +35,7 @@ func init() {
 func (s *BestRoute) Instantiate(fwThread *Thread) {
 	s.NewStrategyBase(fwThread, enc.Component{
 		Typ: enc.TypeGenericNameComponent, Val: []byte("best-route"),
-	}, 1, "BestRoute")
+	}, 1, "bestroute")
 }
 
 func (s *BestRoute) AfterContentStoreHit(

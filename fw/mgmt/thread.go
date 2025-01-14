@@ -40,7 +40,7 @@ type Thread struct {
 }
 
 func (m *Thread) String() string {
-	return "Mgmt"
+	return "mgmt"
 }
 
 // MakeMgmtThread creates a new management thread.

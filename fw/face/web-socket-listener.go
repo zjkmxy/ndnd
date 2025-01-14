@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -53,12 +52,7 @@ func (cfg WebSocketListenerConfig) URL() *url.URL {
 }
 
 func (cfg WebSocketListenerConfig) String() string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "WebSocket listener at %s", cfg.URL())
-	if cfg.TLSEnabled {
-		fmt.Fprintf(&b, " with TLS cert %s and key %s", cfg.TLSCert, cfg.TLSKey)
-	}
-	return b.String()
+	return fmt.Sprintf("web-socket-listener (url=%s tls=%s)", cfg.URL(), cfg.TLSCert)
 }
 
 func NewWebSocketListener(cfg WebSocketListenerConfig) (*WebSocketListener, error) {

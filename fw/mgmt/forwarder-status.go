@@ -24,7 +24,7 @@ type ForwarderStatusModule struct {
 }
 
 func (f *ForwarderStatusModule) String() string {
-	return "ForwarderStatusMgmt"
+	return "mgmt-status"
 }
 
 func (f *ForwarderStatusModule) registerManager(manager *Thread) {

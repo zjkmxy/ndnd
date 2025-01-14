@@ -28,7 +28,7 @@ func NewNlsrReadvertiser(m *Thread) *NlsrReadvertiser {
 }
 
 func (r *NlsrReadvertiser) String() string {
-	return "NlsrReadvertiser"
+	return "mgmt-nlsr-readvertiser"
 }
 
 func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
@@ -64,7 +64,7 @@ func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
 
 func (r *NlsrReadvertiser) Withdraw(name enc.Name, route *table.Route) {
 	if route.Origin != uint64(spec_mgmt.RouteOriginClient) {
-		core.Log.Debug(r, "Skip withdraw", "name", name, "origin", route.Origin)
+		core.Log.Debug(r, "Skip withdraw (origin)", "name", name, "origin", route.Origin)
 		return
 	}
 
