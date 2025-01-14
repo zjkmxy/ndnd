@@ -16,16 +16,18 @@ type NamePattern []ComponentPattern
 const TypeName TLNum = 0x07
 
 func (n Name) String() string {
-	ret := ""
-	for _, c := range n {
-		ret += "/" + c.String()
+	sb := strings.Builder{}
+	for i, c := range n {
+		sb.WriteRune('/')
+		sz := c.WriteTo(&sb)
+		if i == len(n)-1 && sz == 0 {
+			sb.WriteRune('/')
+		}
 	}
-	if len(ret) == 0 {
-		ret = "/"
-	} else if n[len(n)-1].Typ == TypeGenericNameComponent && len(n[len(n)-1].Val) == 0 {
-		ret += "/"
+	if sb.Len() == 0 {
+		return "/"
 	}
-	return ret
+	return sb.String()
 }
 
 func (n NamePattern) String() string {
