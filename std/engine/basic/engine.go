@@ -59,7 +59,7 @@ type Engine struct {
 }
 
 func (e *Engine) String() string {
-	return "BasicEngine"
+	return "basic-engine"
 }
 
 func (e *Engine) EngineTrait() ndn.Engine {
