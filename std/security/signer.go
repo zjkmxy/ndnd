@@ -6,10 +6,6 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-func NewNullSigner() ndn.Signer {
-	return crypto.NewNullSigner()
-}
-
 func NewSha256Signer() ndn.Signer {
 	return crypto.NewSha256Signer()
 }

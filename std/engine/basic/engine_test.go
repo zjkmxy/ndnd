@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/crypto"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -275,7 +276,7 @@ func TestRoute(t *testing.T) {
 					ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 				},
 				enc.Wire{[]byte("test")},
-				sec.NewNullSigner())
+				crypto.NewEmptySigner())
 			require.NoError(t, err)
 			args.Reply(data.Wire)
 		}
@@ -305,7 +306,7 @@ func TestPitToken(t *testing.T) {
 					ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 				},
 				enc.Wire{[]byte("test")},
-				sec.NewNullSigner())
+				crypto.NewEmptySigner())
 			require.NoError(t, err)
 			args.Reply(data.Wire)
 		}
