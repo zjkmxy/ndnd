@@ -9,6 +9,12 @@ func GetSecCmdTree() utils.CmdTree {
 		Name: "sec",
 		Help: "NDN Security Utilities",
 		Sub: []*utils.CmdTree{{
+			Name: "keygen",
+			Help: "Generate a new NDN key pair",
+			Fun:  keygen,
+		}, {
+			// separator
+		}, {
 			Name: "txt-from",
 			Help: "Convert an NDN data to text representation",
 			Fun:  txtFrom,

@@ -1,9 +1,6 @@
 package keychain
 
 import (
-	"encoding/base64"
-	"fmt"
-
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
@@ -27,7 +24,6 @@ func EncodeSecret(key ndn.Signer) (enc.Wire, error) {
 		sk, err = key.Secret()
 	case *crypto.RsaSigner:
 		sk, err = key.Secret()
-		fmt.Println(base64.StdEncoding.EncodeToString(sk))
 	case *crypto.Ed25519Signer:
 		sk, err = key.Secret()
 	default:
