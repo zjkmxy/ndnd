@@ -1,0 +1,63 @@
+package security
+
+import (
+	"encoding/pem"
+	"errors"
+
+	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
+
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+)
+
+const NDN_TXT_TYPE_CERT = "NDN Certificate"
+
+// TxtFrom converts an NDN data to a text representation following RFC 7468.
+func TxtFrom(raw []byte) ([]byte, error) {
+	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(raw))
+	if err != nil {
+		return nil, err
+	}
+
+	if data.ContentType() == nil {
+		return nil, errors.New("missing content type")
+	}
+
+	var pemType string
+	switch *data.ContentType() {
+	case ndn.ContentTypeKey:
+		pemType = NDN_TXT_TYPE_CERT
+	default:
+		return nil, errors.New("unsupported content type")
+	}
+
+	validity := "unknown"
+	if nb, na := data.Signature().Validity(); nb != nil && na != nil {
+		validity = nb.String() + " - " + na.String()
+	}
+
+	return pem.EncodeToMemory(&pem.Block{
+		Type: pemType,
+		Headers: map[string]string{
+			"Name":     data.Name().String(),
+			"Validity": validity,
+		},
+		Bytes: raw,
+	}), nil
+}
+
+// TxtParse converts a text representation of an NDN data.
+func TxtParse(txt []byte) [][]byte {
+	ret := make([][]byte, 0)
+
+	for {
+		block, rest := pem.Decode(txt)
+		if block == nil {
+			break
+		}
+		ret = append(ret, block.Bytes)
+		txt = rest
+	}
+
+	return ret
+}
