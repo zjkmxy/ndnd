@@ -24,6 +24,10 @@ func (emptySigner) Sign(covered enc.Wire) ([]byte, error) {
 	return []byte{}, nil
 }
 
+func (emptySigner) Public() ([]byte, error) {
+	return nil, ndn.ErrNoPubKey
+}
+
 // NewEmptySigner creates an empty signer for test.
 func NewEmptySigner() ndn.Signer {
 	return emptySigner{}

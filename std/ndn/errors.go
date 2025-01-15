@@ -36,3 +36,6 @@ var ErrDeadlineExceed = errors.New("interest deadline exceeded")
 
 // ErrFaceDown is returned when the face is closed.
 var ErrFaceDown = errors.New("face is down. Unable to send packet")
+
+// ErrNoPubKey is returned when the public key does not exist.
+var ErrNoPubKey = errors.New("public key does not exist")

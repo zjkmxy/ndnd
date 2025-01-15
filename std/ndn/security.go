@@ -28,6 +28,8 @@ type Signer interface {
 	EstimateSize() uint
 	// Sign computes the signature value of a wire.
 	Sign(enc.Wire) ([]byte, error)
+	// Public returns the public key of the signer or nil.
+	Public() ([]byte, error)
 }
 
 // SigChecker is a basic function to check the signature of a packet.

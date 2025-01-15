@@ -19,7 +19,7 @@ func TestEd25519SignerBasic(t *testing.T) {
 
 	keyName, _ := enc.NameFromStr("/KEY")
 	edkeybits := ed25519.NewKeyFromSeed([]byte("01234567890123456789012345678901"))
-	signer := crypto.NewEd25519Signer(edkeybits, keyName)
+	signer := crypto.NewEd25519Signer(keyName, edkeybits)
 
 	require.Equal(t, uint(ed25519.SignatureSize), signer.EstimateSize())
 	require.Equal(t, ndn.SignatureEd25519, signer.Type())
@@ -32,7 +32,8 @@ func TestEd25519SignerBasic(t *testing.T) {
 	sigValue := utils.WithoutErr(signer.Sign(dataVal))
 
 	// For basic test, we use ed25519.Verify to verify the signature.
-	require.True(t, ed25519.Verify(crypto.Ed25519DerivePubKey(edkeybits), dataVal.Join(), sigValue))
+	pub := utils.WithoutErr(signer.Public())
+	require.True(t, ed25519.Verify(pub, dataVal.Join(), sigValue))
 }
 
 // TestEd25519SignerCertificate tests the validator using a given certificate for interoperability.

@@ -8,24 +8,24 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-// hmacSigner is a Data signer that uses a provided HMAC key.
-type hmacSigner struct {
+// HmacSigner is a Data signer that uses a provided HMAC key.
+type HmacSigner struct {
 	key []byte
 }
 
-func (signer *hmacSigner) Type() ndn.SigType {
+func (signer *HmacSigner) Type() ndn.SigType {
 	return ndn.SignatureHmacWithSha256
 }
 
-func (*hmacSigner) KeyLocator() enc.Name {
+func (*HmacSigner) KeyLocator() enc.Name {
 	return nil
 }
 
-func (*hmacSigner) EstimateSize() uint {
+func (*HmacSigner) EstimateSize() uint {
 	return 32
 }
 
-func (signer *hmacSigner) Sign(covered enc.Wire) ([]byte, error) {
+func (signer *HmacSigner) Sign(covered enc.Wire) ([]byte, error) {
 	mac := hmac.New(sha256.New, signer.key)
 	for _, buf := range covered {
 		_, err := mac.Write(buf)
@@ -36,9 +36,13 @@ func (signer *hmacSigner) Sign(covered enc.Wire) ([]byte, error) {
 	return mac.Sum(nil), nil
 }
 
+func (*HmacSigner) Public() ([]byte, error) {
+	return nil, ndn.ErrNoPubKey
+}
+
 // NewHmacSigner creates a Data signer that uses DigestSha256.
 func NewHmacSigner(key []byte) ndn.Signer {
-	return &hmacSigner{key}
+	return &HmacSigner{key}
 }
 
 func CheckHmacSig(sigCovered enc.Wire, sigValue []byte, key []byte) bool {

@@ -126,6 +126,10 @@ func (testSigner) Sign(enc.Wire) ([]byte, error) {
 	return []byte{0, 0, 0, 0, 0}, nil
 }
 
+func (testSigner) Public() ([]byte, error) {
+	return nil, ndn.ErrNoPubKey
+}
+
 func TestMakeDataShrink(t *testing.T) {
 	utils.SetTestingT(t)
 	spec := spec_2022.Spec{}
