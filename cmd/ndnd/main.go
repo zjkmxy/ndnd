@@ -9,6 +9,7 @@ import (
 	tools "github.com/named-data/ndnd/tools"
 	dvc "github.com/named-data/ndnd/tools/dvc"
 	nfdc "github.com/named-data/ndnd/tools/nfdc"
+	tools_sec "github.com/named-data/ndnd/tools/sec"
 )
 
 func main() {
@@ -46,6 +47,10 @@ func main() {
 			}},
 		}, {
 			// tools separator
+		}, {
+			Name: "sec",
+			Help: "NDN Security Utilities",
+			Sub:  tools_sec.GetSecCmdTree().Sub,
 		}, {
 			Name: "ping",
 			Help: "Send Interests to an NDN ping server",

@@ -24,6 +24,11 @@ func TxtFrom(raw []byte) ([]byte, error) {
 		return nil, errors.New("missing content type")
 	}
 
+	// Explanatory text before the block
+	headers := map[string]string{
+		"Name": data.Name().String(),
+	}
+
 	var pemType string
 	switch *data.ContentType() {
 	case ndn.ContentTypeKey:
@@ -34,18 +39,14 @@ func TxtFrom(raw []byte) ([]byte, error) {
 		return nil, errors.New("unsupported content type")
 	}
 
-	validity := "unknown"
 	if nb, na := data.Signature().Validity(); nb != nil && na != nil {
-		validity = nb.String() + " - " + na.String()
+		headers["Validity"] = nb.String() + " - " + na.String()
 	}
 
 	return pem.EncodeToMemory(&pem.Block{
-		Type: pemType,
-		Headers: map[string]string{
-			"Name":     data.Name().String(),
-			"Validity": validity,
-		},
-		Bytes: raw,
+		Type:    pemType,
+		Headers: headers,
+		Bytes:   raw,
 	}), nil
 }
 
