@@ -47,6 +47,7 @@ func NewYaNFD(config *core.Config) *YaNFD {
 
 	// Initialize all modules here
 	core.OpenLogger()
+	face.Initialize()
 	table.Initialize()
 
 	return &YaNFD{

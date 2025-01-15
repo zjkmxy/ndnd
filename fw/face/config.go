@@ -14,6 +14,12 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 )
 
+// Initialize initializes the face module.
+func Initialize() {
+	FaceTable.nextFaceID.Store(1)
+	go FaceTable.expirationHandler()
+}
+
 // CfgFaceQueueSize returns the maximum number of packets that can be buffered
 // to be sent or received on a face.
 func CfgFaceQueueSize() int {

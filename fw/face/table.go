@@ -24,12 +24,7 @@ var FaceTable Table
 // Table hold all faces used by the forwarder.
 type Table struct {
 	faces      sync.Map
-	nextFaceID atomic.Uint64
-}
-
-func init() {
-	FaceTable.nextFaceID.Store(1)
-	go FaceTable.expirationHandler()
+	nextFaceID atomic.Uint64 // starts at 1
 }
 
 func (t *Table) String() string {
@@ -87,6 +82,7 @@ func (t *Table) Remove(id uint64) {
 }
 
 // expirationHandler stops the faces that have expired
+// Runs in a separate goroutine called from Initialize()
 func (t *Table) expirationHandler() {
 	for !core.ShouldQuit {
 		// Check for expired faces every 10 seconds
