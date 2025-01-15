@@ -45,9 +45,9 @@ func NewYaNFD(config *core.Config) *YaNFD {
 		_ = make([]byte, config.Core.MemoryBallastSize<<30)
 	}
 
-	// Initialize
+	// Initialize all modules here
 	core.OpenLogger()
-	table.Configure()
+	table.Initialize()
 
 	return &YaNFD{
 		config:   config,
@@ -66,9 +66,6 @@ func (y *YaNFD) Start() {
 
 	// Start profiler
 	y.profiler.Start()
-
-	// Initialize FIB table
-	table.CreateFIBTable()
 
 	// Create null face
 	face.MakeNullLinkService(face.MakeNullTransport()).Run(nil)

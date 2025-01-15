@@ -80,25 +80,25 @@ func (c *ContentStoreModule) config(interest *Interest) {
 
 	if params.Capacity != nil {
 		core.Log.Info(c, "Setting CS capacity", "capacity", *params.Capacity)
-		table.CsCapacity.Store(int32(*params.Capacity))
+		table.CfgSetCsCapacity(int(*params.Capacity))
 	}
 
 	if params.Mask != nil && params.Flags != nil {
 		if *params.Mask&mgmt.CsEnableAdmit > 0 {
 			val := *params.Flags&mgmt.CsEnableAdmit > 0
 			core.Log.Info(c, "Setting CS admit flag", "value", val)
-			table.CsAdmit.Store(val)
+			table.CfgSetCsAdmit(val)
 		}
 
 		if *params.Mask&mgmt.CsEnableServe > 0 {
 			val := *params.Flags&mgmt.CsEnableServe > 0
 			core.Log.Info(c, "Setting CS serve flag", "value", val)
-			table.CsServe.Store(val)
+			table.CfgSetCsServe(val)
 		}
 	}
 
 	c.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
-		Capacity: utils.IdPtr(uint64(table.CsCapacity.Load())),
+		Capacity: utils.IdPtr(uint64(table.CfgCsCapacity())),
 		Flags:    utils.IdPtr(c.getFlags()),
 	})
 }
@@ -112,7 +112,7 @@ func (c *ContentStoreModule) info(interest *Interest) {
 	// Generate new dataset
 	status := mgmt.CsInfoMsg{
 		CsInfo: &mgmt.CsInfo{
-			Capacity:   uint64(table.CsCapacity.Load()),
+			Capacity:   uint64(table.CfgCsCapacity()),
 			Flags:      c.getFlags(),
 			NCsEntries: 0,
 		},
@@ -131,10 +131,10 @@ func (c *ContentStoreModule) info(interest *Interest) {
 
 func (c *ContentStoreModule) getFlags() uint64 {
 	flags := uint64(0)
-	if table.CsAdmit.Load() {
+	if table.CfgCsAdmit() {
 		flags |= mgmt.CsEnableAdmit
 	}
-	if table.CsServe.Load() {
+	if table.CfgCsServe() {
 		flags |= mgmt.CsEnableServe
 	}
 	return flags

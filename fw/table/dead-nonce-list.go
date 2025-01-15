@@ -44,7 +44,7 @@ func (d *DeadNonceList) Insert(name enc.Name, nonce uint32) bool {
 
 	if !exists {
 		d.list[hash] = true
-		d.expirationQueue.Push(hash, time.Now().Add(deadNonceListLifetime).UnixNano())
+		d.expirationQueue.Push(hash, time.Now().Add(CfgDeadNonceListLifetime()).UnixNano())
 	}
 	return exists
 }

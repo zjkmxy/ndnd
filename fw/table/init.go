@@ -15,41 +15,32 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
-// deadNonceListLifetime is the lifetime of entries in the dead nonce list.
-var deadNonceListLifetime time.Duration
+// Mutable table configuration
+var mutCfg = struct {
+	csCapacity atomic.Int32
+	csAdmit    atomic.Bool
+	csServe    atomic.Bool
+}{}
 
-// csCapacity contains the default capacity of each forwarding thread's Content Store.
-var CsCapacity atomic.Int32
+// Initialize creates tables and configuration.
+func Initialize() {
+	// Content Store
+	mutCfg.csCapacity.Store(int32(core.C.Tables.ContentStore.Capacity))
+	mutCfg.csAdmit.Store(core.C.Tables.ContentStore.Admit)
+	mutCfg.csServe.Store(core.C.Tables.ContentStore.Serve)
 
-// csAdmit determines whether contents will be admitted to the Content Store.
-var CsAdmit atomic.Bool
-
-// csServe determines whether contents will be served from the Content Store.
-var CsServe atomic.Bool
-
-// csReplacementPolicy contains the replacement policy used by Content Stores in the forwarder.
-var csReplacementPolicy string
-
-// producerRegions contains the prefixes produced in this forwarder's region.
-var producerRegions []string
-
-// Configure configures the forwarding system.
-func Configure() {
-	// Content Store (mutable config)
-	CsCapacity.Store(int32(core.C.Tables.ContentStore.Capacity))
-	CsAdmit.Store(core.C.Tables.ContentStore.Admit)
-	CsServe.Store(core.C.Tables.ContentStore.Serve)
-	csReplacementPolicy = core.C.Tables.ContentStore.ReplacementPolicy
-
-	// Dead Nonce List
-	deadNonceListLifetime = time.Duration(core.C.Tables.DeadNonceList.Lifetime) * time.Millisecond
-
-	// Network Region Table
-	producerRegions = core.C.Tables.NetworkRegion.Regions
-	if producerRegions == nil {
-		producerRegions = make([]string, 0)
+	// Create FIB strategy table
+	switch core.C.Tables.Fib.Algorithm {
+	case "hashtable":
+		newFibStrategyTableHashTable(core.C.Tables.Fib.Hashtable.M)
+	case "nametree":
+		newFibStrategyTableTree()
+	default:
+		core.Log.Fatal(nil, "Unknown FIB table algorithm", "algo", core.C.Tables.Fib.Algorithm)
 	}
-	for _, region := range producerRegions {
+
+	// Create Network Region Table
+	for _, region := range core.C.Tables.NetworkRegion.Regions {
 		name, err := enc.NameFromStr(region)
 		if err != nil {
 			core.Log.Fatal(nil, "Could not add producer region", "name", region, "err", err)
@@ -59,13 +50,42 @@ func Configure() {
 	}
 }
 
-func CreateFIBTable() {
-	switch core.C.Tables.Fib.Algorithm {
-	case "hashtable":
-		newFibStrategyTableHashTable(core.C.Tables.Fib.Hashtable.M)
-	case "nametree":
-		newFibStrategyTableTree()
-	default:
-		core.Log.Fatal(nil, "Unknown FIB table algorithm", "algo", core.C.Tables.Fib.Algorithm)
-	}
+// CfgCsAdmit returns whether contents will be admitted to the Content Store.
+func CfgCsAdmit() bool {
+	return mutCfg.csAdmit.Load()
+}
+
+// CfgSetCsAdmit sets whether contents will be admitted to the Content Store.
+func CfgSetCsAdmit(admit bool) {
+	mutCfg.csAdmit.Store(admit)
+}
+
+// CfgCsServe returns whether contents will be served from the Content Store.
+func CfgCsServe() bool {
+	return mutCfg.csServe.Load()
+}
+
+// CfgSetCsServe sets whether contents will be served from the Content Store.
+func CfgSetCsServe(serve bool) {
+	mutCfg.csServe.Store(serve)
+}
+
+// CfgCsCapacity returns the capacity of each forwarding thread's Content Store.
+func CfgCsCapacity() int {
+	return int(mutCfg.csCapacity.Load())
+}
+
+// CfgSetCsCapacity sets the capacity of each forwarding thread's Content Store.
+func CfgSetCsCapacity(capacity int) {
+	mutCfg.csCapacity.Store(int32(capacity))
+}
+
+// CfgCsReplacementPolicy returns the replacement policy used by Content Stores in the forwarder.
+func CfgCsReplacementPolicy() string {
+	return core.C.Tables.ContentStore.ReplacementPolicy
+}
+
+// CfgDeadNonceListLifetime returns the lifetime of entries in the dead nonce list.
+func CfgDeadNonceListLifetime() time.Duration {
+	return time.Duration(core.C.Tables.DeadNonceList.Lifetime) * time.Millisecond
 }
