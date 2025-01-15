@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
@@ -59,8 +60,14 @@ func TxtParse(txt []byte) [][]byte {
 		if block == nil {
 			break
 		}
-		ret = append(ret, block.Bytes)
 		txt = rest
+
+		if block.Type != TXT_TYPE_CERT && block.Type != TXT_TYPE_SECRET {
+			log.Warn(nil, "Unsupported PEM type", "type", block.Type)
+			continue
+		}
+
+		ret = append(ret, block.Bytes)
 	}
 
 	return ret
