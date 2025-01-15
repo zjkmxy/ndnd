@@ -8,7 +8,7 @@ const (
 	ContentTypeLink   ContentType = 1
 	ContentTypeKey    ContentType = 2
 	ContentTypeNack   ContentType = 3
-	ContentTypeSecret ContentType = 4
+	ContentTypeSecret ContentType = 9
 )
 
 // SigType represents the type of signature.
