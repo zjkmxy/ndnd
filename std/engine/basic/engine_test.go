@@ -23,7 +23,7 @@ func executeTest(t *testing.T, main func(*dummy.DummyFace, *basic_engine.Engine,
 
 	face := dummy.NewDummyFace()
 	timer := dummy.NewTimer()
-	signer := sec.NewSha256IntSigner(timer)
+	signer := sec.NewSha256Signer()
 	engine := basic_engine.NewEngine(face, timer, signer, passAll)
 	require.NoError(t, engine.Start())
 
@@ -275,7 +275,7 @@ func TestRoute(t *testing.T) {
 					ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 				},
 				enc.Wire{[]byte("test")},
-				sec.NewEmptySigner())
+				sec.NewNullSigner())
 			require.NoError(t, err)
 			args.Reply(data.Wire)
 		}
@@ -305,7 +305,7 @@ func TestPitToken(t *testing.T) {
 					ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 				},
 				enc.Wire{[]byte("test")},
-				sec.NewEmptySigner())
+				sec.NewNullSigner())
 			require.NoError(t, err)
 			args.Reply(data.Wire)
 		}

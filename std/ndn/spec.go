@@ -78,6 +78,9 @@ type DataConfig struct {
 	ContentType  *ContentType
 	Freshness    *time.Duration
 	FinalBlockID *enc.Component
+
+	SigNotBefore *time.Time
+	SigNotAfter  *time.Time
 }
 
 // Container for an encoded Data packet

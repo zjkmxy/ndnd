@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/schema"
 	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/crypto"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -126,7 +127,7 @@ func (p *SignedByPolicy) onGetDataSigner(event *schema.Event) any {
 		log.Error(p, "The key to sign this data is missing. Leave unsigned.")
 		return nil
 	}
-	return sec.NewHmacSigner(keyMNode.Name, key.KeyBits, false, 0)
+	return sec.NewHmacSigner(key.KeyBits)
 }
 
 func (p *SignedByPolicy) onValidateData(event *schema.Event) any {
@@ -142,7 +143,7 @@ func (p *SignedByPolicy) onValidateData(event *schema.Event) any {
 		log.Warn(p, "Unable to fetch the key that signed this data.")
 		return schema.VrFail
 	}
-	if sec.CheckHmacSig(sigCovered, signature.SigValue(), result.Content.Join()) {
+	if crypto.CheckHmacSig(sigCovered, signature.SigValue(), result.Content.Join()) {
 		return schema.VrPass
 	} else {
 		log.Warn(p, "Failed to verify the signature.")

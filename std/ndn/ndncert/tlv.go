@@ -1,5 +1,5 @@
 //go:generate gondn_tlv_gen
-package ndncert_0_3
+package ndncert
 
 import (
 	enc "github.com/named-data/ndnd/std/encoding"

@@ -15,7 +15,7 @@ import (
 // TODO: this API will change once there is a real security model
 func NewBasicEngine(face face.Face) ndn.Engine {
 	timer := basic.NewTimer()
-	cmdSigner := sec.NewSha256IntSigner(timer)
+	cmdSigner := sec.NewSha256Signer()
 	cmdValidator := func(enc.Name, enc.Wire, ndn.Signature) bool {
 		return true
 	}

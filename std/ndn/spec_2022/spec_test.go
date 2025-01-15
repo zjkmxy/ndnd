@@ -7,7 +7,6 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	basic_engine "github.com/named-data/ndnd/std/engine/basic"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security"
@@ -110,19 +109,20 @@ func TestMakeDataMetaInfo(t *testing.T) {
 
 type testSigner struct{}
 
-func (testSigner) SigInfo() (*ndn.SigConfig, error) {
+func (testSigner) KeyLocator() enc.Name {
 	name, _ := enc.NameFromStr("/KEY")
-	return &ndn.SigConfig{
-		Type:    ndn.SigType(200),
-		KeyName: name,
-	}, nil
+	return name
+}
+
+func (testSigner) Type() ndn.SigType {
+	return ndn.SigType(200)
 }
 
 func (testSigner) EstimateSize() uint {
 	return 10
 }
 
-func (testSigner) ComputeSigValue(enc.Wire) ([]byte, error) {
+func (testSigner) Sign(enc.Wire) ([]byte, error) {
 	return []byte{0, 0, 0, 0, 0}, nil
 }
 
@@ -324,7 +324,7 @@ func TestMakeIntLargeAppParam(t *testing.T) {
 			Lifetime: utils.IdPtr(4 * time.Second),
 		},
 		enc.Wire{appParam},
-		security.NewHmacIntSigner([]byte("temp-hmac-key"), basic_engine.NewTimer()),
+		security.NewHmacSigner([]byte("temp-hmac-key")),
 	)
 	require.NoError(t, err)
 

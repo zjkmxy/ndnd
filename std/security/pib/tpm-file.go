@@ -2,7 +2,6 @@ package sqlitepib
 
 import (
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -12,7 +11,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	sec "github.com/named-data/ndnd/std/security"
 )
 
 type FileTpm struct {
@@ -49,19 +47,19 @@ func (tpm *FileTpm) GetSigner(keyName enc.Name, keyLocatorName enc.Name) ndn.Sig
 	block = block[:n]
 
 	// There are only two formats: PKCS1 encoded RSA, or EC
-	eckbits, err := x509.ParseECPrivateKey(block)
-	if err == nil {
-		// ECC Key
-		// TODO: Handle for Interest
-		return sec.NewEccSigner(false, false, 0, eckbits, keyLocatorName)
-	}
+	// eckbits, err := x509.ParseECPrivateKey(block)
+	// if err == nil {
+	// 	// ECC Key
+	// 	// TODO: Handle for Interest
+	// 	return sec.NewEccSigner(false, false, 0, eckbits, keyLocatorName)
+	// }
 
-	rsabits, err := x509.ParsePKCS1PrivateKey(block)
-	if err == nil {
-		// RSA Key
-		// TODO: Handle for Interest
-		return sec.NewRsaSigner(false, false, 0, rsabits, keyLocatorName)
-	}
+	// rsabits, err := x509.ParsePKCS1PrivateKey(block)
+	// if err == nil {
+	// 	// RSA Key
+	// 	// TODO: Handle for Interest
+	// 	return sec.NewRsaSigner(false, false, 0, rsabits, keyLocatorName)
+	// }
 
 	log.Error(tpm, "Unrecognized private key format", "file", fileName)
 	return nil

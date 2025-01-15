@@ -1,4 +1,4 @@
-package security
+package crypto
 
 import (
 	"bytes"
@@ -69,10 +69,10 @@ func RsaValidate(sigCovered enc.Wire, sig ndn.Signature, pubKey *rsa.PublicKey) 
 	return rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, digest, sig.SigValue()) == nil
 }
 
-// EddsaValidate verifies the signature with a known ed25519 public key.
+// Ed25519Validate verifies the signature with a known ed25519 public key.
 // ndn-cxx's PIB does not support this, but a certificate is supposed to use ASN.1 DER format.
 // Use x509.ParsePKIXPublicKey to parse. Note: ed25519.PublicKey is defined to be a pointer type without '*'.
-func EddsaValidate(sigCovered enc.Wire, sig ndn.Signature, pubKey ed25519.PublicKey) bool {
+func Ed25519Validate(sigCovered enc.Wire, sig ndn.Signature, pubKey ed25519.PublicKey) bool {
 	if sig.SigType() != ndn.SignatureEd25519 {
 		return false
 	}

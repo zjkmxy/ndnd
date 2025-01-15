@@ -157,7 +157,7 @@ func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
 		MustBeFresh: true,
 		Nonce:       utils.IdPtr(rand.Uint64()),
 	}
-	interest, err := spec.Spec{}.MakeInterest(name, &config, params, sec.NewSha256IntSigner(m.timer))
+	interest, err := spec.Spec{}.MakeInterest(name, &config, params, sec.NewSha256Signer())
 	if err != nil {
 		core.Log.Warn(m, "Unable to encode Interest", "name", name, "err", err)
 		return

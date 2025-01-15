@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/crypto"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -30,7 +31,7 @@ func (store *DemoHmacKeyStore) AddTrustAnchor(cert enc.Buffer) error {
 		return fmt.Errorf("unable to parse certificate: %+v", err)
 	}
 	keyBits := data.Content().Join()
-	if !sec.CheckHmacSig(sigCovered, data.Signature().SigValue(), keyBits) {
+	if !crypto.CheckHmacSig(sigCovered, data.Signature().SigValue(), keyBits) {
 		return fmt.Errorf("the certificate is not properly self-signed")
 	}
 	return store.SaveKey(data.Name(), keyBits, cert)
@@ -42,7 +43,7 @@ func (store *DemoHmacKeyStore) EnrollKey(keyName enc.Name, keyBits enc.Buffer, s
 	if signKey == nil {
 		return fmt.Errorf("cannot find signing key: %s", signKeyName.String())
 	}
-	signer := sec.NewHmacSigner(keyName, signKey.KeyBits, false, 3600*time.Second)
+	signer := sec.NewHmacSigner(signKey.KeyBits)
 	spec := spec_2022.Spec{}
 	cert, err := spec.MakeData(keyName, &ndn.DataConfig{
 		ContentType: utils.IdPtr(ndn.ContentTypeKey),
