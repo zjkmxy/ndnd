@@ -13,9 +13,9 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/table"
-	enc "github.com/named-data/ndnd/std/encoding"
 )
 
+// MulticastSuppressionTime is the time to suppress retransmissions of the same Interest.
 const MulticastSuppressionTime = 500 * time.Millisecond
 
 // Multicast is a forwarding strategy that forwards Interests to all nexthop faces.
@@ -24,16 +24,12 @@ type Multicast struct {
 }
 
 func init() {
-	strategyTypes = append(strategyTypes, func() Strategy {
-		return &Multicast{}
-	})
+	strategyInit = append(strategyInit, func() Strategy { return &Multicast{} })
 	StrategyVersions["multicast"] = []uint64{1}
 }
 
 func (s *Multicast) Instantiate(fwThread *Thread) {
-	s.NewStrategyBase(fwThread, enc.Component{
-		Typ: enc.TypeGenericNameComponent, Val: []byte("multicast"),
-	}, 1, "multicast")
+	s.NewStrategyBase(fwThread, "multicast", 1)
 }
 
 func (s *Multicast) AfterContentStoreHit(

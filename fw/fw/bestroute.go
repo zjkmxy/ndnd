@@ -14,9 +14,9 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/table"
-	enc "github.com/named-data/ndnd/std/encoding"
 )
 
+// BestRouteSuppressionTime is the time to suppress retransmissions of the same Interest.
 const BestRouteSuppressionTime = 500 * time.Millisecond
 
 // BestRoute is a forwarding strategy that forwards Interests
@@ -26,16 +26,12 @@ type BestRoute struct {
 }
 
 func init() {
-	strategyTypes = append(strategyTypes, func() Strategy {
-		return &BestRoute{}
-	})
+	strategyInit = append(strategyInit, func() Strategy { return &BestRoute{} })
 	StrategyVersions["best-route"] = []uint64{1}
 }
 
 func (s *BestRoute) Instantiate(fwThread *Thread) {
-	s.NewStrategyBase(fwThread, enc.Component{
-		Typ: enc.TypeGenericNameComponent, Val: []byte("best-route"),
-	}, 1, "bestroute")
+	s.NewStrategyBase(fwThread, "best-route", 1)
 }
 
 func (s *BestRoute) AfterContentStoreHit(
