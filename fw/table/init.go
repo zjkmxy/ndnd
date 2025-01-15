@@ -35,23 +35,16 @@ var producerRegions []string
 // Configure configures the forwarding system.
 func Configure() {
 	// Content Store
-	csCapacity = int(core.GetConfig().Tables.ContentStore.Capacity)
-	csAdmit = core.GetConfig().Tables.ContentStore.Admit
-	csServe = core.GetConfig().Tables.ContentStore.Serve
-	csReplacementPolicyName := core.GetConfig().Tables.ContentStore.ReplacementPolicy
-	switch csReplacementPolicyName {
-	case "lru":
-		csReplacementPolicy = "lru"
-	default:
-		// Default to LRU
-		csReplacementPolicy = "lru"
-	}
+	csCapacity = int(core.C.Tables.ContentStore.Capacity)
+	csAdmit = core.C.Tables.ContentStore.Admit
+	csServe = core.C.Tables.ContentStore.Serve
+	csReplacementPolicy = core.C.Tables.ContentStore.ReplacementPolicy
 
 	// Dead Nonce List
-	deadNonceListLifetime = time.Duration(core.GetConfig().Tables.DeadNonceList.Lifetime) * time.Millisecond
+	deadNonceListLifetime = time.Duration(core.C.Tables.DeadNonceList.Lifetime) * time.Millisecond
 
 	// Network Region Table
-	producerRegions = core.GetConfig().Tables.NetworkRegion.Regions
+	producerRegions = core.C.Tables.NetworkRegion.Regions
 	if producerRegions == nil {
 		producerRegions = make([]string, 0)
 	}
@@ -65,15 +58,14 @@ func Configure() {
 	}
 }
 
-func CreateFIBTable(algo string) {
-	switch algo {
+func CreateFIBTable() {
+	switch core.C.Tables.Fib.Algorithm {
 	case "hashtable":
-		m := core.GetConfig().Tables.Fib.Hashtable.M
-		newFibStrategyTableHashTable(m)
+		newFibStrategyTableHashTable(core.C.Tables.Fib.Hashtable.M)
 	case "nametree":
 		newFibStrategyTableTree()
 	default:
-		core.Log.Fatal(nil, "Unknown FIB table algorithm", "algo", algo)
+		core.Log.Fatal(nil, "Unknown FIB table algorithm", "algo", core.C.Tables.Fib.Algorithm)
 	}
 }
 

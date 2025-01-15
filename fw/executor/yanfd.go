@@ -22,24 +22,10 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 )
 
-// YaNFDConfig is the configuration of YaNFD.
-type YaNFDConfig struct {
-	Version string
-	LogFile string
-
-	Config  *core.Config
-	BaseDir string
-
-	CpuProfile        string
-	MemProfile        string
-	BlockProfile      string
-	MemoryBallastSize int
-}
-
 // YaNFD is the wrapper class for the NDN Forwarding Daemon.
 // Note: only one instance of this class should be created.
 type YaNFD struct {
-	config   *YaNFDConfig
+	config   *core.Config
 	profiler *Profiler
 
 	unixListener *face.UnixStreamListener
@@ -48,33 +34,31 @@ type YaNFD struct {
 	udpListeners []*face.UDPListener
 }
 
-func (y *YaNFD) String() string {
-	return "yanfd"
-}
-
 // NewYaNFD creates a YaNFD. Don't call this function twice.
-func NewYaNFD(config *YaNFDConfig) *YaNFD {
-	// Provide metadata to other threads.
-	core.Version = config.Version
+func NewYaNFD(config *core.Config) *YaNFD {
+	// Provide global configuration.
+	core.C = config
 	core.StartTimestamp = time.Now()
 
 	// Allocate memory ballast (if enabled)
-	if config.MemoryBallastSize > 0 {
-		_ = make([]byte, config.MemoryBallastSize<<30)
+	if config.Core.MemoryBallastSize > 0 {
+		_ = make([]byte, config.Core.MemoryBallastSize<<30)
 	}
 
-	// Initialize config file
-	core.LoadConfig(config.Config, config.BaseDir)
-	core.OpenLogger(config.LogFile)
+	// Initialize
+	core.OpenLogger()
 	face.Configure()
 	fw.Configure()
 	table.Configure()
-	mgmt.Configure()
 
 	return &YaNFD{
 		config:   config,
 		profiler: NewProfiler(config),
 	}
+}
+
+func (y *YaNFD) String() string {
+	return "yanfd"
 }
 
 // Start runs YaNFD. Note: this function may exit the program when there is error.
@@ -86,7 +70,7 @@ func (y *YaNFD) Start() {
 	y.profiler.Start()
 
 	// Initialize FIB table
-	table.CreateFIBTable(core.GetConfig().Tables.Fib.Algorithm)
+	table.CreateFIBTable()
 
 	// Create null face
 	face.MakeNullLinkService(face.MakeNullTransport()).Run(nil)
@@ -113,7 +97,7 @@ func (y *YaNFD) Start() {
 	listenerCount := 0
 
 	// Create unicast UDP face
-	if core.GetConfig().Faces.Udp.EnabledUnicast {
+	if core.C.Faces.Udp.EnabledUnicast {
 		udpAddrs := []*net.UDPAddr{{
 			IP:   net.IPv4zero,
 			Port: int(face.UDPUnicastPort),
@@ -137,7 +121,7 @@ func (y *YaNFD) Start() {
 	}
 
 	// Create unicast TCP face
-	if core.GetConfig().Faces.Tcp.Enabled {
+	if core.C.Faces.Tcp.Enabled {
 		tcpAddrs := []*net.TCPAddr{{
 			IP:   net.IPv4zero,
 			Port: int(face.TCPUnicastPort),
@@ -161,7 +145,7 @@ func (y *YaNFD) Start() {
 	}
 
 	// Create multicast UDP face on each non-loopback interface
-	if core.GetConfig().Faces.Udp.EnabledMulticast {
+	if core.C.Faces.Udp.EnabledMulticast {
 		ifaces, err := net.Interfaces()
 		if err != nil {
 			core.Log.Error(y, "Unable to access network interfaces", "err", err)
@@ -208,26 +192,27 @@ func (y *YaNFD) Start() {
 	}
 
 	// Set up Unix stream listener
-	if core.GetConfig().Faces.Unix.Enabled {
-		unixListener, err := face.MakeUnixStreamListener(defn.MakeUnixFaceURI(face.UnixSocketPath))
+	if core.C.Faces.Unix.Enabled {
+		uri := defn.MakeUnixFaceURI(face.UnixSocketPath)
+		unixListener, err := face.MakeUnixStreamListener(uri)
 		if err != nil {
 			core.Log.Error(y, "Unable to create Unix stream listener", "path", face.UnixSocketPath, "err", err)
 		} else {
 			listenerCount++
 			go unixListener.Run()
 			y.unixListener = unixListener
-			core.Log.Info(y, "Created unix stream listener", "uri", face.UnixSocketPath)
+			core.Log.Info(y, "Created unix stream listener", "uri", uri)
 		}
 	}
 
 	// Set up WebSocket listener
-	if core.GetConfig().Faces.WebSocket.Enabled {
+	if core.C.Faces.WebSocket.Enabled {
 		cfg := face.WebSocketListenerConfig{
-			Bind:       core.GetConfig().Faces.WebSocket.Bind,
-			Port:       core.GetConfig().Faces.WebSocket.Port,
-			TLSEnabled: core.GetConfig().Faces.WebSocket.TlsEnabled,
-			TLSCert:    core.ResolveConfigFileRelPath(core.GetConfig().Faces.WebSocket.TlsCert),
-			TLSKey:     core.ResolveConfigFileRelPath(core.GetConfig().Faces.WebSocket.TlsKey),
+			Bind:       core.C.Faces.WebSocket.Bind,
+			Port:       core.C.Faces.WebSocket.Port,
+			TLSEnabled: core.C.Faces.WebSocket.TlsEnabled,
+			TLSCert:    core.C.ResolveRelPath(core.C.Faces.WebSocket.TlsCert),
+			TLSKey:     core.C.ResolveRelPath(core.C.Faces.WebSocket.TlsKey),
 		}
 
 		wsListener, err := face.NewWebSocketListener(cfg)

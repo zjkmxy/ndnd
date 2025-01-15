@@ -61,7 +61,7 @@ func MakeMgmtThread() *Thread {
 
 	// readvertisers run in the management thread for ease of
 	// implementation, since they use the internal transport
-	if core.GetConfig().Tables.Rib.ReadvertiseNlsr {
+	if core.C.Tables.Rib.ReadvertiseNlsr {
 		table.AddReadvertiser(NewNlsrReadvertiser(m))
 	}
 
@@ -80,7 +80,7 @@ func (m *Thread) Run() {
 	// Create and register Internal transport
 	m.face, m.transport = face.RegisterInternalTransport()
 	table.FibStrategyTable.InsertNextHopEnc(LOCAL_PREFIX, m.face.FaceID(), 0)
-	if enableLocalhopManagement {
+	if core.C.Mgmt.AllowLocalhop {
 		table.FibStrategyTable.InsertNextHopEnc(NON_LOCAL_PREFIX, m.face.FaceID(), 0)
 	}
 

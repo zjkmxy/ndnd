@@ -17,13 +17,13 @@ var Log = log.Default()
 var logFileObj *os.File
 
 // OpenLogger initializes the logger.
-func OpenLogger(filename string) {
+func OpenLogger() {
 	// open file if filename is not empty
-	if filename == "" {
+	if C.Core.LogFile == "" {
 		logFileObj = os.Stderr
 	} else {
 		var err error
-		logFileObj, err = os.Create(filename)
+		logFileObj, err = os.Create(C.Core.LogFile)
 		if err != nil {
 			panic(err)
 		}
@@ -33,7 +33,7 @@ func OpenLogger(filename string) {
 	Log = log.NewText(logFileObj)
 
 	// set log level
-	level, err := log.ParseLevel(GetConfig().Core.LogLevel)
+	level, err := log.ParseLevel(C.Core.LogLevel)
 	if err != nil {
 		panic(err)
 	}

@@ -49,15 +49,15 @@ var UnixSocketPath string
 
 // Configure configures the face system.
 func Configure() {
-	faceQueueSize = core.GetConfig().Faces.QueueSize
-	congestionMarking = core.GetConfig().Faces.CongestionMarking
-	lockThreadsToCores = core.GetConfig().Faces.LockThreadsToCores
-	UDPUnicastPort = core.GetConfig().Faces.Udp.PortUnicast
-	TCPUnicastPort = core.GetConfig().Faces.Tcp.PortUnicast
-	UDPMulticastPort = core.GetConfig().Faces.Udp.PortMulticast
-	udp4MulticastAddress = core.GetConfig().Faces.Udp.MulticastAddressIpv4
-	udp6MulticastAddress = core.GetConfig().Faces.Udp.MulticastAddressIpv6
-	udpLifetime = time.Duration(core.GetConfig().Faces.Udp.Lifetime) * time.Second
-	tcpLifetime = time.Duration(core.GetConfig().Faces.Tcp.Lifetime) * time.Second
-	UnixSocketPath = os.ExpandEnv(core.GetConfig().Faces.Unix.SocketPath)
+	faceQueueSize = core.C.Faces.QueueSize
+	congestionMarking = core.C.Faces.CongestionMarking
+	lockThreadsToCores = core.C.Faces.LockThreadsToCores
+	UDPUnicastPort = core.C.Faces.Udp.PortUnicast
+	TCPUnicastPort = core.C.Faces.Tcp.PortUnicast
+	UDPMulticastPort = core.C.Faces.Udp.PortMulticast
+	udp4MulticastAddress = core.C.Faces.Udp.MulticastAddressIpv4
+	udp6MulticastAddress = core.C.Faces.Udp.MulticastAddressIpv6
+	udpLifetime = time.Duration(core.C.Faces.Udp.Lifetime) * time.Second
+	tcpLifetime = time.Duration(core.C.Faces.Tcp.Lifetime) * time.Second
+	UnixSocketPath = os.ExpandEnv(core.C.Faces.Unix.SocketPath)
 }

@@ -20,7 +20,7 @@ var lockThreadsToCores bool
 
 // Configure configures the forwarding system.
 func Configure() {
-	fwQueueSize = core.GetConfig().Fw.QueueSize
-	NumFwThreads = core.GetConfig().Fw.Threads
-	lockThreadsToCores = core.GetConfig().Fw.LockThreadsToCores
+	fwQueueSize = core.C.Fw.QueueSize
+	NumFwThreads = core.C.Fw.Threads
+	lockThreadsToCores = core.C.Fw.LockThreadsToCores
 }
