@@ -8,6 +8,7 @@
 package table
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
@@ -18,13 +19,13 @@ import (
 var deadNonceListLifetime time.Duration
 
 // csCapacity contains the default capacity of each forwarding thread's Content Store.
-var csCapacity int
+var CsCapacity atomic.Int32
 
 // csAdmit determines whether contents will be admitted to the Content Store.
-var csAdmit bool
+var CsAdmit atomic.Bool
 
 // csServe determines whether contents will be served from the Content Store.
-var csServe bool
+var CsServe atomic.Bool
 
 // csReplacementPolicy contains the replacement policy used by Content Stores in the forwarder.
 var csReplacementPolicy string
@@ -34,10 +35,10 @@ var producerRegions []string
 
 // Configure configures the forwarding system.
 func Configure() {
-	// Content Store
-	csCapacity = int(core.C.Tables.ContentStore.Capacity)
-	csAdmit = core.C.Tables.ContentStore.Admit
-	csServe = core.C.Tables.ContentStore.Serve
+	// Content Store (mutable config)
+	CsCapacity.Store(int32(core.C.Tables.ContentStore.Capacity))
+	CsAdmit.Store(core.C.Tables.ContentStore.Admit)
+	CsServe.Store(core.C.Tables.ContentStore.Serve)
 	csReplacementPolicy = core.C.Tables.ContentStore.ReplacementPolicy
 
 	// Dead Nonce List
@@ -67,34 +68,4 @@ func CreateFIBTable() {
 	default:
 		core.Log.Fatal(nil, "Unknown FIB table algorithm", "algo", core.C.Tables.Fib.Algorithm)
 	}
-}
-
-// SetCsCapacity sets the CS capacity from management.
-func SetCsCapacity(capacity int) {
-	csCapacity = capacity
-}
-
-// CsCapacity returns the CS capacity
-func CsCapacity() int {
-	return csCapacity
-}
-
-// SetCsAdmit sets the CS admit flag from management.
-func SetCsAdmit(admit bool) {
-	csAdmit = admit
-}
-
-// CsAdmit returns the CS admit flag
-func CsAdmit() bool {
-	return csAdmit
-}
-
-// SetCsServe sets the CS serve flag from management.
-func SetCsServe(serve bool) {
-	csServe = serve
-}
-
-// CsServe returns the CS serve flag
-func CsServe() bool {
-	return csServe
 }

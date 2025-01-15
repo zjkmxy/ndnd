@@ -84,27 +84,27 @@ func TestNewPitCSTree(t *testing.T) {
 }
 
 func TestIsCsAdmitting(t *testing.T) {
-	csAdmit = false
+	CsAdmit.Store(false)
 	csReplacementPolicy = "lru"
 
 	pitCS := NewPitCS(func(PitEntry) {})
-	assert.Equal(t, pitCS.IsCsAdmitting(), csAdmit)
+	assert.Equal(t, pitCS.IsCsAdmitting(), CsAdmit.Load())
 
-	csAdmit = true
+	CsAdmit.Store(true)
 	pitCS = NewPitCS(func(PitEntry) {})
-	assert.Equal(t, pitCS.IsCsAdmitting(), csAdmit)
+	assert.Equal(t, pitCS.IsCsAdmitting(), CsAdmit.Load())
 }
 
 func TestIsCsServing(t *testing.T) {
-	csServe = false
+	CsServe.Store(false)
 	csReplacementPolicy = "lru"
 
 	pitCS := NewPitCS(func(PitEntry) {})
-	assert.Equal(t, pitCS.IsCsServing(), csServe)
+	assert.Equal(t, pitCS.IsCsServing(), CsServe.Load())
 
-	csServe = true
+	CsServe.Store(true)
 	pitCS = NewPitCS(func(PitEntry) {})
-	assert.Equal(t, pitCS.IsCsServing(), csServe)
+	assert.Equal(t, pitCS.IsCsServing(), CsServe.Load())
 }
 
 func TestInsertInterest(t *testing.T) {
@@ -477,7 +477,7 @@ func TestGetOutRecords(t *testing.T) {
 
 func FindMatchingDataFromCS(t *testing.T) {
 	csReplacementPolicy = "lru"
-	csCapacity = 1024
+	CsCapacity.Store(1024)
 	pitCS := NewPitCS(func(PitEntry) {})
 
 	// Data does not already exist
@@ -527,7 +527,7 @@ func FindMatchingDataFromCS(t *testing.T) {
 	assert.True(t, bytes.Equal(csWire, VALID_DATA_1))
 
 	// Reduced CS capacity to check that eviction occurs
-	csCapacity = 1
+	CsCapacity.Store(1)
 	pitCS = NewPitCS(func(PitEntry) {})
 	pitCS.InsertData(data1, VALID_DATA_1)
 	pitCS.InsertData(data2, VALID_DATA_2)

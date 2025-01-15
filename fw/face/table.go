@@ -28,9 +28,8 @@ type Table struct {
 }
 
 func init() {
-	FaceTable.faces = sync.Map{}
 	FaceTable.nextFaceID.Store(1)
-	go FaceTable.ExpirationHandler()
+	go FaceTable.expirationHandler()
 }
 
 func (t *Table) String() string {
@@ -87,8 +86,8 @@ func (t *Table) Remove(id uint64) {
 	core.Log.Info(t, "Unregistered face", "faceid", id)
 }
 
-// ExpirationHandler stops the faces that have expired
-func (t *Table) ExpirationHandler() {
+// expirationHandler stops the faces that have expired
+func (t *Table) expirationHandler() {
 	for !core.ShouldQuit {
 		// Check for expired faces every 10 seconds
 		time.Sleep(10 * time.Second)

@@ -255,12 +255,12 @@ func (p *PitCsTree) CsSize() int {
 
 // IsCsAdmitting returns whether the CS is admitting content.
 func (p *PitCsTree) IsCsAdmitting() bool {
-	return csAdmit
+	return CsAdmit.Load()
 }
 
 // IsCsServing returns whether the CS is serving content.
 func (p *PitCsTree) IsCsServing() bool {
-	return csServe
+	return CsServe.Load()
 }
 
 // InsertOutRecord inserts an outrecord for the given interest, updating the
