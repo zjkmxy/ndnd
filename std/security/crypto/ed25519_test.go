@@ -14,16 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEd25519SignerBasic(t *testing.T) {
-	utils.SetTestingT(t)
+var TEST_KEY_NAME, _ = enc.NameFromStr("/KEY")
 
-	keyName, _ := enc.NameFromStr("/KEY")
-	edkeybits := ed25519.NewKeyFromSeed([]byte("01234567890123456789012345678901"))
-	signer := crypto.NewEd25519Signer(keyName, edkeybits)
-
+func testEd25519Verify(t *testing.T, signer ndn.Signer, verifyKey []byte) bool {
 	require.Equal(t, uint(ed25519.SignatureSize), signer.EstimateSize())
 	require.Equal(t, ndn.SignatureEd25519, signer.Type())
-	require.Equal(t, keyName, signer.KeyLocator())
+	require.Equal(t, TEST_KEY_NAME, signer.KeyLocator())
 
 	dataVal := enc.Wire{
 		[]byte("\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix"),
@@ -32,8 +28,45 @@ func TestEd25519SignerBasic(t *testing.T) {
 	sigValue := utils.WithoutErr(signer.Sign(dataVal))
 
 	// For basic test, we use ed25519.Verify to verify the signature.
+	return ed25519.Verify(verifyKey, dataVal.Join(), sigValue)
+}
+
+func TestEd25519SignerNew(t *testing.T) {
+	utils.SetTestingT(t)
+
+	edkeybits := ed25519.NewKeyFromSeed([]byte("01234567890123456789012345678901"))
+	signer := crypto.NewEd25519Signer(TEST_KEY_NAME, edkeybits)
 	pub := utils.WithoutErr(signer.Public())
-	require.True(t, ed25519.Verify(pub, dataVal.Join(), sigValue))
+	require.True(t, testEd25519Verify(t, signer, pub))
+}
+
+func TestEd25519Keygen(t *testing.T) {
+	utils.SetTestingT(t)
+
+	signer1 := utils.WithoutErr(crypto.KeygenEd25519(TEST_KEY_NAME))
+	pub1 := utils.WithoutErr(signer1.Public())
+	require.True(t, testEd25519Verify(t, signer1, pub1))
+
+	signer2 := utils.WithoutErr(crypto.KeygenEd25519(TEST_KEY_NAME))
+	pub2 := utils.WithoutErr(signer2.Public())
+	require.True(t, testEd25519Verify(t, signer2, pub2))
+
+	// Check that the two signers are different.
+	require.False(t, testEd25519Verify(t, signer2, pub1))
+}
+
+func TestEd25519Parse(t *testing.T) {
+	utils.SetTestingT(t)
+
+	edkeybits := ed25519.NewKeyFromSeed([]byte("01234567890123456789012345678901"))
+	signer1 := crypto.NewEd25519Signer(TEST_KEY_NAME, edkeybits)
+
+	secret := utils.WithoutErr(signer1.(*crypto.Ed25519Signer).Secret())
+	signer2 := utils.WithoutErr(crypto.ParseEd25519(TEST_KEY_NAME, secret))
+
+	// Check that the two signers are the same.
+	pub1 := utils.WithoutErr(signer1.Public())
+	require.True(t, testEd25519Verify(t, signer2, pub1))
 }
 
 // TestEd25519SignerCertificate tests the validator using a given certificate for interoperability.
