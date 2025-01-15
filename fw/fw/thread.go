@@ -81,8 +81,8 @@ type Thread struct {
 func NewThread(id int) *Thread {
 	t := new(Thread)
 	t.threadID = id
-	t.pendingInterests = make(chan *defn.Pkt, fwQueueSize)
-	t.pendingDatas = make(chan *defn.Pkt, fwQueueSize)
+	t.pendingInterests = make(chan *defn.Pkt, CfgFwQueueSize())
+	t.pendingDatas = make(chan *defn.Pkt, CfgFwQueueSize())
 	t.pitCS = table.NewPitCS(t.finalizeInterest)
 	t.strategies = InstantiateStrategies(t)
 	t.deadNonceList = table.NewDeadNonceList()
@@ -118,7 +118,7 @@ func (t *Thread) TellToQuit() {
 
 // Run forwarding thread
 func (t *Thread) Run() {
-	if lockThreadsToCores {
+	if CfgLockThreadsToCores() {
 		runtime.LockOSThread()
 	}
 

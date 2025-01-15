@@ -67,7 +67,7 @@ func (f *ForwarderStatusModule) general(interest *Interest) {
 		NFibEntries:      uint64(len(table.FibStrategyTable.GetAllFIBEntries())),
 	}
 	// Don't set NNameTreeEntries because we don't use a NameTree
-	for threadID := 0; threadID < fw.NumFwThreads; threadID++ {
+	for threadID := 0; threadID < fw.CfgNumThreads(); threadID++ {
 		thread := dispatch.GetFWThread(threadID)
 		status.NPitEntries += uint64(thread.GetNumPitEntries())
 		status.NCsEntries += uint64(thread.GetNumCsEntries())

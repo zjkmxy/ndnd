@@ -9,18 +9,17 @@ package fw
 
 import "github.com/named-data/ndnd/fw/core"
 
-// fwQueueSize is the maxmimum number of packets that can be buffered to be processed by a forwarding thread.
-var fwQueueSize int
+// FwQueueSize is the maxmimum number of packets that can be buffered to be processed by a forwarding thread.
+func CfgFwQueueSize() int {
+	return core.C.Fw.QueueSize
+}
 
 // NumFwThreads indicates the number of forwarding threads in the forwarder.
-var NumFwThreads int
+func CfgNumThreads() int {
+	return core.C.Fw.Threads
+}
 
-// lockThreadsToCores indicates whether forwarding threads will be locked to cores.
-var lockThreadsToCores bool
-
-// Configure configures the forwarding system.
-func Configure() {
-	fwQueueSize = core.C.Fw.QueueSize
-	NumFwThreads = core.C.Fw.Threads
-	lockThreadsToCores = core.C.Fw.LockThreadsToCores
+// LockThreadsToCores indicates whether forwarding threads will be locked to cores.
+func CfgLockThreadsToCores() bool {
+	return core.C.Fw.LockThreadsToCores
 }

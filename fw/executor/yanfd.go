@@ -48,7 +48,6 @@ func NewYaNFD(config *core.Config) *YaNFD {
 	// Initialize
 	core.OpenLogger()
 	face.Configure()
-	fw.Configure()
 	table.Configure()
 
 	return &YaNFD{
@@ -79,13 +78,13 @@ func (y *YaNFD) Start() {
 	go mgmt.MakeMgmtThread().Run()
 
 	// Create forwarding threads
-	if fw.NumFwThreads < 1 || fw.NumFwThreads > fw.MaxFwThreads {
+	if fw.CfgNumThreads() < 1 || fw.CfgNumThreads() > fw.MaxFwThreads {
 		core.Log.Fatal(y, "Number of forwarding threads out of range", "range", fmt.Sprintf("[1, %d]", fw.MaxFwThreads))
 		os.Exit(2)
 	}
-	fw.Threads = make([]*fw.Thread, fw.NumFwThreads)
+	fw.Threads = make([]*fw.Thread, fw.CfgNumThreads())
 	var fwForDispatch []dispatch.FWThread
-	for i := 0; i < fw.NumFwThreads; i++ {
+	for i := 0; i < fw.CfgNumThreads(); i++ {
 		newThread := fw.NewThread(i)
 		fw.Threads[i] = newThread
 		fwForDispatch = append(fwForDispatch, newThread)

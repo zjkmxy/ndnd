@@ -117,7 +117,7 @@ func (c *ContentStoreModule) info(interest *Interest) {
 			NCsEntries: 0,
 		},
 	}
-	for threadID := 0; threadID < fw.NumFwThreads; threadID++ {
+	for threadID := 0; threadID < fw.CfgNumThreads(); threadID++ {
 		thread := dispatch.GetFWThread(threadID)
 		status.CsInfo.NCsEntries += uint64(thread.GetNumCsEntries())
 	}
