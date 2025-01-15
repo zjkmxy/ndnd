@@ -50,7 +50,7 @@ func MakeUnicastUDPTransport(
 	t := new(UnicastUDPTransport)
 	t.makeTransportBase(remoteURI, localURI, persistency, defn.NonLocal, defn.PointToPoint, defn.MaxNDNPacketSize)
 	t.expirationTime = new(time.Time)
-	*t.expirationTime = time.Now().Add(udpLifetime)
+	*t.expirationTime = time.Now().Add(CfgUDPLifetime())
 
 	// Set scope
 	ip := net.ParseIP(remoteURI.Path())
@@ -65,7 +65,7 @@ func MakeUnicastUDPTransport(
 		t.localAddr.IP = net.ParseIP(localURI.Path())
 		t.localAddr.Port = int(localURI.Port())
 	} else {
-		t.localAddr.Port = int(UDPUnicastPort)
+		t.localAddr.Port = CfgUDPUnicastPort()
 	}
 	t.remoteAddr.IP = net.ParseIP(remoteURI.Path())
 	t.remoteAddr.Port = int(remoteURI.Port())
@@ -126,7 +126,7 @@ func (t *UnicastUDPTransport) sendFrame(frame []byte) {
 	}
 
 	t.nOutBytes += uint64(len(frame))
-	*t.expirationTime = time.Now().Add(udpLifetime)
+	*t.expirationTime = time.Now().Add(CfgUDPLifetime())
 }
 
 func (t *UnicastUDPTransport) runReceive() {
@@ -134,7 +134,7 @@ func (t *UnicastUDPTransport) runReceive() {
 
 	err := readTlvStream(t.conn, func(b []byte) {
 		t.nInBytes += uint64(len(b))
-		*t.expirationTime = time.Now().Add(udpLifetime)
+		*t.expirationTime = time.Now().Add(CfgUDPLifetime())
 		t.linkService.handleIncomingFrame(b)
 	}, func(err error) bool {
 		// Ignore since UDP is a connectionless protocol

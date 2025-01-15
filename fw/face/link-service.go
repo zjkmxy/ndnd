@@ -94,7 +94,7 @@ func (l *linkServiceBase) SetFaceID(faceID uint64) {
 
 func (l *linkServiceBase) makeLinkServiceBase() {
 	l.stopped = make(chan bool)
-	l.sendQueue = make(chan dispatch.OutPkt, faceQueueSize)
+	l.sendQueue = make(chan dispatch.OutPkt, CfgFaceQueueSize())
 }
 
 //

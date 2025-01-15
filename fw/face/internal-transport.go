@@ -34,8 +34,8 @@ func MakeInternalTransport() *InternalTransport {
 		defn.Local,
 		defn.PointToPoint,
 		defn.MaxNDNPacketSize)
-	t.recvQueue = make(chan []byte, faceQueueSize)
-	t.sendQueue = make(chan []byte, faceQueueSize)
+	t.recvQueue = make(chan []byte, CfgFaceQueueSize())
+	t.sendQueue = make(chan []byte, CfgFaceQueueSize())
 	t.running.Store(true)
 	return t
 }

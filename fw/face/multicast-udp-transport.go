@@ -40,9 +40,9 @@ func MakeMulticastUDPTransport(localURI *defn.URI) (*MulticastUDPTransport, erro
 	// Get remote Uri
 	var remote string
 	if localURI.Scheme() == "udp4" {
-		remote = fmt.Sprintf("udp4://%s:%d", udp4MulticastAddress, UDPMulticastPort)
+		remote = fmt.Sprintf("udp4://%s:%d", CfgUDP4MulticastAddress(), CfgUDPMulticastPort())
 	} else if localURI.Scheme() == "udp6" {
-		remote = fmt.Sprintf("udp6://[%s]:%d", udp6MulticastAddress, UDPMulticastPort)
+		remote = fmt.Sprintf("udp6://[%s]:%d", CfgUDP6MulticastAddress(), CfgUDPMulticastPort())
 	}
 
 	// Create transport

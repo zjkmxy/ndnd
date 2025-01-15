@@ -14,50 +14,58 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 )
 
-// faceQueueSize is the maximum number of packets that can be buffered to be sent or received on a face.
-var faceQueueSize int
+// CfgFaceQueueSize returns the maximum number of packets that can be buffered
+// to be sent or received on a face.
+func CfgFaceQueueSize() int {
+	return core.C.Faces.QueueSize
+}
 
-// congestionMarking indicates whether congestion marking is enabled or disabled.
-var congestionMarking bool
+// CfgCongestionMarking returns whether congestion marking is enabled or disabled.
+func CfgCongestionMarking() bool {
+	return core.C.Faces.CongestionMarking
+}
 
-// lockThreadsToCores determines whether face threads will be locked to logical cores.
-var lockThreadsToCores bool
+// CfgLockThreadsToCores returns whether face threads will be locked to logical cores.
+func CfgLockThreadsToCores() bool {
+	return core.C.Faces.LockThreadsToCores
+}
 
-// UDPUnicastPort is the standard unicast UDP port for NDN.
-var UDPUnicastPort uint16
+// CfgUDPUnicastPort returns the configured unicast UDP port.
+func CfgUDPUnicastPort() int {
+	return int(core.C.Faces.Udp.PortUnicast)
+}
 
-// UDPMulticastPort is the standard multicast UDP port for NDN.
-var UDPMulticastPort uint16
+// CfgUDPMulticastPort returns the configured multicast UDP port.
+func CfgUDPMulticastPort() int {
+	return int(core.C.Faces.Udp.PortMulticast)
+}
 
-// udp4MulticastAddress is the standard multicast UDP4 URI for NDN.
-var udp4MulticastAddress string
+// CfgUDP4MulticastAddress returns the configured multicast UDP4 address.
+func CfgUDP4MulticastAddress() string {
+	return core.C.Faces.Udp.MulticastAddressIpv4
+}
 
-// udp6MulticastAddress is the standard multicast UDP6 address for NDN.
-var udp6MulticastAddress string
+// CfgUDP6MulticastAddress returns the configured multicast UDP6 address.
+func CfgUDP6MulticastAddress() string {
+	return core.C.Faces.Udp.MulticastAddressIpv6
+}
 
-// udpLifetime is the lifetime of on-demand UDP faces after they become idle.
-var udpLifetime time.Duration
+// CfgUDPLifetime returns the lifetime of on-demand UDP faces after they become idle.
+func CfgUDPLifetime() time.Duration {
+	return time.Duration(core.C.Faces.Udp.Lifetime) * time.Second
+}
 
-// TCPUnicastPort is the standard unicast TCP port for NDN.
-var TCPUnicastPort uint16
+// CfgTCPUnicastPort returns the configured unicast TCP port.
+func CfgTCPUnicastPort() int {
+	return int(core.C.Faces.Tcp.PortUnicast)
+}
 
-// tcpLifetime is the lifetime of on-demand TCP faces after they become idle.
-var tcpLifetime time.Duration
+// CfgTCPLifetime returns the lifetime of on-demand TCP faces after they become idle.
+func CfgTCPLifetime() time.Duration {
+	return time.Duration(core.C.Faces.Tcp.Lifetime) * time.Second
+}
 
-// UnixSocketPath is the standard Unix socket file path for NDN.
-var UnixSocketPath string
-
-// Configure configures the face system.
-func Configure() {
-	faceQueueSize = core.C.Faces.QueueSize
-	congestionMarking = core.C.Faces.CongestionMarking
-	lockThreadsToCores = core.C.Faces.LockThreadsToCores
-	UDPUnicastPort = core.C.Faces.Udp.PortUnicast
-	TCPUnicastPort = core.C.Faces.Tcp.PortUnicast
-	UDPMulticastPort = core.C.Faces.Udp.PortMulticast
-	udp4MulticastAddress = core.C.Faces.Udp.MulticastAddressIpv4
-	udp6MulticastAddress = core.C.Faces.Udp.MulticastAddressIpv6
-	udpLifetime = time.Duration(core.C.Faces.Udp.Lifetime) * time.Second
-	tcpLifetime = time.Duration(core.C.Faces.Tcp.Lifetime) * time.Second
-	UnixSocketPath = os.ExpandEnv(core.C.Faces.Unix.SocketPath)
+// CfgUnixSocketPath returns the configured Unix socket file path.
+func CfgUnixSocketPath() string {
+	return os.ExpandEnv(core.C.Faces.Unix.SocketPath)
 }

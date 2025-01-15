@@ -141,7 +141,7 @@ func (l *NDNLPLinkService) Run(initial []byte) {
 }
 
 func (l *NDNLPLinkService) runReceive() {
-	if lockThreadsToCores {
+	if CfgLockThreadsToCores() {
 		runtime.LockOSThread()
 	}
 
@@ -150,7 +150,7 @@ func (l *NDNLPLinkService) runReceive() {
 }
 
 func (l *NDNLPLinkService) runSend() {
-	if lockThreadsToCores {
+	if CfgLockThreadsToCores() {
 		runtime.LockOSThread()
 	}
 
@@ -434,7 +434,7 @@ func (l *NDNLPLinkService) reassemble(
 }
 
 func (l *NDNLPLinkService) checkCongestion(wire []byte) bool {
-	if !congestionMarking {
+	if !CfgCongestionMarking() {
 		return false
 	}
 

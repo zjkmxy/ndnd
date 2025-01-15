@@ -47,7 +47,6 @@ func NewYaNFD(config *core.Config) *YaNFD {
 
 	// Initialize
 	core.OpenLogger()
-	face.Configure()
 	table.Configure()
 
 	return &YaNFD{
@@ -99,10 +98,10 @@ func (y *YaNFD) Start() {
 	if core.C.Faces.Udp.EnabledUnicast {
 		udpAddrs := []*net.UDPAddr{{
 			IP:   net.IPv4zero,
-			Port: int(face.UDPUnicastPort),
+			Port: face.CfgUDPUnicastPort(),
 		}, {
 			IP:   net.IPv6zero,
-			Port: int(face.UDPUnicastPort),
+			Port: face.CfgUDPUnicastPort(),
 		}}
 
 		for _, udpAddr := range udpAddrs {
@@ -123,10 +122,10 @@ func (y *YaNFD) Start() {
 	if core.C.Faces.Tcp.Enabled {
 		tcpAddrs := []*net.TCPAddr{{
 			IP:   net.IPv4zero,
-			Port: int(face.TCPUnicastPort),
+			Port: face.CfgTCPUnicastPort(),
 		}, {
 			IP:   net.IPv6zero,
-			Port: int(face.TCPUnicastPort),
+			Port: face.CfgTCPUnicastPort(),
 		}}
 
 		for _, tcpAddr := range tcpAddrs {
@@ -167,7 +166,7 @@ func (y *YaNFD) Start() {
 				udpAddr := net.UDPAddr{
 					IP:   ipAddr.IP,
 					Zone: iface.Name,
-					Port: int(face.UDPMulticastPort),
+					Port: face.CfgUDPMulticastPort(),
 				}
 				uri := fmt.Sprintf("udp://%s", &udpAddr)
 
@@ -192,10 +191,10 @@ func (y *YaNFD) Start() {
 
 	// Set up Unix stream listener
 	if core.C.Faces.Unix.Enabled {
-		uri := defn.MakeUnixFaceURI(face.UnixSocketPath)
+		uri := defn.MakeUnixFaceURI(face.CfgUnixSocketPath())
 		unixListener, err := face.MakeUnixStreamListener(uri)
 		if err != nil {
-			core.Log.Error(y, "Unable to create Unix stream listener", "path", face.UnixSocketPath, "err", err)
+			core.Log.Error(y, "Unable to create Unix stream listener", "path", face.CfgUnixSocketPath(), "err", err)
 		} else {
 			listenerCount++
 			go unixListener.Run()

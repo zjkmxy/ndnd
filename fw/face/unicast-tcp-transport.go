@@ -53,7 +53,7 @@ func MakeUnicastTCPTransport(
 	// Construct transport
 	t := new(UnicastTCPTransport)
 	t.makeTransportBase(remoteURI, localURI, persistency, defn.NonLocal, defn.PointToPoint, defn.MaxNDNPacketSize)
-	t.expirationTime = utils.IdPtr(time.Now().Add(tcpLifetime))
+	t.expirationTime = utils.IdPtr(time.Now().Add(CfgTCPLifetime()))
 	t.rechan = make(chan bool, 2)
 
 	// Set scope
@@ -65,7 +65,7 @@ func MakeUnicastTCPTransport(
 	}
 
 	// Set local and remote addresses
-	t.localAddr.Port = int(TCPUnicastPort)
+	t.localAddr.Port = CfgTCPUnicastPort()
 	t.remoteAddr.IP = net.ParseIP(remoteURI.Path())
 	t.remoteAddr.Port = int(remoteURI.Port())
 
@@ -97,7 +97,7 @@ func AcceptUnicastTCPTransport(
 	// Construct transport
 	t := new(UnicastTCPTransport)
 	t.makeTransportBase(remoteURI, localURI, persistency, defn.NonLocal, defn.PointToPoint, defn.MaxNDNPacketSize)
-	t.expirationTime = utils.IdPtr(time.Now().Add(tcpLifetime))
+	t.expirationTime = utils.IdPtr(time.Now().Add(CfgTCPLifetime()))
 	t.rechan = make(chan bool, 1)
 
 	var success bool
@@ -223,7 +223,7 @@ func (t *UnicastTCPTransport) sendFrame(frame []byte) {
 	}
 
 	t.nOutBytes += uint64(len(frame))
-	*t.expirationTime = time.Now().Add(tcpLifetime)
+	*t.expirationTime = time.Now().Add(CfgTCPLifetime())
 }
 
 func (t *UnicastTCPTransport) runReceive() {
@@ -235,7 +235,7 @@ func (t *UnicastTCPTransport) runReceive() {
 		if t.conn != nil {
 			err := readTlvStream(t.conn, func(b []byte) {
 				t.nInBytes += uint64(len(b))
-				*t.expirationTime = time.Now().Add(tcpLifetime)
+				*t.expirationTime = time.Now().Add(CfgTCPLifetime())
 				t.linkService.handleIncomingFrame(b)
 			}, nil)
 			if err == nil || t.closed {
