@@ -4,10 +4,11 @@ package ndn
 type ContentType uint
 
 const (
-	ContentTypeBlob ContentType = 0
-	ContentTypeLink ContentType = 1
-	ContentTypeKey  ContentType = 2
-	ContentTypeNack ContentType = 3
+	ContentTypeBlob   ContentType = 0
+	ContentTypeLink   ContentType = 1
+	ContentTypeKey    ContentType = 2
+	ContentTypeNack   ContentType = 3
+	ContentTypeSecret ContentType = 4
 )
 
 // SigType represents the type of signature.

@@ -10,7 +10,8 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 )
 
-const NDN_TXT_TYPE_CERT = "NDN Certificate"
+const TXT_TYPE_CERT = "NDN Certificate"
+const TXT_TYPE_SECRET = "NDN Key"
 
 // TxtFrom converts an NDN data to a text representation following RFC 7468.
 func TxtFrom(raw []byte) ([]byte, error) {
@@ -26,7 +27,9 @@ func TxtFrom(raw []byte) ([]byte, error) {
 	var pemType string
 	switch *data.ContentType() {
 	case ndn.ContentTypeKey:
-		pemType = NDN_TXT_TYPE_CERT
+		pemType = TXT_TYPE_CERT
+	case ndn.ContentTypeSecret:
+		pemType = TXT_TYPE_SECRET
 	default:
 		return nil, errors.New("unsupported content type")
 	}
