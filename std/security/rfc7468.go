@@ -22,7 +22,11 @@ func TxtFrom(raw []byte) ([]byte, error) {
 	}
 
 	if data.ContentType() == nil {
-		return nil, errors.New("missing content type")
+		return nil, ndn.ErrInvalidValue{Item: "content type"}
+	}
+
+	if data.Signature() == nil {
+		return nil, ndn.ErrInvalidValue{Item: "signature"}
 	}
 
 	// Explanatory text before the block
@@ -42,6 +46,21 @@ func TxtFrom(raw []byte) ([]byte, error) {
 
 	if nb, na := data.Signature().Validity(); nb != nil && na != nil {
 		headers["Validity"] = nb.String() + " - " + na.String()
+	}
+
+	switch data.Signature().SigType() {
+	case ndn.SignatureDigestSha256:
+		headers["SigType"] = "Digest-SHA256"
+	case ndn.SignatureSha256WithRsa:
+		headers["SigType"] = "RSA-SHA256"
+	case ndn.SignatureSha256WithEcdsa:
+		headers["SigType"] = "ECDSA-SHA256"
+	case ndn.SignatureHmacWithSha256:
+		headers["SigType"] = "HMAC-SHA256"
+	case ndn.SignatureEd25519:
+		headers["SigType"] = "Ed25519"
+	default:
+		headers["SigType"] = "Unknown"
 	}
 
 	return pem.EncodeToMemory(&pem.Block{
