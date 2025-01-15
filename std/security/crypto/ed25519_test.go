@@ -23,6 +23,7 @@ func TestEd25519SignerBasic(t *testing.T) {
 
 	require.Equal(t, uint(ed25519.SignatureSize), signer.EstimateSize())
 	require.Equal(t, ndn.SignatureEd25519, signer.Type())
+	require.Equal(t, keyName, signer.KeyLocator())
 
 	dataVal := enc.Wire{
 		[]byte("\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix"),
