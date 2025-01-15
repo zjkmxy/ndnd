@@ -31,6 +31,8 @@ func keygen(args []string) {
 		os.Exit(1)
 	}
 
+	name = crypto.MakeKeyName(name)
+
 	var signer ndn.Signer
 	switch keyType {
 	case "rsa":
