@@ -17,8 +17,9 @@ import (
 func TestEd25519SignerBasic(t *testing.T) {
 	utils.SetTestingT(t)
 
+	keyName, _ := enc.NameFromStr("/KEY")
 	edkeybits := ed25519.NewKeyFromSeed([]byte("01234567890123456789012345678901"))
-	signer := crypto.NewEd25519Signer(edkeybits)
+	signer := crypto.NewEd25519Signer(edkeybits, keyName)
 
 	require.Equal(t, uint(ed25519.SignatureSize), signer.EstimateSize())
 	require.Equal(t, ndn.SignatureEd25519, signer.Type())

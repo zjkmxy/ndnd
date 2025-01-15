@@ -20,9 +20,14 @@ type Signature interface {
 
 // Signer is the interface of a NDN packet signer.
 type Signer interface {
-	CryptoSigner
+	// SigInfo returns the configuration of the signature.
+	Type() SigType
 	// KeyLocator returns the key name of the signer.
 	KeyLocator() enc.Name
+	// EstimateSize gives the approximate size of the signature in bytes.
+	EstimateSize() uint
+	// Sign computes the signature value of a wire.
+	Sign(enc.Wire) ([]byte, error)
 }
 
 // SigChecker is a basic function to check the signature of a packet.
@@ -30,13 +35,3 @@ type Signer interface {
 // SigChecker is only designed for low-level engine.
 // Create a go routine for time consuming jobs.
 type SigChecker func(name enc.Name, sigCovered enc.Wire, sig Signature) bool
-
-// CryptoSigner is the low level interface of a generic signer.
-type CryptoSigner interface {
-	// SigInfo returns the configuration of the signature.
-	Type() SigType
-	// EstimateSize gives the approximate size of the signature in bytes.
-	EstimateSize() uint
-	// Sign computes the signature value of a wire.
-	Sign(enc.Wire) ([]byte, error)
-}

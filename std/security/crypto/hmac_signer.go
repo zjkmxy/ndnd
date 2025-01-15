@@ -17,6 +17,10 @@ func (signer *hmacSigner) Type() ndn.SigType {
 	return ndn.SignatureHmacWithSha256
 }
 
+func (*hmacSigner) KeyLocator() enc.Name {
+	return nil
+}
+
 func (*hmacSigner) EstimateSize() uint {
 	return 32
 }
@@ -33,7 +37,7 @@ func (signer *hmacSigner) Sign(covered enc.Wire) ([]byte, error) {
 }
 
 // NewHmacSigner creates a Data signer that uses DigestSha256.
-func NewHmacSigner(key []byte) ndn.CryptoSigner {
+func NewHmacSigner(key []byte) ndn.Signer {
 	return &hmacSigner{key}
 }
 

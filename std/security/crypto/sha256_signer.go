@@ -14,6 +14,10 @@ func (sha256Signer) Type() ndn.SigType {
 	return ndn.SignatureDigestSha256
 }
 
+func (sha256Signer) KeyLocator() enc.Name {
+	return nil
+}
+
 func (sha256Signer) EstimateSize() uint {
 	return 32
 }
@@ -30,6 +34,6 @@ func (sha256Signer) Sign(covered enc.Wire) ([]byte, error) {
 }
 
 // NewSha256Signer creates a signer that uses DigestSha256.
-func NewSha256Signer() ndn.CryptoSigner {
+func NewSha256Signer() ndn.Signer {
 	return sha256Signer{}
 }

@@ -13,10 +13,15 @@ import (
 type eccSigner struct {
 	key    *ecdsa.PrivateKey
 	keyLen uint
+	name   enc.Name
 }
 
 func (s *eccSigner) Type() ndn.SigType {
 	return ndn.SignatureSha256WithEcdsa
+}
+
+func (s *eccSigner) KeyLocator() enc.Name {
+	return s.name
 }
 
 func (s *eccSigner) EstimateSize() uint {
@@ -36,11 +41,12 @@ func (s *eccSigner) Sign(covered enc.Wire) ([]byte, error) {
 }
 
 // NewEccSigner creates a signer using ECDSA key
-func NewEccSigner(key *ecdsa.PrivateKey) ndn.CryptoSigner {
+func NewEccSigner(key *ecdsa.PrivateKey, name enc.Name) ndn.Signer {
 	keyLen := (key.Curve.Params().BitSize*2 + 7) / 8
 	keyLen += keyLen%2 + 8
 	return &eccSigner{
 		key:    key,
 		keyLen: uint(keyLen),
+		name:   name,
 	}
 }

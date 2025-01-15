@@ -11,11 +11,16 @@ import (
 
 // rsaSigner is a signer that uses ECC key to sign packets.
 type rsaSigner struct {
-	key *rsa.PrivateKey
+	key  *rsa.PrivateKey
+	name enc.Name
 }
 
 func (s *rsaSigner) Type() ndn.SigType {
 	return ndn.SignatureSha256WithRsa
+}
+
+func (s *rsaSigner) KeyLocator() enc.Name {
+	return s.name
 }
 
 func (s *rsaSigner) EstimateSize() uint {
@@ -35,6 +40,6 @@ func (s *rsaSigner) Sign(covered enc.Wire) ([]byte, error) {
 }
 
 // NewRsaSigner creates a signer using RSA key
-func NewRsaSigner(key *rsa.PrivateKey) ndn.CryptoSigner {
-	return &rsaSigner{key}
+func NewRsaSigner(key *rsa.PrivateKey, name enc.Name) ndn.Signer {
+	return &rsaSigner{key, name}
 }

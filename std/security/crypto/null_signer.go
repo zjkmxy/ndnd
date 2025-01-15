@@ -12,6 +12,10 @@ func (nullSigner) Type() ndn.SigType {
 	return ndn.SignatureEmptyTest
 }
 
+func (nullSigner) KeyLocator() enc.Name {
+	return nil
+}
+
 func (nullSigner) EstimateSize() uint {
 	return 0
 }
@@ -21,6 +25,6 @@ func (nullSigner) Sign(covered enc.Wire) ([]byte, error) {
 }
 
 // NewNullSigner creates an empty signer for test.
-func NewNullSigner() ndn.CryptoSigner {
+func NewNullSigner() ndn.Signer {
 	return nullSigner{}
 }

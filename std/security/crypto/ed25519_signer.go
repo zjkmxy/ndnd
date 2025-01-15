@@ -10,11 +10,16 @@ import (
 
 // ed25519Signer is a signer that uses Ed25519 key to sign packets.
 type ed25519Signer struct {
-	key ed25519.PrivateKey
+	key  ed25519.PrivateKey
+	name enc.Name
 }
 
 func (s *ed25519Signer) Type() ndn.SigType {
 	return ndn.SignatureEd25519
+}
+
+func (s *ed25519Signer) KeyLocator() enc.Name {
+	return s.name
 }
 
 func (s *ed25519Signer) EstimateSize() uint {
@@ -29,8 +34,8 @@ func (s *ed25519Signer) Sign(covered enc.Wire) ([]byte, error) {
 }
 
 // NewEd25519Signer creates a signer using ed25519 key
-func NewEd25519Signer(key ed25519.PrivateKey) ndn.CryptoSigner {
-	return &ed25519Signer{key}
+func NewEd25519Signer(key ed25519.PrivateKey, name enc.Name) ndn.Signer {
+	return &ed25519Signer{key, name}
 }
 
 // Ed25519DerivePubKey derives the public key from a private key.
