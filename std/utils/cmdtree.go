@@ -25,8 +25,16 @@ func (c *CmdTree) Usage(args []string) {
 	fmt.Fprintln(os.Stderr, banner[1:])
 	fmt.Fprintf(os.Stderr, "%s (%s)\n\n", c.Help, c.Name)
 	fmt.Fprintf(os.Stderr, "Usage: %s [command]\n", args[0])
+
+	padding := 16
 	for _, sub := range c.Sub {
-		spaces := strings.Repeat(" ", 16-len(sub.Name))
+		if len(sub.Name)+4 > padding {
+			padding = len(sub.Name) + 4
+		}
+	}
+
+	for _, sub := range c.Sub {
+		spaces := strings.Repeat(" ", padding-len(sub.Name))
 		fmt.Fprintf(os.Stderr, "  %s%s%s\n", sub.Name, spaces, sub.Help)
 	}
 	fmt.Fprintln(os.Stderr)

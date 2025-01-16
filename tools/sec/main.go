@@ -15,6 +15,24 @@ func GetSecCmdTree() utils.CmdTree {
 		}, {
 			// separator
 		}, {
+			Name: "keychain list",
+			Help: "List keys in the specified keychain",
+			Fun:  keychainList,
+		}, {
+			Name: "keychain import",
+			Help: "Import a key or certificate to the specified keychain",
+			Fun:  keychainImport,
+		}, {
+			Name: "keychain export-key",
+			Help: "Export a keyfrom the specified keychain",
+			Fun:  keychainExportKey,
+		}, {
+			Name: "keychain export-cert",
+			Help: "Export a certificate from the specified keychain",
+			Fun:  keychainExportCert,
+		}, {
+			// separator
+		}, {
 			Name: "txt-from",
 			Help: "Convert an NDN data to text representation",
 			Fun:  txtFrom,

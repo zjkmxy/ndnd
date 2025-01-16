@@ -1,6 +1,8 @@
 package keychain
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,7 +12,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security"
 )
 
@@ -51,51 +52,9 @@ func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 			continue
 		}
 
-		if len(content) == 0 {
-			log.Warn(kc, "Empty keychain entry", "file", filename)
-			continue
-		}
-
-		var wires [][]byte
-		if content[0] == 0x06 { // raw data
-			wires = append(wires, content)
-		} else { // try text
-			wires = security.TxtParse(content)
-			if len(wires) == 0 {
-				log.Warn(kc, "Failed to parse keychain entry", "file", filename)
-				continue
-			}
-		}
-
-		for _, wire := range wires {
-			data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(wire))
-			if err != nil {
-				log.Warn(kc, "Failed to parse keychain entry", "file", filename, "error", err)
-				continue
-			}
-
-			if data.ContentType() == nil {
-				log.Warn(kc, "Entry with missing content type", "file", filename)
-				continue
-			}
-
-			switch *data.ContentType() {
-			case ndn.ContentTypeKey: // cert
-				if err := kc.mem.InsertCert(wire); err != nil {
-					log.Warn(kc, "Failed to insert certificate", "file", filename, "error", err)
-				}
-			case ndn.ContentTypeSecret: // key
-				key, err := DecodeSecret(data)
-				if err != nil || key == nil {
-					log.Warn(kc, "Failed to decode key", "file", filename, "error", err)
-					return nil, err
-				}
-				if err := kc.mem.InsertKey(key); err != nil {
-					log.Warn(kc, "Failed to insert key", "file", filename, "error", err)
-				}
-			default:
-				log.Warn(kc, "Unknown content type", "file", filename, "type", *data.ContentType())
-			}
+		err = InsertFile(kc.mem, content)
+		if err != nil {
+			log.Error(kc, "Failed to insert keychain entries", "file", filename, "error", err)
 		}
 	}
 
@@ -106,13 +65,38 @@ func (kc *KeyChainDir) String() string {
 	return fmt.Sprintf("KeyChainDir (%s)", kc.path)
 }
 
+func (kc *KeyChainDir) GetIdentities() []ndn.Identity {
+	return kc.mem.GetIdentities()
+}
+
 func (kc *KeyChainDir) GetIdentity(name enc.Name) ndn.Identity {
 	return kc.mem.GetIdentity(name)
 }
 
 func (kc *KeyChainDir) InsertKey(signer ndn.Signer) error {
-	// TODO: write to disk
-	return kc.mem.InsertKey(signer)
+	err := kc.mem.InsertKey(signer)
+	if err != nil {
+		return err
+	}
+
+	hash := sha256.Sum256(signer.KeyName().Bytes())
+	fname := hex.EncodeToString(hash[:])
+	path := filepath.Join(kc.path, fname+".key")
+
+	kc.wmut.Lock()
+	defer kc.wmut.Unlock()
+
+	secret, err := EncodeSecret(signer)
+	if err != nil {
+		return err
+	}
+
+	txt, err := security.TxtFrom(secret.Join())
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, txt, 0644)
 }
 
 func (kc *KeyChainDir) InsertCert(wire []byte) error {

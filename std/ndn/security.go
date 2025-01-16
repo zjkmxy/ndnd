@@ -40,6 +40,10 @@ type SigChecker func(name enc.Name, sigCovered enc.Wire, sig Signature) bool
 
 // KeyChain is the interface of a keychain.
 type KeyChain interface {
+	// String provides the log identifier of the keychain.
+	String() string
+	// GetIdentities returns all identities in the keychain.
+	GetIdentities() []Identity
 	// GetIdentity returns the identity by full name.
 	GetIdentity(enc.Name) Identity
 	// InsertKey inserts a key to the keychain.

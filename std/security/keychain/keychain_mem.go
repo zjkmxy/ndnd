@@ -25,10 +25,23 @@ func NewKeyChainMem(pubStore ndn.Store) ndn.KeyChain {
 	}
 }
 
+func (kc *KeyChainMem) GetIdentities() []ndn.Identity {
+	kc.mut.RLock()
+	defer kc.mut.RUnlock()
+	ids := make([]ndn.Identity, 0, len(kc.identities))
+	for _, id := range kc.identities {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 func (kc *KeyChainMem) GetIdentity(name enc.Name) ndn.Identity {
 	kc.mut.RLock()
 	defer kc.mut.RUnlock()
-	return kc.identities[name.String()]
+	if id, ok := kc.identities[name.String()]; ok {
+		return id
+	}
+	return nil
 }
 
 func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
@@ -50,7 +63,13 @@ func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	}
 	idObj.signers = append([]ndn.Signer{signer}, idObj.signers...)
 
+	// TODO: fix sort order
+
 	return nil
+}
+
+func (kc *KeyChainMem) String() string {
+	return "keychain-mem"
 }
 
 func (kc *KeyChainMem) InsertCert(wire []byte) error {
