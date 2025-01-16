@@ -2,6 +2,7 @@ package sec
 
 import (
 	"crypto/elliptic"
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -13,40 +14,34 @@ import (
 )
 
 func keygen(args []string) {
-	if len(args) < 3 {
+	flagset := flag.NewFlagSet("keychain-import", flag.ExitOnError)
+	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <identity> <key-type> [params]\n", args[0])
-		fmt.Fprintf(os.Stderr, "  key-type: rsa|ecc|ed25519\n")
+		fmt.Fprintf(os.Stderr, "    key-type: rsa|ecc|ed25519\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Generates a new key pair and outputs the secret key in PEM.\n")
+		fmt.Fprintf(os.Stderr, "The key pair is associated with the specified identity.\n")
+		fmt.Fprintf(os.Stderr, "\n")
 		fmt.Fprintf(os.Stderr, "Example: %s /ndn/alice ed25519\n", args[0])
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(args[1:])
+
+	argIdentity, argKeyType := flagset.Arg(0), flagset.Arg(1)
+	if argIdentity == "" || argKeyType == "" {
+		flagset.Usage()
 		os.Exit(2)
-		return
 	}
 
-	identity := args[1]
-	keyType := args[2]
-	args = args[3:]
-
-	name, err := enc.NameFromStr(identity)
+	name, err := enc.NameFromStr(argIdentity)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid identity: %s\n", identity)
+		fmt.Fprintf(os.Stderr, "Invalid identity: %s\n", argIdentity)
 		os.Exit(1)
 		return
 	}
 
 	name = security.MakeKeyName(name)
-
-	var sgn ndn.Signer
-	switch keyType {
-	case "rsa":
-		sgn = keygenRsa(args, name)
-	case "ed25519":
-		sgn = keygenEd25519(args, name)
-	case "ecc":
-		sgn = keygecEcc(args, name)
-	default:
-		fmt.Fprintf(os.Stderr, "Unsupported key type: %s\n", keyType)
-		os.Exit(1)
-		return
-	}
+	sgn := keygenType(args[3:], name, argKeyType)
 
 	secret, err := signer.EncodeSecret(sgn)
 	if err != nil {
@@ -63,6 +58,21 @@ func keygen(args []string) {
 	}
 
 	os.Stdout.Write(out)
+}
+
+func keygenType(args []string, name enc.Name, keyType string) ndn.Signer {
+	switch keyType {
+	case "rsa":
+		return keygenRsa(args, name)
+	case "ed25519":
+		return keygenEd25519(args, name)
+	case "ecc":
+		return keygecEcc(args, name)
+	default:
+		fmt.Fprintf(os.Stderr, "Unsupported key type: %s\n", keyType)
+		os.Exit(2)
+		return nil
+	}
 }
 
 func keygenRsa(args []string, name enc.Name) ndn.Signer {

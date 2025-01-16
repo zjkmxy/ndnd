@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -25,23 +26,26 @@ func (pc *PutChunks) String() string {
 	return "put"
 }
 
-func (pc *PutChunks) usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s <name>\n", pc.args[0])
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Publish data under the specified prefix.\n")
-	fmt.Fprintf(os.Stderr, "This tool expects data from the standard input.\n")
-}
-
 func (pc *PutChunks) run() {
-	if len(pc.args) < 2 {
-		pc.usage()
-		os.Exit(3)
+	flagset := flag.NewFlagSet("put", flag.ExitOnError)
+	flagset.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s <name>\n", pc.args[0])
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Publish data under the specified prefix.\n")
+		fmt.Fprintf(os.Stderr, "This tool expects data from the standard input.\n")
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(pc.args[1:])
+
+	argName := flagset.Arg(0)
+	if argName == "" {
+		flagset.Usage()
+		os.Exit(2)
 	}
 
-	// get name from cli
-	name, err := enc.NameFromStr(pc.args[1])
+	name, err := enc.NameFromStr(argName)
 	if err != nil {
-		log.Fatal(pc, "Invalid object name", "name", pc.args[1])
+		log.Fatal(pc, "Invalid object name", "name", argName)
 		return
 	}
 

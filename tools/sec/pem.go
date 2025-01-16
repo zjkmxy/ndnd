@@ -1,6 +1,7 @@
 package sec
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -9,12 +10,15 @@ import (
 )
 
 func pemEncode(args []string) {
-	if len(args) > 1 {
+	flagset := flag.NewFlagSet("pem-encode", flag.ExitOnError)
+	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
-		fmt.Fprintf(os.Stderr, "    provide raw data as input to stdin\n")
-		os.Exit(2)
-		return
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Encodes a TLV NDN Key or Certificate to PEM.\n")
+		fmt.Fprintf(os.Stderr, "Provide TLV data as input to stdin.\n")
+		flagset.PrintDefaults()
 	}
+	flagset.Parse(args[1:])
 
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
@@ -34,12 +38,15 @@ func pemEncode(args []string) {
 }
 
 func pemDecode(args []string) {
-	if len(args) != 1 {
+	flagset := flag.NewFlagSet("pem-encode", flag.ExitOnError)
+	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
-		fmt.Fprintln(os.Stderr, "    provide PEM input to stdin")
-		os.Exit(2)
-		return
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Decodes a PEM file with a single NDN TLV.\n")
+		fmt.Fprintf(os.Stderr, "Provide PEM data as input to stdin.\n")
+		flagset.PrintDefaults()
 	}
+	flagset.Parse(args[1:])
 
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
@@ -59,5 +66,6 @@ func pemDecode(args []string) {
 		os.Exit(1)
 		return
 	}
+
 	os.Stdout.Write(out[0])
 }

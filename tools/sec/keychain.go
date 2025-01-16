@@ -1,6 +1,7 @@
 package sec
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -14,16 +15,25 @@ import (
 )
 
 func keychainList(args []string) {
-	if len(args) != 2 {
+	flagset := flag.NewFlagSet("keychain-list", flag.ExitOnError)
+	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <keychain>\n", args[0])
-		fmt.Fprintf(os.Stderr, "    keychain is the Keychain URI\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Lists all keys in the specified keychain.\n")
+		fmt.Fprintf(os.Stderr, "Target <keychain> is specified as a URI.\n")
+		fmt.Fprintf(os.Stderr, "\n")
 		fmt.Fprintf(os.Stderr, "Example: %s dir:///safe/keys\n", args[0])
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(args[1:])
+
+	argKeychain := flagset.Arg(0)
+	if argKeychain == "" {
+		flagset.Usage()
 		os.Exit(2)
-		return
 	}
 
-	uri := args[1]
-	kc, err := keychain.NewKeyChain(uri, object.NewMemoryStore())
+	kc, err := keychain.NewKeyChain(argKeychain, object.NewMemoryStore())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open keychain: %s\n", err)
 		os.Exit(1)
@@ -39,15 +49,24 @@ func keychainList(args []string) {
 }
 
 func keychainImport(args []string) {
-	if len(args) != 2 {
+	flagset := flag.NewFlagSet("keychain-import", flag.ExitOnError)
+	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <keychain>\n", args[0])
-		fmt.Fprintf(os.Stderr, "    Expects import data on stdin\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Expects one (TLV) or more (PEM) keys or certificates on stdin\n")
+		fmt.Fprintf(os.Stderr, "and inserts them into the specified keychain.\n")
+		fmt.Fprintf(os.Stderr, "Target <keychain> is specified as a URI.\n")
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(args[1:])
+
+	argKeychain := flagset.Arg(0)
+	if argKeychain == "" {
+		flagset.Usage()
 		os.Exit(2)
-		return
 	}
 
-	uri := args[1]
-	kc, err := keychain.NewKeyChain(uri, object.NewMemoryStore())
+	kc, err := keychain.NewKeyChain(argKeychain, object.NewMemoryStore())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open keychain: %s\n", err)
 		os.Exit(1)
@@ -70,22 +89,32 @@ func keychainImport(args []string) {
 }
 
 func keychainGetKey(args []string) {
-	if len(args) != 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <keychain> <key-name>\n", args[0])
-		fmt.Fprintf(os.Stderr, "    If no KEY is specified, export the default identity key\n")
-		os.Exit(1)
-		return
+	flagset := flag.NewFlagSet("keychain-get-key", flag.ExitOnError)
+	flagset.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s <keychain> <name>\n", args[0])
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Exports the specified key from the specified keychain.\n")
+		fmt.Fprintf(os.Stderr, "If no KEY is specified, name will be treated as an identity\n")
+		fmt.Fprintf(os.Stderr, "and the default key of the identity will be exported.\n")
+		fmt.Fprintf(os.Stderr, "Target <keychain> is specified as a URI.\n")
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(args[1:])
+
+	argKeychain, argName := flagset.Arg(0), flagset.Arg(1)
+	if argKeychain == "" || argName == "" {
+		flagset.Usage()
+		os.Exit(2)
 	}
 
-	name, err := enc.NameFromStr(args[2])
+	name, err := enc.NameFromStr(argName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid key name: %s\n", args[2])
+		fmt.Fprintf(os.Stderr, "Invalid key name: %s\n", argName)
 		os.Exit(1)
 		return
 	}
 
-	uri := args[1]
-	kc, err := keychain.NewKeyChain(uri, object.NewMemoryStore())
+	kc, err := keychain.NewKeyChain(argKeychain, object.NewMemoryStore())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open keychain: %s\n", err)
 		os.Exit(1)

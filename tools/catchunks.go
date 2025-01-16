@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -23,23 +24,26 @@ func (cc *CatChunks) String() string {
 	return "cat"
 }
 
-func (cc *CatChunks) usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s <name>\n", cc.args[0])
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Retrieves an object with the specified name.\n")
-	fmt.Fprintf(os.Stderr, "The object contents are written to stdout on success.\n")
-}
-
 func (cc *CatChunks) run() {
-	if len(cc.args) < 2 {
-		cc.usage()
-		os.Exit(3)
+	flagset := flag.NewFlagSet("cat", flag.ExitOnError)
+	flagset.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s <name>\n", cc.args[0])
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Retrieves an object with the specified name.\n")
+		fmt.Fprintf(os.Stderr, "The object contents are written to stdout on success.\n")
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(cc.args[1:])
+
+	argName := flagset.Arg(0)
+	if argName == "" {
+		flagset.Usage()
+		os.Exit(2)
 	}
 
-	// get name from cli
-	name, err := enc.NameFromStr(cc.args[1])
+	name, err := enc.NameFromStr(argName)
 	if err != nil {
-		log.Fatal(cc, "Invalid name", "name", cc.args[1])
+		log.Fatal(cc, "Invalid name", "name", argName)
 	}
 
 	// start face and engine
@@ -99,5 +103,4 @@ func (cc *CatChunks) run() {
 	fmt.Fprintf(os.Stderr, "Content: %d bytes\n", byteCount)
 	fmt.Fprintf(os.Stderr, "Time taken: %s\n", t2.Sub(t1))
 	fmt.Fprintf(os.Stderr, "Throughput: %f Mbit/s\n", float64(byteCount*8)/t2.Sub(t1).Seconds()/1e6)
-
 }
