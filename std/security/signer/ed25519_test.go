@@ -1,4 +1,4 @@
-package crypto_test
+package signer_test
 
 import (
 	"crypto/ed25519"
@@ -9,23 +9,23 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/security/crypto"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
 )
 
 var TEST_KEY_NAME, _ = enc.NameFromStr("/KEY")
 
-func testEd25519Verify(t *testing.T, signer ndn.Signer, verifyKey []byte) bool {
-	require.Equal(t, uint(ed25519.SignatureSize), signer.EstimateSize())
-	require.Equal(t, ndn.SignatureEd25519, signer.Type())
-	require.Equal(t, TEST_KEY_NAME, signer.KeyName())
+func testEd25519Verify(t *testing.T, sgn ndn.Signer, verifyKey []byte) bool {
+	require.Equal(t, uint(ed25519.SignatureSize), sgn.EstimateSize())
+	require.Equal(t, ndn.SignatureEd25519, sgn.Type())
+	require.Equal(t, TEST_KEY_NAME, sgn.KeyName())
 
 	dataVal := enc.Wire{
 		[]byte("\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix"),
 		[]byte("\x14\x03\x18\x01\x00"),
 	}
-	sigValue := utils.WithoutErr(signer.Sign(dataVal))
+	sigValue := utils.WithoutErr(sgn.Sign(dataVal))
 
 	// For basic test, we use ed25519.Verify to verify the signature.
 	return ed25519.Verify(verifyKey, dataVal.Join(), sigValue)
@@ -35,38 +35,38 @@ func TestEd25519SignerNew(t *testing.T) {
 	utils.SetTestingT(t)
 
 	edkeybits := ed25519.NewKeyFromSeed([]byte("01234567890123456789012345678901"))
-	signer := crypto.NewEd25519Signer(TEST_KEY_NAME, edkeybits)
-	pub := utils.WithoutErr(signer.Public())
-	require.True(t, testEd25519Verify(t, signer, pub))
+	sgn := signer.NewEd25519Signer(TEST_KEY_NAME, edkeybits)
+	pub := utils.WithoutErr(sgn.Public())
+	require.True(t, testEd25519Verify(t, sgn, pub))
 }
 
 func TestEd25519Keygen(t *testing.T) {
 	utils.SetTestingT(t)
 
-	signer1 := utils.WithoutErr(crypto.KeygenEd25519(TEST_KEY_NAME))
-	pub1 := utils.WithoutErr(signer1.Public())
-	require.True(t, testEd25519Verify(t, signer1, pub1))
+	sgn1 := utils.WithoutErr(signer.KeygenEd25519(TEST_KEY_NAME))
+	pub1 := utils.WithoutErr(sgn1.Public())
+	require.True(t, testEd25519Verify(t, sgn1, pub1))
 
-	signer2 := utils.WithoutErr(crypto.KeygenEd25519(TEST_KEY_NAME))
-	pub2 := utils.WithoutErr(signer2.Public())
-	require.True(t, testEd25519Verify(t, signer2, pub2))
+	sgn2 := utils.WithoutErr(signer.KeygenEd25519(TEST_KEY_NAME))
+	pub2 := utils.WithoutErr(sgn2.Public())
+	require.True(t, testEd25519Verify(t, sgn2, pub2))
 
 	// Check that the two signers are different.
-	require.False(t, testEd25519Verify(t, signer2, pub1))
+	require.False(t, testEd25519Verify(t, sgn2, pub1))
 }
 
 func TestEd25519Parse(t *testing.T) {
 	utils.SetTestingT(t)
 
 	edkeybits := ed25519.NewKeyFromSeed([]byte("01234567890123456789012345678901"))
-	signer1 := crypto.NewEd25519Signer(TEST_KEY_NAME, edkeybits)
+	sgn1 := signer.NewEd25519Signer(TEST_KEY_NAME, edkeybits)
 
-	secret := utils.WithoutErr(signer1.(*crypto.Ed25519Signer).Secret())
-	signer2 := utils.WithoutErr(crypto.ParseEd25519(TEST_KEY_NAME, secret))
+	secret := utils.WithoutErr(sgn1.(*signer.Ed25519Signer).Secret())
+	sgn2 := utils.WithoutErr(signer.ParseEd25519(TEST_KEY_NAME, secret))
 
 	// Check that the two signers are the same.
-	pub1 := utils.WithoutErr(signer1.Public())
-	require.True(t, testEd25519Verify(t, signer2, pub1))
+	pub1 := utils.WithoutErr(sgn1.Public())
+	require.True(t, testEd25519Verify(t, sgn2, pub1))
 }
 
 // TestEd25519SignerCertificate tests the validator using a given certificate for interoperability.
@@ -91,5 +91,5 @@ M43PFy/2hDe8j61PuYD9tCah0TWapPwfXWi3fygA`
 	if pubKey == nil {
 		require.Fail(t, "unexpected public key type")
 	}
-	require.True(t, crypto.Ed25519Validate(covered, certData.Signature(), pubKey))
+	require.True(t, signer.Ed25519Validate(covered, certData.Signature(), pubKey))
 }

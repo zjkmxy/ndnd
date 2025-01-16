@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 )
 
 func NewKeyChain(uri string, pubStore ndn.Store) (ndn.KeyChain, error) {
@@ -63,7 +64,7 @@ func InsertFile(kc ndn.KeyChain, content []byte) error {
 			}
 
 		case ndn.ContentTypeSecret: // key
-			key, err := DecodeSecret(data)
+			key, err := signer.DecodeSecret(data)
 			if err != nil || key == nil {
 				log.Warn(kc, "Failed to decode key", "name", data.Name(), "error", err)
 				continue

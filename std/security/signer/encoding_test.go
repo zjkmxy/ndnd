@@ -1,4 +1,4 @@
-package keychain_test
+package signer_test
 
 import (
 	"encoding/base64"
@@ -7,8 +7,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/security/crypto"
-	"github.com/named-data/ndnd/std/security/keychain"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -43,10 +42,10 @@ func TestEncodeSecret(t *testing.T) {
 
 	// create signer
 	secret, _ := base64.StdEncoding.DecodeString(RSA_KEY_SECRET)
-	signer := utils.WithoutErr(crypto.ParseRsa(RSA_KEY_NAME, secret))
+	sgn := utils.WithoutErr(signer.ParseRsa(RSA_KEY_NAME, secret))
 
 	// encode signer secret
-	wire := utils.WithoutErr(keychain.EncodeSecret(signer))
+	wire := utils.WithoutErr(signer.EncodeSecret(sgn))
 
 	// check output data
 	data, _, err := spec.Spec{}.ReadData(enc.NewWireReader(wire))
@@ -64,10 +63,10 @@ func TestDecodeSecret(t *testing.T) {
 	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(dataRaw))
 	require.NoError(t, err)
 
-	signer, err := keychain.DecodeSecret(data)
+	sgn, err := signer.DecodeSecret(data)
 	require.NoError(t, err)
 
 	// check output signer
-	require.Equal(t, ndn.SignatureSha256WithRsa, signer.Type())
-	require.Equal(t, RSA_KEY_NAME, signer.KeyName())
+	require.Equal(t, ndn.SignatureSha256WithRsa, sgn.Type())
+	require.Equal(t, RSA_KEY_NAME, sgn.KeyName())
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sec "github.com/named-data/ndnd/std/security"
-	"github.com/named-data/ndnd/std/security/crypto"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -24,21 +24,21 @@ func executeTest(t *testing.T, main func(*dummy.DummyFace, *basic_engine.Engine,
 
 	face := dummy.NewDummyFace()
 	timer := dummy.NewTimer()
-	signer := sec.NewSha256Signer()
-	engine := basic_engine.NewEngine(face, timer, signer, passAll)
+	sgn := sec.NewSha256Signer()
+	engine := basic_engine.NewEngine(face, timer, sgn, passAll)
 	require.NoError(t, engine.Start())
 
-	main(face, engine, timer, signer)
+	main(face, engine, timer, sgn)
 
 	require.NoError(t, engine.Stop())
 }
 
 func TestEngineStart(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {})
+	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, sgn ndn.Signer) {})
 }
 
 func TestConsumerBasic(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, sgn ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -77,7 +77,7 @@ func TestConsumerBasic(t *testing.T) {
 // TODO: TestInterestCancel
 
 func TestInterestNack(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, sgn ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -112,7 +112,7 @@ func TestInterestNack(t *testing.T) {
 }
 
 func TestInterestTimeout(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, sgn ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -140,7 +140,7 @@ func TestInterestTimeout(t *testing.T) {
 }
 
 func TestInterestCanBePrefix(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, sgn ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -203,7 +203,7 @@ func TestInterestCanBePrefix(t *testing.T) {
 }
 
 func TestImplicitSha256(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, sgn ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -260,7 +260,7 @@ func TestImplicitSha256(t *testing.T) {
 // No need to test AppParam for expression. If `spec.MakeInterest` works, `engine.Express` will.
 
 func TestRoute(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, sgn ndn.Signer) {
 		hitCnt := 0
 		spec := engine.Spec()
 
@@ -276,7 +276,7 @@ func TestRoute(t *testing.T) {
 					ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 				},
 				enc.Wire{[]byte("test")},
-				crypto.NewEmptySigner())
+				signer.NewEmptySigner())
 			require.NoError(t, err)
 			args.Reply(data.Wire)
 		}
@@ -294,7 +294,7 @@ func TestRoute(t *testing.T) {
 }
 
 func TestPitToken(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, sgn ndn.Signer) {
 		hitCnt := 0
 		spec := engine.Spec()
 
@@ -306,7 +306,7 @@ func TestPitToken(t *testing.T) {
 					ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 				},
 				enc.Wire{[]byte("test")},
-				crypto.NewEmptySigner())
+				signer.NewEmptySigner())
 			require.NoError(t, err)
 			args.Reply(data.Wire)
 		}

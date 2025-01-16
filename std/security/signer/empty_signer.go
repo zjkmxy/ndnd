@@ -1,4 +1,4 @@
-package crypto
+package signer
 
 import (
 	enc "github.com/named-data/ndnd/std/encoding"

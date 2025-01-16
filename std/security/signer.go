@@ -1,15 +1,14 @@
 package security
 
 import (
-	"github.com/named-data/ndnd/std/security/crypto"
-
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/security/signer"
 )
 
 func NewSha256Signer() ndn.Signer {
-	return crypto.NewSha256Signer()
+	return signer.NewSha256Signer()
 }
 
 func NewHmacSigner(key []byte) ndn.Signer {
-	return crypto.NewHmacSigner(key)
+	return signer.NewHmacSigner(key)
 }

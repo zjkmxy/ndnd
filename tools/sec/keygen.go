@@ -9,8 +9,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/security"
-	"github.com/named-data/ndnd/std/security/crypto"
-	"github.com/named-data/ndnd/std/security/keychain"
+	"github.com/named-data/ndnd/std/security/signer"
 )
 
 func keygen(args []string) {
@@ -35,21 +34,21 @@ func keygen(args []string) {
 
 	name = security.MakeKeyName(name)
 
-	var signer ndn.Signer
+	var sgn ndn.Signer
 	switch keyType {
 	case "rsa":
-		signer = keygenRsa(args, name)
+		sgn = keygenRsa(args, name)
 	case "ed25519":
-		signer = keygenEd25519(args, name)
+		sgn = keygenEd25519(args, name)
 	case "ecc":
-		signer = keygecEcc(args, name)
+		sgn = keygecEcc(args, name)
 	default:
 		fmt.Fprintf(os.Stderr, "Unsupported key type: %s\n", keyType)
 		os.Exit(1)
 		return
 	}
 
-	secret, err := keychain.EncodeSecret(signer)
+	secret, err := signer.EncodeSecret(sgn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to encode secret key: %s\n", err)
 		os.Exit(1)
@@ -80,24 +79,24 @@ func keygenRsa(args []string, name enc.Name) ndn.Signer {
 		return nil
 	}
 
-	signer, err := crypto.KeygenRsa(name, keySize)
+	sgn, err := signer.KeygenRsa(name, keySize)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate RSA key: %s\n", err)
 		os.Exit(1)
 		return nil
 	}
 
-	return signer
+	return sgn
 }
 
 func keygenEd25519(_ []string, name enc.Name) ndn.Signer {
-	signer, err := crypto.KeygenEd25519(name)
+	sgn, err := signer.KeygenEd25519(name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate Ed25519 key: %s\n", err)
 		os.Exit(1)
 		return nil
 	}
-	return signer
+	return sgn
 }
 
 func keygecEcc(args []string, name enc.Name) ndn.Signer {
@@ -122,11 +121,11 @@ func keygecEcc(args []string, name enc.Name) ndn.Signer {
 		return nil
 	}
 
-	signer, err := crypto.KeygenEcc(name, curve)
+	sgn, err := signer.KeygenEcc(name, curve)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate EC key: %s\n", err)
 		os.Exit(1)
 		return nil
 	}
-	return signer
+	return sgn
 }

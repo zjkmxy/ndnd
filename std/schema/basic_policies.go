@@ -10,7 +10,7 @@ import (
 	basic_engine "github.com/named-data/ndnd/std/engine/basic"
 	"github.com/named-data/ndnd/std/ndn"
 	sec "github.com/named-data/ndnd/std/security"
-	"github.com/named-data/ndnd/std/security/crypto"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -217,7 +217,7 @@ func (p *FixedHmacSignerPolicy) onValidateData(event *Event) any {
 	if sigCovered == nil || signature == nil || signature.SigType() != ndn.SignatureHmacWithSha256 {
 		return VrSilence
 	}
-	if crypto.CheckHmacSig(sigCovered, signature.SigValue(), []byte(p.Key)) {
+	if signer.CheckHmacSig(sigCovered, signature.SigValue(), []byte(p.Key)) {
 		return VrPass
 	} else {
 		return VrFail
@@ -266,7 +266,7 @@ func (p *FixedHmacIntSignerPolicy) onValidateInt(event *Event) any {
 	if sigCovered == nil || signature == nil || signature.SigType() != ndn.SignatureHmacWithSha256 {
 		return VrSilence
 	}
-	if crypto.CheckHmacSig(sigCovered, signature.SigValue(), []byte(p.Key)) {
+	if signer.CheckHmacSig(sigCovered, signature.SigValue(), []byte(p.Key)) {
 		return VrPass
 	} else {
 		return VrFail

@@ -13,6 +13,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 )
 
 const EXT_KEY = ".key"
@@ -76,13 +77,13 @@ func (kc *KeyChainDir) GetIdentity(name enc.Name) ndn.Identity {
 	return kc.mem.GetIdentity(name)
 }
 
-func (kc *KeyChainDir) InsertKey(signer ndn.Signer) error {
-	err := kc.mem.InsertKey(signer)
+func (kc *KeyChainDir) InsertKey(sgn ndn.Signer) error {
+	err := kc.mem.InsertKey(sgn)
 	if err != nil {
 		return err
 	}
 
-	secret, err := EncodeSecret(signer)
+	secret, err := signer.EncodeSecret(sgn)
 	if err != nil {
 		return err
 	}
