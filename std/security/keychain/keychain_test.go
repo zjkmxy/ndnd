@@ -25,7 +25,7 @@ qoAEsjM9PEUEWbnqAiEApu0rg9GAK1LNExjLYAF6qVgpWQgU+atPn63Gtuubqyg=
 `
 
 const KEY_ALICE = `
------BEGIN NDN Key-----
+-----BEGIN NDN KEY-----
 Name: /ndn/alice/KEY/cK%1D%A4%E1%5B%91%CF
 SigType: Ed25519
 
@@ -34,7 +34,7 @@ fjONZO7Y4PNqy7FiDnar33uVO71FLK6Vp8GrPCkEhuODl6GBv2nUuovtO9KtHW11
 8apSS093FiIbAQUcHQcbCANuZG4IBWFsaWNlCANLRVkICGNLHaThW5HPF0Cw3Oh7
 I2jmBBxop1bIPXq292TfltVwhdbB3/yUXkKcg3BYbY6vcAhNNqrG2B+G/iHvKGsy
 DpvDtnlEN72hIeIP
------END NDN Key-----
+-----END NDN KEY-----
 `
 
 var CERT_ROOT_NAME, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556")

@@ -11,8 +11,8 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 )
 
-const PEM_TYPE_CERT = "NDN Certificate"
-const PEM_TYPE_SECRET = "NDN Key"
+const PEM_TYPE_CERT = "NDN CERT"
+const PEM_TYPE_SECRET = "NDN KEY"
 
 // PemEncode converts an NDN data to a text representation following RFC 7468.
 func PemEncode(raw []byte) ([]byte, error) {
