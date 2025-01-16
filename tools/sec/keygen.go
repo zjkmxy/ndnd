@@ -18,6 +18,7 @@ func keygen(args []string) {
 		fmt.Fprintf(os.Stderr, "Usage: sec keygen <identity> <key-type> [params]\n")
 		fmt.Fprintf(os.Stderr, "  key-type: rsa|ecc|ed25519\n")
 		fmt.Fprintf(os.Stderr, "Example: %s sec keygen /ndn/alice ed25519\n", os.Args[0])
+		os.Exit(2)
 		return
 	}
 
@@ -29,6 +30,7 @@ func keygen(args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid identity: %s\n", identity)
 		os.Exit(1)
+		return
 	}
 
 	name = security.MakeKeyName(name)
@@ -44,18 +46,21 @@ func keygen(args []string) {
 	default:
 		fmt.Fprintf(os.Stderr, "Unsupported key type: %s\n", keyType)
 		os.Exit(1)
+		return
 	}
 
 	secret, err := keychain.EncodeSecret(signer)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to encode secret key: %s\n", err)
 		os.Exit(1)
+		return
 	}
 
 	out, err := security.PemEncode(secret.Join())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to convert secret key to text: %s\n", err)
 		os.Exit(1)
+		return
 	}
 
 	os.Stdout.Write(out)
@@ -64,19 +69,22 @@ func keygen(args []string) {
 func keygenRsa(args []string, name enc.Name) ndn.Signer {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "Usage: keygen rsa <key-size>\n")
-		os.Exit(1)
+		os.Exit(2)
+		return nil
 	}
 
 	keySize, err := strconv.Atoi(args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid key size: %s\n", args[0])
 		os.Exit(1)
+		return nil
 	}
 
 	signer, err := crypto.KeygenRsa(name, keySize)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate RSA key: %s\n", err)
 		os.Exit(1)
+		return nil
 	}
 
 	return signer
@@ -86,6 +94,8 @@ func keygenEd25519(_ []string, name enc.Name) ndn.Signer {
 	signer, err := crypto.KeygenEd25519(name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate Ed25519 key: %s\n", err)
+		os.Exit(1)
+		return nil
 	}
 	return signer
 }
@@ -94,7 +104,8 @@ func keygecEcc(args []string, name enc.Name) ndn.Signer {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "Usage: keygen ecc <curve>\n")
 		fmt.Fprintf(os.Stderr, "Supported curves: secp256r1, secp384r1, secp521r1\n")
-		os.Exit(1)
+		os.Exit(2)
+		return nil
 	}
 
 	var curve elliptic.Curve
@@ -107,11 +118,15 @@ func keygecEcc(args []string, name enc.Name) ndn.Signer {
 		curve = elliptic.P521()
 	default:
 		fmt.Fprintf(os.Stderr, "Unsupported curve: %s\n", args[0])
+		os.Exit(1)
+		return nil
 	}
 
 	signer, err := crypto.KeygenEcc(name, curve)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate EC key: %s\n", err)
+		os.Exit(1)
+		return nil
 	}
 	return signer
 }
