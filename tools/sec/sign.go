@@ -10,7 +10,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security"
-	"github.com/named-data/ndnd/std/security/keychain"
 )
 
 // YYYYMMDDhhmmss
@@ -72,7 +71,7 @@ func signCert(args []string) {
 		os.Exit(1)
 	}
 
-	signers, _, _ := keychain.DecodeFile(keysBytes)
+	signers, _, _ := security.DecodeFile(keysBytes)
 	if len(signers) != 1 {
 		fmt.Fprintf(os.Stderr, "Expected exactly one key, got %d\n", len(signers))
 		os.Exit(1)
