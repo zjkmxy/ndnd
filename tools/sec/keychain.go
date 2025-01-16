@@ -67,9 +67,9 @@ func keychainImport(args []string) {
 	}
 }
 
-func keychainExportKey(args []string) {
+func keychainGetKey(args []string) {
 	if len(args) != 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %s sec keychain export <keychain> <key-name>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s sec keychain get-key <keychain> <key-name>\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "    if no KEY is specified, export the default identity key\n")
 		os.Exit(1)
 		return
@@ -138,5 +138,5 @@ func keychainExportKey(args []string) {
 	os.Stdout.Write(out)
 }
 
-func keychainExportCert(args []string) {
+func keychainGetCert(args []string) {
 }
