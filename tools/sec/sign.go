@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
 )
+
+// YYYYMMDDhhmmss
+const TIME_LAYOUT = "20060102150405"
 
 func signCert(args []string) {
 	flags := struct {
@@ -88,11 +92,31 @@ func signCert(args []string) {
 		os.Exit(1)
 	}
 
-	// TODO: set validity and description
+	notBefore := time.Now()
+	notAfter := time.Now().AddDate(1, 0, 0)
+
+	if flags.Start != start_default {
+		notBefore, err = time.Parse(TIME_LAYOUT, flags.Start)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to parse start time: %s\n", err)
+			os.Exit(1)
+		}
+	}
+	if flags.End != end_default {
+		notAfter, err = time.Parse(TIME_LAYOUT, flags.End)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to parse end time: %s\n", err)
+			os.Exit(1)
+		}
+	}
+
+	// TODO: set description
 	certWire, err := security.SignCert(security.SignCertArgs{
-		Signer:   signer,
-		Data:     csr,
-		IssuerId: enc.NewStringComponent(enc.TypeGenericNameComponent, flags.Issuer),
+		Signer:    signer,
+		Data:      csr,
+		IssuerId:  enc.NewStringComponent(enc.TypeGenericNameComponent, flags.Issuer),
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to sign certificate: %s\n", err)

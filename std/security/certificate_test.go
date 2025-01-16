@@ -3,6 +3,7 @@ package security_test
 import (
 	"encoding/base64"
 	"testing"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
@@ -40,6 +41,9 @@ var ISSUER = enc.NewStringComponent(enc.TypeGenericNameComponent, "myissuer")
 var KEY_ALICE_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/cK%1D%A4%E1%5B%91%CF")
 var KEY_ROOT_NAME, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27")
 
+var T1 = time.Date(2022, 4, 29, 15, 39, 50, 0, time.UTC)
+var T2 = time.Date(2089, 12, 31, 23, 59, 59, 0, time.UTC)
+
 func TestSignCertInvalid(t *testing.T) {
 	utils.SetTestingT(t)
 
@@ -60,9 +64,11 @@ func TestSignCertSelf(t *testing.T) {
 
 	// self-sign alice's key
 	aliceCert, err := sec.SignCert(sec.SignCertArgs{
-		Signer:   aliceSigner,
-		Data:     aliceKeyData,
-		IssuerId: ISSUER,
+		Signer:    aliceSigner,
+		Data:      aliceKeyData,
+		IssuerId:  ISSUER,
+		NotBefore: T1,
+		NotAfter:  T2,
 	})
 	require.NoError(t, err)
 	cert, certSigCovered, err := spec_2022.Spec{}.ReadData(enc.NewWireReader(aliceCert))
@@ -76,10 +82,8 @@ func TestSignCertSelf(t *testing.T) {
 	require.Greater(t, name[len(name)-1].NumberVal(), uint64(0))
 	require.Equal(t, ISSUER, name[len(name)-2])
 
-	// check data attributes
-	require.Equal(t, ndn.ContentTypeKey, *cert.ContentType())
-
 	// check data content is public key
+	require.Equal(t, ndn.ContentTypeKey, *cert.ContentType())
 	alicePub := utils.WithoutErr(aliceSigner.Public())
 	require.Equal(t, alicePub, cert.Content().Join())
 
@@ -87,6 +91,11 @@ func TestSignCertSelf(t *testing.T) {
 	signature := cert.Signature()
 	require.Equal(t, ndn.SignatureEd25519, signature.SigType())
 	require.Equal(t, aliceSigner.KeyName(), signature.KeyName())
+
+	// check validity period
+	notBefore, notAfter := signature.Validity()
+	require.Equal(t, T1, *notBefore)
+	require.Equal(t, T2, *notAfter)
 
 	// check signature
 	require.Equal(t, 64, len(signature.SigValue())) // ed25519
@@ -106,9 +115,11 @@ func TestSignCertOther(t *testing.T) {
 
 	// sign root cert with alice's key
 	newCertB, err := sec.SignCert(sec.SignCertArgs{
-		Signer:   aliceSigner,
-		Data:     rootCertData,
-		IssuerId: ISSUER,
+		Signer:    aliceSigner,
+		Data:      rootCertData,
+		IssuerId:  ISSUER,
+		NotBefore: T1,
+		NotAfter:  T2,
 	})
 	require.NoError(t, err)
 	newCert, newSigCov, err := spec_2022.Spec{}.ReadData(enc.NewWireReader(newCertB))
@@ -122,10 +133,8 @@ func TestSignCertOther(t *testing.T) {
 	require.Greater(t, name[len(name)-1].NumberVal(), uint64(0))
 	require.Equal(t, ISSUER, name[len(name)-2])
 
-	// check data attributes
-	require.Equal(t, ndn.ContentTypeKey, *newCert.ContentType())
-
 	// check data content is public key
+	require.Equal(t, ndn.ContentTypeKey, *newCert.ContentType())
 	rootPub := rootCertData.Content().Join()
 	require.Equal(t, rootPub, newCert.Content().Join())
 
@@ -133,6 +142,11 @@ func TestSignCertOther(t *testing.T) {
 	signature := newCert.Signature()
 	require.Equal(t, ndn.SignatureEd25519, signature.SigType())
 	require.Equal(t, aliceSigner.KeyName(), signature.KeyName())
+
+	// check validity period
+	notBefore, notAfter := signature.Validity()
+	require.Equal(t, T1, *notBefore)
+	require.Equal(t, T2, *notAfter)
 
 	// check signature
 	alicePub := utils.WithoutErr(aliceSigner.Public())

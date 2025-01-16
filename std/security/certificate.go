@@ -29,23 +29,38 @@ type SignCertArgs struct {
 // SignCert signs a new NDN certificate with the given signer.
 // Data must have either a Key or Secret in the Content.
 func SignCert(args SignCertArgs) (enc.Wire, error) {
+	// Check all parameters (strict for certs)
 	if args.Signer == nil || args.Data == nil || args.IssuerId.Typ == 0 {
 		return nil, ndn.ErrInvalidValue{Item: "SignCertArgs", Value: args}
 	}
+	if args.NotBefore.IsZero() || args.NotAfter.IsZero() {
+		return nil, ndn.ErrInvalidValue{Item: "Validity", Value: args}
+	}
 
+	// Cannot expire before it starts
+	if args.NotAfter.Before(args.NotBefore) {
+		return nil, ndn.ErrInvalidValue{Item: "Expiry", Value: args.NotAfter}
+	}
+
+	// Get public key bits and key name
 	pk, keyName, err := getPubKey(args.Data)
 	if err != nil {
 		return nil, err
 	}
+
+	// Get certificate name
 	certName, err := MakeCertName(keyName, args.IssuerId, uint64(time.Now().UnixMilli()))
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: set validity and description
+	// TODO: set description
+	// Create certificate data
 	cfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeKey),
-		Freshness:   utils.IdPtr(time.Hour),
+		ContentType:  utils.IdPtr(ndn.ContentTypeKey),
+		Freshness:    utils.IdPtr(time.Hour),
+		SigNotBefore: utils.IdPtr(args.NotBefore),
+		SigNotAfter:  utils.IdPtr(args.NotAfter),
 	}
 	cert, err := spec.Spec{}.MakeData(certName, cfg, enc.Wire{pk}, args.Signer)
 	if err != nil {
