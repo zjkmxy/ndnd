@@ -9,39 +9,39 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-// Ed25519Signer is a signer that uses Ed25519 key to sign packets.
-type Ed25519Signer struct {
+// ed25519Signer is a signer that uses Ed25519 key to sign packets.
+type ed25519Signer struct {
 	name enc.Name
 	key  ed25519.PrivateKey
 }
 
-func (s *Ed25519Signer) Type() ndn.SigType {
+func (s *ed25519Signer) Type() ndn.SigType {
 	return ndn.SignatureEd25519
 }
 
-func (s *Ed25519Signer) KeyName() enc.Name {
+func (s *ed25519Signer) KeyName() enc.Name {
 	return s.name
 }
 
-func (s *Ed25519Signer) EstimateSize() uint {
+func (s *ed25519Signer) EstimateSize() uint {
 	return ed25519.SignatureSize
 }
 
-func (s *Ed25519Signer) Sign(covered enc.Wire) ([]byte, error) {
+func (s *ed25519Signer) Sign(covered enc.Wire) ([]byte, error) {
 	return ed25519.Sign(s.key, covered.Join()), nil
 }
 
-func (s *Ed25519Signer) Public() ([]byte, error) {
+func (s *ed25519Signer) Public() ([]byte, error) {
 	return s.key[ed25519.PublicKeySize:], nil
 }
 
-func (s *Ed25519Signer) Secret() ([]byte, error) {
+func (s *ed25519Signer) Secret() ([]byte, error) {
 	return s.key, nil
 }
 
 // NewEd25519Signer creates a signer using ed25519 key
 func NewEd25519Signer(name enc.Name, key ed25519.PrivateKey) ndn.Signer {
-	return &Ed25519Signer{name, key}
+	return &ed25519Signer{name, key}
 }
 
 // Ed25519Keygen creates a signer using a new Ed25519 key

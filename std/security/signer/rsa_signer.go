@@ -11,25 +11,25 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-// RsaSigner is a signer that uses ECC key to sign packets.
-type RsaSigner struct {
+// rsaSigner is a signer that uses ECC key to sign packets.
+type rsaSigner struct {
 	name enc.Name
 	key  *rsa.PrivateKey
 }
 
-func (s *RsaSigner) Type() ndn.SigType {
+func (s *rsaSigner) Type() ndn.SigType {
 	return ndn.SignatureSha256WithRsa
 }
 
-func (s *RsaSigner) KeyName() enc.Name {
+func (s *rsaSigner) KeyName() enc.Name {
 	return s.name
 }
 
-func (s *RsaSigner) EstimateSize() uint {
+func (s *rsaSigner) EstimateSize() uint {
 	return uint(s.key.Size())
 }
 
-func (s *RsaSigner) Sign(covered enc.Wire) ([]byte, error) {
+func (s *rsaSigner) Sign(covered enc.Wire) ([]byte, error) {
 	h := sha256.New()
 	for _, buf := range covered {
 		_, err := h.Write(buf)
@@ -41,17 +41,17 @@ func (s *RsaSigner) Sign(covered enc.Wire) ([]byte, error) {
 	return rsa.SignPKCS1v15(nil, s.key, crypto.SHA256, digest)
 }
 
-func (s *RsaSigner) Public() ([]byte, error) {
+func (s *rsaSigner) Public() ([]byte, error) {
 	return x509.MarshalPKIXPublicKey(&s.key.PublicKey)
 }
 
-func (s *RsaSigner) Secret() ([]byte, error) {
+func (s *rsaSigner) Secret() ([]byte, error) {
 	return x509.MarshalPKCS1PrivateKey(s.key), nil
 }
 
 // NewRsaSigner creates a signer using RSA key
 func NewRsaSigner(name enc.Name, key *rsa.PrivateKey) ndn.Signer {
-	return &RsaSigner{name, key}
+	return &rsaSigner{name, key}
 }
 
 // KeygenRsa creates a signer using a new RSA key

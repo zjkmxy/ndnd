@@ -11,26 +11,26 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-// EccSigner is a signer that uses ECC key to sign packets.
-type EccSigner struct {
+// eccSigner is a signer that uses ECC key to sign packets.
+type eccSigner struct {
 	name   enc.Name
 	key    *ecdsa.PrivateKey
 	keyLen uint
 }
 
-func (s *EccSigner) Type() ndn.SigType {
+func (s *eccSigner) Type() ndn.SigType {
 	return ndn.SignatureSha256WithEcdsa
 }
 
-func (s *EccSigner) KeyName() enc.Name {
+func (s *eccSigner) KeyName() enc.Name {
 	return s.name
 }
 
-func (s *EccSigner) EstimateSize() uint {
+func (s *eccSigner) EstimateSize() uint {
 	return s.keyLen
 }
 
-func (s *EccSigner) Sign(covered enc.Wire) ([]byte, error) {
+func (s *eccSigner) Sign(covered enc.Wire) ([]byte, error) {
 	h := sha256.New()
 	for _, buf := range covered {
 		_, err := h.Write(buf)
@@ -42,11 +42,11 @@ func (s *EccSigner) Sign(covered enc.Wire) ([]byte, error) {
 	return ecdsa.SignASN1(rand.Reader, s.key, digest)
 }
 
-func (s *EccSigner) Public() ([]byte, error) {
+func (s *eccSigner) Public() ([]byte, error) {
 	return x509.MarshalPKIXPublicKey(&s.key.PublicKey)
 }
 
-func (s *EccSigner) Secret() ([]byte, error) {
+func (s *eccSigner) Secret() ([]byte, error) {
 	return x509.MarshalECPrivateKey(s.key)
 }
 
@@ -54,7 +54,7 @@ func (s *EccSigner) Secret() ([]byte, error) {
 func NewEccSigner(name enc.Name, key *ecdsa.PrivateKey) ndn.Signer {
 	keyLen := (key.Curve.Params().BitSize*2 + 7) / 8
 	keyLen += keyLen%2 + 8
-	return &EccSigner{
+	return &eccSigner{
 		name:   name,
 		key:    key,
 		keyLen: uint(keyLen),

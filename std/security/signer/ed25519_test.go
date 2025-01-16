@@ -61,7 +61,7 @@ func TestEd25519Parse(t *testing.T) {
 	edkeybits := ed25519.NewKeyFromSeed([]byte("01234567890123456789012345678901"))
 	sgn1 := signer.NewEd25519Signer(TEST_KEY_NAME, edkeybits)
 
-	secret := utils.WithoutErr(sgn1.(*signer.Ed25519Signer).Secret())
+	secret := utils.WithoutErr(signer.GetSecret(sgn1))
 	sgn2 := utils.WithoutErr(signer.ParseEd25519(TEST_KEY_NAME, secret))
 
 	// Check that the two signers are the same.

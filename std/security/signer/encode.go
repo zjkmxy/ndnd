@@ -7,6 +7,20 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
+// GetSecret gets the key secret bits.
+func GetSecret(key ndn.Signer) ([]byte, error) {
+	switch key := key.(type) {
+	case *eccSigner:
+		return key.Secret()
+	case *rsaSigner:
+		return key.Secret()
+	case *ed25519Signer:
+		return key.Secret()
+	default:
+		return nil, ndn.ErrNotSupported{Item: "key type"}
+	}
+}
+
 // EncodeSecret encodes a key secret to a signed NDN Data packet.
 func EncodeSecret(key ndn.Signer) (enc.Wire, error) {
 	// Get key name
@@ -16,18 +30,7 @@ func EncodeSecret(key ndn.Signer) (enc.Wire, error) {
 	}
 
 	// Get key secret bits
-	var sk []byte = nil
-	var err error = nil
-	switch key := key.(type) {
-	case *EccSigner:
-		sk, err = key.Secret()
-	case *RsaSigner:
-		sk, err = key.Secret()
-	case *Ed25519Signer:
-		sk, err = key.Secret()
-	default:
-		return nil, ndn.ErrNotSupported{Item: "key type"}
-	}
+	sk, err := GetSecret(key)
 	if err != nil {
 		return nil, err
 	} else if sk == nil {
