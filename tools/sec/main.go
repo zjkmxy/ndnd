@@ -13,6 +13,10 @@ func GetSecCmdTree() utils.CmdTree {
 			Help: "Generate a new NDN key pair",
 			Fun:  keygen,
 		}, {
+			Name: "sign-cert",
+			Help: "Sign a new NDN certificate",
+			Fun:  signCert,
+		}, {
 			// separator
 		}, {
 			Name: "keychain list",
