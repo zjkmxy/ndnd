@@ -3,6 +3,7 @@ package security
 import (
 	"encoding/pem"
 	"errors"
+	"fmt"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -36,7 +37,7 @@ func PemEncode(raw []byte) ([]byte, error) {
 
 	// Add validity period
 	if nb, na := data.Signature().Validity(); nb != nil && na != nil {
-		headers["Validity"] = nb.String() + " - " + na.String()
+		headers["Validity"] = fmt.Sprintf("%s - %s", *nb, *na)
 	}
 
 	// Add signature type
