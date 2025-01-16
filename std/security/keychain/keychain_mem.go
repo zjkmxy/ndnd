@@ -24,14 +24,12 @@ func NewKeyChainMem(pubStore ndn.Store) ndn.KeyChain {
 	}
 }
 
-// GetIdentity returns the identity by full name.
 func (kc *KeyChainMem) GetIdentity(name enc.Name) ndn.Identity {
 	kc.mut.RLock()
 	defer kc.mut.RUnlock()
 	return kc.identities[name.String()]
 }
 
-// InsertKey inserts a key to the keychain.
 func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	kc.mut.Lock()
 	defer kc.mut.Unlock()
@@ -54,7 +52,6 @@ func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	return nil
 }
 
-// InsertCert inserts a certificate to the keychain.
 func (kc *KeyChainMem) InsertCert(wire []byte) error {
 	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(wire))
 	if err != nil {

@@ -2,6 +2,7 @@ package keychain_test
 
 import (
 	"encoding/base64"
+	"os"
 	"testing"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -22,7 +23,21 @@ TkROIFRlc3RiZWQgUm9vdCAyMjA0F0gwRgIhAPYUOjNakdfDGh5j9dcCGOz+Ie1M
 qoAEsjM9PEUEWbnqAiEApu0rg9GAK1LNExjLYAF6qVgpWQgU+atPn63Gtuubqyg=
 `
 
+const KEY_ALICE = `
+-----BEGIN NDN Key-----
+Name: /ndn/alice/KEY/cK%1D%A4%E1%5B%91%CF
+SigType: Ed25519
+
+BsoHGwgDbmRuCAVhbGljZQgDS0VZCAhjSx2k4VuRzxQDGAEJFUC64F62YK0/v5z4
+fjONZO7Y4PNqy7FiDnar33uVO71FLK6Vp8GrPCkEhuODl6GBv2nUuovtO9KtHW11
+8apSS093FiIbAQUcHQcbCANuZG4IBWFsaWNlCANLRVkICGNLHaThW5HPF0Cw3Oh7
+I2jmBBxop1bIPXq292TfltVwhdbB3/yUXkKcg3BYbY6vcAhNNqrG2B+G/iHvKGsy
+DpvDtnlEN72hIeIP
+-----END NDN Key-----
+`
+
 var CERT_ROOT_NAME, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556")
+var KEY_ALICE_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/cK%1D%A4%E1%5B%91%CF")
 
 func TestKeyChainMem(t *testing.T) {
 	utils.SetTestingT(t)
@@ -75,4 +90,42 @@ func TestKeyChainMem(t *testing.T) {
 	data, err := store.Get(CERT_ROOT_NAME, false)
 	require.NoError(t, err)
 	require.Equal(t, certRoot, data)
+}
+
+func TestKeyChainDir(t *testing.T) {
+	utils.SetTestingT(t)
+
+	store := object.NewMemoryStore()
+
+	// Create a temporary directory
+	dirname := "./ndn-test-keychain"
+	require.NoError(t, os.RemoveAll(dirname))
+	defer os.RemoveAll(dirname)
+	require.NoError(t, os.Mkdir(dirname, 0755))
+
+	// Write root cert (raw)
+	rootCert, _ := base64.StdEncoding.DecodeString(CERT_ROOT)
+	require.NoError(t, os.WriteFile(dirname+"/root.cert", rootCert, 0644))
+
+	// Write Alice key (text)
+	require.NoError(t, os.WriteFile(dirname+"/alice.key", []byte(KEY_ALICE), 0644))
+
+	// Create a keychain
+	kc, err := keychain.NewKeyChainDir(dirname, store)
+	require.NoError(t, err)
+
+	// Check root cert
+	data, err := store.Get(CERT_ROOT_NAME, false)
+	require.NoError(t, err)
+	require.Equal(t, rootCert, data)
+
+	// Check Alice key
+	identity := kc.GetIdentity(KEY_ALICE_NAME[:2])
+	require.NotNil(t, identity)
+	require.Len(t, identity.AllSigners(), 1)
+	require.Equal(t, identity.Signer().KeyName(), KEY_ALICE_NAME)
+
+	// Check Alice key is not in store
+	data, _ = store.Get(KEY_ALICE_NAME, false)
+	require.Nil(t, data)
 }
