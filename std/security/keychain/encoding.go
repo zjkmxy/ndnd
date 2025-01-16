@@ -65,14 +65,20 @@ func DecodeSecret(data ndn.Data) (ndn.Signer, error) {
 		return nil, ndn.ErrInvalidValue{Item: "content"}
 	}
 
+	// Check name
+	name := data.Name()
+	if len(name) < 2 || name[len(name)-2].String() != "KEY" {
+		return nil, ndn.ErrInvalidValue{Item: "name", Value: name}
+	}
+
 	// Decode key secret depending on signature type
 	switch data.Signature().SigType() {
 	case ndn.SignatureSha256WithEcdsa:
-		return crypto.ParseEcc(data.Name(), wire)
+		return crypto.ParseEcc(name, wire)
 	case ndn.SignatureSha256WithRsa:
-		return crypto.ParseRsa(data.Name(), wire)
+		return crypto.ParseRsa(name, wire)
 	case ndn.SignatureEd25519:
-		return crypto.ParseEd25519(data.Name(), wire)
+		return crypto.ParseEd25519(name, wire)
 	default:
 		return nil, ndn.ErrNotSupported{Item: "signature type"}
 	}

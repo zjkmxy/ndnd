@@ -7,6 +7,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
+// MakeKeyName generates a new key name for a given identity.
 func MakeKeyName(name enc.Name) enc.Name {
 	keyId := make([]byte, 8)
 	rand.Read(keyId)
@@ -17,6 +18,7 @@ func MakeKeyName(name enc.Name) enc.Name {
 	)
 }
 
+// GetIdentityFromKeyName extracts the identity name from a key name.
 func GetIdentityFromKeyName(name enc.Name) (enc.Name, error) {
 	if len(name) < 3 {
 		return nil, ndn.ErrInvalidValue{Item: "key name"}
