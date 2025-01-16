@@ -10,7 +10,7 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 	"github.com/named-data/ndnd/std/object"
-	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -63,12 +63,12 @@ func (a *advertModule) sendSyncInterestImpl(prefix enc.Name) (err error) {
 	}
 
 	// TODO: sign the sync data
-	signer := sec.NewSha256Signer()
+	sgn := signer.NewSha256Signer()
 
 	dataCfg := &ndn.DataConfig{
 		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 	}
-	data, err := a.dv.engine.Spec().MakeData(syncName, dataCfg, sv.Encode(), signer)
+	data, err := a.dv.engine.Spec().MakeData(syncName, dataCfg, sv.Encode(), sgn)
 	if err != nil {
 		log.Error(nil, "Failed make data", "err", err)
 		return

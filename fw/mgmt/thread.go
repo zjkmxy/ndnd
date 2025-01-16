@@ -21,7 +21,7 @@ import (
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/object"
-	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -37,6 +37,7 @@ type Thread struct {
 
 	store  ndn.Store
 	objDir *object.MemoryFifoDir
+	signer ndn.Signer
 }
 
 func (m *Thread) String() string {
@@ -50,6 +51,7 @@ func MakeMgmtThread() *Thread {
 		timer:   basic_engine.NewTimer(),
 		store:   object.NewMemoryStore(),
 		objDir:  object.NewMemoryFifoDir(32),
+		signer:  signer.NewSha256Signer(),
 	}
 
 	m.registerModule("cs", new(ContentStoreModule))
@@ -157,7 +159,7 @@ func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
 		MustBeFresh: true,
 		Nonce:       utils.IdPtr(rand.Uint64()),
 	}
-	interest, err := spec.Spec{}.MakeInterest(name, &config, params, sec.NewSha256Signer())
+	interest, err := spec.Spec{}.MakeInterest(name, &config, params, m.signer)
 	if err != nil {
 		core.Log.Warn(m, "Unable to encode Interest", "name", name, "err", err)
 		return
@@ -175,7 +177,7 @@ func (m *Thread) sendData(interest *Interest, name enc.Name, content enc.Wire) {
 			Freshness:   utils.IdPtr(time.Second),
 		},
 		content,
-		sec.NewSha256Signer(),
+		m.signer,
 	)
 	if err != nil {
 		core.Log.Warn(m, "Unable to encode Data", "name", interest.Name(), "err", err)
@@ -214,7 +216,7 @@ func (m *Thread) sendStatusDataset(interest *Interest, name enc.Name, dataset en
 		Content:         dataset,
 		FreshnessPeriod: time.Millisecond,
 		NoMetadata:      true,
-	}, m.store, sec.NewSha256Signer())
+	}, m.store, m.signer)
 	if err != nil {
 		core.Log.Warn(m, "Unable to produce status dataset", "err", err)
 		return

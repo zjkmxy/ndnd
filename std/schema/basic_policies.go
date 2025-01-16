@@ -9,7 +9,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	basic_engine "github.com/named-data/ndnd/std/engine/basic"
 	"github.com/named-data/ndnd/std/ndn"
-	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -62,7 +61,7 @@ func NewSha256SignerPolicy() Policy {
 }
 
 func (p *Sha256SignerPolicy) onGetDataSigner(*Event) any {
-	return sec.NewSha256Signer()
+	return signer.NewSha256Signer()
 }
 
 func (p *Sha256SignerPolicy) onValidateData(event *Event) any {
@@ -71,7 +70,7 @@ func (p *Sha256SignerPolicy) onValidateData(event *Event) any {
 	if sigCovered == nil || signature == nil || signature.SigType() != ndn.SignatureDigestSha256 {
 		return VrSilence
 	}
-	val, _ := sec.NewSha256Signer().Sign(sigCovered)
+	val, _ := signer.NewSha256Signer().Sign(sigCovered)
 	if bytes.Equal(signature.SigValue(), val) {
 		return VrPass
 	} else {
@@ -208,7 +207,7 @@ func NewFixedHmacSignerPolicy() Policy {
 }
 
 func (p *FixedHmacSignerPolicy) onGetDataSigner(*Event) any {
-	return sec.NewHmacSigner([]byte(p.Key))
+	return signer.NewHmacSigner([]byte(p.Key))
 }
 
 func (p *FixedHmacSignerPolicy) onValidateData(event *Event) any {
@@ -274,7 +273,7 @@ func (p *FixedHmacIntSignerPolicy) onValidateInt(event *Event) any {
 }
 
 func (p *FixedHmacIntSignerPolicy) onAttach(event *Event) any {
-	p.signer = sec.NewHmacSigner([]byte(p.Key))
+	p.signer = signer.NewHmacSigner([]byte(p.Key))
 	return nil
 }
 

@@ -9,7 +9,6 @@ import (
 	"github.com/named-data/ndnd/std/engine/dummy"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
-	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,7 @@ func executeTest(t *testing.T, main func(*dummy.DummyFace, *basic_engine.Engine,
 
 	face := dummy.NewDummyFace()
 	timer := dummy.NewTimer()
-	sgn := sec.NewSha256Signer()
+	sgn := signer.NewSha256Signer()
 	engine := basic_engine.NewEngine(face, timer, sgn, passAll)
 	require.NoError(t, engine.Start())
 
@@ -131,7 +130,7 @@ func TestInterestTimeout(t *testing.T) {
 		require.Equal(t, enc.Buffer("\x05\x14\x07\x0f\x08\rnot important\x0c\x01\x0a"), buf)
 		timer.MoveForward(50 * time.Millisecond)
 
-		data, err := spec.MakeData(name, &ndn.DataConfig{}, enc.Wire{enc.Buffer("\x0a")}, sec.NewSha256Signer())
+		data, err := spec.MakeData(name, &ndn.DataConfig{}, enc.Wire{enc.Buffer("\x0a")}, signer.NewSha256Signer())
 		require.NoError(t, err)
 		require.NoError(t, face.FeedPacket(data.Wire.Join()))
 

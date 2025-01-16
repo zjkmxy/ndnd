@@ -10,7 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -26,7 +26,7 @@ type PingServer struct {
 func RunPingServer(args []string) {
 	(&PingServer{
 		args:   args,
-		signer: sec.NewSha256Signer(),
+		signer: signer.NewSha256Signer(),
 	}).run()
 }
 

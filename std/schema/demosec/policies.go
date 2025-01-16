@@ -8,7 +8,6 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/schema"
-	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -127,7 +126,7 @@ func (p *SignedByPolicy) onGetDataSigner(event *schema.Event) any {
 		log.Error(p, "The key to sign this data is missing. Leave unsigned.")
 		return nil
 	}
-	return sec.NewHmacSigner(key.KeyBits)
+	return signer.NewHmacSigner(key.KeyBits)
 }
 
 func (p *SignedByPolicy) onValidateData(event *schema.Event) any {

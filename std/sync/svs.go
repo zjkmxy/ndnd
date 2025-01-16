@@ -14,7 +14,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
-	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -316,12 +316,12 @@ func (s *SvSync) sendSyncInterest() {
 	syncName := s.o.GroupPrefix.Append(enc.NewVersionComponent(3))
 
 	// TODO: sign the sync data
-	signer := sec.NewSha256Signer()
+	sgn := signer.NewSha256Signer()
 
 	dataCfg := &ndn.DataConfig{
 		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 	}
-	data, err := s.o.Engine.Spec().MakeData(syncName, dataCfg, svWire, signer)
+	data, err := s.o.Engine.Spec().MakeData(syncName, dataCfg, svWire, sgn)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed make data", "err", err)
 		return

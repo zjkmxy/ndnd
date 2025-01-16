@@ -7,22 +7,22 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-// Sha256Signer is a Data signer that uses DigestSha256.
-type Sha256Signer struct{}
+// sha256Signer is a Data signer that uses DigestSha256.
+type sha256Signer struct{}
 
-func (Sha256Signer) Type() ndn.SigType {
+func (sha256Signer) Type() ndn.SigType {
 	return ndn.SignatureDigestSha256
 }
 
-func (Sha256Signer) KeyName() enc.Name {
+func (sha256Signer) KeyName() enc.Name {
 	return nil
 }
 
-func (Sha256Signer) EstimateSize() uint {
+func (sha256Signer) EstimateSize() uint {
 	return 32
 }
 
-func (Sha256Signer) Sign(covered enc.Wire) ([]byte, error) {
+func (sha256Signer) Sign(covered enc.Wire) ([]byte, error) {
 	h := sha256.New()
 	for _, buf := range covered {
 		_, err := h.Write(buf)
@@ -33,11 +33,11 @@ func (Sha256Signer) Sign(covered enc.Wire) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-func (Sha256Signer) Public() ([]byte, error) {
+func (sha256Signer) Public() ([]byte, error) {
 	return nil, ndn.ErrNoPubKey
 }
 
 // NewSha256Signer creates a signer that uses DigestSha256.
 func NewSha256Signer() ndn.Signer {
-	return Sha256Signer{}
+	return sha256Signer{}
 }

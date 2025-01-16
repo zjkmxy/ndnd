@@ -7,7 +7,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -22,7 +22,7 @@ func (dv *Router) readvertiseOnInterest(args ndn.InterestHandlerArgs) {
 	}
 
 	defer func() {
-		signer := security.NewSha256Signer()
+		sgn := signer.NewSha256Signer()
 		data, err := dv.engine.Spec().MakeData(
 			args.Interest.Name(),
 			&ndn.DataConfig{
@@ -30,7 +30,7 @@ func (dv *Router) readvertiseOnInterest(args ndn.InterestHandlerArgs) {
 				Freshness:   utils.IdPtr(1 * time.Second),
 			},
 			res.Encode(),
-			signer)
+			sgn)
 		if err != nil {
 			log.Warn(dv, "Failed to make readvertise response Data", "err", err)
 			return

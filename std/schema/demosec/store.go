@@ -8,7 +8,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
-	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -43,12 +42,12 @@ func (store *DemoHmacKeyStore) EnrollKey(keyName enc.Name, keyBits enc.Buffer, s
 	if signKey == nil {
 		return fmt.Errorf("cannot find signing key: %s", signKeyName.String())
 	}
-	signer := sec.NewHmacSigner(signKey.KeyBits)
+	sgn := signer.NewHmacSigner(signKey.KeyBits)
 	spec := spec_2022.Spec{}
 	cert, err := spec.MakeData(keyName, &ndn.DataConfig{
 		ContentType: utils.IdPtr(ndn.ContentTypeKey),
 		Freshness:   utils.IdPtr(3600 * time.Second),
-	}, enc.Wire{keyBits}, signer)
+	}, enc.Wire{keyBits}, sgn)
 	if err != nil {
 		return fmt.Errorf("unable to make certificate: %+v", err)
 	}
