@@ -44,6 +44,7 @@ Usage: ndnd [command]
   fw              NDN Forwarding Daemon
   dv              NDN Distance Vector Routing Daemon
 
+  sec             NDN Security Utilities
   ping            Send Interests to an NDN ping server
   pingserver      Start an NDN ping server under a prefix
   cat             Retrieve data under a prefix
