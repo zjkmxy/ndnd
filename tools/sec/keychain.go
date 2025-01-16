@@ -64,7 +64,7 @@ func keychainImport(args []string) {
 func keychainExportKey(args []string) {
 	if len(args) != 3 {
 		fmt.Fprintf(os.Stderr, "Usage: %s sec keychain export <keychain> <key-name>\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "    if not KEY is specified, export the default key for the identity\n")
+		fmt.Fprintf(os.Stderr, "    if no KEY is specified, export the default identity key\n")
 		return
 	}
 

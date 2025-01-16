@@ -15,6 +15,9 @@ import (
 	"github.com/named-data/ndnd/std/security"
 )
 
+const EXT_KEY = ".key"
+const EXT_CERT = ".cert"
+
 // KeyChainDir is a directory-based keychain.
 type KeyChainDir struct {
 	wmut sync.Mutex
@@ -36,8 +39,8 @@ func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 		return nil, err
 	}
 	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), ".key") &&
-			!strings.HasSuffix(entry.Name(), ".cert") {
+		if !strings.HasSuffix(entry.Name(), EXT_KEY) &&
+			!strings.HasSuffix(entry.Name(), EXT_CERT) {
 			continue
 		}
 
@@ -79,27 +82,35 @@ func (kc *KeyChainDir) InsertKey(signer ndn.Signer) error {
 		return err
 	}
 
-	hash := sha256.Sum256(signer.KeyName().Bytes())
-	fname := hex.EncodeToString(hash[:])
-	path := filepath.Join(kc.path, fname+".key")
-
-	kc.wmut.Lock()
-	defer kc.wmut.Unlock()
-
 	secret, err := EncodeSecret(signer)
 	if err != nil {
 		return err
 	}
 
-	txt, err := security.TxtFrom(secret.Join())
+	return kc.writeFile(secret.Join(), EXT_KEY)
+}
+
+func (kc *KeyChainDir) InsertCert(wire []byte) error {
+	err := kc.mem.InsertCert(wire)
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(path, txt, 0644)
+	return kc.writeFile(wire, EXT_CERT)
 }
 
-func (kc *KeyChainDir) InsertCert(wire []byte) error {
-	// TODO: write to disk
-	return kc.mem.InsertCert(wire)
+func (kc *KeyChainDir) writeFile(wire []byte, ext string) error {
+	hash := sha256.Sum256(wire)
+	filename := hex.EncodeToString(hash[:])
+	path := filepath.Join(kc.path, filename+ext)
+
+	txt, err := security.TxtFrom(wire)
+	if err != nil {
+		return err
+	}
+
+	kc.wmut.Lock()
+	defer kc.wmut.Unlock()
+
+	return os.WriteFile(path, txt, 0644)
 }
