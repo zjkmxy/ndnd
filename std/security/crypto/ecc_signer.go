@@ -22,7 +22,7 @@ func (s *EccSigner) Type() ndn.SigType {
 	return ndn.SignatureSha256WithEcdsa
 }
 
-func (s *EccSigner) KeyLocator() enc.Name {
+func (s *EccSigner) KeyName() enc.Name {
 	return s.name
 }
 

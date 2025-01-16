@@ -109,7 +109,7 @@ func TestMakeDataMetaInfo(t *testing.T) {
 
 type testSigner struct{}
 
-func (testSigner) KeyLocator() enc.Name {
+func (testSigner) KeyName() enc.Name {
 	name, _ := enc.NameFromStr("/KEY")
 	return name
 }

@@ -11,7 +11,7 @@ import (
 // EncodeSecret encodes a key secret to a signed NDN Data packet.
 func EncodeSecret(key ndn.Signer) (enc.Wire, error) {
 	// Get key name
-	name := key.KeyLocator()
+	name := key.KeyName()
 	if name == nil {
 		return nil, ndn.ErrInvalidValue{Item: "key locator"}
 	}

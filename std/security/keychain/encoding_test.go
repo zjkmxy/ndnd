@@ -80,5 +80,5 @@ func TestDecodeSecret(t *testing.T) {
 
 	// check output signer
 	require.Equal(t, ndn.SignatureSha256WithRsa, signer.Type())
-	require.Equal(t, name, signer.KeyLocator())
+	require.Equal(t, name, signer.KeyName())
 }

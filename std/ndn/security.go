@@ -22,8 +22,8 @@ type Signature interface {
 type Signer interface {
 	// SigInfo returns the configuration of the signature.
 	Type() SigType
-	// KeyLocator returns the key name of the signer.
-	KeyLocator() enc.Name
+	// KeyName returns the key name of the signer.
+	KeyName() enc.Name
 	// EstimateSize gives the approximate size of the signature in bytes.
 	EstimateSize() uint
 	// Sign computes the signature value of a wire.
@@ -37,3 +37,23 @@ type Signer interface {
 // SigChecker is only designed for low-level engine.
 // Create a go routine for time consuming jobs.
 type SigChecker func(name enc.Name, sigCovered enc.Wire, sig Signature) bool
+
+// KeyChain is the interface of a keychain.
+type KeyChain interface {
+	// GetIdentity returns the identity by full name.
+	GetIdentity(enc.Name) Identity
+	// InsertKey inserts a key to the keychain.
+	InsertKey(Signer) error
+	// InsertCert inserts a certificate to the keychain.
+	InsertCert([]byte) error
+}
+
+// Identity is the interface of a signing identity.
+type Identity interface {
+	// Name returns the full name of the identity.
+	Name() enc.Name
+	// Signer returns the default signer of the identity.
+	Signer() Signer
+	// AllSigners returns all signers of the identity.
+	AllSigners() []Signer
+}

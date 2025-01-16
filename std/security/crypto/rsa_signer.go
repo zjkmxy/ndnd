@@ -21,7 +21,7 @@ func (s *RsaSigner) Type() ndn.SigType {
 	return ndn.SignatureSha256WithRsa
 }
 
-func (s *RsaSigner) KeyLocator() enc.Name {
+func (s *RsaSigner) KeyName() enc.Name {
 	return s.name
 }
 

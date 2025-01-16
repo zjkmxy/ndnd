@@ -19,7 +19,7 @@ var TEST_KEY_NAME, _ = enc.NameFromStr("/KEY")
 func testEd25519Verify(t *testing.T, signer ndn.Signer, verifyKey []byte) bool {
 	require.Equal(t, uint(ed25519.SignatureSize), signer.EstimateSize())
 	require.Equal(t, ndn.SignatureEd25519, signer.Type())
-	require.Equal(t, TEST_KEY_NAME, signer.KeyLocator())
+	require.Equal(t, TEST_KEY_NAME, signer.KeyName())
 
 	dataVal := enc.Wire{
 		[]byte("\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix"),

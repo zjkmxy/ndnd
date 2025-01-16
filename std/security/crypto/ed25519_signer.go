@@ -19,7 +19,7 @@ func (s *Ed25519Signer) Type() ndn.SigType {
 	return ndn.SignatureEd25519
 }
 
-func (s *Ed25519Signer) KeyLocator() enc.Name {
+func (s *Ed25519Signer) KeyName() enc.Name {
 	return s.name
 }
 

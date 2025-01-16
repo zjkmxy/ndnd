@@ -12,7 +12,7 @@ func (emptySigner) Type() ndn.SigType {
 	return ndn.SignatureEmptyTest
 }
 
-func (emptySigner) KeyLocator() enc.Name {
+func (emptySigner) KeyName() enc.Name {
 	return nil
 }
 

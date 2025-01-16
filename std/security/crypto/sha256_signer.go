@@ -14,7 +14,7 @@ func (Sha256Signer) Type() ndn.SigType {
 	return ndn.SignatureDigestSha256
 }
 
-func (Sha256Signer) KeyLocator() enc.Name {
+func (Sha256Signer) KeyName() enc.Name {
 	return nil
 }
 

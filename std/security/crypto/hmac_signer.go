@@ -17,7 +17,7 @@ func (signer *HmacSigner) Type() ndn.SigType {
 	return ndn.SignatureHmacWithSha256
 }
 
-func (*HmacSigner) KeyLocator() enc.Name {
+func (*HmacSigner) KeyName() enc.Name {
 	return nil
 }
 
