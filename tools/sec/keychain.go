@@ -170,4 +170,5 @@ func keychainGetKey(args []string) {
 }
 
 func keychainGetCert(args []string) {
+	panic("not implemented")
 }

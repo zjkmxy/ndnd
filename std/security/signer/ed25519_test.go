@@ -67,6 +67,11 @@ func TestEd25519Parse(t *testing.T) {
 	// Check that the two signers are the same.
 	pub1 := utils.WithoutErr(sgn1.Public())
 	require.True(t, testEd25519Verify(t, sgn2, pub1))
+
+	// Make sure parse fails with the public key.
+	pub2 := utils.WithoutErr(sgn1.Public())
+	_, err := signer.ParseEd25519(TEST_KEY_NAME, pub2)
+	require.Error(t, err)
 }
 
 // TestEd25519SignerCertificate tests the validator using a given certificate for interoperability.
