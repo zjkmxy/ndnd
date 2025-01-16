@@ -34,20 +34,12 @@ func PemEncode(raw []byte) ([]byte, error) {
 		"Name": data.Name().String(),
 	}
 
-	var pemType string
-	switch *data.ContentType() {
-	case ndn.ContentTypeKey:
-		pemType = PEM_TYPE_CERT
-	case ndn.ContentTypeSecret:
-		pemType = PEM_TYPE_SECRET
-	default:
-		return nil, errors.New("unsupported content type")
-	}
-
+	// Add validity period
 	if nb, na := data.Signature().Validity(); nb != nil && na != nil {
 		headers["Validity"] = nb.String() + " - " + na.String()
 	}
 
+	// Add signature type
 	switch data.Signature().SigType() {
 	case ndn.SignatureDigestSha256:
 		headers["SigType"] = "Digest-SHA256"
@@ -61,6 +53,22 @@ func PemEncode(raw []byte) ([]byte, error) {
 		headers["SigType"] = "Ed25519"
 	default:
 		headers["SigType"] = "Unknown"
+	}
+
+	// Add signing key for certificates
+	if k := data.Signature().KeyName(); k != nil && *data.ContentType() == ndn.ContentTypeKey {
+		headers["Key"] = k.String()
+	}
+
+	// Choose PEM type based on content type
+	var pemType string
+	switch *data.ContentType() {
+	case ndn.ContentTypeKey:
+		pemType = PEM_TYPE_CERT
+	case ndn.ContentTypeSecret:
+		pemType = PEM_TYPE_SECRET
+	default:
+		return nil, errors.New("unsupported content type")
 	}
 
 	return pem.EncodeToMemory(&pem.Block{
