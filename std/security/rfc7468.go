@@ -11,11 +11,11 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 )
 
-const TXT_TYPE_CERT = "NDN Certificate"
-const TXT_TYPE_SECRET = "NDN Key"
+const PEM_TYPE_CERT = "NDN Certificate"
+const PEM_TYPE_SECRET = "NDN Key"
 
-// TxtFrom converts an NDN data to a text representation following RFC 7468.
-func TxtFrom(raw []byte) ([]byte, error) {
+// PemEncode converts an NDN data to a text representation following RFC 7468.
+func PemEncode(raw []byte) ([]byte, error) {
 	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(raw))
 	if err != nil {
 		return nil, err
@@ -37,9 +37,9 @@ func TxtFrom(raw []byte) ([]byte, error) {
 	var pemType string
 	switch *data.ContentType() {
 	case ndn.ContentTypeKey:
-		pemType = TXT_TYPE_CERT
+		pemType = PEM_TYPE_CERT
 	case ndn.ContentTypeSecret:
-		pemType = TXT_TYPE_SECRET
+		pemType = PEM_TYPE_SECRET
 	default:
 		return nil, errors.New("unsupported content type")
 	}
@@ -70,18 +70,18 @@ func TxtFrom(raw []byte) ([]byte, error) {
 	}), nil
 }
 
-// TxtParse converts a text representation of an NDN data.
-func TxtParse(txt []byte) [][]byte {
+// PemDecode converts a text representation of an NDN data.
+func PemDecode(str []byte) [][]byte {
 	ret := make([][]byte, 0)
 
 	for {
-		block, rest := pem.Decode(txt)
+		block, rest := pem.Decode(str)
 		if block == nil {
 			break
 		}
-		txt = rest
+		str = rest
 
-		if block.Type != TXT_TYPE_CERT && block.Type != TXT_TYPE_SECRET {
+		if block.Type != PEM_TYPE_CERT && block.Type != PEM_TYPE_SECRET {
 			log.Warn(nil, "Unsupported PEM type", "type", block.Type)
 			continue
 		}

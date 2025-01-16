@@ -9,7 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/security"
 )
 
-func txtFrom(args []string) {
+func pemEncode(args []string) {
 	if len(args) > 1 {
 		fmt.Fprintln(os.Stderr, "Usage: Provide raw NDN data as input to stdin")
 		os.Exit(1)
@@ -21,7 +21,7 @@ func txtFrom(args []string) {
 		return
 	}
 
-	out, err := security.TxtFrom(input)
+	out, err := security.PemEncode(input)
 	if err != nil {
 		log.Fatal(nil, "Failed to convert to text", "err", err)
 		return
@@ -30,7 +30,7 @@ func txtFrom(args []string) {
 	os.Stdout.Write(out)
 }
 
-func txtParse(args []string) {
+func pemDecode(args []string) {
 	if len(args) > 1 {
 		fmt.Fprintln(os.Stderr, "Usage: Provide text format as input to stdin")
 		os.Exit(1)
@@ -42,7 +42,7 @@ func txtParse(args []string) {
 		return
 	}
 
-	out := security.TxtParse(input)
+	out := security.PemDecode(input)
 	if len(out) == 0 {
 		log.Fatal(nil, "No valid NDN data found")
 		return

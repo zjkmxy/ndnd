@@ -33,13 +33,13 @@ func GetSecCmdTree() utils.CmdTree {
 		}, {
 			// separator
 		}, {
-			Name: "txt-from",
-			Help: "Convert an NDN data to text representation",
-			Fun:  txtFrom,
+			Name: "pem-encode",
+			Help: "Encode an NDN data to PEM representation",
+			Fun:  pemEncode,
 		}, {
-			Name: "txt-parse",
-			Help: "Parse a text representation of an NDN data",
-			Fun:  txtParse,
+			Name: "pem-decode",
+			Help: "Decode a PEM representation of an NDN data",
+			Fun:  pemDecode,
 		}},
 	}
 }

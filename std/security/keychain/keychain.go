@@ -37,7 +37,7 @@ func InsertFile(kc ndn.KeyChain, content []byte) error {
 	if content[0] == 0x06 { // raw data
 		wires = append(wires, content)
 	} else { // try text
-		wires = security.TxtParse(content)
+		wires = security.PemDecode(content)
 		if len(wires) == 0 {
 			return errors.New("no valid keychain entry found")
 		}

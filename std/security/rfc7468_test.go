@@ -18,7 +18,7 @@ NTM5NTD9AP8PMjAyNjEyMzFUMjM1OTU5/QECKf0CACX9AgEIZnVsbG5hbWX9AgIV
 TkROIFRlc3RiZWQgUm9vdCAyMjA0F0gwRgIhAPYUOjNakdfDGh5j9dcCGOz+Ie1M
 qoAEsjM9PEUEWbnqAiEApu0rg9GAK1LNExjLYAF6qVgpWQgU+atPn63Gtuubqyg=`
 
-const CERT_TXT = `-----BEGIN NDN Certificate-----
+const CERT_PEM = `-----BEGIN NDN Certificate-----
 Name: /ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556
 SigType: ECDSA-SHA256
 Validity: 2022-04-29 15:39:50 +0000 UTC - 2026-12-31 23:59:59 +0000 UTC
@@ -33,18 +33,18 @@ qoAEsjM9PEUEWbnqAiEApu0rg9GAK1LNExjLYAF6qVgpWQgU+atPn63Gtuubqyg=
 -----END NDN Certificate-----
 `
 
-func TestTxtFromCert(t *testing.T) {
+func TestPemEncodeCert(t *testing.T) {
 	utils.SetTestingT(t)
 
 	cert, _ := base64.StdEncoding.DecodeString(CERT_B64)
-	res := utils.WithoutErr(security.TxtFrom(cert))
-	require.Equal(t, CERT_TXT, string(res))
+	res := utils.WithoutErr(security.PemEncode(cert))
+	require.Equal(t, CERT_PEM, string(res))
 }
 
-func TestTxtParseCert(t *testing.T) {
+func TestPemDecodeCert(t *testing.T) {
 	utils.SetTestingT(t)
 
 	cert, _ := base64.StdEncoding.DecodeString(CERT_B64)
-	res := security.TxtParse([]byte(CERT_TXT))
+	res := security.PemDecode([]byte(CERT_PEM))
 	require.Equal(t, cert, res[0])
 }

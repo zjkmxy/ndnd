@@ -104,7 +104,7 @@ func (kc *KeyChainDir) writeFile(wire []byte, ext string) error {
 	filename := hex.EncodeToString(hash[:])
 	path := filepath.Join(kc.path, filename+ext)
 
-	txt, err := security.TxtFrom(wire)
+	str, err := security.PemEncode(wire)
 	if err != nil {
 		return err
 	}
@@ -112,5 +112,5 @@ func (kc *KeyChainDir) writeFile(wire []byte, ext string) error {
 	kc.wmut.Lock()
 	defer kc.wmut.Unlock()
 
-	return os.WriteFile(path, txt, 0644)
+	return os.WriteFile(path, str, 0644)
 }

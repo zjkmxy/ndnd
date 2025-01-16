@@ -116,7 +116,7 @@ func keychainExportKey(args []string) {
 		os.Exit(1)
 	}
 
-	out, err := security.TxtFrom(secret.Join())
+	out, err := security.PemEncode(secret.Join())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to convert secret key to text: %s\n", err)
 		os.Exit(1)
