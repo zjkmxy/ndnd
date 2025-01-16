@@ -15,8 +15,9 @@ import (
 
 func keychainList(args []string) {
 	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s sec keychain list <keychain>\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "Example: %s sec keychain list dir:///safe/keys\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s <keychain>\n", args[0])
+		fmt.Fprintf(os.Stderr, "    keychain is the Keychain URI\n")
+		fmt.Fprintf(os.Stderr, "Example: %s dir:///safe/keys\n", args[0])
 		os.Exit(2)
 		return
 	}
@@ -39,8 +40,8 @@ func keychainList(args []string) {
 
 func keychainImport(args []string) {
 	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s sec keychain import <keychain>\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "   expects import data on stdin\n")
+		fmt.Fprintf(os.Stderr, "Usage: %s <keychain>\n", args[0])
+		fmt.Fprintf(os.Stderr, "    Expects import data on stdin\n")
 		os.Exit(2)
 		return
 	}
@@ -70,8 +71,8 @@ func keychainImport(args []string) {
 
 func keychainGetKey(args []string) {
 	if len(args) != 3 {
-		fmt.Fprintf(os.Stderr, "Usage: %s sec keychain get-key <keychain> <key-name>\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "    if no KEY is specified, export the default identity key\n")
+		fmt.Fprintf(os.Stderr, "Usage: %s <keychain> <key-name>\n", args[0])
+		fmt.Fprintf(os.Stderr, "    If no KEY is specified, export the default identity key\n")
 		os.Exit(1)
 		return
 	}

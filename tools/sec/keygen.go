@@ -14,9 +14,9 @@ import (
 
 func keygen(args []string) {
 	if len(args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: sec keygen <identity> <key-type> [params]\n")
+		fmt.Fprintf(os.Stderr, "Usage: %s <identity> <key-type> [params]\n", args[0])
 		fmt.Fprintf(os.Stderr, "  key-type: rsa|ecc|ed25519\n")
-		fmt.Fprintf(os.Stderr, "Example: %s sec keygen /ndn/alice ed25519\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Example: %s /ndn/alice ed25519\n", args[0])
 		os.Exit(2)
 		return
 	}

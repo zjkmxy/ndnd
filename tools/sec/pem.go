@@ -10,8 +10,8 @@ import (
 
 func pemEncode(args []string) {
 	if len(args) > 1 {
-		fmt.Fprintf(os.Stderr, "Usage: %s sec pem-encode\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  provide raw data as input to stdin\n")
+		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
+		fmt.Fprintf(os.Stderr, "    provide raw data as input to stdin\n")
 		os.Exit(2)
 		return
 	}
@@ -35,8 +35,8 @@ func pemEncode(args []string) {
 
 func pemDecode(args []string) {
 	if len(args) != 1 {
-		fmt.Fprintf(os.Stderr, "Usage: %s sec pem-decode\n", os.Args[0])
-		fmt.Fprintln(os.Stderr, "  provide PEM input to stdin")
+		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
+		fmt.Fprintln(os.Stderr, "    provide PEM input to stdin")
 		os.Exit(2)
 		return
 	}
