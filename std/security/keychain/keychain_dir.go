@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -34,6 +35,11 @@ func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 		return nil, err
 	}
 	for _, entry := range entries {
+		if !strings.HasSuffix(entry.Name(), ".key") &&
+			!strings.HasSuffix(entry.Name(), ".cert") {
+			continue
+		}
+
 		if entry.IsDir() {
 			continue
 		}
