@@ -9,7 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	rdr "github.com/named-data/ndnd/std/ndn/rdr_2024"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/security/signer"
+	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -134,9 +134,9 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 // The input data will be freed as the object is segmented.
 func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
 	// TODO: sign the data
-	sgn := signer.NewSha256Signer()
+	signer := sig.NewSha256Signer()
 
-	return Produce(args, c.store, sgn)
+	return Produce(args, c.store, signer)
 }
 
 // Remove an object from the client's store by name

@@ -7,7 +7,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/security/signer"
+	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -42,10 +42,10 @@ func TestEncodeSecret(t *testing.T) {
 
 	// create signer
 	secret, _ := base64.StdEncoding.DecodeString(RSA_KEY_SECRET)
-	sgn := utils.WithoutErr(signer.ParseRsa(RSA_KEY_NAME, secret))
+	signer := utils.WithoutErr(sig.ParseRsa(RSA_KEY_NAME, secret))
 
 	// encode signer secret
-	wire := utils.WithoutErr(signer.EncodeSecret(sgn))
+	wire := utils.WithoutErr(sig.EncodeSecret(signer))
 
 	// check output data
 	data, _, err := spec.Spec{}.ReadData(enc.NewWireReader(wire))
@@ -63,10 +63,10 @@ func TestDecodeSecret(t *testing.T) {
 	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(dataRaw))
 	require.NoError(t, err)
 
-	sgn, err := signer.DecodeSecret(data)
+	signer, err := sig.DecodeSecret(data)
 	require.NoError(t, err)
 
 	// check output signer
-	require.Equal(t, ndn.SignatureSha256WithRsa, sgn.Type())
-	require.Equal(t, RSA_KEY_NAME, sgn.KeyName())
+	require.Equal(t, ndn.SignatureSha256WithRsa, signer.Type())
+	require.Equal(t, RSA_KEY_NAME, signer.KeyName())
 }

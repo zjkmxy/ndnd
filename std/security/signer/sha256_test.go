@@ -5,7 +5,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/security/signer"
+	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -14,12 +14,12 @@ func TestSha256Signer(t *testing.T) {
 	utils.SetTestingT(t)
 
 	// Create a signature.
-	sgn := signer.NewSha256Signer()
-	sig := utils.WithoutErr(sgn.Sign(enc.Wire{[]byte("hello")}))
+	signer := sig.NewSha256Signer()
+	sig := utils.WithoutErr(signer.Sign(enc.Wire{[]byte("hello")}))
 
-	require.Equal(t, ndn.SignatureDigestSha256, sgn.Type())
-	require.Equal(t, uint(32), sgn.EstimateSize())
-	require.Equal(t, enc.Name(nil), sgn.KeyName())
+	require.Equal(t, ndn.SignatureDigestSha256, signer.Type())
+	require.Equal(t, uint(32), signer.EstimateSize())
+	require.Equal(t, enc.Name(nil), signer.KeyName())
 	require.Equal(t, []byte{
 		0x2c, 0xf2, 0x4d, 0xba, 0x5f, 0xb0, 0xa3, 0x0e, 0x26, 0xe8, 0x3b, 0x2a, 0xc5,
 		0xb9, 0xe2, 0x9e, 0x1b, 0x16, 0x1e, 0x5c, 0x1f, 0xa7, 0x42, 0x5e, 0x73, 0x04,

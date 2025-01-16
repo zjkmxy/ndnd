@@ -9,7 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/object"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
-	"github.com/named-data/ndnd/std/security/signer"
+	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -48,23 +48,23 @@ func TestKeyChainMem(t *testing.T) {
 
 	// Insert a key
 	idName, _ := enc.NameFromStr("/my/test/identity")
-	sgn := utils.WithoutErr(signer.KeygenEd25519(sec.MakeKeyName(idName)))
-	require.NoError(t, kc.InsertKey(sgn))
+	signer := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName)))
+	require.NoError(t, kc.InsertKey(signer))
 
 	// Check key in keychain
 	identity := kc.GetIdentity(idName)
 	require.NotNil(t, identity)
 	require.Equal(t, idName, identity.Name())
 	require.Len(t, identity.AllSigners(), 1)
-	require.Equal(t, sgn, identity.Signer())
+	require.Equal(t, signer, identity.Signer())
 
 	// Insert another key for the same identity
-	sgn2 := utils.WithoutErr(signer.KeygenEd25519(sec.MakeKeyName(idName)))
-	require.NoError(t, kc.InsertKey(sgn2))
+	signer2 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName)))
+	require.NoError(t, kc.InsertKey(signer2))
 	identity = kc.GetIdentity(idName)
 	require.NotNil(t, identity)
 	require.Len(t, identity.AllSigners(), 2)
-	require.Equal(t, sgn2, identity.Signer())
+	require.Equal(t, signer2, identity.Signer())
 
 	// Lookup non-existing identity
 	idName2, _ := enc.NameFromStr("/my/test/identity2")
@@ -72,16 +72,16 @@ func TestKeyChainMem(t *testing.T) {
 	require.Nil(t, identity)
 
 	// Insert key for different identity
-	sgn3 := utils.WithoutErr(signer.KeygenEd25519(sec.MakeKeyName(idName2)))
-	require.NoError(t, kc.InsertKey(sgn3))
+	signer3 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
+	require.NoError(t, kc.InsertKey(signer3))
 	identity = kc.GetIdentity(idName2)
 	require.NotNil(t, identity)
 	require.Len(t, identity.AllSigners(), 1)
-	require.Equal(t, sgn3, identity.Signer())
+	require.Equal(t, signer3, identity.Signer())
 
 	// Insert invalid key
-	sgn4 := signer.NewSha256Signer()
-	require.Error(t, kc.InsertKey(sgn4))
+	signer4 := sig.NewSha256Signer()
+	require.Error(t, kc.InsertKey(signer4))
 
 	// Insert a certificate.
 	certRoot, _ := base64.StdEncoding.DecodeString(CERT_ROOT)

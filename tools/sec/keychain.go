@@ -11,7 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
-	"github.com/named-data/ndnd/std/security/signer"
+	sig "github.com/named-data/ndnd/std/security/signer"
 )
 
 func keychainList(args []string) {
@@ -135,24 +135,24 @@ func keychainGetKey(args []string) {
 		return
 	}
 
-	var sgn ndn.Signer
+	var signer ndn.Signer
 	if keyName == nil {
-		sgn = idObj.Signer()
+		signer = idObj.Signer()
 	} else {
-		for _, key := range idObj.AllSigners() {
-			if key.KeyName().Equal(keyName) {
-				sgn = key
+		for _, s := range idObj.AllSigners() {
+			if s.KeyName().Equal(keyName) {
+				signer = s
 				break
 			}
 		}
 	}
-	if sgn == nil {
+	if signer == nil {
 		fmt.Fprintf(os.Stderr, "Key not found: %s\n", keyName)
 		os.Exit(1)
 		return
 	}
 
-	secret, err := signer.EncodeSecret(sgn)
+	secret, err := sig.EncodeSecret(signer)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to encode secret key: %s\n", err)
 		os.Exit(1)

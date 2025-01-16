@@ -22,12 +22,15 @@ func signCert(args []string) {
 	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <key-file>\n", args[0])
 		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Expects CSR input on stdin\n")
-		fmt.Fprintf(os.Stderr, "Signer key and CSR can be TLV or PEM encoded\n")
+		fmt.Fprintf(os.Stderr, "Expects CSR input on stdin.\n")
+		fmt.Fprintf(os.Stderr, "Signer key and CSR can be TLV or PEM encoded.\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "CSR can be either a self-signed certificate or a secret key.\n")
+		fmt.Fprintf(os.Stderr, "To generate a self-signed certificate, provide the same key\n")
+		fmt.Fprintf(os.Stderr, "file as both the signer key and the CSR.\n")
 		fmt.Fprintf(os.Stderr, "\n")
 		flagset.PrintDefaults()
 	}
-
 	flagset.StringVar(&flags.Start, "start", start_default, "Validity start time in YYYYMMDDhhmmss format")
 	flagset.StringVar(&flags.End, "end", end_default, "Validity end time in YYYYMMDDhhmmss format")
 	flagset.StringVar(&flags.Info, "info", "", "Additional info to be included in the certificate")

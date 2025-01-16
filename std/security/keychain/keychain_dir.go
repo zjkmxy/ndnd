@@ -12,8 +12,8 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/security"
-	"github.com/named-data/ndnd/std/security/signer"
+	sec "github.com/named-data/ndnd/std/security"
+	sig "github.com/named-data/ndnd/std/security/signer"
 )
 
 const EXT_KEY = ".key"
@@ -77,13 +77,13 @@ func (kc *KeyChainDir) GetIdentity(name enc.Name) ndn.Identity {
 	return kc.mem.GetIdentity(name)
 }
 
-func (kc *KeyChainDir) InsertKey(sgn ndn.Signer) error {
-	err := kc.mem.InsertKey(sgn)
+func (kc *KeyChainDir) InsertKey(signer ndn.Signer) error {
+	err := kc.mem.InsertKey(signer)
 	if err != nil {
 		return err
 	}
 
-	secret, err := signer.EncodeSecret(sgn)
+	secret, err := sig.EncodeSecret(signer)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (kc *KeyChainDir) writeFile(wire []byte, ext string) error {
 	filename := hex.EncodeToString(hash[:])
 	path := filepath.Join(kc.path, filename+ext)
 
-	str, err := security.PemEncode(wire)
+	str, err := sec.PemEncode(wire)
 	if err != nil {
 		return err
 	}

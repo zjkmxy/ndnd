@@ -10,7 +10,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/security"
-	"github.com/named-data/ndnd/std/security/signer"
+	sig "github.com/named-data/ndnd/std/security/signer"
 )
 
 func keygen(args []string) {
@@ -41,9 +41,9 @@ func keygen(args []string) {
 	}
 
 	name = security.MakeKeyName(name)
-	sgn := keygenType(args[3:], name, argKeyType)
+	signer := keygenType(args[3:], name, argKeyType)
 
-	secret, err := signer.EncodeSecret(sgn)
+	secret, err := sig.EncodeSecret(signer)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to encode secret key: %s\n", err)
 		os.Exit(1)
@@ -89,24 +89,24 @@ func keygenRsa(args []string, name enc.Name) ndn.Signer {
 		return nil
 	}
 
-	sgn, err := signer.KeygenRsa(name, keySize)
+	signer, err := sig.KeygenRsa(name, keySize)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate RSA key: %s\n", err)
 		os.Exit(1)
 		return nil
 	}
 
-	return sgn
+	return signer
 }
 
 func keygenEd25519(_ []string, name enc.Name) ndn.Signer {
-	sgn, err := signer.KeygenEd25519(name)
+	signer, err := sig.KeygenEd25519(name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate Ed25519 key: %s\n", err)
 		os.Exit(1)
 		return nil
 	}
-	return sgn
+	return signer
 }
 
 func keygecEcc(args []string, name enc.Name) ndn.Signer {
@@ -131,11 +131,11 @@ func keygecEcc(args []string, name enc.Name) ndn.Signer {
 		return nil
 	}
 
-	sgn, err := signer.KeygenEcc(name, curve)
+	signer, err := sig.KeygenEcc(name, curve)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate EC key: %s\n", err)
 		os.Exit(1)
 		return nil
 	}
-	return sgn
+	return signer
 }
