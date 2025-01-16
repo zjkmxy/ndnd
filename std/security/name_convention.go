@@ -26,6 +26,25 @@ func GetIdentityFromKeyName(name enc.Name) (enc.Name, error) {
 	if name[len(name)-2].String() != "KEY" {
 		return nil, ndn.ErrInvalidValue{Item: "KEY component"}
 	}
+	return name[:len(name)-2], nil
+}
 
+// MakeCertName generates a new certificate name for a given key name.
+func MakeCertName(keyName enc.Name, issuerId enc.Component, version uint64) (enc.Name, error) {
+	_, err := GetIdentityFromKeyName(keyName) // Check if key name is valid
+	if err != nil {
+		return nil, err
+	}
+	return keyName.Append(issuerId, enc.NewVersionComponent(version)), nil
+}
+
+// GetKeyNameFromCertName extracts the key name from a certificate name.
+func GetKeyNameFromCertName(name enc.Name) (enc.Name, error) {
+	if len(name) < 5 {
+		return nil, ndn.ErrInvalidValue{Item: "certificate name"}
+	}
+	if name[len(name)-4].String() != "KEY" {
+		return nil, ndn.ErrInvalidValue{Item: "KEY component"}
+	}
 	return name[:len(name)-2], nil
 }

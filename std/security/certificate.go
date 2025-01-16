@@ -1,7 +1,89 @@
 package security
 
-import "github.com/named-data/ndnd/std/ndn"
+import (
+	"time"
 
-func SignCert(signer ndn.Signer) {
+	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/utils"
+)
 
+// SignCertArgs are the arguments to SignCert.
+type SignCertArgs struct {
+	// Signer is the private key used to sign the certificate.
+	Signer ndn.Signer
+	// Data is the CSR or Key to be signed.
+	Data ndn.Data
+	// IssuerId is the issuer ID to be included in the certificate name.
+	IssuerId enc.Component
+	// NotBefore is the start of the certificate validity period.
+	NotBefore time.Time
+	// NotAfter is the end of the certificate validity period.
+	NotAfter time.Time
+	// Description is extra information to be included in the certificate.
+	Description map[string]string
+}
+
+// SignCert signs a new NDN certificate with the given signer.
+// Data must have either a Key or Secret in the Content.
+func SignCert(args SignCertArgs) (enc.Wire, error) {
+	if args.Signer == nil || args.Data == nil || args.IssuerId.Typ == 0 {
+		return nil, ndn.ErrInvalidValue{Item: "SignCertArgs", Value: args}
+	}
+
+	pk, keyName, err := getPubKey(args.Data)
+	if err != nil {
+		return nil, err
+	}
+	certName, err := MakeCertName(keyName, args.IssuerId, uint64(time.Now().UnixMilli()))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: set validity and description
+	cfg := &ndn.DataConfig{
+		ContentType: utils.IdPtr(ndn.ContentTypeKey),
+		Freshness:   utils.IdPtr(time.Hour),
+	}
+	cert, err := spec.Spec{}.MakeData(certName, cfg, enc.Wire{pk}, args.Signer)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert.Wire, nil
+}
+
+// getPubKey gets the public key from an NDN data.
+// returns [public key, key name, error].
+func getPubKey(data ndn.Data) ([]byte, enc.Name, error) {
+	if data.ContentType() == nil {
+		return nil, nil, ndn.ErrInvalidValue{Item: "Data.ContentType", Value: nil}
+	}
+
+	switch *data.ContentType() {
+	case ndn.ContentTypeKey:
+		// Content is public key, return directly
+		pub := data.Content().Join()
+		keyName, err := GetKeyNameFromCertName(data.Name())
+		if err != nil {
+			return nil, nil, err
+		}
+		return pub, keyName, nil
+	case ndn.ContentTypeSecret:
+		// Content is private key, parse the signer
+		signer, err := sig.DecodeSecret(data)
+		if err != nil {
+			return nil, nil, err
+		}
+		pub, err := signer.Public()
+		if err != nil {
+			return nil, nil, err
+		}
+		return pub, signer.KeyName(), nil
+	default:
+		// Invalid content type
+		return nil, nil, ndn.ErrInvalidValue{Item: "Data.ContentType", Value: *data.ContentType()}
+	}
 }
