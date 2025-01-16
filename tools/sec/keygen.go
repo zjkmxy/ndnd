@@ -31,7 +31,7 @@ func keygen(args []string) {
 		os.Exit(1)
 	}
 
-	name = keychain.MakeKeyName(name)
+	name = security.MakeKeyName(name)
 
 	var signer ndn.Signer
 	switch keyType {

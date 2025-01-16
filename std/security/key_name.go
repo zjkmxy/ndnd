@@ -1,4 +1,4 @@
-package keychain
+package security
 
 import (
 	"crypto/rand"

@@ -7,6 +7,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/object"
+	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/crypto"
 	"github.com/named-data/ndnd/std/security/keychain"
 	"github.com/named-data/ndnd/std/utils"
@@ -47,7 +48,7 @@ func TestKeyChainMem(t *testing.T) {
 
 	// Insert a key
 	idName, _ := enc.NameFromStr("/my/test/identity")
-	signer := utils.WithoutErr(crypto.KeygenEd25519(keychain.MakeKeyName(idName)))
+	signer := utils.WithoutErr(crypto.KeygenEd25519(sec.MakeKeyName(idName)))
 	require.NoError(t, kc.InsertKey(signer))
 
 	// Check key in keychain
@@ -58,7 +59,7 @@ func TestKeyChainMem(t *testing.T) {
 	require.Equal(t, signer, identity.Signer())
 
 	// Insert another key for the same identity
-	signer2 := utils.WithoutErr(crypto.KeygenEd25519(keychain.MakeKeyName(idName)))
+	signer2 := utils.WithoutErr(crypto.KeygenEd25519(sec.MakeKeyName(idName)))
 	require.NoError(t, kc.InsertKey(signer2))
 	identity = kc.GetIdentity(idName)
 	require.NotNil(t, identity)
@@ -71,7 +72,7 @@ func TestKeyChainMem(t *testing.T) {
 	require.Nil(t, identity)
 
 	// Insert key for different identity
-	signer3 := utils.WithoutErr(crypto.KeygenEd25519(keychain.MakeKeyName(idName2)))
+	signer3 := utils.WithoutErr(crypto.KeygenEd25519(sec.MakeKeyName(idName2)))
 	require.NoError(t, kc.InsertKey(signer3))
 	identity = kc.GetIdentity(idName2)
 	require.NotNil(t, identity)

@@ -6,6 +6,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	sec "github.com/named-data/ndnd/std/security"
 )
 
 // KeyChainMem is an in-memory keychain.
@@ -35,7 +36,7 @@ func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	defer kc.mut.Unlock()
 
 	// Get key name
-	id, err := GetIdentityFromKeyName(signer.KeyName())
+	id, err := sec.GetIdentityFromKeyName(signer.KeyName())
 	if err != nil {
 		return err
 	}
