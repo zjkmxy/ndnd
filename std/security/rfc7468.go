@@ -71,7 +71,7 @@ func PemEncode(raw []byte) ([]byte, error) {
 	switch *data.ContentType() {
 	case ndn.ContentTypeKey:
 		pemType = PEM_TYPE_CERT
-	case ndn.ContentTypeSecret:
+	case ndn.ContentTypeSigKey:
 		pemType = PEM_TYPE_SECRET
 	default:
 		return nil, errors.New("unsupported content type")
