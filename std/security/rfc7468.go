@@ -15,6 +15,11 @@ import (
 const PEM_TYPE_CERT = "NDN CERT"
 const PEM_TYPE_SECRET = "NDN KEY"
 
+const PEM_HEADER_NAME = "Name"
+const PEM_HEADER_VALIDITY = "Validity"
+const PEM_HEADER_SIGTYPE = "SigType"
+const PEM_HEADER_KEY = "Key"
+
 // PemEncode converts an NDN data to a text representation following RFC 7468.
 func PemEncode(raw []byte) ([]byte, error) {
 	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(raw))
@@ -32,33 +37,33 @@ func PemEncode(raw []byte) ([]byte, error) {
 
 	// Explanatory text before the block
 	headers := map[string]string{
-		"Name": data.Name().String(),
+		PEM_HEADER_NAME: data.Name().String(),
 	}
 
 	// Add validity period
 	if nb, na := data.Signature().Validity(); nb != nil && na != nil {
-		headers["Validity"] = fmt.Sprintf("%s - %s", *nb, *na)
+		headers[PEM_HEADER_VALIDITY] = fmt.Sprintf("%s - %s", *nb, *na)
 	}
 
 	// Add signature type
 	switch data.Signature().SigType() {
 	case ndn.SignatureDigestSha256:
-		headers["SigType"] = "Digest-SHA256"
+		headers[PEM_HEADER_SIGTYPE] = "Digest-SHA256"
 	case ndn.SignatureSha256WithRsa:
-		headers["SigType"] = "RSA-SHA256"
+		headers[PEM_HEADER_SIGTYPE] = "RSA-SHA256"
 	case ndn.SignatureSha256WithEcdsa:
-		headers["SigType"] = "ECDSA-SHA256"
+		headers[PEM_HEADER_SIGTYPE] = "ECDSA-SHA256"
 	case ndn.SignatureHmacWithSha256:
-		headers["SigType"] = "HMAC-SHA256"
+		headers[PEM_HEADER_SIGTYPE] = "HMAC-SHA256"
 	case ndn.SignatureEd25519:
-		headers["SigType"] = "Ed25519"
+		headers[PEM_HEADER_SIGTYPE] = "Ed25519"
 	default:
-		headers["SigType"] = "Unknown"
+		headers[PEM_HEADER_SIGTYPE] = "Unknown"
 	}
 
 	// Add signing key for certificates
 	if k := data.Signature().KeyName(); k != nil && *data.ContentType() == ndn.ContentTypeKey {
-		headers["Key"] = k.String()
+		headers[PEM_HEADER_KEY] = k.String()
 	}
 
 	// Choose PEM type based on content type
