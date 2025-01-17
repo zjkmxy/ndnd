@@ -83,7 +83,7 @@ func (kc *KeyChainDir) InsertKey(signer ndn.Signer) error {
 		return err
 	}
 
-	secret, err := sig.EncodeSecret(signer)
+	secret, err := sig.MarshalSecret(signer)
 	if err != nil {
 		return err
 	}

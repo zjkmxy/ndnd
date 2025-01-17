@@ -152,7 +152,7 @@ func keychainGetKey(args []string) {
 		return
 	}
 
-	secret, err := sig.EncodeSecret(signer)
+	secret, err := sig.MarshalSecret(signer)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to encode secret key: %s\n", err)
 		os.Exit(1)

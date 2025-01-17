@@ -37,7 +37,7 @@ qEa4Xg1H5/+zKy2mdI82/AcbsQJslRxC32g0ZfmDPKs=
 
 var RSA_KEY_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/e%9A%F2%15%21%FF2%F1")
 
-func TestEncodeSecret(t *testing.T) {
+func TestMarshalSecret(t *testing.T) {
 	utils.SetTestingT(t)
 
 	// create signer
@@ -45,7 +45,7 @@ func TestEncodeSecret(t *testing.T) {
 	signer := utils.WithoutErr(sig.ParseRsa(RSA_KEY_NAME, secret))
 
 	// encode signer secret
-	wire := utils.WithoutErr(sig.EncodeSecret(signer))
+	wire := utils.WithoutErr(sig.MarshalSecret(signer))
 
 	// check output data
 	data, _, err := spec.Spec{}.ReadData(enc.NewWireReader(wire))
@@ -55,7 +55,7 @@ func TestEncodeSecret(t *testing.T) {
 	require.Equal(t, secret, data.Content().Join())
 }
 
-func TestDecodeSecret(t *testing.T) {
+func TestUnmarshalSecret(t *testing.T) {
 	utils.SetTestingT(t)
 
 	// get static secret data
@@ -63,7 +63,7 @@ func TestDecodeSecret(t *testing.T) {
 	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(dataRaw))
 	require.NoError(t, err)
 
-	signer, err := sig.DecodeSecret(data)
+	signer, err := sig.UnmarshalSecret(data)
 	require.NoError(t, err)
 
 	// check output signer

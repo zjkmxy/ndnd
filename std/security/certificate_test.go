@@ -29,7 +29,7 @@ func TestSignCertSelf(t *testing.T) {
 
 	aliceKey, _ := base64.StdEncoding.DecodeString(KEY_ALICE)
 	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferReader(aliceKey))
-	aliceSigner := utils.WithoutErr(signer.DecodeSecret(aliceKeyData))
+	aliceSigner := utils.WithoutErr(signer.UnmarshalSecret(aliceKeyData))
 
 	// self-sign alice's key
 	aliceCert, err := sec.SignCert(sec.SignCertArgs{
@@ -76,7 +76,7 @@ func TestSignCertOther(t *testing.T) {
 
 	aliceKey, _ := base64.StdEncoding.DecodeString(KEY_ALICE)
 	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferReader(aliceKey))
-	aliceSigner := utils.WithoutErr(signer.DecodeSecret(aliceKeyData))
+	aliceSigner := utils.WithoutErr(signer.UnmarshalSecret(aliceKeyData))
 
 	// parse existing certificate
 	rootCert, _ := base64.StdEncoding.DecodeString(CERT_ROOT)

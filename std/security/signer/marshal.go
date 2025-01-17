@@ -21,8 +21,8 @@ func GetSecret(key ndn.Signer) ([]byte, error) {
 	}
 }
 
-// EncodeSecret encodes a key secret to a signed NDN Data packet.
-func EncodeSecret(key ndn.Signer) (enc.Wire, error) {
+// MarshalSecret encodes a key secret to a signed NDN Data packet.
+func MarshalSecret(key ndn.Signer) (enc.Wire, error) {
 	// Get key name
 	name := key.KeyName()
 	if name == nil {
@@ -49,8 +49,8 @@ func EncodeSecret(key ndn.Signer) (enc.Wire, error) {
 	return data.Wire, nil
 }
 
-// DecodeSecret decodes a signed NDN Data packet to a key secret.
-func DecodeSecret(data ndn.Data) (ndn.Signer, error) {
+// UnmarshalSecret decodes a signed NDN Data packet to a key secret.
+func UnmarshalSecret(data ndn.Data) (ndn.Signer, error) {
 	// Check data content type
 	if data.ContentType() == nil || *data.ContentType() != ndn.ContentTypeSecret {
 		return nil, ndn.ErrInvalidValue{Item: "content type"}

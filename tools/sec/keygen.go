@@ -43,14 +43,14 @@ func keygen(args []string) {
 	name = security.MakeKeyName(name)
 	signer := keygenType(args[3:], name, argKeyType)
 
-	secret, err := sig.EncodeSecret(signer)
+	data, err := sig.MarshalSecret(signer)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to encode secret key: %s\n", err)
 		os.Exit(1)
 		return
 	}
 
-	out, err := security.PemEncode(secret.Join())
+	out, err := security.PemEncode(data.Join())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to convert secret key to text: %s\n", err)
 		os.Exit(1)

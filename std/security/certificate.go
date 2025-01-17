@@ -88,7 +88,7 @@ func getPubKey(data ndn.Data) ([]byte, enc.Name, error) {
 		return pub, keyName, nil
 	case ndn.ContentTypeSecret:
 		// Content is private key, parse the signer
-		signer, err := sig.DecodeSecret(data)
+		signer, err := sig.UnmarshalSecret(data)
 		if err != nil {
 			return nil, nil, err
 		}
