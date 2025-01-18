@@ -188,6 +188,21 @@ func (s *LvsSchema) Match(name enc.Name) []*LvsNode {
 	return ret
 }
 
+func (s *LvsSchema) Check(pkt enc.Name, key enc.Name) bool {
+	pktNodes := s.Match(pkt)
+	keyNodes := s.Match(key)
+	for _, pktNode := range pktNodes {
+		for _, sc := range pktNode.SignCons {
+			for _, keyNode := range keyNodes {
+				if keyNode.Id == sc {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (s *LvsSchema) checkCons(
 	value enc.Component,
 	context map[uint64]enc.Component,
