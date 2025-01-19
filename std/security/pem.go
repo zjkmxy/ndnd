@@ -18,7 +18,7 @@ const PEM_TYPE_SECRET = "NDN KEY"
 const PEM_HEADER_NAME = "Name"
 const PEM_HEADER_VALIDITY = "Validity"
 const PEM_HEADER_SIGTYPE = "SigType"
-const PEM_HEADER_KEY = "Key"
+const PEM_HEADER_KEY = "SignerKey"
 
 // PemEncode converts an NDN data to a text representation following RFC 7468.
 func PemEncode(raw []byte) ([]byte, error) {
