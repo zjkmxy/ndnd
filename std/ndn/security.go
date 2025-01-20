@@ -39,6 +39,7 @@ type Signer interface {
 type SigChecker func(name enc.Name, sigCovered enc.Wire, sig Signature) bool
 
 // KeyChain is the interface of a keychain.
+// Note that Keychains are not thread-safe, and the owner should provide a lock.
 type KeyChain interface {
 	// String provides the log identifier of the keychain.
 	String() string

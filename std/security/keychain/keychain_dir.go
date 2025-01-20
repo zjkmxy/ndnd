@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -21,7 +20,6 @@ const EXT_CERT = ".cert"
 
 // KeyChainDir is a directory-based keychain.
 type KeyChainDir struct {
-	wmut sync.Mutex
 	mem  ndn.KeyChain
 	path string
 }
@@ -29,7 +27,6 @@ type KeyChainDir struct {
 // NewKeyChainDir creates a new in-memory keychain.
 func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 	kc := &KeyChainDir{
-		wmut: sync.Mutex{},
 		mem:  NewKeyChainMem(pubStore),
 		path: path,
 	}
@@ -66,7 +63,7 @@ func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 }
 
 func (kc *KeyChainDir) String() string {
-	return fmt.Sprintf("KeyChainDir (%s)", kc.path)
+	return fmt.Sprintf("keychain-dir (%s)", kc.path)
 }
 
 func (kc *KeyChainDir) GetIdentities() []ndn.Identity {
@@ -109,9 +106,6 @@ func (kc *KeyChainDir) writeFile(wire []byte, ext string) error {
 	if err != nil {
 		return err
 	}
-
-	kc.wmut.Lock()
-	defer kc.wmut.Unlock()
 
 	return os.WriteFile(path, str, 0644)
 }

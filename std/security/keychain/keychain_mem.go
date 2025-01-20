@@ -1,8 +1,6 @@
 package keychain
 
 import (
-	"sync"
-
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
@@ -11,7 +9,6 @@ import (
 
 // KeyChainMem is an in-memory keychain.
 type KeyChainMem struct {
-	mut        sync.RWMutex
 	identities map[string]*identity
 	pubStore   ndn.Store
 }
@@ -19,15 +16,16 @@ type KeyChainMem struct {
 // NewKeyChainMem creates a new in-memory keychain.
 func NewKeyChainMem(pubStore ndn.Store) ndn.KeyChain {
 	return &KeyChainMem{
-		mut:        sync.RWMutex{},
 		identities: make(map[string]*identity),
 		pubStore:   pubStore,
 	}
 }
 
+func (kc *KeyChainMem) String() string {
+	return "keychain-mem"
+}
+
 func (kc *KeyChainMem) GetIdentities() []ndn.Identity {
-	kc.mut.RLock()
-	defer kc.mut.RUnlock()
 	ids := make([]ndn.Identity, 0, len(kc.identities))
 	for _, id := range kc.identities {
 		ids = append(ids, id)
@@ -36,8 +34,6 @@ func (kc *KeyChainMem) GetIdentities() []ndn.Identity {
 }
 
 func (kc *KeyChainMem) GetIdentity(name enc.Name) ndn.Identity {
-	kc.mut.RLock()
-	defer kc.mut.RUnlock()
 	if id, ok := kc.identities[name.String()]; ok {
 		return id
 	}
@@ -45,9 +41,6 @@ func (kc *KeyChainMem) GetIdentity(name enc.Name) ndn.Identity {
 }
 
 func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
-	kc.mut.Lock()
-	defer kc.mut.Unlock()
-
 	// Get key name
 	id, err := sec.GetIdentityFromKeyName(signer.KeyName())
 	if err != nil {
@@ -66,10 +59,6 @@ func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	// TODO: fix sort order
 
 	return nil
-}
-
-func (kc *KeyChainMem) String() string {
-	return "keychain-mem"
 }
 
 func (kc *KeyChainMem) InsertCert(wire []byte) error {
