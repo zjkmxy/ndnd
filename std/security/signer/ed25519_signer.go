@@ -23,6 +23,10 @@ func (s *ed25519Signer) KeyName() enc.Name {
 	return s.name
 }
 
+func (s *ed25519Signer) KeyLocator() enc.Name {
+	return s.name
+}
+
 func (s *ed25519Signer) EstimateSize() uint {
 	return ed25519.SignatureSize
 }

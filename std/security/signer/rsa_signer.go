@@ -25,6 +25,10 @@ func (s *rsaSigner) KeyName() enc.Name {
 	return s.name
 }
 
+func (s *rsaSigner) KeyLocator() enc.Name {
+	return s.name
+}
+
 func (s *rsaSigner) EstimateSize() uint {
 	return uint(s.key.Size())
 }

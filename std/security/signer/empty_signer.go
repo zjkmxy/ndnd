@@ -16,6 +16,10 @@ func (emptySigner) KeyName() enc.Name {
 	return nil
 }
 
+func (emptySigner) KeyLocator() enc.Name {
+	return nil
+}
+
 func (emptySigner) EstimateSize() uint {
 	return 0
 }

@@ -114,6 +114,10 @@ func (testSigner) KeyName() enc.Name {
 	return name
 }
 
+func (t testSigner) KeyLocator() enc.Name {
+	return t.KeyName()
+}
+
 func (testSigner) Type() ndn.SigType {
 	return ndn.SigType(200)
 }

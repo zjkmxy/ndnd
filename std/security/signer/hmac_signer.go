@@ -21,6 +21,10 @@ func (*hmacSigner) KeyName() enc.Name {
 	return nil
 }
 
+func (*hmacSigner) KeyLocator() enc.Name {
+	return nil
+}
+
 func (*hmacSigner) EstimateSize() uint {
 	return 32
 }

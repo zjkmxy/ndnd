@@ -24,6 +24,8 @@ type Signer interface {
 	Type() SigType
 	// KeyName returns the key name of the signer.
 	KeyName() enc.Name
+	// KeyLocator returns the key locator name of the signer.
+	KeyLocator() enc.Name
 	// EstimateSize gives the approximate size of the signature in bytes.
 	EstimateSize() uint
 	// Sign computes the signature value of a wire.

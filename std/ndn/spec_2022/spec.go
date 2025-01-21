@@ -265,7 +265,7 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 			SignatureType: uint64(signer.Type()),
 		}
 
-		if key := signer.KeyName(); key != nil {
+		if key := signer.KeyLocator(); key != nil {
 			data.SignatureInfo.KeyLocator = &KeyLocator{Name: key}
 		}
 
@@ -385,7 +385,7 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 			SignatureType: uint64(signer.Type()),
 		}
 
-		if key := signer.KeyName(); key != nil {
+		if key := signer.KeyLocator(); key != nil {
 			interest.SignatureInfo.KeyLocator = &KeyLocator{Name: key}
 		}
 	}

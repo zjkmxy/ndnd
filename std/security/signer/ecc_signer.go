@@ -26,6 +26,10 @@ func (s *eccSigner) KeyName() enc.Name {
 	return s.name
 }
 
+func (s *eccSigner) KeyLocator() enc.Name {
+	return s.name
+}
+
 func (s *eccSigner) EstimateSize() uint {
 	return s.keyLen
 }

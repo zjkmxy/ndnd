@@ -18,6 +18,10 @@ func (sha256Signer) KeyName() enc.Name {
 	return nil
 }
 
+func (sha256Signer) KeyLocator() enc.Name {
+	return nil
+}
+
 func (sha256Signer) EstimateSize() uint {
 	return 32
 }
