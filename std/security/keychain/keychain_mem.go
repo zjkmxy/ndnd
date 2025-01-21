@@ -9,14 +9,16 @@ import (
 
 // KeyChainMem is an in-memory keychain.
 type KeyChainMem struct {
-	identities map[string]*identity
+	identities []ndn.KeyChainIdentity
+	certNames  []enc.Name
 	pubStore   ndn.Store
 }
 
 // NewKeyChainMem creates a new in-memory keychain.
 func NewKeyChainMem(pubStore ndn.Store) ndn.KeyChain {
 	return &KeyChainMem{
-		identities: make(map[string]*identity),
+		identities: make([]ndn.KeyChainIdentity, 0),
+		certNames:  make([]enc.Name, 0),
 		pubStore:   pubStore,
 	}
 }
@@ -25,38 +27,52 @@ func (kc *KeyChainMem) String() string {
 	return "keychain-mem"
 }
 
-func (kc *KeyChainMem) GetIdentities() []ndn.Identity {
-	ids := make([]ndn.Identity, 0, len(kc.identities))
-	for _, id := range kc.identities {
-		ids = append(ids, id)
-	}
-	return ids
+func (kc *KeyChainMem) GetIdentities() []ndn.KeyChainIdentity {
+	return kc.identities
 }
 
-func (kc *KeyChainMem) GetIdentity(name enc.Name) ndn.Identity {
-	if id, ok := kc.identities[name.String()]; ok {
-		return id
+func (kc *KeyChainMem) GetIdentity(name enc.Name) ndn.KeyChainIdentity {
+	for _, id := range kc.identities {
+		if id.Name().Equal(name) {
+			return id
+		}
 	}
 	return nil
 }
 
 func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	// Get key name
-	id, err := sec.GetIdentityFromKeyName(signer.KeyName())
+	keyName := signer.KeyName()
+	idName, err := sec.GetIdentityFromKeyName(keyName)
 	if err != nil {
 		return err
 	}
-	hash := id.String()
 
-	// Insert signer
-	idObj := kc.identities[hash]
-	if idObj == nil {
-		idObj = &identity{name: id}
-		kc.identities[hash] = idObj
+	// Check if signer already exists
+	idObj, _ := kc.GetIdentity(idName).(*keyChainIdentity)
+	if idObj != nil {
+		for _, key := range idObj.Keys() {
+			if key.KeyName().Equal(keyName) {
+				return nil // not an error
+			}
+		}
+	} else {
+		// Create new identity if not exists
+		idObj = &keyChainIdentity{name: idName}
+		kc.identities = append(kc.identities, idObj)
 	}
-	idObj.signers = append([]ndn.Signer{signer}, idObj.signers...)
 
-	// TODO: fix sort order
+	// Attach any existing certificates to the signer
+	key := &keyChainKey{signer: signer}
+	for _, certName := range kc.certNames {
+		if keyName.IsPrefix(certName) {
+			key.insertCert(certName)
+		}
+	}
+
+	// Insert signer to identity
+	idObj.keyList = append(idObj.keyList, key)
+	idObj.sort()
 
 	return nil
 }
@@ -88,6 +104,23 @@ func (kc *KeyChainMem) InsertCert(wire []byte) error {
 	}
 	version := versionComp.NumberVal()
 
-	kc.pubStore.Put(name, version, wire)
+	// Check if certificate already exists
+	for _, existing := range kc.certNames {
+		if existing.Equal(name) {
+			return nil // not an error
+		}
+	}
+	kc.certNames = append(kc.certNames, name)
+
+	// Insert certificate to public store
+	if err := kc.pubStore.Put(name, version, wire); err != nil {
+		return err
+	}
+
+	// Update identities with the new certificate
+	for _, id := range kc.identities {
+		id.(*keyChainIdentity).insertCert(name)
+	}
+
 	return nil
 }

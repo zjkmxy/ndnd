@@ -42,7 +42,7 @@ func keychainList(args []string) {
 
 	for _, id := range kc.GetIdentities() {
 		fmt.Printf("%s\n", id.Name())
-		for _, key := range id.AllSigners() {
+		for _, key := range id.Keys() {
 			fmt.Printf("==> %s\n", key.KeyName())
 		}
 	}
@@ -137,11 +137,13 @@ func keychainGetKey(args []string) {
 
 	var signer ndn.Signer
 	if keyName == nil {
-		signer = idObj.Signer()
+		if len(idObj.Keys()) > 0 {
+			signer = idObj.Keys()[0].Signer()
+		}
 	} else {
-		for _, s := range idObj.AllSigners() {
-			if s.KeyName().Equal(keyName) {
-				signer = s
+		for _, key := range idObj.Keys() {
+			if key.KeyName().Equal(keyName) {
+				signer = key.Signer()
 				break
 			}
 		}

@@ -66,11 +66,11 @@ func (kc *KeyChainDir) String() string {
 	return fmt.Sprintf("keychain-dir (%s)", kc.path)
 }
 
-func (kc *KeyChainDir) GetIdentities() []ndn.Identity {
+func (kc *KeyChainDir) GetIdentities() []ndn.KeyChainIdentity {
 	return kc.mem.GetIdentities()
 }
 
-func (kc *KeyChainDir) GetIdentity(name enc.Name) ndn.Identity {
+func (kc *KeyChainDir) GetIdentity(name enc.Name) ndn.KeyChainIdentity {
 	return kc.mem.GetIdentity(name)
 }
 

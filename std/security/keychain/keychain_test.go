@@ -4,8 +4,11 @@ import (
 	"encoding/base64"
 	"os"
 	"testing"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/object"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
@@ -40,6 +43,20 @@ DpvDtnlEN72hIeIP
 var CERT_ROOT_NAME, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556")
 var KEY_ALICE_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/cK%1D%A4%E1%5B%91%CF")
 
+func signCert(t *testing.T, signer ndn.Signer) []byte {
+	certData, _, _ := spec.Spec{}.ReadData(enc.NewWireReader(
+		utils.WithoutErr(sig.MarshalSecret(signer))))
+	cert, err := sec.SignCert(sec.SignCertArgs{
+		Signer:    signer,
+		Data:      certData,
+		IssuerId:  enc.NewStringComponent(enc.TypeGenericNameComponent, "Test"),
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().AddDate(1, 0, 0),
+	})
+	require.NoError(t, err)
+	return cert.Join()
+}
+
 func TestKeyChainMem(t *testing.T) {
 	utils.SetTestingT(t)
 
@@ -47,41 +64,67 @@ func TestKeyChainMem(t *testing.T) {
 	kc := keychain.NewKeyChainMem(store)
 
 	// Insert a key
-	idName, _ := enc.NameFromStr("/my/test/identity")
-	signer := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName)))
-	require.NoError(t, kc.InsertKey(signer))
+	idName1, _ := enc.NameFromStr("/my/test/identity")
+	signer11 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName1)))
+	require.NoError(t, kc.InsertKey(signer11))
 
 	// Check key in keychain
-	identity := kc.GetIdentity(idName)
-	require.NotNil(t, identity)
-	require.Equal(t, idName, identity.Name())
-	require.Len(t, identity.AllSigners(), 1)
-	require.Equal(t, signer, identity.Signer())
+	identity1 := kc.GetIdentity(idName1)
+	require.NotNil(t, identity1)
+	require.Equal(t, idName1, identity1.Name())
+	require.Len(t, identity1.Keys(), 1)
+	require.Equal(t, signer11, identity1.Keys()[0].Signer())
 
 	// Insert another key for the same identity
-	signer2 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName)))
-	require.NoError(t, kc.InsertKey(signer2))
-	identity = kc.GetIdentity(idName)
-	require.NotNil(t, identity)
-	require.Len(t, identity.AllSigners(), 2)
-	require.Equal(t, signer2, identity.Signer())
+	signer12 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName1)))
+	require.NoError(t, kc.InsertKey(signer12))
+	require.Len(t, identity1.Keys(), 2)
+
+	// Generate cert11 for first signer
+	// Make sure signer is the default signer
+	cert111 := signCert(t, signer11)
+	require.NoError(t, kc.InsertCert(cert111))
+	require.Equal(t, signer11, identity1.Keys()[0].Signer())
+
+	// Generate newer cert for second signer
+	time.Sleep(5 * time.Millisecond) // new version
+	cert121 := signCert(t, signer12)
+	require.NoError(t, kc.InsertCert(cert121))
+
+	// Check if the default signer changes to the newer signer
+	key12 := identity1.Keys()[0]
+	require.Equal(t, signer12, key12.Signer())
+	require.Len(t, key12.UniqueCerts(), 1)
+
+	// Insert another cert for second signer
+	cert122 := signCert(t, signer12)
+	require.NoError(t, kc.InsertCert(cert122))
+	require.Len(t, key12.UniqueCerts(), 1) // same issuer
 
 	// Lookup non-existing identity
 	idName2, _ := enc.NameFromStr("/my/test/identity2")
-	identity = kc.GetIdentity(idName2)
-	require.Nil(t, identity)
+	require.Nil(t, kc.GetIdentity(idName2))
 
-	// Insert key for different identity
-	signer3 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
-	require.NoError(t, kc.InsertKey(signer3))
-	identity = kc.GetIdentity(idName2)
-	require.NotNil(t, identity)
-	require.Len(t, identity.AllSigners(), 1)
-	require.Equal(t, signer3, identity.Signer())
+	// Insert key for identity2
+	signer21 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
+	require.NoError(t, kc.InsertKey(signer21))
+	identity2 := kc.GetIdentity(idName2)
+	require.NotNil(t, identity2)
+	require.Len(t, identity2.Keys(), 1)
+	require.Equal(t, signer21, identity2.Keys()[0].Signer())
+
+	// Insert cert for another key for identity2 before key
+	signer22 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
+	cert22 := signCert(t, signer22)
+	require.NoError(t, kc.InsertCert(cert22))
+	require.Len(t, identity2.Keys(), 1)
+	require.NoError(t, kc.InsertKey(signer22))
+	require.Len(t, identity2.Keys(), 2)
+	require.Equal(t, signer22, identity2.Keys()[0].Signer()) // has cert
 
 	// Insert invalid key
-	signer4 := sig.NewSha256Signer()
-	require.Error(t, kc.InsertKey(signer4))
+	signerInvalid := sig.NewSha256Signer()
+	require.Error(t, kc.InsertKey(signerInvalid))
 
 	// Insert a certificate.
 	certRoot, _ := base64.StdEncoding.DecodeString(CERT_ROOT)
@@ -123,8 +166,8 @@ func TestKeyChainDir(t *testing.T) {
 	// Check Alice key
 	identity := kc.GetIdentity(KEY_ALICE_NAME[:2])
 	require.NotNil(t, identity)
-	require.Len(t, identity.AllSigners(), 1)
-	require.Equal(t, identity.Signer().KeyName(), KEY_ALICE_NAME)
+	require.Len(t, identity.Keys(), 1)
+	require.Equal(t, identity.Keys()[0].KeyName(), KEY_ALICE_NAME)
 
 	// Check Alice key is not in store
 	data, _ = store.Get(KEY_ALICE_NAME, false)

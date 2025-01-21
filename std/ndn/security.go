@@ -46,21 +46,30 @@ type KeyChain interface {
 	// String provides the log identifier of the keychain.
 	String() string
 	// GetIdentities returns all identities in the keychain.
-	GetIdentities() []Identity
+	GetIdentities() []KeyChainIdentity
 	// GetIdentity returns the identity by full name.
-	GetIdentity(enc.Name) Identity
+	GetIdentity(enc.Name) KeyChainIdentity
 	// InsertKey inserts a key to the keychain.
 	InsertKey(Signer) error
 	// InsertCert inserts a certificate to the keychain.
 	InsertCert([]byte) error
 }
 
-// Identity is the interface of a signing identity.
-type Identity interface {
+// KeyChainIdentity is the interface of a signing identity.
+type KeyChainIdentity interface {
 	// Name returns the full name of the identity.
 	Name() enc.Name
-	// Signer returns the default signer of the identity.
+	// Keys returns all keys of the identity.
+	Keys() []KeyChainKey
+}
+
+// KeyChainKey is the interface of a key in the keychain.
+type KeyChainKey interface {
+	// KeyName returns the key name of the key.
+	KeyName() enc.Name
+	// Signer returns the signer of the key.
 	Signer() Signer
-	// AllSigners returns all signers of the identity.
-	AllSigners() []Signer
+	// UniqueCerts returns a list of unique cert names in the key.
+	// The version number is always set to zero.
+	UniqueCerts() []enc.Name
 }
