@@ -45,6 +45,8 @@ type SigChecker func(name enc.Name, sigCovered enc.Wire, sig Signature) bool
 type KeyChain interface {
 	// String provides the log identifier of the keychain.
 	String() string
+	// Store provides the public storage of the keychain.
+	Store() Store
 	// GetIdentities returns all identities in the keychain.
 	GetIdentities() []KeyChainIdentity
 	// GetIdentity returns the identity by full name.
@@ -72,4 +74,12 @@ type KeyChainKey interface {
 	// UniqueCerts returns a list of unique cert names in the key.
 	// The version number is always set to zero.
 	UniqueCerts() []enc.Name
+}
+
+// TrustSchema is the interface for a trust schema.
+type TrustSchema interface {
+	// Check checks if a packet can be signed with the provided certificate.
+	Check(pkt enc.Name, cert enc.Name) bool
+	// Suggest suggests a signer for a packet.
+	Suggest(enc.Name, KeyChain) Signer
 }

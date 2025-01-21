@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
+	sig "github.com/named-data/ndnd/std/security/signer"
 )
 
 const LVS_VERSION uint64 = 0x00011000
@@ -189,18 +191,26 @@ func (s *LvsSchema) Match(name enc.Name) []*LvsNode {
 }
 
 func (s *LvsSchema) Check(pkt enc.Name, key enc.Name) bool {
+	return s.checkSigner(s.Match(pkt), s.Match(key))
+}
+
+func (s *LvsSchema) Suggest(pkt enc.Name, keychain ndn.KeyChain) ndn.Signer {
 	pktNodes := s.Match(pkt)
-	keyNodes := s.Match(key)
-	for _, pktNode := range pktNodes {
-		for _, sc := range pktNode.SignCons {
-			for _, keyNode := range keyNodes {
-				if keyNode.Id == sc {
-					return true
+	for _, id := range keychain.GetIdentities() {
+		for _, key := range id.Keys() {
+			for _, cert := range key.UniqueCerts() {
+				certNodes := s.Match(cert)
+				if s.checkSigner(pktNodes, certNodes) {
+					// Valid signer found, remove version number
+					return &sig.ContextSigner{
+						Signer:         key.Signer(),
+						KeyLocatorName: cert[:len(cert)-1],
+					}
 				}
 			}
 		}
 	}
-	return false
+	return nil
 }
 
 func (s *LvsSchema) checkCons(
@@ -233,4 +243,17 @@ func (s *LvsSchema) checkCons(
 		}
 	}
 	return true
+}
+
+func (s *LvsSchema) checkSigner(pktNodes []*LvsNode, keyNodes []*LvsNode) bool {
+	for _, pktNode := range pktNodes {
+		for _, sc := range pktNode.SignCons {
+			for _, keyNode := range keyNodes {
+				if keyNode.Id == sc {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

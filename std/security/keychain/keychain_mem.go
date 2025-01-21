@@ -27,6 +27,10 @@ func (kc *KeyChainMem) String() string {
 	return "keychain-mem"
 }
 
+func (kc *KeyChainMem) Store() ndn.Store {
+	return kc.pubStore
+}
+
 func (kc *KeyChainMem) GetIdentities() []ndn.KeyChainIdentity {
 	return kc.identities
 }

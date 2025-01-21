@@ -2,9 +2,14 @@ dv:
   # [required] Global prefix for all DV routers in the network
   network: /ndn
   # [required] Unique name for each router in the network
-  router: /sample
+  router: /ndn/sample
 
   # [optional] Period of Advertisement Sync Interests (ms)
   advertise_interval: 5000
   # [optional] Time after which a neighbor is considered dead (ms)
   router_dead_interval: 30000
+
+  # [optional] Keychain URI for security
+  # - If "insecure" is specified, security is disabled
+  # - Example: dir:///absolute/path/to/keychain
+  keychain: "insecure"

@@ -2,6 +2,7 @@ package object
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
 	"time"
 
@@ -133,8 +134,13 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 // Produce and sign data, and insert into the client's store.
 // The input data will be freed as the object is segmented.
 func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
-	// TODO: sign the data
 	signer := sig.NewSha256Signer()
+	if c.trust != nil {
+		signer = c.trust.Suggest(args.Name)
+		if signer == nil {
+			return nil, fmt.Errorf("no valid signer found for %s", args.Name)
+		}
+	}
 
 	return Produce(args, c.store, signer)
 }

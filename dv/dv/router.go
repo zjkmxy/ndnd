@@ -12,6 +12,8 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/security/keychain"
+	"github.com/named-data/ndnd/std/security/schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -21,6 +23,8 @@ type Router struct {
 	engine ndn.Engine
 	// config for this router
 	config *config.Config
+	// trust configuration
+	trust *ndn.TrustConfig
 	// object client
 	client *object.Client
 	// nfd management thread
@@ -58,11 +62,34 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		return nil, err
 	}
 
+	// Create packet store
+	store := object.NewMemoryStore()
+
+	// Create security configuration
+	var trust *ndn.TrustConfig = nil
+	if config.KeyChainUri == "insecure" {
+		log.Warn(nil, "Security is disabled - insecure mode")
+	} else {
+		kc, err := keychain.NewKeyChain(config.KeyChainUri, store)
+		if err != nil {
+			return nil, err
+		}
+		schema, err := schema.NewLvsSchema(config.SchemaBytes())
+		if err != nil {
+			return nil, err
+		}
+		trust = &ndn.TrustConfig{
+			KeyChain: kc,
+			Schema:   schema,
+		}
+	}
+
 	// Create the DV router
 	dv := &Router{
 		engine: engine,
 		config: config,
-		client: object.NewClient(engine, object.NewMemoryStore()),
+		trust:  trust,
+		client: object.NewClient(engine, store, trust),
 		nfdc:   nfdc.NewNfdMgmtThread(engine),
 		mutex:  sync.Mutex{},
 	}

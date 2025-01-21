@@ -59,7 +59,7 @@ func (pc *PutChunks) run() {
 	defer app.Stop()
 
 	// start object client
-	cli := object.NewClient(app, object.NewMemoryStore())
+	cli := object.NewClient(app, object.NewMemoryStore(), nil)
 	err = cli.Start()
 	if err != nil {
 		log.Fatal(pc, "Unable to start object client", "err", err)

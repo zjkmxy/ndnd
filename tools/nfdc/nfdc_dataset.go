@@ -7,7 +7,7 @@ import (
 
 func (n *Nfdc) fetchStatusDataset(suffix enc.Name) ([]byte, error) {
 	// consume-only client, no need for a store
-	client := object.NewClient(n.engine, nil)
+	client := object.NewClient(n.engine, nil, nil)
 	client.Start()
 	defer client.Stop()
 

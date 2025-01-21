@@ -1,6 +1,7 @@
 package config
 
 import (
+	_ "embed"
 	"errors"
 	"time"
 
@@ -17,6 +18,9 @@ var MulticastStrategy = enc.LOCALHOST.Append(
 	enc.NewStringComponent(enc.TypeGenericNameComponent, "multicast"),
 )
 
+//go:embed schema.tlv
+var SchemaBytes []byte
+
 type Config struct {
 	// Network should be the same for all routers in the network.
 	Network string `json:"network"`
@@ -26,6 +30,8 @@ type Config struct {
 	AdvertisementSyncInterval_ms uint64 `json:"advertise_interval"`
 	// Time after which a neighbor is considered dead.
 	RouterDeadInterval_ms uint64 `json:"router_dead_interval"`
+	// URI specifying KeyChain location.
+	KeyChainUri string `json:"keychain"`
 
 	// Parsed Global Prefix
 	networkNameN enc.Name
@@ -167,4 +173,8 @@ func (c *Config) AdvertisementSyncInterval() time.Duration {
 
 func (c *Config) RouterDeadInterval() time.Duration {
 	return time.Duration(c.RouterDeadInterval_ms) * time.Millisecond
+}
+
+func (c *Config) SchemaBytes() []byte {
+	return SchemaBytes
 }

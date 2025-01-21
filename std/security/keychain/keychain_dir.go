@@ -66,6 +66,10 @@ func (kc *KeyChainDir) String() string {
 	return fmt.Sprintf("keychain-dir (%s)", kc.path)
 }
 
+func (kc *KeyChainDir) Store() ndn.Store {
+	return kc.mem.Store()
+}
+
 func (kc *KeyChainDir) GetIdentities() []ndn.KeyChainIdentity {
 	return kc.mem.GetIdentities()
 }
