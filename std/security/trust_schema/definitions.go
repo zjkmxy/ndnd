@@ -1,5 +1,5 @@
 //go:generate gondn_tlv_gen
-package schema
+package trust_schema
 
 type LvsUserFnArg struct {
 	//+field:binary

@@ -13,7 +13,7 @@ import (
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security/keychain"
-	"github.com/named-data/ndnd/std/security/schema"
+	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -74,7 +74,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		if err != nil {
 			return nil, err
 		}
-		schema, err := schema.NewLvsSchema(config.SchemaBytes())
+		schema, err := trust_schema.NewLvsSchema(config.SchemaBytes())
 		if err != nil {
 			return nil, err
 		}

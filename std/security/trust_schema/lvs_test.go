@@ -1,10 +1,10 @@
-package schema_test
+package trust_schema_test
 
 import (
 	"testing"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/security/schema"
+	"github.com/named-data/ndnd/std/security/trust_schema"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -117,7 +117,7 @@ func sname(n string) enc.Name {
 func TestParseModel(t *testing.T) {
 	utils.SetTestingT(t)
 
-	m, err := schema.ParseLvsModel(enc.NewBufferReader(TEST_MODEL), false)
+	m, err := trust_schema.ParseLvsModel(enc.NewBufferReader(TEST_MODEL), false)
 	require.NoError(t, err)
 
 	require.Equal(t, uint64(0x00011000), m.Version)
@@ -131,7 +131,7 @@ func TestParseModel(t *testing.T) {
 func TestModelSimpleMatch(t *testing.T) {
 	utils.SetTestingT(t)
 
-	s, err := schema.NewLvsSchema(TEST_MODEL)
+	s, err := trust_schema.NewLvsSchema(TEST_MODEL)
 	require.NoError(t, err)
 
 	// Test all valid matches
@@ -178,7 +178,7 @@ func TestModelSimpleMatch(t *testing.T) {
 func TestModelComplexMatch(t *testing.T) {
 	utils.SetTestingT(t)
 
-	s, err := schema.NewLvsSchema(TEST_MODEL_COMPLEX)
+	s, err := trust_schema.NewLvsSchema(TEST_MODEL_COMPLEX)
 	require.NoError(t, err)
 
 	// #r1: a/b/c & { c: b, c: a, a: "a"|"x" }
@@ -229,7 +229,7 @@ func TestModelComplexMatch(t *testing.T) {
 func TestModelSimpleCheck(t *testing.T) {
 	utils.SetTestingT(t)
 
-	s, err := schema.NewLvsSchema(TEST_MODEL)
+	s, err := trust_schema.NewLvsSchema(TEST_MODEL)
 	require.NoError(t, err)
 
 	require.True(t, s.Check(sname("/a/blog/admin/000001/KEY/1/root/1"), sname("/a/blog/KEY/1/self/1")))
@@ -242,7 +242,7 @@ func TestModelSimpleCheck(t *testing.T) {
 func TestModelComplexCheck(t *testing.T) {
 	utils.SetTestingT(t)
 
-	s, err := schema.NewLvsSchema(TEST_MODEL_COMPLEX)
+	s, err := trust_schema.NewLvsSchema(TEST_MODEL_COMPLEX)
 	require.NoError(t, err)
 
 	require.True(t, s.Check(sname("/a/b/c"), sname("/xxx/yyy/zzz")))

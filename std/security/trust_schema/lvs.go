@@ -1,4 +1,4 @@
-package schema
+package trust_schema
 
 import (
 	"bytes"
