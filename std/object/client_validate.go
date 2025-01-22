@@ -9,7 +9,7 @@ import (
 )
 
 // Validate a data packet using the client configuration
-func (c *Client) Validate(data ndn.Data, callback func(bool, error)) {
+func (c *Client) Validate(data ndn.Data, sigCov enc.Wire, callback func(bool, error)) {
 	if c.trust == nil {
 		callback(true, nil)
 		return
@@ -29,9 +29,10 @@ func (c *Client) Validate(data ndn.Data, callback func(bool, error)) {
 	// Add to queue of validation
 	select {
 	case c.validatepipe <- sec.ValidateArgs{
-		Data:     data,
-		Callback: callback,
-		DataName: name,
+		Data:       data,
+		DataSigCov: sigCov,
+		Callback:   callback,
+		DataName:   name,
 		Fetch: func(name enc.Name, config *ndn.InterestConfig, found func(ndn.Data, enc.Wire, enc.Wire, error)) {
 			c.ExpressR(ndn.ExpressRArgs{
 				Name:    name,

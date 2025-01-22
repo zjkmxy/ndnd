@@ -168,7 +168,7 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 		return
 	}
 
-	s.client.Validate(args.Data, func(valid bool, err error) {
+	s.client.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
 		if !valid {
 			state.finalizeError(fmt.Errorf("consume: validation failed with error (%v)", err))
 		} else {

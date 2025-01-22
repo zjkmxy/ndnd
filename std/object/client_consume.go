@@ -199,7 +199,7 @@ func (c *Client) fetchMetadata(
 				return
 			}
 
-			c.Validate(args.Data, func(valid bool, err error) {
+			c.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
 				// validate with trust config
 				if !valid {
 					callback(nil, fmt.Errorf("consume: failed to validate metadata (%v)", err))
@@ -247,7 +247,7 @@ func (c *Client) fetchDataByPrefix(
 				return
 			}
 
-			c.Validate(args.Data, func(valid bool, err error) {
+			c.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
 				callback(args.Data, nil)
 			})
 		},

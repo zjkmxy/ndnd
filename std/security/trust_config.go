@@ -82,6 +82,11 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		return
 	}
 
+	if len(args.DataSigCov) == 0 {
+		args.Callback(false, fmt.Errorf("data sig covered is nil"))
+		return
+	}
+
 	// Prevent infinite recursion for signer loops
 	if args.depth == 0 {
 		args.depth = 32
@@ -130,6 +135,11 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		valid, err := signer.ValidateData(args.Data, args.DataSigCov, args.cert)
 		if !valid || err != nil {
 			args.Callback(false, fmt.Errorf("signature is invalid: %s (%+v)", args.Data.Name(), err))
+			return
+		}
+
+		if len(args.certSigCov) == 0 {
+			args.Callback(false, fmt.Errorf("cert sig covered is nil: %s", certName))
 			return
 		}
 

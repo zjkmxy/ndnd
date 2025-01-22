@@ -30,7 +30,7 @@ type Client interface {
 	// Express a single interest with reliability
 	ExpressR(args ExpressRArgs)
 	// Validate a single data packet
-	Validate(data Data, callback func(bool, error))
+	Validate(data Data, sigCov enc.Wire, callback func(bool, error))
 }
 
 // ProduceArgs are the arguments for the produce API

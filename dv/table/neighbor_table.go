@@ -132,8 +132,17 @@ func (ns *NeighborState) delete() {
 	ns.isFaceActive = false
 }
 
-func (ns *NeighborState) route() enc.Name {
-	return ns.Name.Append(enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"))
+func (ns *NeighborState) localRoute() enc.Name {
+	return enc.LOCALHOP.Append(ns.Name.Append(
+		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
+	)...)
+}
+
+func (ns *NeighborState) certRoute() enc.Name {
+	return ns.Name.Append(
+		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "KEY"),
+	)
 }
 
 // Register route to this neighbor
@@ -155,9 +164,9 @@ func (ns *NeighborState) routeRegister(faceId uint64) {
 	}
 
 	// For fetching advertisements from neighbor
-	register(enc.LOCALHOP.Append(ns.route()...))
+	register(ns.localRoute())
 	// For fetching certificates from neighbor
-	register(ns.route())
+	register(ns.certRoute())
 	// Passive advertisement sync to neighbor
 	register(ns.nt.config.AdvertisementSyncPassivePrefix())
 	// For prefix table sync group
@@ -184,8 +193,8 @@ func (ns *NeighborState) routeUnregister() {
 	}
 
 	// Always remove local data routes to neighbor
-	unregister(enc.LOCALHOP.Append(ns.route()...))
-	unregister(ns.route())
+	unregister(ns.localRoute())
+	unregister(ns.certRoute())
 
 	// If there are multiple neighbors on this face, we do not
 	// want to unregister the global routes to the face.
