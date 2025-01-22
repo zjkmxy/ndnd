@@ -6,7 +6,18 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 )
+
+// SuggestSigner returns the signer for a given name
+// nil is returned if no signer is found
+func (c *Client) SuggestSigner(name enc.Name) ndn.Signer {
+	if c.trust == nil {
+		return signer.NewSha256Signer()
+	}
+	name = c.rmSegVer(name)
+	return c.trust.Suggest(name)
+}
 
 // Validate a data packet using the client configuration
 func (c *Client) Validate(data ndn.Data, sigCov enc.Wire, callback func(bool, error)) {
@@ -16,15 +27,7 @@ func (c *Client) Validate(data ndn.Data, sigCov enc.Wire, callback func(bool, er
 	}
 
 	// Pop off the version and segment components
-	name := data.Name()
-	if len(name) > 2 {
-		if name[len(name)-1].Typ == enc.TypeSegmentNameComponent {
-			name = name[:len(name)-1]
-		}
-		if name[len(name)-1].Typ == enc.TypeVersionNameComponent {
-			name = name[:len(name)-1]
-		}
-	}
+	name := c.rmSegVer(data.Name())
 
 	// Add to queue of validation
 	select {
@@ -54,4 +57,17 @@ func (c *Client) Validate(data ndn.Data, sigCov enc.Wire, callback func(bool, er
 	default:
 		callback(false, fmt.Errorf("validation queue full"))
 	}
+}
+
+// rmSegVer removes the segment and version components from a name
+func (c *Client) rmSegVer(name enc.Name) enc.Name {
+	if len(name) > 2 {
+		if name[len(name)-1].Typ == enc.TypeSegmentNameComponent {
+			name = name[:len(name)-1]
+		}
+		if name[len(name)-1].Typ == enc.TypeVersionNameComponent {
+			name = name[:len(name)-1]
+		}
+	}
+	return name
 }

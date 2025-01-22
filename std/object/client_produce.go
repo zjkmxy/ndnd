@@ -10,7 +10,6 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	rdr "github.com/named-data/ndnd/std/ndn/rdr_2024"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -121,12 +120,9 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 // Produce and sign data, and insert into the client's store.
 // The input data will be freed as the object is segmented.
 func (c *Client) Produce(args ndn.ProduceArgs) (enc.Name, error) {
-	signer := sig.NewSha256Signer()
-	if c.trust != nil {
-		signer = c.trust.Suggest(args.Name)
-		if signer == nil {
-			return nil, fmt.Errorf("no valid signer found for %s", args.Name)
-		}
+	signer := c.SuggestSigner(args.Name)
+	if signer == nil {
+		return nil, fmt.Errorf("no valid signer found for %s", args.Name)
 	}
 
 	return Produce(args, c.store, signer)

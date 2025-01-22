@@ -15,7 +15,7 @@ type Client interface {
 	Stop() error
 	// Underlying API engine
 	Engine() Engine
-	// Undelying data store
+	// Underlying data store
 	Store() Store
 	// Produce and sign data, and insert into the client's store.
 	// The input data will be freed as the object is segmented.
@@ -29,6 +29,8 @@ type Client interface {
 	ConsumeExt(args ConsumeExtArgs)
 	// Express a single interest with reliability
 	ExpressR(args ExpressRArgs)
+	// Suggest a signer for a given name
+	SuggestSigner(name enc.Name) Signer
 	// Validate a single data packet
 	Validate(data Data, sigCov enc.Wire, callback func(bool, error))
 }

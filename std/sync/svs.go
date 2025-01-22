@@ -14,7 +14,6 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
-	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -315,8 +314,12 @@ func (s *SvSync) sendSyncInterest() {
 	// SVS v3 Sync Data
 	syncName := s.o.GroupPrefix.Append(enc.NewVersionComponent(3))
 
-	// TODO: sign the sync data
-	signer := sig.NewSha256Signer()
+	// Sign Sync Data
+	signer := s.o.Client.SuggestSigner(syncName)
+	if signer == nil {
+		log.Error(s, "SvSync failed to find valid signer", "name", syncName)
+		return
+	}
 
 	dataCfg := &ndn.DataConfig{
 		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
@@ -357,27 +360,28 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 	}
 
 	// Decode Sync Data
-	pkt, _, err := spec.ReadPacket(enc.NewWireReader(interest.AppParam()))
+	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(interest.AppParam()))
 	if err != nil {
 		log.Warn(s, "onSyncInterest failed to parse SyncData", "err", err)
 		return
 	}
-	if pkt.Data == nil {
-		log.Warn(s, "onSyncInterest no Data, ignoring")
-		return
-	}
-
-	// TODO: verify signature on Sync Data
 
 	// Decode state vector
-	svWire := pkt.Data.Content().Join()
+	svWire := data.Content().Join()
 	params, err := spec_svs.ParseSvsData(enc.NewBufferReader(svWire), false)
 	if err != nil || params.StateVector == nil {
 		log.Warn(s, "onSyncInterest failed to parse StateVec", "err", err)
 		return
 	}
 
-	s.recvSv <- params.StateVector
+	// Validate signature
+	s.o.Client.Validate(data, sigCov, func(valid bool, err error) {
+		if !valid || err != nil {
+			log.Warn(s, "SvSync failed to validate signature", "name", data.Name(), "valid", valid, "err", err)
+			return
+		}
+		s.recvSv <- params.StateVector
+	})
 }
 
 // Call with mutex locked
