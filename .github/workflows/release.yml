@@ -26,12 +26,18 @@ jobs:
 
       - name: Build
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ndnd-linux-amd64 cmd/ndnd/main.go
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o ndnd-linux-aarch64 cmd/ndnd/main.go
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ndnd-macos-amd64 cmd/ndnd/main.go
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o ndnd-macos-aarch64 cmd/ndnd/main.go
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ndnd-windows-amd64.exe cmd/ndnd/main.go
-          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -o ndnd-windows-aarch64.exe cmd/ndnd/main.go
+          GOOS=linux GOARCH=amd64 make ndnd
+          mv ndnd ndnd-linux-amd64
+          GOOS=linux GOARCH=arm64 make ndnd
+          mv ndnd ndnd-linux-aarch64
+          GOOS=darwin GOARCH=amd64 make ndnd
+          mv ndnd ndnd-macos-amd64
+          GOOS=darwin GOARCH=arm64 make ndnd
+          mv ndnd ndnd-macos-aarch64
+          GOOS=windows GOARCH=amd64 make ndnd
+          mv ndnd ndnd-windows-amd64
+          GOOS=windows GOARCH=arm64 make ndnd
+          mv ndnd ndnd-windows-aarch64
 
       - name: Upload to releases
         uses: svenstaro/upload-release-action@v2

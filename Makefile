@@ -1,4 +1,4 @@
-VERSION = 1.3.0.0
+VERSION= $(shell git describe --tags --always --dirty)
 STD_PACKAGE = github.com/named-data/ndnd/std
 
 .PHONY: all install clean test coverage
@@ -7,8 +7,8 @@ all: ndnd
 
 ndnd: clean
 	CGO_ENABLED=0 go build -o ndnd \
-	 -ldflags "-X '${STD_PACKAGE}/utils.NDNdVersion=${VERSION}'" \
-	 cmd/ndnd/main.go
+		-ldflags "-X '${STD_PACKAGE}/utils.NDNdVersion=${VERSION}'" \
+		cmd/ndnd/main.go
 
 generate:
 	go generate ./...

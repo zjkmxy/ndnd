@@ -1,4 +1,4 @@
-VERSION = 1.3.0.0
+VERSION= $(shell git describe --tags --always --dirty)
 STD_PACKAGE = github.com/named-data/ndnd/std
 
 .PHONY: all install clean test coverage
