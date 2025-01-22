@@ -24,6 +24,27 @@ const (
 	SignatureEmptyTest       SigType = 200
 )
 
+func (t SigType) String() string {
+	switch t {
+	case SignatureNone:
+		return "None"
+	case SignatureDigestSha256:
+		return "DigestSha256"
+	case SignatureSha256WithRsa:
+		return "Sha256WithRsa"
+	case SignatureSha256WithEcdsa:
+		return "Sha256WithEcdsa"
+	case SignatureHmacWithSha256:
+		return "HmacWithSha256"
+	case SignatureEd25519:
+		return "Ed25519"
+	case SignatureEmptyTest:
+		return "EmptyTest"
+	default:
+		return "Unknown"
+	}
+}
+
 // InterestResult represents the result of Interest expression.
 // Can be Data fetched (succeeded), NetworkNack received, or Timeout.
 // Note that AppNack is considered as Data.

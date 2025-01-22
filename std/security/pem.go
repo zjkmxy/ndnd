@@ -46,20 +46,7 @@ func PemEncode(raw []byte) ([]byte, error) {
 	}
 
 	// Add signature type
-	switch data.Signature().SigType() {
-	case ndn.SignatureDigestSha256:
-		headers[PEM_HEADER_SIGTYPE] = "Digest-SHA256"
-	case ndn.SignatureSha256WithRsa:
-		headers[PEM_HEADER_SIGTYPE] = "RSA-SHA256"
-	case ndn.SignatureSha256WithEcdsa:
-		headers[PEM_HEADER_SIGTYPE] = "ECDSA-SHA256"
-	case ndn.SignatureHmacWithSha256:
-		headers[PEM_HEADER_SIGTYPE] = "HMAC-SHA256"
-	case ndn.SignatureEd25519:
-		headers[PEM_HEADER_SIGTYPE] = "Ed25519"
-	default:
-		headers[PEM_HEADER_SIGTYPE] = "Unknown"
-	}
+	headers[PEM_HEADER_SIGTYPE] = data.Signature().SigType().String()
 
 	// Add signing key for certificates
 	if k := data.Signature().KeyName(); k != nil && *data.ContentType() == ndn.ContentTypeKey {

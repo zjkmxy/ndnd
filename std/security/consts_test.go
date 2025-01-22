@@ -43,7 +43,7 @@ qoAEsjM9PEUEWbnqAiEApu0rg9GAK1LNExjLYAF6qVgpWQgU+atPn63Gtuubqyg=
 
 const CERT_ROOT_PEM = `-----BEGIN NDN CERT-----
 Name: /ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556
-SigType: ECDSA-SHA256
+SigType: Sha256WithEcdsa
 SignerKey: /ndn/KEY/%27%C4%B2%2A%9F%7B%81%27
 Validity: 2022-04-29 15:39:50 +0000 UTC - 2026-12-31 23:59:59 +0000 UTC
 
