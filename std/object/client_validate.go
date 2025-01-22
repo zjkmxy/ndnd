@@ -32,18 +32,18 @@ func (c *Client) Validate(data ndn.Data, callback func(bool, error)) {
 		Data:     data,
 		Callback: callback,
 		DataName: name,
-		Fetch: func(name enc.Name, config *ndn.InterestConfig, found func(ndn.Data, []byte, error)) {
+		Fetch: func(name enc.Name, config *ndn.InterestConfig, found func(ndn.Data, enc.Wire, enc.Wire, error)) {
 			c.ExpressR(ndn.ExpressRArgs{
 				Name:    name,
 				Config:  config,
 				Retries: 3,
 				Callback: func(res ndn.ExpressCallbackArgs) {
 					if res.Result == ndn.InterestResultData {
-						found(res.Data, res.RawData.Join(), nil)
+						found(res.Data, res.RawData, res.SigCovered, nil)
 					} else if res.Error != nil {
-						found(nil, nil, res.Error)
+						found(nil, nil, nil, res.Error)
 					} else {
-						found(nil, nil, fmt.Errorf("failed to fetch certificate (%s) with result: %v", name, res.Result))
+						found(nil, nil, nil, fmt.Errorf("failed to fetch certificate (%s) with result: %v", name, res.Result))
 					}
 				},
 			})

@@ -55,12 +55,17 @@ func (tc *TrustConfig) Suggest(name enc.Name) ndn.Signer {
 
 // ValidateArgs are the arguments for the Validate function.
 type ValidateArgs struct {
-	Data     ndn.Data
-	Fetch    func(enc.Name, *ndn.InterestConfig, func(ndn.Data, []byte, error))
+	Data       ndn.Data
+	DataSigCov enc.Wire
+
+	Fetch func(enc.Name, *ndn.InterestConfig,
+		func(data ndn.Data, wire enc.Wire, sigCov enc.Wire, err error))
 	Callback func(bool, error)
 	DataName enc.Name
 
-	cert  ndn.Data
+	cert       ndn.Data
+	certSigCov enc.Wire
+
 	depth int
 }
 
@@ -110,12 +115,17 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 
 		// Recursively validate the certificate
 		tc.Validate(ValidateArgs{
-			Data:     args.cert,
+			Data:       args.cert,
+			DataSigCov: args.certSigCov,
+
 			Fetch:    args.Fetch,
 			Callback: args.Callback,
 			DataName: nil,
-			depth:    args.depth,
-			cert:     nil,
+
+			cert:       nil,
+			certSigCov: nil,
+
+			depth: args.depth,
 		})
 		return
 	}
@@ -163,12 +173,15 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		args.Fetch(keyLocator, &ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,
-		}, func(cert ndn.Data, wire []byte, err error) {
+		}, func(cert ndn.Data, wire enc.Wire, sigCov enc.Wire, err error) {
 			if err != nil {
 				args.Callback(false, err)
 				return // failed to fetch cert
 			}
+
+			// Call again with the fetched cert
 			args.cert = cert
+			args.certSigCov = sigCov
 
 			// Monkey patch the callback to store the cert in keychain
 			// if the validation passes.
@@ -176,7 +189,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 			args.Callback = func(valid bool, err error) {
 				if valid && err == nil {
 					tc.mutex.Lock()
-					err := tc.KeyChain.InsertCert(wire)
+					err := tc.KeyChain.InsertCert(wire.Join())
 					tc.mutex.Unlock()
 					if err != nil {
 						log.Error(tc.KeyChain, "Failed to insert certificate", "error", err)

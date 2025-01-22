@@ -78,7 +78,7 @@ func sname(n string) enc.Name {
 	return utils.WithoutErr(enc.NameFromStr(n))
 }
 
-func signCert(signer ndn.Signer, wire enc.Wire) ([]byte, ndn.Data) {
+func signCert(signer ndn.Signer, wire enc.Wire) (enc.Wire, ndn.Data) {
 	data, _, _ := spec.Spec{}.ReadData(enc.NewWireReader(wire))
 	cert, _ := sec.SignCert(sec.SignCertArgs{
 		Signer:    signer,
@@ -88,7 +88,7 @@ func signCert(signer ndn.Signer, wire enc.Wire) ([]byte, ndn.Data) {
 		NotAfter:  time.Now().Add(time.Hour),
 	})
 	certData, _, _ := spec.Spec{}.ReadData(enc.NewWireReader(cert))
-	return cert.Join(), certData
+	return cert, certData
 }
 
 func TestTrustConfig(t *testing.T) {
@@ -96,46 +96,46 @@ func TestTrustConfig(t *testing.T) {
 
 	store := object.NewMemoryStore()
 	keychain := keychain.NewKeyChainMem(store)
-	network := make(map[string][]byte)
+	network := make(map[string]enc.Wire)
 
 	// ------------- Keys and certs -------------
 	// Root key
 	rootSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	rootCertBytes, rootCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(rootSigner)))
-	network[rootCertData.Name().String()] = rootCertBytes
-	keychain.InsertCert(rootCertBytes)
+	rootCertWire, rootCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(rootSigner)))
+	network[rootCertData.Name().String()] = rootCertWire
+	keychain.InsertCert(rootCertWire.Join())
 
 	// Second root key
 	root2Signer, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	root2CertBytes, root2CertData := signCert(root2Signer, utils.WithoutErr(signer.MarshalSecret(root2Signer)))
-	network[root2CertData.Name().String()] = root2CertBytes
-	keychain.InsertCert(root2CertBytes)
+	root2CertWire, root2CertData := signCert(root2Signer, utils.WithoutErr(signer.MarshalSecret(root2Signer)))
+	network[root2CertData.Name().String()] = root2CertWire
+	keychain.InsertCert(root2CertWire.Join())
 
 	// Alice key (us)
 	aliceSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
-	aliceCertBytes, aliceCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(aliceSigner)))
-	network[aliceCertData.Name().String()] = aliceCertBytes
-	keychain.InsertCert(aliceCertBytes)
+	aliceCertWire, aliceCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(aliceSigner)))
+	network[aliceCertData.Name().String()] = aliceCertWire
+	keychain.InsertCert(aliceCertWire.Join())
 	keychain.InsertKey(aliceSigner)
 
 	// Alice admin key
 	aliceAdminSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/admin/alice")))
-	aliceAdminCertBytes, aliceAdminCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(aliceAdminSigner)))
-	network[aliceAdminCertData.Name().String()] = aliceAdminCertBytes
-	keychain.InsertCert(aliceAdminCertBytes)
+	aliceAdminCertWire, aliceAdminCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(aliceAdminSigner)))
+	network[aliceAdminCertData.Name().String()] = aliceAdminCertWire
+	keychain.InsertCert(aliceAdminCertWire.Join())
 	keychain.InsertKey(aliceAdminSigner)
 
 	// Bob key
 	bobSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/bob")))
-	bobCertBytes, bobCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(bobSigner)))
-	network[bobCertData.Name().String()] = bobCertBytes
+	bobCertWire, bobCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(bobSigner)))
+	network[bobCertData.Name().String()] = bobCertWire
 	// Bob is not present in the keychain
 
 	// Cathy key (also us)
 	cathySigner, _ := signer.KeygenEcc(sec.MakeKeyName(sname("/test/cathy")), elliptic.P384())
-	cathyCertBytes, cathyCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(cathySigner)))
-	network[cathyCertData.Name().String()] = cathyCertBytes
-	keychain.InsertCert(cathyCertBytes)
+	cathyCertWire, cathyCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(cathySigner)))
+	network[cathyCertData.Name().String()] = cathyCertWire
+	keychain.InsertCert(cathyCertWire.Join())
 	keychain.InsertKey(cathySigner)
 
 	// David key
@@ -152,32 +152,32 @@ func TestTrustConfig(t *testing.T) {
 	// ------------- Mallory -------------
 	// Mallory root key
 	malloryRootSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	malloryRootCertBytes, malloryRootCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(malloryRootSigner)))
-	network[malloryRootCertData.Name().String()] = malloryRootCertBytes
+	malloryRootCertWire, malloryRootCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(malloryRootSigner)))
+	network[malloryRootCertData.Name().String()] = malloryRootCertWire
 
 	// Mallory key
 	mallorySigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/mallory")))
-	malloryCertBytes, malloryCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(mallorySigner)))
-	network[malloryCertData.Name().String()] = malloryCertBytes
+	malloryCertWire, malloryCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(mallorySigner)))
+	network[malloryCertData.Name().String()] = malloryCertWire
 
 	// Mallory Alice key
 	mAliceSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
-	mAliceCertBytes, mAliceCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(mAliceSigner)))
-	network[mAliceCertData.Name().String()] = mAliceCertBytes
+	mAliceCertWire, mAliceCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(mAliceSigner)))
+	network[mAliceCertData.Name().String()] = mAliceCertWire
 	// -----------------------------------
 
 	// Simulate fetch from network using engine
 	fetchCount := 0
-	fetch := func(name enc.Name, cfg *ndn.InterestConfig, callback func(ndn.Data, []byte, error)) {
+	fetch := func(name enc.Name, cfg *ndn.InterestConfig, callback func(ndn.Data, enc.Wire, enc.Wire, error)) {
 		fetchCount++
-		for cname, cbytes := range network {
+		for cname, cwire := range network {
 			if strings.HasPrefix(cname, name.String()) {
-				data, _, _ := spec.Spec{}.ReadData(enc.NewBufferReader(cbytes))
-				callback(data, cbytes, nil)
+				data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(cwire))
+				callback(data, cwire, sigCov, err)
 				return
 			}
 		}
-		callback(nil, nil, errors.New("not found"))
+		callback(nil, nil, nil, errors.New("not found"))
 	}
 
 	// Create trust config
@@ -203,12 +203,13 @@ func TestTrustConfig(t *testing.T) {
 		content := enc.Wire{[]byte{0x01, 0x02, 0x03}}
 		dataW, err := spec.Spec{}.MakeData(sname(name), &ndn.DataConfig{}, content, signer)
 		require.NoError(t, err)
-		data, _, err := spec.Spec{}.ReadData(enc.NewWireReader(dataW.Wire))
+		data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(dataW.Wire))
 		require.NoError(t, err)
 		ch := make(chan bool)
 		go trust.Validate(sec.ValidateArgs{
-			Data:  data,
-			Fetch: fetch,
+			Data:       data,
+			DataSigCov: sigCov,
+			Fetch:      fetch,
 			Callback: func(valid bool, err error) {
 				ch <- valid
 			},
