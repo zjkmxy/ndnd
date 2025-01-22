@@ -6,6 +6,10 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+// NDNd version from source control
+// Note: this is only defined in NDNd itself, not for other projects.
+var NDNdVersion string = "unknown"
+
 // IdPtr is the pointer version of id: 'a->'a
 func IdPtr[T any](value T) *T {
 	return &value

@@ -6,7 +6,9 @@ STD_PACKAGE = github.com/named-data/ndnd/std
 all: ndnd
 
 ndnd: clean
-	CGO_ENABLED=0 go build -o ndnd cmd/ndnd/main.go
+	CGO_ENABLED=0 go build -o ndnd \
+	 -ldflags "-X '${STD_PACKAGE}/utils.NDNdVersion=${VERSION}'" \
+	 cmd/ndnd/main.go
 
 generate:
 	go generate ./...

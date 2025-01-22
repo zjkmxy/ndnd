@@ -1,11 +1,14 @@
 VERSION = 1.3.0.0
+STD_PACKAGE = github.com/named-data/ndnd/std
 
 .PHONY: all install clean test coverage
 
 all: yanfd
 
 yanfd: clean
-	CGO_ENABLED=0 go build -o yanfd -ldflags "-X 'github.com/named-data/ndnd/fw/core.Version=${VERSION}'" cmd/yanfd/main.go
+	CGO_ENABLED=0 go build -o yanfd \
+		-ldflags "-X '${STD_PACKAGE}/utils.NDNdVersion=${VERSION}'" \
+		cmd/yanfd/main.go
 
 install:
 	install -m 755 yanfd /usr/local/bin

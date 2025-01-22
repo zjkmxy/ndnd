@@ -16,6 +16,7 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 // ForwarderStatusModule is the module that provide forwarder status information.
@@ -61,7 +62,7 @@ func (f *ForwarderStatusModule) general(interest *Interest) {
 
 	// Generate new dataset
 	status := &mgmt.GeneralStatus{
-		NfdVersion:       core.Version,
+		NfdVersion:       utils.NDNdVersion,
 		StartTimestamp:   time.Duration(core.StartTimestamp.UnixNano()),
 		CurrentTimestamp: time.Duration(time.Now().UnixNano()),
 		NFibEntries:      uint64(len(table.FibStrategyTable.GetAllFIBEntries())),
