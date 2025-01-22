@@ -20,10 +20,10 @@ This page describes the protocol specification of NDN Distance Vector Routing (n
 
 - **Advertisement Sync (active)**: `/localhop/<network>/32=DV/32=ADS/32=ACT`
 - **Advertisement Sync (passive)**: `/localhop/<network>/32=DV/32=ADS/32=PSV`
-- **Advertisement Data**: `/localhop/<router>/32=DV/32=ADV/58=<seq>`
+- **Advertisement Data**: `/localhop/<router>/32=DV/32=ADV/t=<boot>/v=<seq>`
 - **Prefix Sync group**: `/<network>/32=DV/32=PFS`
-- **Prefix Data**: `/<router>/32=DV/32=PFX/58=<seq>`
-- **Prefix Data snapshot**: `/<router>/32=DV/32=PFX/32=SNAP/58=<seq>`
+- **Prefix Data**: `/<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0`
+- **Prefix Data snapshot**: `/<router>/32=DV/32=PFX/32=SNAP`
 
 `<router>` is the router's unique name in the network.\
 `<network>` is the globally unique network prefix.

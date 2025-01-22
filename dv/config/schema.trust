@@ -4,14 +4,16 @@
 #router: #network/router
 
 // Advertisement Sync
-#advsvs: /"localhop"/#network/"32=DV"/"32=ADS"/type & { type: "32=ACT"|"32=PSV" } <= #router_cert
+#adv_svs: /"localhop"/#network/"32=DV"/"32=ADS"/type & { type: "32=ACT"|"32=PSV" } <= #router_cert
 // Advertisement data
-#advert: /"localhop"/#router/"32=DV"/"32=ADV"/_ <= #router_cert
+#adv_data: /"localhop"/#router/"32=DV"/"32=ADV"/_ <= #router_cert
 
 // Prefix table Sync
-#pfxsvs: #network/"32=DV"/"32=PFS" <= #router_cert
+#pfx_svs: #network/"32=DV"/"32=PFS" <= #router_cert
 // Prefix table data
-#prefix: #router/"32=DV"/"32=PFX"/_/_ <= #router_cert
+#pfx_data: #router/"32=DV"/"32=PFX"/_/_ <= #router_cert
+// Prefix table snapshot
+#pfx_snap: #router/"32=DV"/"32=PFX"/"32=SNAP" <= #router_cert
 
 // Certificate definitions
 #network_cert: #network/#KEY
