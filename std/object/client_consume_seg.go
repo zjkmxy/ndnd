@@ -159,18 +159,18 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 	}
 
 	if args.Result == ndn.InterestResultError {
-		state.finalizeError(fmt.Errorf("consume: fetch failed with error (%v)", args.Error))
+		state.finalizeError(fmt.Errorf("consume: fetch seg failed: %v", args.Error))
 		return
 	}
 
 	if args.Result != ndn.InterestResultData {
-		state.finalizeError(fmt.Errorf("consume: fetch failed with result %d", args.Result))
+		state.finalizeError(fmt.Errorf("consume: fetch seg failed with result: %s", args.Result))
 		return
 	}
 
 	s.client.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
 		if !valid {
-			state.finalizeError(fmt.Errorf("consume: validation failed with error (%v)", err))
+			state.finalizeError(fmt.Errorf("consume: validate seg failed: %v", err))
 		} else {
 			s.handleValidatedData(args, state)
 		}

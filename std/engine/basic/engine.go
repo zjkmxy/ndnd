@@ -300,9 +300,7 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 		cur.SetValue(newList)
 	}
 
-	n.DeleteIf(func(lst []*pendInt) bool {
-		return len(lst) == 0
-	})
+	n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
 }
 
 func (e *Engine) onNack(name enc.Name, reason uint64) {
@@ -410,9 +408,7 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 				}
 			}
 			n.SetValue(newLst)
-			n.DeleteIf(func(lst []*pendInt) bool {
-				return len(lst) == 0
-			})
+			n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
 		}
 		entry := &pendInt{
 			callback:      callback,

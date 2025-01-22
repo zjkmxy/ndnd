@@ -150,6 +150,7 @@ func (c *Client) consumeObject(state *ConsumeState) {
 				}
 				c.consumeObjectWithMeta(state, meta)
 			})
+			return
 		}
 
 		// fetch RDR metadata for this object
@@ -190,19 +191,19 @@ func (c *Client) fetchMetadata(
 		Retries: 3,
 		Callback: func(args ndn.ExpressCallbackArgs) {
 			if args.Result == ndn.InterestResultError {
-				callback(nil, fmt.Errorf("consume: fetch failed with error %v", args.Error))
+				callback(nil, fmt.Errorf("consume: fetch metadata failed: %v", args.Error))
 				return
 			}
 
 			if args.Result != ndn.InterestResultData {
-				callback(nil, fmt.Errorf("consume: fetch failed with result %d", args.Result))
+				callback(nil, fmt.Errorf("consume: fetch metadata failed with result: %s", args.Result))
 				return
 			}
 
 			c.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
 				// validate with trust config
 				if !valid {
-					callback(nil, fmt.Errorf("consume: failed to validate metadata (%v)", err))
+					callback(nil, fmt.Errorf("consume: validate metadata failed: %v", err))
 					return
 				}
 
@@ -238,16 +239,21 @@ func (c *Client) fetchDataByPrefix(
 		Retries: 3,
 		Callback: func(args ndn.ExpressCallbackArgs) {
 			if args.Result == ndn.InterestResultError {
-				callback(nil, fmt.Errorf("consume: fetch failed with error %v", args.Error))
+				callback(nil, fmt.Errorf("consume: fetch by prefix failed: %v", args.Error))
 				return
 			}
 
 			if args.Result != ndn.InterestResultData {
-				callback(nil, fmt.Errorf("consume: fetch failed with result %d", args.Result))
+				callback(nil, fmt.Errorf("consume: fetch by prefix failed with result: %s", args.Result))
 				return
 			}
 
 			c.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
+				if !valid {
+					callback(nil, fmt.Errorf("consume: validate by prefix failed: %v", err))
+					return
+				}
+
 				callback(args.Data, nil)
 			})
 		},
