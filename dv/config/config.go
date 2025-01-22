@@ -85,6 +85,11 @@ func (c *Config) Parse() (err error) {
 		return err
 	}
 
+	// Make sure router is in the network
+	if !c.networkNameN.IsPrefix(c.routerNameN) {
+		return errors.New("network name is required to be a prefix of router name")
+	}
+
 	// Validate intervals are not too short
 	if c.AdvertisementSyncInterval() < 1*time.Second {
 		return errors.New("AdvertisementSyncInterval must be at least 1 second")
