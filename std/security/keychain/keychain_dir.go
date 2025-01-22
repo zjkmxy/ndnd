@@ -17,6 +17,7 @@ import (
 
 const EXT_KEY = ".key"
 const EXT_CERT = ".cert"
+const EXT_PEM = ".pem"
 
 // KeyChainDir is a directory-based keychain.
 type KeyChainDir struct {
@@ -38,7 +39,8 @@ func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 	}
 	for _, entry := range entries {
 		if !strings.HasSuffix(entry.Name(), EXT_KEY) &&
-			!strings.HasSuffix(entry.Name(), EXT_CERT) {
+			!strings.HasSuffix(entry.Name(), EXT_CERT) &&
+			!strings.HasSuffix(entry.Name(), EXT_PEM) {
 			continue
 		}
 
@@ -49,13 +51,13 @@ func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 		filename := filepath.Join(path, entry.Name())
 		content, err := os.ReadFile(filename)
 		if err != nil {
-			log.Warn(kc, "Failed to read keychain entry", "file", filename, "error", err)
+			log.Warn(kc, "Failed to read keychain entry", "file", filename, "err", err)
 			continue
 		}
 
 		err = InsertFile(kc.mem, content)
 		if err != nil {
-			log.Error(kc, "Failed to insert keychain entries", "file", filename, "error", err)
+			log.Error(kc, "Failed to insert keychain entries", "file", filename, "err", err)
 		}
 	}
 

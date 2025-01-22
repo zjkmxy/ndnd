@@ -6,108 +6,109 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
+// Client is the interface for the Object Client API
 type Client interface {
-	// Instance log identifier
+	// String is the instance log identifier.
 	String() string
-	// Start the client. The engine must be running.
+	// Start starts the client. The engine must be running.
 	Start() error
-	// Stop the client.
+	// Stop stops the client.
 	Stop() error
-	// Underlying API engine
+	// Engine gives the underlying API engine.
 	Engine() Engine
-	// Underlying data store
+	// Store gives the underlying data store.
 	Store() Store
-	// Produce and sign data, and insert into the client's store.
+	// Produce generates and signs data, and inserts into the client's store.
 	// The input data will be freed as the object is segmented.
 	Produce(args ProduceArgs) (enc.Name, error)
-	// Remove an object from the client's store by name
+	// Remove removes an object from the client's store by name.
 	Remove(name enc.Name) error
-	// Consume an object with a given name
-	Consume(name enc.Name, callback ConsumeCallback)
+	// Consume fetches an object with a given name
+	Consume(name enc.Name, callback func(status ConsumeState) bool)
 	// ConsumeExt is a more advanced consume API that allows for
 	// more control over the fetching process.
 	ConsumeExt(args ConsumeExtArgs)
-	// Express a single interest with reliability
+	// ExpressR sends a single interest with reliability.
+	// Since this is a low-level API, the result is NOT validated.
 	ExpressR(args ExpressRArgs)
-	// Suggest a signer for a given name
+	// Suggest suggests a signer for a given name.
+	// nil is returned if no signer is found.
 	SuggestSigner(name enc.Name) Signer
-	// Validate a single data packet
+	// Validate validates a single data packet.
 	Validate(data Data, sigCov enc.Wire, callback func(bool, error))
-	// Validate a single data packet (advanced API)
+	// ValidateExt validates a single data packet (advanced API).
 	ValidateExt(args ValidateExtArgs)
 }
 
-// ProduceArgs are the arguments for the produce API
+// ProduceArgs are the arguments for the produce API.
 type ProduceArgs struct {
-	// name of the object to produce
+	// Name is the name of the object to produce.
 	Name enc.Name
-	// raw data contents
+	// Content is the raw data wire.
+	// Content can be larger than a single packet and will be segmented.
 	Content enc.Wire
-	// version of the object (defaults to unix timestamp, 0 for immutable)
+	// Version of the object (defaults to unix timestamp, 0 for immutable).
 	Version *uint64
-	// time for which the object version can be cached (default 4s)
+	// Time for which the object version can be cached (default 4s).
 	FreshnessPeriod time.Duration
-	// do not create metadata packet
+	// NoMetadata disables RDR metadata (advanced usage).
 	NoMetadata bool
 }
-
-// callback for consume API
-// return true to continue fetching the object
-type ConsumeCallback func(status ConsumeState) bool
 
 // ConsumeState is the state of the consume operation
 type ConsumeState interface {
-	// Name of the object being consumed
+	// Name of the object being consumed.
 	Name() enc.Name
-	// Error that occurred during fetching
+	// Error that occurred during fetching.
 	Error() error
-	// IsComplete returns true if the content has been completely fetched
+	// IsComplete returns true if the content has been completely fetched.
 	IsComplete() bool
-	// Content is the currently available buffer in the content
-	// any subsequent calls to Content() will return data after the previous call
+	// Content is the currently available buffer in the content.
+	// any subsequent calls to Content() will return data after the previous call.
 	Content() []byte
 	// Progress counter
 	Progress() int
-	// ProgressMax is the max value for the progress counter (-1 for unknown)
+	// ProgressMax is the max value for the progress counter (-1 for unknown).
 	ProgressMax() int
 }
 
-// ConsumeExtArgs are arguments for the ConsumeExt API
+// ConsumeExtArgs are arguments for the ConsumeExt API.
 type ConsumeExtArgs struct {
-	// name of the object to consume
+	// Name is the name of the object to consume.
 	Name enc.Name
-	// callback when data is available
-	Callback ConsumeCallback
-	// do not fetch metadata packet (advanced usage)
+	// Callback is called when data is available.
+	// True should be returned to continue fetching the object.
+	Callback func(status ConsumeState) bool
+	// NoMetadata disables fetching RDR metadata (advanced usage).
 	NoMetadata bool
 }
 
-// ExpressRArgs are the arguments for the express retry API
+// ExpressRArgs are the arguments for the express retry API.
 type ExpressRArgs struct {
-	// Name of the data to fetch
+	// Name of the data to fetch.
 	Name enc.Name
-	// Interest configuration
+	// Interest configuration.
 	Config *InterestConfig
-	// AppParam for the interest
+	// AppParam for the interest.
 	AppParam enc.Wire
-	// Signer for signed interests
+	// Signer for signed interests.
 	Signer Signer
-	// Number of retries
+	// Number of retries.
 	Retries int
-	// Callback for the result
+	// Callback for the result.
 	Callback ExpressCallbackFunc
 }
 
-// ValidateExtArgs are the arguments for the advanced validate API
+// ValidateExtArgs are the arguments for the advanced validate API.
 type ValidateExtArgs struct {
-	// Data packet to validate
+	// Data packet to validate.
 	Data Data
-	// Signature covered wire
+	// Signature covered wire.
 	SigCovered enc.Wire
-	// Callback for the result
+	// Callback for the result.
 	Callback func(bool, error)
-	// Override data name during first validation
+	// Override data name during first validation.
 	DataName enc.Name
-	// Next Hop ID to use for fetching certificates
+	// Next Hop ID to use for fetching certificates.
 	CertNextHop *uint64
 }

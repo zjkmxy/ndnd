@@ -9,13 +9,23 @@ import (
 // Signature is the abstract of the signature of a packet.
 // Some of the fields are invalid for Data or Interest.
 type Signature interface {
+	// SigType returns the type of the signature.
 	SigType() SigType
+	// KeyName returns the key locator in the signature.
+	// Note that this may not be the actual key name.
 	KeyName() enc.Name
-	SigNonce() []byte
-	SigTime() *time.Time
-	SigSeqNum() *uint64
+	// Validity returns the validity period of the signature.
+	// This field is generally only present in NDN certificates.
 	Validity() (notBefore, notAfter *time.Time)
+	// SigValue returns the signature value.
 	SigValue() []byte
+
+	// SigNonce returns the nonce in the Interest signature.
+	SigNonce() []byte
+	// SigTime returns the time in the Interest signature.
+	SigTime() *time.Time
+	// SigSeqNum returns the sequence number in the Interest signature.
+	SigSeqNum() *uint64
 }
 
 // Signer is the interface of a NDN packet signer.

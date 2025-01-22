@@ -33,7 +33,7 @@ func (tpm *FileTpm) GetSigner(keyName enc.Name, keyLocatorName enc.Name) ndn.Sig
 
 	text, err := os.ReadFile(fileName)
 	if err != nil {
-		log.Error(tpm, "Unable to read private key file", "file", fileName, "error", err)
+		log.Error(tpm, "Unable to read private key file", "file", fileName, "err", err)
 		return nil
 	}
 
@@ -41,7 +41,7 @@ func (tpm *FileTpm) GetSigner(keyName enc.Name, keyLocatorName enc.Name) ndn.Sig
 	block := make([]byte, blockLen)
 	n, err := base64.StdEncoding.Decode(block, text)
 	if err != nil {
-		log.Error(tpm, "Unable to base64 decode private key file", "file", fileName, "error", err)
+		log.Error(tpm, "Unable to base64 decode private key file", "file", fileName, "err", err)
 		return nil
 	}
 	block = block[:n]

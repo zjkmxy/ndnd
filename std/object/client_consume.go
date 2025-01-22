@@ -94,7 +94,7 @@ func (a *ConsumeState) finalizeError(err error) {
 }
 
 // Consume an object with a given name
-func (c *Client) Consume(name enc.Name, callback ndn.ConsumeCallback) {
+func (c *Client) Consume(name enc.Name, callback func(status ndn.ConsumeState) bool) {
 	c.ConsumeExt(ndn.ConsumeExtArgs{Name: name, Callback: callback})
 }
 

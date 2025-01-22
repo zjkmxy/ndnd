@@ -34,7 +34,7 @@ func DecodeFile(content []byte) (signers []ndn.Signer, certs [][]byte, err error
 	for _, wire := range wires {
 		data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(wire))
 		if err != nil {
-			log.Warn(nil, "Failed to read keychain entry", "error", err)
+			log.Warn(nil, "Failed to read keychain entry", "err", err)
 			continue
 		}
 
@@ -49,7 +49,7 @@ func DecodeFile(content []byte) (signers []ndn.Signer, certs [][]byte, err error
 		case ndn.ContentTypeSigKey: // key
 			key, err := sig.UnmarshalSecret(data)
 			if err != nil || key == nil {
-				log.Warn(nil, "Failed to decode key", "name", data.Name(), "error", err)
+				log.Warn(nil, "Failed to decode key", "name", data.Name(), "err", err)
 				continue
 			}
 			signers = append(signers, key)

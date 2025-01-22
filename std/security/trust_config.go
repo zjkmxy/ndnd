@@ -185,10 +185,11 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		return
 	}
 
-	// Attempt to get cert from store
+	// Attempt to get cert from store.
+	// Store is thread-safe so no need to lock here.
 	certBytes, err := tc.keychain.Store().Get(keyLocator, true)
 	if err != nil {
-		log.Error(nil, "Failed to get certificate from store", "error", err)
+		log.Error(nil, "Failed to get certificate from store", "err", err)
 		args.Callback(false, err)
 		return // store is likely broken
 	}
@@ -196,7 +197,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		// Attempt to parse the certificate
 		args.cert, args.certSigCov, err = spec.Spec{}.ReadData(enc.NewBufferReader(certBytes))
 		if err != nil {
-			log.Error(nil, "Failed to parse certificate in store", "error", err)
+			log.Error(nil, "Failed to parse certificate in store", "err", err)
 			args.cert = nil
 			args.certSigCov = nil
 		}
@@ -216,7 +217,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 			MustBeFresh: true,
 		}, func(cert ndn.Data, wire enc.Wire, sigCov enc.Wire, err error) {
 			if err != nil {
-				log.Warn(tc, "Failed to fetch certificate", "error", err)
+				log.Warn(tc, "Failed to fetch certificate", "err", err)
 				args.Callback(false, err)
 				return // failed to fetch cert
 			}
@@ -229,7 +230,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 			}
 
 			// Fetched cert is fresh
-			log.Debug(tc, "Fetched certificate", "cert", cert.Name())
+			log.Debug(tc, "Fetched certificate from network", "cert", cert.Name())
 
 			// Call again with the fetched cert
 			args.cert = cert
@@ -240,12 +241,15 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 			origCallback := args.Callback
 			args.Callback = func(valid bool, err error) {
 				if valid && err == nil {
+					log.Debug(tc, "Inserting certificate to keychain", "cert", cert.Name())
 					tc.mutex.Lock()
 					err := tc.keychain.InsertCert(wire.Join())
 					tc.mutex.Unlock()
 					if err != nil {
-						log.Error(tc.keychain, "Failed to insert certificate", "error", err)
+						log.Error(tc, "Failed to insert certificate to keychain", "cert", cert.Name(), "err", err)
 					}
+				} else {
+					log.Warn(tc, "Received invalid certificate", "cert", cert.Name(), "valid", valid, "err", err)
 				}
 				origCallback(valid, err) // continue validation
 			}
