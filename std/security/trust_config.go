@@ -8,6 +8,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/security/signer"
 )
 
 // TrustConfig is the configuration of the trust module.
@@ -76,6 +77,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		return
 	}
 
+	// Prevent infinite recursion for signer loops
 	if args.depth == 0 {
 		args.depth = 32
 	} else if args.depth <= 1 {
@@ -85,6 +87,14 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		args.depth--
 	}
 
+	// Make sure the data is signed
+	signature := args.Data.Signature()
+	if signature == nil {
+		args.Callback(false, fmt.Errorf("signature is nil"))
+		return
+	}
+
+	// If a certificate is provided, go directly to validation
 	if args.cert != nil {
 		certName := args.cert.Name()
 		dataName := args.Data.Name()
@@ -111,7 +121,12 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 			return
 		}
 
-		// TODO: validate signature
+		// Validate signature on data
+		valid, err := signer.ValidateData(args.Data, args.DataSigCov, args.cert)
+		if !valid || err != nil {
+			args.Callback(false, fmt.Errorf("signature is invalid: %s (%+v)", args.Data.Name(), err))
+			return
+		}
 
 		// Recursively validate the certificate
 		tc.Validate(ValidateArgs{
@@ -127,13 +142,6 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 
 			depth: args.depth,
 		})
-		return
-	}
-
-	// Get the certificate using the key locator
-	signature := args.Data.Signature()
-	if signature == nil {
-		args.Callback(false, fmt.Errorf("signature is nil"))
 		return
 	}
 
@@ -161,11 +169,18 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 	}
 	if len(certBytes) > 0 {
 		// Attempt to parse the certificate
-		args.cert, _, err = spec.Spec{}.ReadData(enc.NewBufferReader(certBytes))
+		args.cert, args.certSigCov, err = spec.Spec{}.ReadData(enc.NewBufferReader(certBytes))
 		if err != nil {
 			log.Error(nil, "Failed to parse certificate in store", "error", err)
 			args.cert = nil
+			args.certSigCov = nil
 		}
+	}
+
+	// Make sure the certificate is fresh
+	if args.cert != nil && CertIsExpired(args.cert) {
+		args.cert = nil
+		args.certSigCov = nil
 	}
 
 	// If not found, attempt to fetch cert from network
@@ -177,6 +192,12 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 			if err != nil {
 				args.Callback(false, err)
 				return // failed to fetch cert
+			}
+
+			// Bail if the fetched cert is not fresh
+			if CertIsExpired(cert) {
+				args.Callback(false, fmt.Errorf("certificate is expired: %s", cert.Name()))
+				return
 			}
 
 			// Call again with the fetched cert

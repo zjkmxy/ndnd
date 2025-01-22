@@ -216,7 +216,7 @@ func (p *FixedHmacSignerPolicy) onValidateData(event *Event) any {
 	if sigCovered == nil || signature == nil || signature.SigType() != ndn.SignatureHmacWithSha256 {
 		return VrSilence
 	}
-	if signer.CheckHmacSig(sigCovered, signature.SigValue(), []byte(p.Key)) {
+	if signer.ValidateHmac(sigCovered, signature, []byte(p.Key)) {
 		return VrPass
 	} else {
 		return VrFail
@@ -265,7 +265,7 @@ func (p *FixedHmacIntSignerPolicy) onValidateInt(event *Event) any {
 	if sigCovered == nil || signature == nil || signature.SigType() != ndn.SignatureHmacWithSha256 {
 		return VrSilence
 	}
-	if signer.CheckHmacSig(sigCovered, signature.SigValue(), []byte(p.Key)) {
+	if signer.ValidateHmac(sigCovered, signature, []byte(p.Key)) {
 		return VrPass
 	} else {
 		return VrFail

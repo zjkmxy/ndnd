@@ -30,7 +30,7 @@ func (store *DemoHmacKeyStore) AddTrustAnchor(cert enc.Buffer) error {
 		return fmt.Errorf("unable to parse certificate: %+v", err)
 	}
 	keyBits := data.Content().Join()
-	if !sig.CheckHmacSig(sigCovered, data.Signature().SigValue(), keyBits) {
+	if !sig.ValidateHmac(sigCovered, data.Signature(), keyBits) {
 		return fmt.Errorf("the certificate is not properly self-signed")
 	}
 	return store.SaveKey(data.Name(), keyBits, cert)

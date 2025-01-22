@@ -40,7 +40,7 @@ func TestSignCertSelf(t *testing.T) {
 		NotAfter:  T2,
 	})
 	require.NoError(t, err)
-	cert, certSigCovered, err := spec_2022.Spec{}.ReadData(enc.NewWireReader(aliceCert))
+	cert, certSigCov, err := spec_2022.Spec{}.ReadData(enc.NewWireReader(aliceCert))
 	require.NoError(t, err)
 
 	// check certificate name
@@ -68,7 +68,7 @@ func TestSignCertSelf(t *testing.T) {
 
 	// check signature
 	require.Equal(t, 64, len(signature.SigValue())) // ed25519
-	require.True(t, signer.Ed25519Validate(certSigCovered, signature, alicePub))
+	require.True(t, utils.WithoutErr(signer.ValidateData(cert, certSigCov, cert)))
 }
 
 func TestSignCertOther(t *testing.T) {
@@ -77,6 +77,18 @@ func TestSignCertOther(t *testing.T) {
 	aliceKey, _ := base64.StdEncoding.DecodeString(KEY_ALICE)
 	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferReader(aliceKey))
 	aliceSigner := utils.WithoutErr(signer.UnmarshalSecret(aliceKeyData))
+
+	// self signed alice's key
+	aliceCert, err := sec.SignCert(sec.SignCertArgs{
+		Signer:    aliceSigner,
+		Data:      aliceKeyData,
+		IssuerId:  ISSUER,
+		NotBefore: T1,
+		NotAfter:  T2,
+	})
+	require.NoError(t, err)
+	aliceCertData, _, err := spec_2022.Spec{}.ReadData(enc.NewWireReader(aliceCert))
+	require.NoError(t, err)
 
 	// parse existing certificate
 	rootCert, _ := base64.StdEncoding.DecodeString(CERT_ROOT)
@@ -118,7 +130,6 @@ func TestSignCertOther(t *testing.T) {
 	require.Equal(t, T2, *notAfter)
 
 	// check signature
-	alicePub := utils.WithoutErr(aliceSigner.Public())
 	require.Equal(t, 64, len(signature.SigValue())) // ed25519
-	require.True(t, signer.Ed25519Validate(newSigCov, signature, alicePub))
+	require.True(t, utils.WithoutErr(signer.ValidateData(newCert, newSigCov, aliceCertData)))
 }

@@ -118,6 +118,10 @@ func TestTrustConfig(t *testing.T) {
 	keychain.InsertCert(aliceCertWire.Join())
 	keychain.InsertKey(aliceSigner)
 
+	// Alice key invalid (same name but different key)
+	aliceInvalidSigner, _ := signer.KeygenEd25519(aliceSigner.KeyName())
+	require.Equal(t, aliceSigner.KeyName(), aliceInvalidSigner.KeyName())
+
 	// Alice admin key
 	aliceAdminSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/admin/alice")))
 	aliceAdminCertWire, aliceAdminCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(aliceAdminSigner)))
@@ -210,9 +214,7 @@ func TestTrustConfig(t *testing.T) {
 			Data:       data,
 			DataSigCov: sigCov,
 			Fetch:      fetch,
-			Callback: func(valid bool, err error) {
-				ch <- valid
-			},
+			Callback:   func(valid bool, err error) { ch <- valid },
 		})
 		return <-ch
 	}
@@ -230,6 +232,9 @@ func TestTrustConfig(t *testing.T) {
 
 	// Signing with admin key
 	require.True(t, validateSync("/test/admin/alice/data1", aliceAdminSigner))
+
+	// Invalid signer (different key)
+	require.False(t, validateSync("/test/alice/data1", aliceInvalidSigner))
 
 	// Sign with cert that cannot be fetched
 	fetchCount = 0

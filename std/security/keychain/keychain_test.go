@@ -27,21 +27,19 @@ TkROIFRlc3RiZWQgUm9vdCAyMjA0F0gwRgIhAPYUOjNakdfDGh5j9dcCGOz+Ie1M
 qoAEsjM9PEUEWbnqAiEApu0rg9GAK1LNExjLYAF6qVgpWQgU+atPn63Gtuubqyg=
 `
 
-const KEY_ALICE = `
------BEGIN NDN KEY-----
-Name: /ndn/alice/KEY/cK%1D%A4%E1%5B%91%CF
+const KEY_ALICE = `-----BEGIN NDN KEY-----
+Name: /ndn/alice/KEY/X%DC%B6%FAg%29%A4%82
 SigType: Ed25519
 
-BsoHGwgDbmRuCAVhbGljZQgDS0VZCAhjSx2k4VuRzxQDGAEJFUC64F62YK0/v5z4
-fjONZO7Y4PNqy7FiDnar33uVO71FLK6Vp8GrPCkEhuODl6GBv2nUuovtO9KtHW11
-8apSS093FiIbAQUcHQcbCANuZG4IBWFsaWNlCANLRVkICGNLHaThW5HPF0Cw3Oh7
-I2jmBBxop1bIPXq292TfltVwhdbB3/yUXkKcg3BYbY6vcAhNNqrG2B+G/iHvKGsy
-DpvDtnlEN72hIeIP
+BroHGwgDbmRuCAVhbGljZQgDS0VZCAhY3Lb6ZymkghQDGAEJFTAwLgIBADAFBgMr
+ZXAEIgQgG8Z7YkpBxVDqIFIm6EJlfCujheiW0262kJUj5vkmLDkWIhsBBRwdBxsI
+A25kbggFYWxpY2UIA0tFWQgIWNy2+mcppIIXQB19BDvrahM3DR1DV7ESosKW4uzE
+Z27QIGFgKR4LEuflvnSZZGFRKFxTUF5S2f/ZO/4B4NoxrF1ZOHD9NCWTkwI=
 -----END NDN KEY-----
 `
 
 var CERT_ROOT_NAME, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556")
-var KEY_ALICE_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/cK%1D%A4%E1%5B%91%CF")
+var KEY_ALICE_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/X%DC%B6%FAg%29%A4%82")
 
 func signCert(t *testing.T, signer ndn.Signer) []byte {
 	certData, _, _ := spec.Spec{}.ReadData(enc.NewWireReader(

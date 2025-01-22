@@ -28,7 +28,8 @@ func testEd25519Verify(t *testing.T, signer ndn.Signer, verifyKey []byte) bool {
 	sigValue := utils.WithoutErr(signer.Sign(dataVal))
 
 	// For basic test, we use ed25519.Verify to verify the signature.
-	return ed25519.Verify(verifyKey, dataVal.Join(), sigValue)
+	verifyKeyBits := utils.WithoutErr(x509.ParsePKIXPublicKey(verifyKey)).(ed25519.PublicKey)
+	return ed25519.Verify(verifyKeyBits, dataVal.Join(), sigValue)
 }
 
 func TestEd25519SignerNew(t *testing.T) {
@@ -74,8 +75,9 @@ func TestEd25519Parse(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestEd25519SignerCertificate tests the validator using a given certificate for interoperability.
-func TestEd25519SignerCertificate(t *testing.T) {
+// TestEd25519ValidateInterop tests the validator using a given
+// certificate for interoperability.
+func TestEd25519ValidateInterop(t *testing.T) {
 	utils.SetTestingT(t)
 
 	const TestCert = `
@@ -87,13 +89,7 @@ MjA1MjZUMTUyODQ0F0DAAWCZzxQSCAV0tluFDry5aT1b+EgoYgT1JKxbKVb/tINx
 M43PFy/2hDe8j61PuYD9tCah0TWapPwfXWi3fygA`
 
 	certWire := utils.WithoutErr(base64.RawStdEncoding.DecodeString(TestCert))
-	certData, covered, err := spec.Spec{}.ReadData(enc.NewBufferReader(certWire))
+	certData, sigCov, err := spec.Spec{}.ReadData(enc.NewBufferReader(certWire))
 	require.NoError(t, err)
-
-	pubKeyBits := utils.WithoutErr(x509.ParsePKIXPublicKey(certData.Content().Join()))
-	pubKey := pubKeyBits.(ed25519.PublicKey)
-	if pubKey == nil {
-		require.Fail(t, "unexpected public key type")
-	}
-	require.True(t, sig.Ed25519Validate(covered, certData.Signature(), pubKey))
+	require.True(t, utils.WithoutErr(sig.ValidateData(certData, sigCov, certData)))
 }

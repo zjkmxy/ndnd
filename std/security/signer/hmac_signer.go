@@ -49,7 +49,11 @@ func NewHmacSigner(key []byte) ndn.Signer {
 	return &hmacSigner{key}
 }
 
-func CheckHmacSig(sigCovered enc.Wire, sigValue []byte, key []byte) bool {
+// ValidateHmac verifies the signature with a known HMAC shared key.
+func ValidateHmac(sigCovered enc.Wire, sig ndn.Signature, key []byte) bool {
+	if sig.SigType() != ndn.SignatureHmacWithSha256 {
+		return false
+	}
 	mac := hmac.New(sha256.New, []byte(key))
 	for _, buf := range sigCovered {
 		_, err := mac.Write(buf)
@@ -57,5 +61,5 @@ func CheckHmacSig(sigCovered enc.Wire, sigValue []byte, key []byte) bool {
 			return false
 		}
 	}
-	return hmac.Equal(mac.Sum(nil), sigValue)
+	return hmac.Equal(mac.Sum(nil), sig.SigValue())
 }

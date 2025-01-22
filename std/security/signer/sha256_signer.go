@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"bytes"
 	"crypto/sha256"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -44,4 +45,19 @@ func (sha256Signer) Public() ([]byte, error) {
 // NewSha256Signer creates a signer that uses DigestSha256.
 func NewSha256Signer() ndn.Signer {
 	return sha256Signer{}
+}
+
+// ValidateSha256 checks if the signature is valid for the covered data.
+func ValidateSha256(sigCovered enc.Wire, sig ndn.Signature) bool {
+	if sig.SigType() != ndn.SignatureDigestSha256 {
+		return false
+	}
+	h := sha256.New()
+	for _, buf := range sigCovered {
+		_, err := h.Write(buf)
+		if err != nil {
+			return false
+		}
+	}
+	return bytes.Equal(h.Sum(nil), sig.SigValue())
 }

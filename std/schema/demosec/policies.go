@@ -142,7 +142,7 @@ func (p *SignedByPolicy) onValidateData(event *schema.Event) any {
 		log.Warn(p, "Unable to fetch the key that signed this data.")
 		return schema.VrFail
 	}
-	if signer.CheckHmacSig(sigCovered, signature.SigValue(), result.Content.Join()) {
+	if signer.ValidateHmac(sigCovered, signature, result.Content.Join()) {
 		return schema.VrPass
 	} else {
 		log.Warn(p, "Failed to verify the signature.")

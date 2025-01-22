@@ -70,6 +70,23 @@ func SignCert(args SignCertArgs) (enc.Wire, error) {
 	return cert.Wire, nil
 }
 
+func CertIsExpired(cert ndn.Data) bool {
+	if cert.Signature() == nil {
+		return true
+	}
+
+	notBefore, notAfter := cert.Signature().Validity()
+	if notBefore == nil || notAfter == nil {
+		return true
+	}
+
+	if time.Now().Before(*notBefore) || time.Now().After(*notAfter) {
+		return true
+	}
+
+	return false
+}
+
 // getPubKey gets the public key from an NDN data.
 // returns [public key, key name, error].
 func getPubKey(data ndn.Data) ([]byte, enc.Name, error) {

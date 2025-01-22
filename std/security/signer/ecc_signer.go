@@ -82,3 +82,20 @@ func ParseEcc(name enc.Name, key []byte) (ndn.Signer, error) {
 	}
 	return NewEccSigner(name, sk), nil
 }
+
+// validateEcdsa verifies the signature with a known ECC public key.
+// ndn-cxx's PIB uses secp256r1 key stored in ASN.1 DER format. Use x509.ParsePKIXPublicKey to parse.
+func validateEcdsa(sigCovered enc.Wire, sig ndn.Signature, pubKey *ecdsa.PublicKey) bool {
+	if sig.SigType() != ndn.SignatureSha256WithEcdsa {
+		return false
+	}
+	h := sha256.New()
+	for _, buf := range sigCovered {
+		_, err := h.Write(buf)
+		if err != nil {
+			return false
+		}
+	}
+	digest := h.Sum(nil)
+	return ecdsa.VerifyASN1(pubKey, digest, sig.SigValue())
+}
