@@ -60,12 +60,14 @@ func (n *Nfdc) ExecFibList(args []string) {
 	data, err := n.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 
 	status, err := mgmt.ParseFibStatus(enc.NewBufferReader(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing FIB status: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 

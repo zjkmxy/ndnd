@@ -97,6 +97,7 @@ func (n *Nfdc) Start() {
 	err := n.engine.Start()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to start engine: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 }

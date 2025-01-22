@@ -17,12 +17,14 @@ func (n *Nfdc) ExecCsInfo(args []string) {
 	data, err := n.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 
 	status, err := mgmt.ParseCsInfoMsg(enc.NewBufferReader(data), true)
 	if err != nil || status.CsInfo == nil {
 		fmt.Fprintf(os.Stderr, "Error parsing CS info: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 
