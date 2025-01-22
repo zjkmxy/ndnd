@@ -33,6 +33,8 @@ type Client interface {
 	SuggestSigner(name enc.Name) Signer
 	// Validate a single data packet
 	Validate(data Data, sigCov enc.Wire, callback func(bool, error))
+	// Validate a single data packet (advanced API)
+	ValidateExt(args ValidateExtArgs)
 }
 
 // ProduceArgs are the arguments for the produce API
@@ -82,10 +84,30 @@ type ConsumeExtArgs struct {
 
 // ExpressRArgs are the arguments for the express retry API
 type ExpressRArgs struct {
-	Name     enc.Name
-	Config   *InterestConfig
+	// Name of the data to fetch
+	Name enc.Name
+	// Interest configuration
+	Config *InterestConfig
+	// AppParam for the interest
 	AppParam enc.Wire
-	Signer   Signer
-	Retries  int
+	// Signer for signed interests
+	Signer Signer
+	// Number of retries
+	Retries int
+	// Callback for the result
 	Callback ExpressCallbackFunc
+}
+
+// ValidateExtArgs are the arguments for the advanced validate API
+type ValidateExtArgs struct {
+	// Data packet to validate
+	Data Data
+	// Signature covered wire
+	SigCovered enc.Wire
+	// Callback for the result
+	Callback func(bool, error)
+	// Override data name during first validation
+	DataName enc.Name
+	// Next Hop ID to use for fetching certificates
+	CertNextHop *uint64
 }

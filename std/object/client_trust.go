@@ -15,28 +15,46 @@ func (c *Client) SuggestSigner(name enc.Name) ndn.Signer {
 	if c.trust == nil {
 		return signer.NewSha256Signer()
 	}
-	name = c.rmSegVer(name)
+	name = rmSegVer(name)
 	return c.trust.Suggest(name)
 }
 
 // Validate a data packet using the client configuration
 func (c *Client) Validate(data ndn.Data, sigCov enc.Wire, callback func(bool, error)) {
+	c.ValidateExt(ndn.ValidateExtArgs{
+		Data:       data,
+		SigCovered: sigCov,
+		Callback:   callback,
+	})
+}
+
+// ValidateExt is an advanced API for validating data packets
+func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 	if c.trust == nil {
-		callback(true, nil)
+		args.Callback(true, nil)
 		return
 	}
 
 	// Pop off the version and segment components
-	name := c.rmSegVer(data.Name())
+	dataName := rmSegVer(args.Data.Name())
+	if len(args.DataName) > 0 {
+		dataName = args.DataName
+	}
 
 	// Add to queue of validation
 	select {
 	case c.validatepipe <- sec.ValidateArgs{
-		Data:       data,
-		DataSigCov: sigCov,
-		Callback:   callback,
-		DataName:   name,
+		Data:       args.Data,
+		DataSigCov: args.SigCovered,
+		Callback:   args.Callback,
+		DataName:   dataName,
 		Fetch: func(name enc.Name, config *ndn.InterestConfig, found func(ndn.Data, enc.Wire, enc.Wire, error)) {
+			// Pass through extra options
+			if args.CertNextHop != nil {
+				config.NextHopId = args.CertNextHop
+			}
+
+			// Express the interest with reliability
 			c.ExpressR(ndn.ExpressRArgs{
 				Name:    name,
 				Config:  config,
@@ -55,12 +73,12 @@ func (c *Client) Validate(data ndn.Data, sigCov enc.Wire, callback func(bool, er
 	}:
 		// Queued successfully
 	default:
-		callback(false, fmt.Errorf("validation queue full"))
+		args.Callback(false, fmt.Errorf("validation queue full"))
 	}
 }
 
 // rmSegVer removes the segment and version components from a name
-func (c *Client) rmSegVer(name enc.Name) enc.Name {
+func rmSegVer(name enc.Name) enc.Name {
 	if len(name) > 2 {
 		if name[len(name)-1].Typ == enc.TypeSegmentNameComponent {
 			name = name[:len(name)-1]

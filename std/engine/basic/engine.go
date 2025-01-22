@@ -425,8 +425,22 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 		n.SetValue(append(n.Value(), entry))
 	}()
 
-	// Send interest
-	err := e.face.Send(interest.Wire)
+	// Wrap the interest in link packet if needed
+	wire := interest.Wire
+	if interest.Config.NextHopId != nil {
+		lpPkt := &spec.Packet{
+			LpPacket: &spec.LpPacket{
+				Fragment:      wire,
+				NextHopFaceId: interest.Config.NextHopId,
+			},
+		}
+		encoder := spec.PacketEncoder{}
+		encoder.Init(lpPkt)
+		wire = encoder.Encode(lpPkt)
+	}
+
+	// Send interest to face
+	err := e.face.Send(wire)
 	if err != nil {
 		log.Error(e, "Failed to send interest", "err", err)
 	}

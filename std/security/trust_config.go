@@ -51,6 +51,10 @@ func NewTrustConfig(keyChain ndn.KeyChain, schema ndn.TrustSchema, roots []enc.N
 	}, nil
 }
 
+func (tc *TrustConfig) String() string {
+	return "trust-config"
+}
+
 // Suggest suggests a signer for a given name.
 func (tc *TrustConfig) Suggest(name enc.Name) ndn.Signer {
 	tc.mutex.RLock()
@@ -110,6 +114,12 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		dataName := args.Data.Name()
 		if len(args.DataName) > 0 {
 			dataName = args.DataName
+		}
+
+		// Disallow empty names
+		if len(dataName) == 0 {
+			args.Callback(false, fmt.Errorf("data name is empty"))
+			return
 		}
 
 		// Check if the data claims to be a root certificate.
@@ -200,20 +210,26 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 
 	// If not found, attempt to fetch cert from network
 	if args.cert == nil {
+		log.Debug(tc, "Fetching certificate", "key", keyLocator)
 		args.Fetch(keyLocator, &ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,
 		}, func(cert ndn.Data, wire enc.Wire, sigCov enc.Wire, err error) {
 			if err != nil {
+				log.Warn(tc, "Failed to fetch certificate", "error", err)
 				args.Callback(false, err)
 				return // failed to fetch cert
 			}
 
 			// Bail if the fetched cert is not fresh
 			if CertIsExpired(cert) {
+				log.Warn(tc, "Fetched certificate is expired", "cert", cert.Name())
 				args.Callback(false, fmt.Errorf("certificate is expired: %s", cert.Name()))
 				return
 			}
+
+			// Fetched cert is fresh
+			log.Debug(tc, "Fetched certificate", "cert", cert.Name())
 
 			// Call again with the fetched cert
 			args.cert = cert

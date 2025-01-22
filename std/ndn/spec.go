@@ -48,6 +48,7 @@ type InterestConfig struct {
 	Nonce          *uint64
 	Lifetime       *time.Duration
 	HopLimit       *uint
+	NextHopId      *uint64 // NDNLPv2
 }
 
 // Container for an encoded Interest packet

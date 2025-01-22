@@ -46,3 +46,24 @@ const (
 	// Other error happens during handling the fetched data. Not used by the engine itself.
 	InterestResultError
 )
+
+func (r InterestResult) String() string {
+	switch r {
+	case InterestResultNone:
+		return "None"
+	case InterestResultData:
+		return "Data"
+	case InterestResultNack:
+		return "Nack"
+	case InterestResultTimeout:
+		return "Timeout"
+	case InterestCancelled:
+		return "Cancelled"
+	case InterestResultUnverified:
+		return "Unverified"
+	case InterestResultError:
+		return "Error"
+	default:
+		return "Unknown"
+	}
+}

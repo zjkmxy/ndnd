@@ -366,20 +366,21 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 		return
 	}
 
-	// Decode state vector
-	svWire := data.Content().Join()
-	params, err := spec_svs.ParseSvsData(enc.NewBufferReader(svWire), false)
-	if err != nil || params.StateVector == nil {
-		log.Warn(s, "onSyncInterest failed to parse StateVec", "err", err)
-		return
-	}
-
 	// Validate signature
 	s.o.Client.Validate(data, sigCov, func(valid bool, err error) {
 		if !valid || err != nil {
 			log.Warn(s, "SvSync failed to validate signature", "name", data.Name(), "valid", valid, "err", err)
 			return
 		}
+
+		// Decode state vector
+		svWire := data.Content().Join()
+		params, err := spec_svs.ParseSvsData(enc.NewBufferReader(svWire), false)
+		if err != nil || params.StateVector == nil {
+			log.Warn(s, "onSyncInterest failed to parse StateVec", "err", err)
+			return
+		}
+
 		s.recvSv <- params.StateVector
 	})
 }

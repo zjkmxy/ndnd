@@ -287,11 +287,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	if packet.NextHopFaceID != nil {
 		if face := dispatch.GetFace(*packet.NextHopFaceID); face != nil {
 			core.Log.Trace(t, "NextHopFaceId is set for Interest", "name", packet.Name)
-			face.SendPacket(dispatch.OutPkt{
-				Pkt:      packet,
-				PitToken: packet.PitToken, // TODO: ??
-				InFace:   packet.IncomingFaceID,
-			})
+			t.processOutgoingInterest(packet, pitEntry, *packet.NextHopFaceID, incomingFace.FaceID())
 		} else {
 			core.Log.Info(t, "Non-existent face specified in NextHopFaceId for Interest",
 				"name", packet.Name, "faceid", *packet.NextHopFaceID)
