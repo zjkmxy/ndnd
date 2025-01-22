@@ -89,11 +89,14 @@ The `ndnd/std` package implements `go-ndn`, a standard library for NDN applicati
 You can use this package to build your own NDN applications.
 Several examples are provided in the [std/examples](std/examples) directory.
 
+The standard library supports the [Light VerSec](https://python-ndn.readthedocs.io/en/latest/src/lvs/lvs.html) binary format for trust schema specification.
+
 ## 🛠️ Tools
 
 The `ndnd/tools` package provides basic utilities for NDN networks.
 These can be used directly using the `ndnd` CLI.
 
+- `sec`: security utilities for generating keys and certificates ([docs](docs/sec.md))
 - `ping`/`pingserver`: test reachability between two NDN nodes
 - `cat`/`put`: segmented file transfer between a consumer and a producer
 
