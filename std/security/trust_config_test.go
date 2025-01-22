@@ -30,7 +30,7 @@ import (
 
 #KEY: "KEY"/_/_/_
 */
-var TRUST_CONFIG_TEST_SCHEMA = []byte{
+var TRUST_CONFIG_TEST_LVS = []byte{
 	0x61, 0x04, 0x00, 0x01, 0x10, 0x00, 0x25, 0x01, 0x00, 0x69, 0x01, 0x02,
 	0x63, 0x1c, 0x25, 0x01, 0x00, 0x51, 0x0a, 0x25, 0x01, 0x01, 0x21, 0x05,
 	0x08, 0x03, 0x4b, 0x45, 0x59, 0x51, 0x0b, 0x25, 0x01, 0x05, 0x21, 0x06,
@@ -74,10 +74,12 @@ var TRUST_CONFIG_TEST_SCHEMA = []byte{
 	0x29, 0x05, 0x61, 0x64, 0x6d, 0x69, 0x6e,
 }
 
+// Helper to create a name
 func sname(n string) enc.Name {
 	return utils.WithoutErr(enc.NameFromStr(n))
 }
 
+// Helper to sign a certificate
 func signCert(signer ndn.Signer, wire enc.Wire) (enc.Wire, ndn.Data) {
 	data, _, _ := spec.Spec{}.ReadData(enc.NewWireReader(wire))
 	cert, _ := sec.SignCert(sec.SignCertArgs{
@@ -91,11 +93,8 @@ func signCert(signer ndn.Signer, wire enc.Wire) (enc.Wire, ndn.Data) {
 	return cert, certData
 }
 
-func TestTrustConfig(t *testing.T) {
-	utils.SetTestingT(t)
-
-	store := object.NewMemoryStore()
-	keychain := keychain.NewKeyChainMem(store)
+// This is intended as the ultimate trust config test.
+func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema) {
 	network := make(map[string]enc.Wire)
 
 	// ------------- Keys and certs -------------
@@ -187,7 +186,7 @@ func TestTrustConfig(t *testing.T) {
 	// Create trust config
 	trust, err := sec.NewTrustConfig(
 		keychain,
-		utils.WithoutErr(trust_schema.NewLvsSchema(TRUST_CONFIG_TEST_SCHEMA)),
+		schema,
 		[]enc.Name{
 			rootCertData.Name(),
 			root2CertData.Name(),
@@ -272,4 +271,15 @@ func TestTrustConfig(t *testing.T) {
 	require.False(t, validateSync("/test/alice/data/extra", mallorySigner))
 	require.Equal(t, 6, fetchCount) // don't bother fetching mallory root because of schema miss
 	require.False(t, validateSync("/test/mallory/data4", mallorySigner))
+}
+
+func TestTrustConfigLvs(t *testing.T) {
+	utils.SetTestingT(t)
+
+	store := object.NewMemoryStore()
+	keychain := keychain.NewKeyChainMem(store)
+	schema, err := trust_schema.NewLvsSchema(TRUST_CONFIG_TEST_LVS)
+	require.NoError(t, err)
+
+	testTrustConfig(t, keychain, schema)
 }
