@@ -96,9 +96,9 @@ func (n *NameTrie[V]) HasChildren() bool {
 	return len(n.chd) > 0
 }
 
-// Delete deletes the node itself.
+// Prune deletes the node itself if no children.
 // Automatically removes ancestors if empty.
-func (n *NameTrie[V]) Delete() {
+func (n *NameTrie[V]) Prune() {
 	n.PruneIf(func(V) bool { return true })
 }
 

@@ -93,7 +93,8 @@ func (e *Engine) DetachHandler(prefix enc.Name) error {
 	if n == nil {
 		return ndn.ErrInvalidValue{Item: "prefix", Value: prefix}
 	}
-	n.Delete()
+	n.SetValue(nil)
+	n.Prune()
 	return nil
 }
 
@@ -322,7 +323,8 @@ func (e *Engine) onNack(name enc.Name, reason uint64) {
 			panic("[BUG] PIT has empty entry")
 		}
 	}
-	n.Delete()
+	n.SetValue(nil)
+	n.Prune()
 }
 
 func (e *Engine) onError(err error) error {
