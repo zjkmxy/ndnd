@@ -5,6 +5,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
+	sec "github.com/named-data/ndnd/std/security"
 )
 
 type Client struct {
@@ -13,7 +14,7 @@ type Client struct {
 	// data storage
 	store ndn.Store
 	// trust configuration
-	trust *ndn.TrustConfig
+	trust *sec.TrustConfig
 	// segment fetcher
 	fetcher rrSegFetcher
 
@@ -30,7 +31,7 @@ type Client struct {
 }
 
 // Create a new client with given engine and store
-func NewClient(engine ndn.Engine, store ndn.Store, trust *ndn.TrustConfig) *Client {
+func NewClient(engine ndn.Engine, store ndn.Store, trust *sec.TrustConfig) *Client {
 	client := new(Client)
 	client.engine = engine
 	client.store = store

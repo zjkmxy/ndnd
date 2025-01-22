@@ -81,18 +81,27 @@ func NewLvsSchema(buf []byte) (*LvsSchema, error) {
 }
 
 func (s *LvsSchema) Match(name enc.Name) []*LvsNode {
+	nodes := make([]*LvsNode, 0)
+	s.match_(name, nil, func(node *LvsNode, ctx map[uint64]enc.Component) bool {
+		nodes = append(nodes, node)
+		return true
+	})
+	return nodes
+}
+
+func (s *LvsSchema) match_(
+	name enc.Name, startCtx map[uint64]enc.Component,
+	callback func(node *LvsNode, ctx map[uint64]enc.Component) bool,
+) {
 	// Empty name never matches
 	if len(name) == 0 {
-		return nil
+		return
 	}
 
 	// Remove the implicit SHA-256 digest component
 	if name[len(name)-1].Typ == enc.TypeImplicitSha256DigestComponent {
 		name = name[:len(name)-1]
 	}
-
-	// Return value (matched nodes)
-	ret := make([]*LvsNode, 0)
 
 	// Current node in the depth-first search
 	cur := s.m.Nodes[s.m.StartId]
@@ -111,6 +120,9 @@ func (s *LvsSchema) Match(name enc.Name) []*LvsNode {
 
 	// Tag -> name component mapping
 	context := make(map[uint64]enc.Component, len(name))
+	for k, v := range startCtx {
+		context[k] = v
+	}
 
 	// Depth-first search
 	for cur != nil {
@@ -119,7 +131,9 @@ func (s *LvsSchema) Match(name enc.Name) []*LvsNode {
 
 		// If match succeeds
 		if depth == len(name) {
-			ret = append(ret, cur)
+			if !callback(cur, context) {
+				return
+			}
 			backtrack = true
 		} else {
 			// Make movements
@@ -186,31 +200,48 @@ func (s *LvsSchema) Match(name enc.Name) []*LvsNode {
 			}
 		}
 	}
-
-	return ret
 }
 
 func (s *LvsSchema) Check(pkt enc.Name, key enc.Name) bool {
-	return s.checkSigner(s.Match(pkt), s.Match(key))
+	matched := false
+	s.match_(pkt, nil, func(pktNode *LvsNode, pktCtx map[uint64]enc.Component) bool {
+		s.match_(key, pktCtx, func(keyNode *LvsNode, _ map[uint64]enc.Component) bool {
+			if s.checkSigner(pktNode, keyNode) {
+				matched = true
+			}
+			return !matched
+		})
+		return !matched
+	})
+	return matched
 }
 
 func (s *LvsSchema) Suggest(pkt enc.Name, keychain ndn.KeyChain) ndn.Signer {
-	pktNodes := s.Match(pkt)
-	for _, id := range keychain.GetIdentities() {
-		for _, key := range id.Keys() {
-			for _, cert := range key.UniqueCerts() {
-				certNodes := s.Match(cert)
-				if s.checkSigner(pktNodes, certNodes) {
-					// Valid signer found, remove version number
-					return &sig.ContextSigner{
-						Signer:         key.Signer(),
-						KeyLocatorName: cert[:len(cert)-1],
-					}
+	var signer ndn.Signer = nil
+
+	// O(n^7) ... but n is small
+	s.match_(pkt, nil, func(pktNode *LvsNode, pktCtx map[uint64]enc.Component) bool {
+		for _, id := range keychain.GetIdentities() {
+			for _, key := range id.Keys() {
+				for _, cert := range key.UniqueCerts() {
+					s.match_(cert, pktCtx, func(keyNode *LvsNode, _ map[uint64]enc.Component) bool {
+						if s.checkSigner(pktNode, keyNode) {
+							signer = &sig.ContextSigner{
+								Signer:         key.Signer(),
+								KeyLocatorName: cert[:len(cert)-1], // remove version
+							}
+						}
+
+						return signer == nil
+					})
 				}
 			}
 		}
-	}
-	return nil
+
+		return signer == nil
+	})
+
+	return signer
 }
 
 func (s *LvsSchema) checkCons(
@@ -245,14 +276,10 @@ func (s *LvsSchema) checkCons(
 	return true
 }
 
-func (s *LvsSchema) checkSigner(pktNodes []*LvsNode, keyNodes []*LvsNode) bool {
-	for _, pktNode := range pktNodes {
-		for _, sc := range pktNode.SignCons {
-			for _, keyNode := range keyNodes {
-				if keyNode.Id == sc {
-					return true
-				}
-			}
+func (s *LvsSchema) checkSigner(pktNode *LvsNode, keyNode *LvsNode) bool {
+	for _, sc := range pktNode.SignCons {
+		if keyNode.Id == sc {
+			return true
 		}
 	}
 	return false

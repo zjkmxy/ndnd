@@ -12,6 +12,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/object"
+	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
 	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
@@ -24,7 +25,7 @@ type Router struct {
 	// config for this router
 	config *config.Config
 	// trust configuration
-	trust *ndn.TrustConfig
+	trust *sec.TrustConfig
 	// object client
 	client *object.Client
 	// nfd management thread
@@ -66,7 +67,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 	store := object.NewMemoryStore()
 
 	// Create security configuration
-	var trust *ndn.TrustConfig = nil
+	var trust *sec.TrustConfig = nil
 	if config.KeyChainUri == "insecure" {
 		log.Warn(nil, "Security is disabled - insecure mode")
 	} else {
@@ -78,7 +79,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		if err != nil {
 			return nil, err
 		}
-		trust = &ndn.TrustConfig{
+		trust = &sec.TrustConfig{
 			KeyChain: kc,
 			Schema:   schema,
 		}
