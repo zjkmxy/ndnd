@@ -36,7 +36,7 @@ type SvSync struct {
 }
 
 type SvSyncOpts struct {
-	Engine      ndn.Engine
+	Client      ndn.Client
 	GroupPrefix enc.Name
 	OnUpdate    func(SvSyncUpdate)
 
@@ -55,8 +55,8 @@ type SvSyncUpdate struct {
 // NewSvSync creates a new SV Sync instance.
 func NewSvSync(opts SvSyncOpts) *SvSync {
 	// Check required options
-	if opts.Engine == nil {
-		panic("SvSync: Engine is required")
+	if opts.Client == nil {
+		panic("SvSync: Client is required")
 	}
 	if len(opts.GroupPrefix) == 0 {
 		panic("SvSync: GroupPrefix is required")
@@ -104,7 +104,7 @@ func (s *SvSync) String() string {
 
 // Start the SV Sync instance.
 func (s *SvSync) Start() (err error) {
-	err = s.o.Engine.AttachHandler(s.o.GroupPrefix, func(args ndn.InterestHandlerArgs) {
+	err = s.o.Client.Engine().AttachHandler(s.o.GroupPrefix, func(args ndn.InterestHandlerArgs) {
 		go s.onSyncInterest(args.Interest)
 	})
 	if err != nil {
@@ -118,7 +118,7 @@ func (s *SvSync) Start() (err error) {
 }
 
 func (s *SvSync) main() {
-	defer s.o.Engine.DetachHandler(s.o.GroupPrefix)
+	defer s.o.Client.Engine().DetachHandler(s.o.GroupPrefix)
 
 	s.running.Store(true)
 	defer s.running.Store(false)
@@ -321,7 +321,7 @@ func (s *SvSync) sendSyncInterest() {
 	dataCfg := &ndn.DataConfig{
 		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 	}
-	data, err := s.o.Engine.Spec().MakeData(syncName, dataCfg, svWire, signer)
+	data, err := s.o.Client.Engine().Spec().MakeData(syncName, dataCfg, svWire, signer)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed make data", "err", err)
 		return
@@ -330,16 +330,16 @@ func (s *SvSync) sendSyncInterest() {
 	// Make SVS Sync Interest
 	intCfg := &ndn.InterestConfig{
 		Lifetime: utils.IdPtr(1 * time.Second),
-		Nonce:    utils.ConvertNonce(s.o.Engine.Timer().Nonce()),
+		Nonce:    utils.ConvertNonce(s.o.Client.Engine().Timer().Nonce()),
 	}
-	interest, err := s.o.Engine.Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
+	interest, err := s.o.Client.Engine().Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed make interest", "err", err)
 		return
 	}
 
 	// [Spec] Sync Ack Policy - Do not acknowledge Sync Interests
-	err = s.o.Engine.Express(interest, nil)
+	err = s.o.Client.Engine().Express(interest, nil)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed express", "err", err)
 	}

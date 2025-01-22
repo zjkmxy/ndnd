@@ -10,7 +10,7 @@
 
 // Certificate definitions
 #root_cert: #network/#KEY
-#router_cert: #router/#KEY <= #root_cert
+#router_cert: #router/"32=DV"/#KEY <= #root_cert
 
 // Standard NDN conventions
 #KEY: "KEY"/_/_/_

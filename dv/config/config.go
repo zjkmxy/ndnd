@@ -47,6 +47,8 @@ type Config struct {
 	advSyncPassivePfxN enc.Name
 	// Advertisement Data Prefix
 	advDataPfxN enc.Name
+	// Universal router data prefix
+	routerDataPfxN enc.Name
 	// Prefix Table Sync Prefix
 	pfxSyncPfxN enc.Name
 	// Prefix Table Data Prefix
@@ -103,7 +105,7 @@ func (c *Config) Parse() (err error) {
 		c.trustAnchorsN = append(c.trustAnchorsN, name)
 	}
 
-	// Create name table
+	// Advertisement sync and data prefixes
 	c.advSyncPfxN = enc.LOCALHOP.Append(c.networkNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADS"),
@@ -118,14 +120,23 @@ func (c *Config) Parse() (err error) {
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
 	)...)
+
+	// Prefix table sync prefix
 	c.pfxSyncPfxN = c.networkNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFS"),
+	)
+
+	// Router data prefix including prefix data and certificates
+	c.routerDataPfxN = c.routerNameN.Append(
+		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 	)
 	c.pfxDataPfxN = c.routerNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
 	)
+
+	// Local prefixes to NFD
 	c.localPfxN = enc.LOCALHOST.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
 	)
@@ -155,6 +166,10 @@ func (c *Config) AdvertisementSyncPassivePrefix() enc.Name {
 
 func (c *Config) AdvertisementDataPrefix() enc.Name {
 	return c.advDataPfxN
+}
+
+func (c *Config) RouterDataPrefix() enc.Name {
+	return c.routerDataPfxN
 }
 
 func (c *Config) PrefixTableSyncPrefix() enc.Name {

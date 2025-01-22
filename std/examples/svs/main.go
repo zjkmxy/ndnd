@@ -8,6 +8,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
+	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/sync"
 )
 
@@ -39,10 +40,20 @@ func main() {
 	}
 	defer app.Stop()
 
+	// Create object client
+	store := object.NewMemoryStore()
+	client := object.NewClient(app, store, nil)
+	err = client.Start()
+	if err != nil {
+		log.Error(nil, "Unable to start object client", "err", err)
+		return
+	}
+	defer client.Stop()
+
 	// Start SVS instance
 	group, _ := enc.NameFromStr("/ndn/svs")
 	svsync := sync.NewSvSync(sync.SvSyncOpts{
-		Engine:      app,
+		Client:      client,
 		GroupPrefix: group,
 		OnUpdate: func(ssu sync.SvSyncUpdate) {
 			log.Info(nil, "Received update", "update", ssu)

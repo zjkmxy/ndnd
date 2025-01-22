@@ -58,6 +58,7 @@ type ValidateArgs struct {
 	Data     ndn.Data
 	Fetch    func(enc.Name, *ndn.InterestConfig, func(ndn.Data, []byte, error))
 	Callback func(bool, error)
+	DataName enc.Name
 
 	cert  ndn.Data
 	depth int
@@ -80,22 +81,28 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 	}
 
 	if args.cert != nil {
+		certName := args.cert.Name()
+		dataName := args.Data.Name()
+		if len(args.DataName) > 0 {
+			dataName = args.DataName
+		}
+
 		// Check if the data claims to be a root certificate.
 		// This breaks the recursion for validation.
-		if args.Data.Name().Equal(args.cert.Name()) {
+		if dataName.Equal(certName) {
 			for _, root := range tc.Roots {
-				if args.Data.Name().Equal(root) {
+				if dataName.Equal(root) {
 					args.Callback(true, nil)
 					return
 				}
 			}
-			args.Callback(false, fmt.Errorf("data claims to be a trust anchor: %s", args.Data.Name()))
+			args.Callback(false, fmt.Errorf("data claims to be a trust anchor: %s", dataName))
 			return
 		}
 
 		// Check schema if the key is allowed
-		if !tc.Schema.Check(args.Data.Name(), args.cert.Name()) {
-			args.Callback(false, fmt.Errorf("key is not allowed: %s signed by %s", args.Data.Name(), args.cert.Name()))
+		if !tc.Schema.Check(dataName, certName) {
+			args.Callback(false, fmt.Errorf("key is not allowed: %s signed by %s", dataName, certName))
 			return
 		}
 
@@ -106,6 +113,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 			Data:     args.cert,
 			Fetch:    args.Fetch,
 			Callback: args.Callback,
+			DataName: nil,
 			depth:    args.depth,
 			cert:     nil,
 		})

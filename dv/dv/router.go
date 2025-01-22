@@ -106,7 +106,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 
 	// Create sync groups
 	dv.pfxSvs = ndn_sync.NewSvSync(ndn_sync.SvSyncOpts{
-		Engine:      engine,
+		Client:      dv.client,
 		GroupPrefix: config.PrefixTableSyncPrefix(),
 		OnUpdate:    func(ssu ndn_sync.SvSyncUpdate) { go dv.onPfxSyncUpdate(ssu) },
 		BootTime:    dv.advert.bootTime,
@@ -244,7 +244,7 @@ func (dv *Router) register() (err error) {
 		dv.config.AdvertisementSyncPrefix(),
 		dv.config.AdvertisementDataPrefix(),
 		dv.config.PrefixTableSyncPrefix(),
-		dv.config.PrefixTableDataPrefix(),
+		dv.config.RouterDataPrefix(),
 		dv.config.LocalPrefix(),
 	}
 	for _, prefix := range pfxs {

@@ -159,7 +159,7 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 	}
 
 	if args.Result == ndn.InterestResultError {
-		state.finalizeError(fmt.Errorf("consume: fetch failed with error %v", args.Error))
+		state.finalizeError(fmt.Errorf("consume: fetch failed with error (%v)", args.Error))
 		return
 	}
 
@@ -168,6 +168,16 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 		return
 	}
 
+	s.client.Validate(args.Data, func(valid bool, err error) {
+		if !valid {
+			state.finalizeError(fmt.Errorf("consume: validation failed with error (%v)", err))
+		} else {
+			s.handleValidatedData(args, state)
+		}
+	})
+}
+
+func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *ConsumeState) {
 	// get the final block id if we don't know the segment count
 	if state.segCnt == -1 { // TODO: can change?
 		fbId := args.Data.FinalBlockID()

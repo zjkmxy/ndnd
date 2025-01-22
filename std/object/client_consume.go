@@ -199,17 +199,25 @@ func (c *Client) fetchMetadata(
 				return
 			}
 
-			// parse metadata
-			metadata, err := rdr.ParseMetaData(enc.NewWireReader(args.Data.Content()), false)
-			if err != nil {
-				callback(nil, fmt.Errorf("consume: failed to parse object metadata %v", err))
-				return
-			}
+			c.Validate(args.Data, func(valid bool, err error) {
+				// validate with trust config
+				if !valid {
+					callback(nil, fmt.Errorf("consume: failed to validate metadata (%v)", err))
+					return
+				}
 
-			// clone fields for lifetime
-			metadata.Name = metadata.Name.Clone()
-			metadata.FinalBlockID = append([]byte{}, metadata.FinalBlockID...)
-			callback(metadata, nil)
+				// parse metadata
+				metadata, err := rdr.ParseMetaData(enc.NewWireReader(args.Data.Content()), false)
+				if err != nil {
+					callback(nil, fmt.Errorf("consume: failed to parse object metadata (%v)", err))
+					return
+				}
+
+				// clone fields for lifetime
+				metadata.Name = metadata.Name.Clone()
+				metadata.FinalBlockID = append([]byte{}, metadata.FinalBlockID...)
+				callback(metadata, nil)
+			})
 		},
 	})
 }
@@ -239,7 +247,9 @@ func (c *Client) fetchDataByPrefix(
 				return
 			}
 
-			callback(args.Data, nil)
+			c.Validate(args.Data, func(valid bool, err error) {
+				callback(args.Data, nil)
+			})
 		},
 	})
 }
