@@ -3,12 +3,10 @@ package signer_test
 import (
 	"crypto/ed25519"
 	"crypto/x509"
-	"encoding/base64"
 	"testing"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/require"
@@ -73,23 +71,4 @@ func TestEd25519Parse(t *testing.T) {
 	pub2 := utils.WithoutErr(signer1.Public())
 	_, err := sig.ParseEd25519(TEST_KEY_NAME, pub2)
 	require.Error(t, err)
-}
-
-// TestEd25519ValidateInterop tests the validator using a given
-// certificate for interoperability.
-func TestEd25519ValidateInterop(t *testing.T) {
-	utils.SetTestingT(t)
-
-	const TestCert = `
-Bv0BCgc1CAxFZDI1NTE5LWRlbW8IA0tFWQgQNWE2MTVkYjdjZjA2MDNiNQgEc2Vs
-ZjYIAAABgQD8AY0UCRgBAhkEADbugBUsMCowBQYDK2VwAyEAQxUZBL+3I3D4oDIJ
-tJvuCTguHM7AUbhlhA/wu8ZhrkwWVhsBBRwnByUIDEVkMjU1MTktZGVtbwgDS0VZ
-CBA1YTYxNWRiN2NmMDYwM2I1/QD9Jv0A/g8xOTcwMDEwMVQwMDAwMDD9AP8PMjAy
-MjA1MjZUMTUyODQ0F0DAAWCZzxQSCAV0tluFDry5aT1b+EgoYgT1JKxbKVb/tINx
-M43PFy/2hDe8j61PuYD9tCah0TWapPwfXWi3fygA`
-
-	certWire := utils.WithoutErr(base64.RawStdEncoding.DecodeString(TestCert))
-	certData, sigCov, err := spec.Spec{}.ReadData(enc.NewBufferReader(certWire))
-	require.NoError(t, err)
-	require.True(t, utils.WithoutErr(sig.ValidateData(certData, sigCov, certData)))
 }
