@@ -17,22 +17,9 @@ import (
 // size of produced segment (~800B for header)
 const pSegmentSize = 8000
 
-type ProduceArgs struct {
-	// name of the object to produce
-	Name enc.Name
-	// raw data contents
-	Content enc.Wire
-	// version of the object (defaults to unix timestamp, 0 for immutable)
-	Version *uint64
-	// time for which the object version can be cached (default 4s)
-	FreshnessPeriod time.Duration
-	// do not create metadata packet
-	NoMetadata bool
-}
-
 // Produce and sign data, and insert into a store
 // This function does not rely on the engine or client, so it can also be used in YaNFD
-func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, error) {
+func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, error) {
 	content := args.Content
 	contentSize := content.Length()
 
@@ -133,7 +120,7 @@ func Produce(args ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name, er
 
 // Produce and sign data, and insert into the client's store.
 // The input data will be freed as the object is segmented.
-func (c *Client) Produce(args ProduceArgs) (enc.Name, error) {
+func (c *Client) Produce(args ndn.ProduceArgs) (enc.Name, error) {
 	signer := sig.NewSha256Signer()
 	if c.trust != nil {
 		signer = c.trust.Suggest(args.Name)

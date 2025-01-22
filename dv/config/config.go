@@ -32,6 +32,8 @@ type Config struct {
 	RouterDeadInterval_ms uint64 `json:"router_dead_interval"`
 	// URI specifying KeyChain location.
 	KeyChainUri string `json:"keychain"`
+	// List of trust anchor full names.
+	TrustAnchors []string `json:"trust_anchors"`
 
 	// Parsed Global Prefix
 	networkNameN enc.Name
@@ -51,6 +53,8 @@ type Config struct {
 	pfxDataPfxN enc.Name
 	// NLSR readvertise prefix
 	localPfxN enc.Name
+	// Trust anchor names
+	trustAnchorsN []enc.Name
 }
 
 func DefaultConfig() *Config {
@@ -87,6 +91,16 @@ func (c *Config) Parse() (err error) {
 	// Dead interval at least 2 sync intervals
 	if c.RouterDeadInterval() < 2*c.AdvertisementSyncInterval() {
 		return errors.New("RouterDeadInterval must be at least 2*AdvertisementSyncInterval")
+	}
+
+	// Validate trust anchors
+	c.trustAnchorsN = make([]enc.Name, 0, len(c.TrustAnchors))
+	for _, anchor := range c.TrustAnchors {
+		name, err := enc.NameFromStr(anchor)
+		if err != nil {
+			return err
+		}
+		c.trustAnchorsN = append(c.trustAnchorsN, name)
 	}
 
 	// Create name table
@@ -173,6 +187,10 @@ func (c *Config) AdvertisementSyncInterval() time.Duration {
 
 func (c *Config) RouterDeadInterval() time.Duration {
 	return time.Duration(c.RouterDeadInterval_ms) * time.Millisecond
+}
+
+func (c *Config) TrustAnchorNames() []enc.Name {
+	return c.trustAnchorsN
 }
 
 func (c *Config) SchemaBytes() []byte {

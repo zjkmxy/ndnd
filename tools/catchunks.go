@@ -9,6 +9,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
+	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
 )
 
@@ -64,20 +65,20 @@ func (cc *CatChunks) run() {
 	}
 	defer cli.Stop()
 
-	done := make(chan *object.ConsumeState)
+	done := make(chan ndn.ConsumeState)
 	t1, t2 := time.Now(), time.Now()
 	byteCount := 0
 
 	// calling Content() on a status object clears the buffer
 	// and returns the new data the next time it is called
-	write := func(status *object.ConsumeState) {
+	write := func(status ndn.ConsumeState) {
 		content := status.Content()
 		os.Stdout.Write(content)
 		byteCount += len(content)
 	}
 
 	// fetch object
-	cli.Consume(name, func(status *object.ConsumeState) bool {
+	cli.Consume(name, func(status ndn.ConsumeState) bool {
 		if status.IsComplete() {
 			t2 = time.Now()
 			write(status)

@@ -1,32 +1,19 @@
 package object
 
 import (
-	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/utils"
 )
 
-// arguments for the express retry API
-type ExpressRArgs struct {
-	Name     enc.Name
-	Config   *ndn.InterestConfig
-	AppParam enc.Wire
-	Signer   ndn.Signer
-	Retries  int
-
-	callback ndn.ExpressCallbackFunc
-}
-
 // (advanced) express a single interest with reliability
-func (c *Client) ExpressR(args ExpressRArgs, callback ndn.ExpressCallbackFunc) {
-	args.callback = callback
+func (c *Client) ExpressR(args ndn.ExpressRArgs) {
 	c.outpipe <- args
 }
 
-func (c *Client) expressRImpl(args ExpressRArgs) {
+func (c *Client) expressRImpl(args ndn.ExpressRArgs) {
 	sendErr := func(err error) {
-		args.callback(ndn.ExpressCallbackArgs{
+		args.Callback(ndn.ExpressCallbackArgs{
 			Result: ndn.InterestResultError,
 			Error:  err,
 		})
@@ -50,16 +37,16 @@ func (c *Client) expressRImpl(args ExpressRArgs) {
 
 			// check if retries are exhausted
 			if args.Retries == 0 {
-				args.callback(res)
+				args.Callback(res)
 				return
 			}
 
 			// retry on timeout
 			args.Retries--
-			c.ExpressR(args, args.callback)
+			c.ExpressR(args)
 		} else {
 			// all other results / errors are final
-			args.callback(res)
+			args.Callback(res)
 			return
 		}
 	})

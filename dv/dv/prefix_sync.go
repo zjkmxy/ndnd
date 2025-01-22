@@ -5,7 +5,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
-	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/ndn"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 )
 
@@ -60,7 +60,7 @@ func (dv *Router) prefixDataFetch(nName enc.Name) {
 	log.Debug(dv.pfx, "Fetching prefix data", "router", nName, "known", router.Known, "latest", router.Latest)
 
 	name := router.GetNextDataName()
-	dv.client.Consume(name, func(state *object.ConsumeState) bool {
+	dv.client.Consume(name, func(state ndn.ConsumeState) bool {
 		if !state.IsComplete() {
 			return true
 		}

@@ -27,7 +27,7 @@ type Router struct {
 	// trust configuration
 	trust *sec.TrustConfig
 	// object client
-	client *object.Client
+	client ndn.Client
 	// nfd management thread
 	nfdc *nfdc.NfdMgmtThread
 	// single mutex for all operations
@@ -79,9 +79,10 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		if err != nil {
 			return nil, err
 		}
-		trust = &sec.TrustConfig{
-			KeyChain: kc,
-			Schema:   schema,
+		anchors := config.TrustAnchorNames()
+		trust, err = sec.NewTrustConfig(kc, schema, anchors)
+		if err != nil {
+			return nil, err
 		}
 	}
 

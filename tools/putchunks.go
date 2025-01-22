@@ -11,6 +11,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
+	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
 )
 
@@ -81,7 +82,7 @@ func (pc *PutChunks) run() {
 	}
 
 	// produce object
-	vname, err := cli.Produce(object.ProduceArgs{
+	vname, err := cli.Produce(ndn.ProduceArgs{
 		Name:    name,
 		Content: content,
 	})

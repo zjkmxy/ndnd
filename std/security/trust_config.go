@@ -23,6 +23,28 @@ type TrustConfig struct {
 	mutex sync.RWMutex
 }
 
+// NewTrustConfig creates a new TrustConfig.
+// ALl roots must be full names and already present in the keychain.
+func NewTrustConfig(keyChain ndn.KeyChain, schema ndn.TrustSchema, roots []enc.Name) (*TrustConfig, error) {
+	// Check if we have some roots
+	if len(roots) == 0 {
+		return nil, fmt.Errorf("no trust anchors provided")
+	}
+
+	// Check if all roots are present in the keychain
+	for _, root := range roots {
+		if cert, _ := keyChain.Store().Get(root, false); cert == nil {
+			return nil, fmt.Errorf("trust anchor not found in keychain: %s", root)
+		}
+	}
+
+	return &TrustConfig{
+		KeyChain: keyChain,
+		Schema:   schema,
+		Roots:    roots,
+	}, nil
+}
+
 // Suggest suggests a signer for a given name.
 func (tc *TrustConfig) Suggest(name enc.Name) ndn.Signer {
 	tc.mutex.RLock()
@@ -82,10 +104,10 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		// Recursively validate the certificate
 		tc.Validate(ValidateArgs{
 			Data:     args.cert,
-			cert:     nil,
 			Fetch:    args.Fetch,
-			depth:    args.depth,
 			Callback: args.Callback,
+			depth:    args.depth,
+			cert:     nil,
 		})
 		return
 	}

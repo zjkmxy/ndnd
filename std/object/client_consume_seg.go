@@ -137,15 +137,15 @@ func (s *rrSegFetcher) doCheck() {
 	defer s.doCheck()
 
 	// queue outgoing interest for the next segment
-	args := ExpressRArgs{
+	s.client.ExpressR(ndn.ExpressRArgs{
 		Name: state.fetchName.Append(enc.NewSegmentComponent(seg)),
 		Config: &ndn.InterestConfig{
 			MustBeFresh: false,
 		},
 		Retries: 3,
-	}
-	s.client.ExpressR(args, func(args ndn.ExpressCallbackArgs) {
-		s.client.seginpipe <- rrSegHandleDataArgs{state: state, args: args}
+		Callback: func(args ndn.ExpressCallbackArgs) {
+			s.client.seginpipe <- rrSegHandleDataArgs{state: state, args: args}
+		},
 	})
 }
 
