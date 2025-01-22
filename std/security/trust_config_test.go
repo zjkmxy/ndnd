@@ -185,14 +185,14 @@ func TestTrustConfig(t *testing.T) {
 	}
 
 	// Create trust config
-	trust := &sec.TrustConfig{
-		KeyChain: keychain,
-		Schema:   utils.WithoutErr(trust_schema.NewLvsSchema(TRUST_CONFIG_TEST_SCHEMA)),
-		Roots: []enc.Name{
+	trust, err := sec.NewTrustConfig(
+		keychain,
+		utils.WithoutErr(trust_schema.NewLvsSchema(TRUST_CONFIG_TEST_SCHEMA)),
+		[]enc.Name{
 			rootCertData.Name(),
 			root2CertData.Name(),
-		},
-	}
+		})
+	require.NoError(t, err)
 
 	// Test key suggestion
 	require.Equal(t, aliceSigner.KeyName(), trust.Suggest(sname("/test/alice/data1")).KeyName())

@@ -13,20 +13,24 @@ import (
 
 // TrustConfig is the configuration of the trust module.
 type TrustConfig struct {
-	// KeyChain is the keychain.
-	KeyChain ndn.KeyChain
-	// Schema is the trust schema.
-	Schema ndn.TrustSchema
-	// Roots are the full names of the trust anchors.
-	Roots []enc.Name
-
 	// mutex is the lock for keychain.
 	mutex sync.RWMutex
+	// keychain is the keychain.
+	keychain ndn.KeyChain
+	// schema is the trust schema.
+	schema ndn.TrustSchema
+	// roots are the full names of the trust anchors.
+	roots []enc.Name
 }
 
 // NewTrustConfig creates a new TrustConfig.
 // ALl roots must be full names and already present in the keychain.
 func NewTrustConfig(keyChain ndn.KeyChain, schema ndn.TrustSchema, roots []enc.Name) (*TrustConfig, error) {
+	// Check arguments
+	if keyChain == nil || schema == nil {
+		return nil, fmt.Errorf("keychain and schema must not be nil")
+	}
+
 	// Check if we have some roots
 	if len(roots) == 0 {
 		return nil, fmt.Errorf("no trust anchors provided")
@@ -40,9 +44,10 @@ func NewTrustConfig(keyChain ndn.KeyChain, schema ndn.TrustSchema, roots []enc.N
 	}
 
 	return &TrustConfig{
-		KeyChain: keyChain,
-		Schema:   schema,
-		Roots:    roots,
+		mutex:    sync.RWMutex{},
+		keychain: keyChain,
+		schema:   schema,
+		roots:    roots,
 	}, nil
 }
 
@@ -51,7 +56,7 @@ func (tc *TrustConfig) Suggest(name enc.Name) ndn.Signer {
 	tc.mutex.RLock()
 	defer tc.mutex.RUnlock()
 
-	return tc.Schema.Suggest(name, tc.KeyChain)
+	return tc.schema.Suggest(name, tc.keychain)
 }
 
 // ValidateArgs are the arguments for the Validate function.
@@ -105,7 +110,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		// Check if the data claims to be a root certificate.
 		// This breaks the recursion for validation.
 		if dataName.Equal(certName) {
-			for _, root := range tc.Roots {
+			for _, root := range tc.roots {
 				if dataName.Equal(root) {
 					args.Callback(true, nil)
 					return
@@ -116,7 +121,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		}
 
 		// Check schema if the key is allowed
-		if !tc.Schema.Check(dataName, certName) {
+		if !tc.schema.Check(dataName, certName) {
 			args.Callback(false, fmt.Errorf("key is not allowed: %s signed by %s", dataName, certName))
 			return
 		}
@@ -161,7 +166,7 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 	}
 
 	// Attempt to get cert from store
-	certBytes, err := tc.KeyChain.Store().Get(keyLocator, true)
+	certBytes, err := tc.keychain.Store().Get(keyLocator, true)
 	if err != nil {
 		log.Error(nil, "Failed to get certificate from store", "error", err)
 		args.Callback(false, err)
@@ -210,10 +215,10 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 			args.Callback = func(valid bool, err error) {
 				if valid && err == nil {
 					tc.mutex.Lock()
-					err := tc.KeyChain.InsertCert(wire.Join())
+					err := tc.keychain.InsertCert(wire.Join())
 					tc.mutex.Unlock()
 					if err != nil {
-						log.Error(tc.KeyChain, "Failed to insert certificate", "error", err)
+						log.Error(tc.keychain, "Failed to insert certificate", "error", err)
 					}
 				}
 				origCallback(valid, err) // continue validation
