@@ -108,20 +108,16 @@ func (a *advertModule) OnSyncInterest(args ndn.InterestHandlerArgs, active bool)
 	}
 
 	// Decode Sync Data
-	pkt, _, err := spec.ReadPacket(enc.NewWireReader(args.Interest.AppParam()))
+	data, _, err := spec.Spec{}.ReadData(enc.NewWireReader(args.Interest.AppParam()))
 	if err != nil {
 		log.Warn(a, "Failed to parse Sync Data", "err", err)
-		return
-	}
-	if pkt.Data == nil {
-		log.Warn(a, "No Sync Data, ignoring")
 		return
 	}
 
 	// TODO: verify signature on Sync Interest
 
 	// Decode state vector
-	svWire := pkt.Data.Content()
+	svWire := data.Content()
 	params, err := spec_svs.ParseSvsData(enc.NewWireReader(svWire), false)
 	if err != nil || params.StateVector == nil {
 		log.Warn(a, "Failed to parse StateVec", "err", err)
