@@ -174,7 +174,7 @@ func (m *Thread) sendData(interest *Interest, name enc.Name, content enc.Wire) {
 	data, err := spec.Spec{}.MakeData(name,
 		&ndn.DataConfig{
 			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utils.IdPtr(time.Second),
+			Freshness:   utils.IdPtr(time.Duration(0)),
 		},
 		content,
 		m.signer,

@@ -442,8 +442,9 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 	}
 
 	intCfg := &ndn.InterestConfig{
-		Lifetime: utils.IdPtr(1 * time.Second),
-		Nonce:    utils.ConvertNonce(e.timer.Nonce()),
+		Lifetime:    utils.IdPtr(1 * time.Second),
+		Nonce:       utils.ConvertNonce(e.timer.Nonce()),
+		MustBeFresh: true,
 	}
 	interest, err := e.mgmtConf.MakeCmd(module, cmd, cmdArgs, intCfg)
 	if err != nil {
