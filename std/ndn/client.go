@@ -108,7 +108,7 @@ type ValidateExtArgs struct {
 	// Callback for the result.
 	Callback func(bool, error)
 	// Override data name during first validation.
-	DataName enc.Name
+	OverrideName enc.Name
 	// Next Hop ID to use for fetching certificates.
 	CertNextHop *uint64
 }

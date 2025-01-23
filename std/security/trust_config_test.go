@@ -2,7 +2,6 @@ package security_test
 
 import (
 	"crypto/elliptic"
-	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -171,16 +170,24 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 
 	// Simulate fetch from network using engine
 	fetchCount := 0
-	fetch := func(name enc.Name, cfg *ndn.InterestConfig, callback func(ndn.Data, enc.Wire, enc.Wire, error)) {
+	fetch := func(name enc.Name, _ *ndn.InterestConfig, callback ndn.ExpressCallbackFunc) {
 		fetchCount++
-		for cname, cwire := range network {
-			if strings.HasPrefix(cname, name.String()) {
-				data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(cwire))
-				callback(data, cwire, sigCov, err)
+		for certName, certWire := range network {
+			if strings.HasPrefix(certName, name.String()) {
+				data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(certWire))
+				callback(ndn.ExpressCallbackArgs{
+					Result:     ndn.InterestResultData,
+					Data:       data,
+					RawData:    certWire,
+					SigCovered: sigCov,
+					Error:      err,
+				})
 				return
 			}
 		}
-		callback(nil, nil, nil, errors.New("not found"))
+		callback(ndn.ExpressCallbackArgs{
+			Result: ndn.InterestResultNack,
+		})
 	}
 
 	// Create trust config
@@ -209,7 +216,7 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 		data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(dataW.Wire))
 		require.NoError(t, err)
 		ch := make(chan bool)
-		go trust.Validate(sec.ValidateArgs{
+		go trust.Validate(sec.TrustConfigValidateArgs{
 			Data:       data,
 			DataSigCov: sigCov,
 			Fetch:      fetch,

@@ -29,7 +29,7 @@ type Client struct {
 	// [fetcher] recheck segment fetcher
 	segcheck chan bool
 	// [validate] queue for new object validation
-	validatepipe chan sec.ValidateArgs
+	validatepipe chan sec.TrustConfigValidateArgs
 }
 
 // Create a new client with given engine and store
@@ -45,7 +45,7 @@ func NewClient(engine ndn.Engine, store ndn.Store, trust *sec.TrustConfig) ndn.C
 	client.seginpipe = make(chan rrSegHandleDataArgs, 512)
 	client.segfetch = make(chan *ConsumeState, 128)
 	client.segcheck = make(chan bool, 2)
-	client.validatepipe = make(chan sec.ValidateArgs, 64)
+	client.validatepipe = make(chan sec.TrustConfigValidateArgs, 64)
 
 	return client
 }

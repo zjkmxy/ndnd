@@ -36,19 +36,19 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 	}
 
 	// Pop off the version and segment components
-	dataName := rmSegVer(args.Data.Name())
-	if len(args.DataName) > 0 {
-		dataName = args.DataName
+	overrideName := rmSegVer(args.Data.Name())
+	if len(args.OverrideName) > 0 {
+		overrideName = args.OverrideName
 	}
 
 	// Add to queue of validation
 	select {
-	case c.validatepipe <- sec.ValidateArgs{
-		Data:       args.Data,
-		DataSigCov: args.SigCovered,
-		Callback:   args.Callback,
-		DataName:   dataName,
-		Fetch: func(name enc.Name, config *ndn.InterestConfig, found func(ndn.Data, enc.Wire, enc.Wire, error)) {
+	case c.validatepipe <- sec.TrustConfigValidateArgs{
+		Data:         args.Data,
+		DataSigCov:   args.SigCovered,
+		Callback:     args.Callback,
+		OverrideName: overrideName,
+		Fetch: func(name enc.Name, config *ndn.InterestConfig, callback ndn.ExpressCallbackFunc) {
 			// Pass through extra options
 			if args.CertNextHop != nil {
 				config.NextHopId = args.CertNextHop
@@ -56,18 +56,10 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 
 			// Express the interest with reliability
 			c.ExpressR(ndn.ExpressRArgs{
-				Name:    name,
-				Config:  config,
-				Retries: 3,
-				Callback: func(res ndn.ExpressCallbackArgs) {
-					if res.Result == ndn.InterestResultData {
-						found(res.Data, res.RawData, res.SigCovered, nil)
-					} else if res.Error != nil {
-						found(nil, nil, nil, res.Error)
-					} else {
-						found(nil, nil, nil, fmt.Errorf("failed to fetch certificate (%s) with result: %v", name, res.Result))
-					}
-				},
+				Name:     name,
+				Config:   config,
+				Retries:  3,
+				Callback: callback,
 			})
 		},
 	}:

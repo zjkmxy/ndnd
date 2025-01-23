@@ -63,24 +63,31 @@ func (tc *TrustConfig) Suggest(name enc.Name) ndn.Signer {
 	return tc.schema.Suggest(name, tc.keychain)
 }
 
-// ValidateArgs are the arguments for the Validate function.
-type ValidateArgs struct {
-	Data       ndn.Data
+// TrustConfigValidateArgs are the arguments for the TrustConfig Validate function.
+type TrustConfigValidateArgs struct {
+	// Data is the packet to validate.
+	Data ndn.Data
+	// DataSigCov is the signature covered data wire.
 	DataSigCov enc.Wire
 
-	Fetch func(enc.Name, *ndn.InterestConfig,
-		func(data ndn.Data, wire enc.Wire, sigCov enc.Wire, err error))
+	// Fetch is the fetch function to use for fetching certificates.
+	Fetch func(enc.Name, *ndn.InterestConfig, ndn.ExpressCallbackFunc)
+	// Callback is the callback to call when validation is done.
 	Callback func(bool, error)
-	DataName enc.Name
+	// OverrideName is an override for the data name (advanced usage).
+	OverrideName enc.Name
 
-	cert       ndn.Data
+	// cert is the certificate to use for validation.
+	cert ndn.Data
+	// certSigCov is the signature covered certificate wire.
 	certSigCov enc.Wire
 
+	// depth is the maximum depth of the validation chain.
 	depth int
 }
 
 // Validate validates a Data packet using a fetch API.
-func (tc *TrustConfig) Validate(args ValidateArgs) {
+func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 	if args.Data == nil {
 		args.Callback(false, fmt.Errorf("data is nil"))
 		return
@@ -112,8 +119,8 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 	if args.cert != nil {
 		certName := args.cert.Name()
 		dataName := args.Data.Name()
-		if len(args.DataName) > 0 {
-			dataName = args.DataName
+		if len(args.OverrideName) > 0 {
+			dataName = args.OverrideName
 		}
 
 		// Disallow empty names
@@ -154,13 +161,13 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 		}
 
 		// Recursively validate the certificate
-		tc.Validate(ValidateArgs{
+		tc.Validate(TrustConfigValidateArgs{
 			Data:       args.cert,
 			DataSigCov: args.certSigCov,
 
-			Fetch:    args.Fetch,
-			Callback: args.Callback,
-			DataName: nil,
+			Fetch:        args.Fetch,
+			Callback:     args.Callback,
+			OverrideName: nil,
 
 			cert:       nil,
 			certSigCov: nil,
@@ -211,45 +218,46 @@ func (tc *TrustConfig) Validate(args ValidateArgs) {
 
 	// If not found, attempt to fetch cert from network
 	if args.cert == nil {
-		log.Debug(tc, "Fetching certificate", "key", keyLocator)
+		log.Debug(tc, "Fetching certificate", "name", keyLocator)
 		args.Fetch(keyLocator, &ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,
-		}, func(cert ndn.Data, wire enc.Wire, sigCov enc.Wire, err error) {
-			if err != nil {
-				log.Warn(tc, "Failed to fetch certificate", "err", err)
-				args.Callback(false, err)
+		}, func(res ndn.ExpressCallbackArgs) {
+			if res.Error == nil && res.Result != ndn.InterestResultData {
+				res.Error = fmt.Errorf("failed to fetch certificate (%s) with result: %s", keyLocator, res.Result)
+			}
+
+			if res.Error != nil {
+				args.Callback(false, res.Error)
 				return // failed to fetch cert
 			}
 
 			// Bail if the fetched cert is not fresh
-			if CertIsExpired(cert) {
-				log.Warn(tc, "Fetched certificate is expired", "cert", cert.Name())
-				args.Callback(false, fmt.Errorf("certificate is expired: %s", cert.Name()))
+			if CertIsExpired(res.Data) {
+				args.Callback(false, fmt.Errorf("certificate is expired: %s", res.Data.Name()))
 				return
 			}
 
 			// Fetched cert is fresh
-			log.Debug(tc, "Fetched certificate from network", "cert", cert.Name())
+			log.Debug(tc, "Fetched certificate from network", "cert", res.Data.Name())
 
 			// Call again with the fetched cert
-			args.cert = cert
-			args.certSigCov = sigCov
+			args.cert = res.Data
+			args.certSigCov = res.SigCovered
 
 			// Monkey patch the callback to store the cert in keychain
 			// if the validation passes.
 			origCallback := args.Callback
 			args.Callback = func(valid bool, err error) {
 				if valid && err == nil {
-					log.Debug(tc, "Inserting certificate to keychain", "cert", cert.Name())
 					tc.mutex.Lock()
-					err := tc.keychain.InsertCert(wire.Join())
+					err := tc.keychain.InsertCert(res.RawData.Join())
 					tc.mutex.Unlock()
 					if err != nil {
-						log.Error(tc, "Failed to insert certificate to keychain", "cert", cert.Name(), "err", err)
+						log.Error(tc, "Failed to insert certificate to keychain", "name", res.Data.Name(), "err", err)
 					}
 				} else {
-					log.Warn(tc, "Received invalid certificate", "cert", cert.Name(), "valid", valid, "err", err)
+					log.Warn(tc, "Received invalid certificate", "name", res.Data.Name(), "valid", valid, "err", err)
 				}
 				origCallback(valid, err) // continue validation
 			}

@@ -78,16 +78,17 @@ type Data interface {
 	Freshness() *time.Duration
 	FinalBlockID() *enc.Component
 	Content() enc.Wire
-
 	Signature() Signature
 }
 
 // DataConfig is used to create a Data.
 type DataConfig struct {
+	// Standard Data parameters
 	ContentType  *ContentType
 	Freshness    *time.Duration
 	FinalBlockID *enc.Component
 
+	// Certificate parameters
 	SigNotBefore *time.Time
 	SigNotAfter  *time.Time
 }
