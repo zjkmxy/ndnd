@@ -87,8 +87,7 @@ func GetNfdcCmdTree() utils.CmdTree {
 }
 
 type Nfdc struct {
-	engine        ndn.Engine
-	statusPadding int
+	engine ndn.Engine
 }
 
 func (n *Nfdc) Start() {

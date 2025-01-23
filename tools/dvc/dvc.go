@@ -64,12 +64,15 @@ func RunDvStatus(args []string) {
 	flagset.Parse(args[1:])
 
 	status := dvGetStatus()
-	fmt.Printf("version = %s\n", status.Version)
-	fmt.Printf("routerName = %s\n", status.RouterName.Name)
-	fmt.Printf("networkName = %s\n", status.NetworkName.Name)
-	fmt.Printf("nRibEntries = %d\n", status.NRibEntries)
-	fmt.Printf("nNeighbors = %d\n", status.NNeighbors)
-	fmt.Printf("nFibEntries = %d\n", status.NFibEntries)
+
+	p := utils.StatusPrinter{File: os.Stdout, Padding: 12}
+	fmt.Println("General DV status:")
+	p.Print("version", status.Version)
+	p.Print("routerName", status.RouterName.Name)
+	p.Print("networkName", status.NetworkName.Name)
+	p.Print("nRibEntries", status.NRibEntries)
+	p.Print("nNeighbors", status.NNeighbors)
+	p.Print("nFibEntries", status.NFibEntries)
 }
 
 func RunDvLinkCreate(nfdcTree *utils.CmdTree) func([]string) {
