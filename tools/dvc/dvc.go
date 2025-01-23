@@ -1,6 +1,7 @@
 package dvc
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -54,13 +55,39 @@ func dvGetStatus() *spec_dv.Status {
 	return status
 }
 
+func RunDvStatus(args []string) {
+	flagset := flag.NewFlagSet("dv-status", flag.ExitOnError)
+	flagset.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(args[1:])
+
+	status := dvGetStatus()
+	fmt.Printf("version = %s\n", status.Version)
+	fmt.Printf("routerName = %s\n", status.RouterName.Name)
+	fmt.Printf("networkName = %s\n", status.NetworkName.Name)
+	fmt.Printf("nRibEntries = %d\n", status.NRibEntries)
+	fmt.Printf("nNeighbors = %d\n", status.NNeighbors)
+	fmt.Printf("nFibEntries = %d\n", status.NFibEntries)
+}
+
 func RunDvLinkCreate(nfdcTree *utils.CmdTree) func([]string) {
 	return func(args []string) {
-		if len(args) != 2 {
+		flagset := flag.NewFlagSet("dv-link-create", flag.ExitOnError)
+		flagset.Usage = func() {
 			fmt.Fprintf(os.Stderr, "Usage: %s <neighbor-uri>\n", args[0])
-			return
+			flagset.PrintDefaults()
+		}
+		flagset.Parse(args[1:])
+
+		argUri := flagset.Arg(0)
+		if argUri == "" {
+			flagset.Usage()
+			os.Exit(2)
 		}
 
+		// Get router status to get network name
 		status := dvGetStatus() // will panic if fail
 
 		// /localhop/<network>/32=DV/32=ADS/32=ACT
@@ -73,20 +100,31 @@ func RunDvLinkCreate(nfdcTree *utils.CmdTree) func([]string) {
 		nfdcTree.Execute([]string{
 			"nfdc", "route", "add",
 			"persistency=permanent",
-			"face=" + args[1],
-			"prefix=" + name.String(),
+			fmt.Sprintf("face=%s", argUri),
+			fmt.Sprintf("prefix=%s", name),
 		})
 	}
 }
 
 func RunDvLinkDestroy(nfdcTree *utils.CmdTree) func([]string) {
 	return func(args []string) {
-		if len(args) != 2 {
+		flagset := flag.NewFlagSet("dv-link-create", flag.ExitOnError)
+		flagset.Usage = func() {
 			fmt.Fprintf(os.Stderr, "Usage: %s <neighbor-uri>\n", args[0])
-			return
+			flagset.PrintDefaults()
+		}
+		flagset.Parse(args[1:])
+
+		argUri := flagset.Arg(0)
+		if argUri == "" {
+			flagset.Usage()
+			os.Exit(2)
 		}
 
 		// just destroy the face assuming we created it
-		nfdcTree.Execute([]string{"nfdc", "face", "destroy", "face=" + args[1]})
+		nfdcTree.Execute([]string{
+			"nfdc", "face", "destroy",
+			fmt.Sprintf("face=%s", argUri),
+		})
 	}
 }

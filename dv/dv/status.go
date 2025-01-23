@@ -12,10 +12,18 @@ import (
 
 // Received advertisement Interest
 func (dv *Router) statusOnInterest(args ndn.InterestHandlerArgs) {
-	status := tlv.Status{
-		NetworkName: &tlv.Destination{Name: dv.config.NetworkName()},
-		RouterName:  &tlv.Destination{Name: dv.config.RouterName()},
-	}
+	status := func() tlv.Status {
+		dv.mutex.Lock()
+		defer dv.mutex.Unlock()
+		return tlv.Status{
+			Version:     utils.NDNdVersion,
+			NetworkName: &tlv.Destination{Name: dv.config.NetworkName()},
+			RouterName:  &tlv.Destination{Name: dv.config.RouterName()},
+			NRibEntries: uint64(dv.rib.Size()),
+			NNeighbors:  uint64(dv.neighbors.Size()),
+			NFibEntries: uint64(dv.fib.Size()),
+		}
+	}()
 
 	name := args.Interest.Name()
 	cfg := &ndn.DataConfig{

@@ -37,6 +37,10 @@ func main() {
 				Help: "Start the NDN Distance Vector Routing Daemon",
 				Fun:  dv.Main,
 			}, {}, {
+				Name: "status",
+				Help: "Get general status of the router",
+				Fun:  dvc.RunDvStatus,
+			}, {
 				Name: "link create",
 				Help: "Create a new active neighbor link",
 				Fun:  dvc.RunDvLinkCreate(&nfdcTree),

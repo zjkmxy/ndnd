@@ -54,6 +54,10 @@ func (nt *NeighborTable) String() string {
 	return "dv-neighbors"
 }
 
+func (nt *NeighborTable) Size() int {
+	return len(nt.neighbors)
+}
+
 func (nt *NeighborTable) Get(name enc.Name) *NeighborState {
 	return nt.GetH(name.Hash())
 }

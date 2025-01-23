@@ -58,6 +58,10 @@ func NewFib(config *config.Config, nfdc *nfdc.NfdMgmtThread) *Fib {
 	}
 }
 
+func (fib *Fib) Size() int {
+	return len(fib.prefixes)
+}
+
 func (fib *Fib) Update(name enc.Name, newEntries []FibEntry) bool {
 	return fib.UpdateH(name.Hash(), name, newEntries)
 }
