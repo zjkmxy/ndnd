@@ -42,13 +42,21 @@ type Interest interface {
 
 // InterestConfig is used to create a Interest.
 type InterestConfig struct {
+	// Standard Interest parameters
 	CanBePrefix    bool
 	MustBeFresh    bool
 	ForwardingHint []enc.Name
 	Nonce          *uint64
 	Lifetime       *time.Duration
 	HopLimit       *uint
-	NextHopId      *uint64 // NDNLPv2
+
+	// Signed Interest parameters
+	SigNonce []byte
+	SigTime  *time.Duration
+	SigSeqNo *uint64
+
+	// NDNLPv2 parameters
+	NextHopId *uint64
 }
 
 // Container for an encoded Interest packet

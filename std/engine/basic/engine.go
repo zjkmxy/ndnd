@@ -457,6 +457,10 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 		Lifetime:    utils.IdPtr(1 * time.Second),
 		Nonce:       utils.ConvertNonce(e.timer.Nonce()),
 		MustBeFresh: true,
+
+		// Signed interest shenanigans (NFD wants this)
+		SigNonce: e.timer.Nonce(),
+		SigTime:  utils.IdPtr(time.Duration(e.timer.Now().UnixMilli()) * time.Millisecond),
 	}
 	interest, err := e.mgmtConf.MakeCmd(module, cmd, cmdArgs, intCfg)
 	if err != nil {

@@ -11,9 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-const (
-	TimeFmt = "20060102T150405" // ISO 8601 time format
-)
+const TimeFmt = "20060102T150405" // ISO 8601 time format
 
 func _() {
 	// Trait for Signature of Data
@@ -382,7 +380,10 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 		}
 
 		interest.SignatureInfo = &SignatureInfo{
-			SignatureType: uint64(signer.Type()),
+			SignatureType:   uint64(signer.Type()),
+			SignatureNonce:  config.SigNonce,
+			SignatureTime:   config.SigTime,
+			SignatureSeqNum: config.SigSeqNo,
 		}
 
 		if key := signer.KeyLocator(); key != nil {
