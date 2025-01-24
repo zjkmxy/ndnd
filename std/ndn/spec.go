@@ -50,7 +50,10 @@ type InterestConfig struct {
 	Lifetime       *time.Duration
 	HopLimit       *uint
 
-	// Signed Interest parameters
+	// Signed Interest parameters.
+	// The use of signed interests is strongly discouraged, and will
+	// be gradually phased out, which is why these parameters are
+	// not directly provided by the signer.
 	SigNonce []byte
 	SigTime  *time.Duration
 	SigSeqNo *uint64
