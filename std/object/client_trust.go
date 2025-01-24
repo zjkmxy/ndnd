@@ -15,7 +15,7 @@ func (c *Client) SuggestSigner(name enc.Name) ndn.Signer {
 	if c.trust == nil {
 		return signer.NewSha256Signer()
 	}
-	name = rmSegVer(name)
+	name = removeSegVer(name)
 	return c.trust.Suggest(name)
 }
 
@@ -36,7 +36,7 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 	}
 
 	// Pop off the version and segment components
-	overrideName := rmSegVer(args.Data.Name())
+	overrideName := removeSegVer(args.Data.Name())
 	if len(args.OverrideName) > 0 {
 		overrideName = args.OverrideName
 	}
@@ -69,8 +69,8 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 	}
 }
 
-// rmSegVer removes the segment and version components from a name
-func rmSegVer(name enc.Name) enc.Name {
+// removeSegVer removes the segment and version components from a name
+func removeSegVer(name enc.Name) enc.Name {
 	if len(name) > 2 {
 		if name[len(name)-1].Typ == enc.TypeSegmentNameComponent {
 			name = name[:len(name)-1]
