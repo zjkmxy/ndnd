@@ -31,11 +31,11 @@ func (kc *KeyChainMem) Store() ndn.Store {
 	return kc.pubStore
 }
 
-func (kc *KeyChainMem) GetIdentities() []ndn.KeyChainIdentity {
+func (kc *KeyChainMem) Identities() []ndn.KeyChainIdentity {
 	return kc.identities
 }
 
-func (kc *KeyChainMem) GetIdentity(name enc.Name) ndn.KeyChainIdentity {
+func (kc *KeyChainMem) IdentityByName(name enc.Name) ndn.KeyChainIdentity {
 	for _, id := range kc.identities {
 		if id.Name().Equal(name) {
 			return id
@@ -53,7 +53,7 @@ func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	}
 
 	// Check if signer already exists
-	idObj, _ := kc.GetIdentity(idName).(*keyChainIdentity)
+	idObj, _ := kc.IdentityByName(idName).(*keyChainIdentity)
 	if idObj != nil {
 		for _, key := range idObj.Keys() {
 			if key.KeyName().Equal(keyName) {

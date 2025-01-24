@@ -67,7 +67,7 @@ func TestKeyChainMem(t *testing.T) {
 	require.NoError(t, kc.InsertKey(signer11))
 
 	// Check key in keychain
-	identity1 := kc.GetIdentity(idName1)
+	identity1 := kc.IdentityByName(idName1)
 	require.NotNil(t, identity1)
 	require.Equal(t, idName1, identity1.Name())
 	require.Len(t, identity1.Keys(), 1)
@@ -101,12 +101,12 @@ func TestKeyChainMem(t *testing.T) {
 
 	// Lookup non-existing identity
 	idName2, _ := enc.NameFromStr("/my/test/identity2")
-	require.Nil(t, kc.GetIdentity(idName2))
+	require.Nil(t, kc.IdentityByName(idName2))
 
 	// Insert key for identity2
 	signer21 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
 	require.NoError(t, kc.InsertKey(signer21))
-	identity2 := kc.GetIdentity(idName2)
+	identity2 := kc.IdentityByName(idName2)
 	require.NotNil(t, identity2)
 	require.Len(t, identity2.Keys(), 1)
 	require.Equal(t, signer21, identity2.Keys()[0].Signer())
@@ -162,7 +162,7 @@ func TestKeyChainDir(t *testing.T) {
 	require.Equal(t, rootCert, data)
 
 	// Check Alice key
-	identity := kc.GetIdentity(KEY_ALICE_NAME[:2])
+	identity := kc.IdentityByName(KEY_ALICE_NAME[:2])
 	require.NotNil(t, identity)
 	require.Len(t, identity.Keys(), 1)
 	require.Equal(t, identity.Keys()[0].KeyName(), KEY_ALICE_NAME)

@@ -221,7 +221,7 @@ func (s *LvsSchema) Suggest(pkt enc.Name, keychain ndn.KeyChain) ndn.Signer {
 
 	// O(n^7) ... but n is small
 	s.match_(pkt, nil, func(pktNode *LvsNode, pktCtx map[uint64]enc.Component) bool {
-		for _, id := range keychain.GetIdentities() {
+		for _, id := range keychain.Identities() {
 			for _, key := range id.Keys() {
 				for _, cert := range key.UniqueCerts() {
 					s.match_(cert, pktCtx, func(keyNode *LvsNode, _ map[uint64]enc.Component) bool {

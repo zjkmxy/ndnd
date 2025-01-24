@@ -40,7 +40,7 @@ func keychainList(args []string) {
 		return
 	}
 
-	for _, id := range kc.GetIdentities() {
+	for _, id := range kc.Identities() {
 		fmt.Printf("%s\n", id.Name())
 		for _, key := range id.Keys() {
 			fmt.Printf("==> %s\n", key.KeyName())
@@ -128,7 +128,7 @@ func keychainGetKey(args []string) {
 		keyName = nil
 	}
 
-	idObj := kc.GetIdentity(id)
+	idObj := kc.IdentityByName(id)
 	if idObj == nil {
 		fmt.Fprintf(os.Stderr, "Identity not found: %s\n", id)
 		os.Exit(1)

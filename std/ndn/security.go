@@ -57,10 +57,10 @@ type KeyChain interface {
 	String() string
 	// Store provides the public storage of the keychain.
 	Store() Store
-	// GetIdentities returns all identities in the keychain.
-	GetIdentities() []KeyChainIdentity
-	// GetIdentity returns the identity by full name.
-	GetIdentity(enc.Name) KeyChainIdentity
+	// Identities returns all identities in the keychain.
+	Identities() []KeyChainIdentity
+	// IdentityByName returns the identity by full name.
+	IdentityByName(enc.Name) KeyChainIdentity
 	// InsertKey inserts a key to the keychain.
 	InsertKey(Signer) error
 	// InsertCert inserts a certificate to the keychain.

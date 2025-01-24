@@ -72,12 +72,12 @@ func (kc *KeyChainDir) Store() ndn.Store {
 	return kc.mem.Store()
 }
 
-func (kc *KeyChainDir) GetIdentities() []ndn.KeyChainIdentity {
-	return kc.mem.GetIdentities()
+func (kc *KeyChainDir) Identities() []ndn.KeyChainIdentity {
+	return kc.mem.Identities()
 }
 
-func (kc *KeyChainDir) GetIdentity(name enc.Name) ndn.KeyChainIdentity {
-	return kc.mem.GetIdentity(name)
+func (kc *KeyChainDir) IdentityByName(name enc.Name) ndn.KeyChainIdentity {
+	return kc.mem.IdentityByName(name)
 }
 
 func (kc *KeyChainDir) InsertKey(signer ndn.Signer) error {
