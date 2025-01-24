@@ -4,6 +4,7 @@ package tlv
 import (
 	"encoding/binary"
 	"io"
+	"strings"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 )
@@ -1830,6 +1831,7 @@ type StatusParsingContext struct {
 }
 
 func (encoder *StatusEncoder) Init(value *Status) {
+
 	if value.NetworkName != nil {
 		encoder.NetworkName_encoder.Init(value.NetworkName)
 	}
@@ -1838,6 +1840,18 @@ func (encoder *StatusEncoder) Init(value *Status) {
 	}
 
 	l := uint(0)
+	l += 3
+	switch x := len(value.Version); {
+	case x <= 0xfc:
+		l += 1
+	case x <= 0xffff:
+		l += 3
+	case x <= 0xffffffff:
+		l += 5
+	default:
+		l += 9
+	}
+	l += uint(len(value.Version))
 	if value.NetworkName != nil {
 		l += 3
 		switch x := encoder.NetworkName_encoder.length; {
@@ -1866,22 +1880,79 @@ func (encoder *StatusEncoder) Init(value *Status) {
 		}
 		l += encoder.RouterName_encoder.length
 	}
+	l += 3
+	switch x := value.NRibEntries; {
+	case x <= 0xff:
+		l += 2
+	case x <= 0xffff:
+		l += 3
+	case x <= 0xffffffff:
+		l += 5
+	default:
+		l += 9
+	}
+	l += 3
+	switch x := value.NNeighbors; {
+	case x <= 0xff:
+		l += 2
+	case x <= 0xffff:
+		l += 3
+	case x <= 0xffffffff:
+		l += 5
+	default:
+		l += 9
+	}
+	l += 3
+	switch x := value.NFibEntries; {
+	case x <= 0xff:
+		l += 2
+	case x <= 0xffff:
+		l += 3
+	case x <= 0xffffffff:
+		l += 5
+	default:
+		l += 9
+	}
 	encoder.length = l
 
 }
 
 func (context *StatusParsingContext) Init() {
+
 	context.NetworkName_context.Init()
 	context.RouterName_context.Init()
+
 }
 
 func (encoder *StatusEncoder) EncodeInto(value *Status, buf []byte) {
 
 	pos := uint(0)
 
+	buf[pos] = 253
+	binary.BigEndian.PutUint16(buf[pos+1:], uint16(401))
+	pos += 3
+	switch x := len(value.Version); {
+	case x <= 0xfc:
+		buf[pos] = byte(x)
+		pos += 1
+	case x <= 0xffff:
+		buf[pos] = 0xfd
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
+		pos += 3
+	case x <= 0xffffffff:
+		buf[pos] = 0xfe
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
+		pos += 5
+	default:
+		buf[pos] = 0xff
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
+		pos += 9
+	}
+	copy(buf[pos:], value.Version)
+	pos += uint(len(value.Version))
 	if value.NetworkName != nil {
 		buf[pos] = 253
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(401))
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(403))
 		pos += 3
 		switch x := encoder.NetworkName_encoder.length; {
 		case x <= 0xfc:
@@ -1907,7 +1978,7 @@ func (encoder *StatusEncoder) EncodeInto(value *Status, buf []byte) {
 	}
 	if value.RouterName != nil {
 		buf[pos] = 253
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(403))
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(405))
 		pos += 3
 		switch x := encoder.RouterName_encoder.length; {
 		case x <= 0xfc:
@@ -1931,6 +2002,69 @@ func (encoder *StatusEncoder) EncodeInto(value *Status, buf []byte) {
 			pos += encoder.RouterName_encoder.length
 		}
 	}
+	buf[pos] = 253
+	binary.BigEndian.PutUint16(buf[pos+1:], uint16(407))
+	pos += 3
+	switch x := value.NRibEntries; {
+	case x <= 0xff:
+		buf[pos] = 1
+		buf[pos+1] = byte(x)
+		pos += 2
+	case x <= 0xffff:
+		buf[pos] = 2
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
+		pos += 3
+	case x <= 0xffffffff:
+		buf[pos] = 4
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
+		pos += 5
+	default:
+		buf[pos] = 8
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
+		pos += 9
+	}
+	buf[pos] = 253
+	binary.BigEndian.PutUint16(buf[pos+1:], uint16(409))
+	pos += 3
+	switch x := value.NNeighbors; {
+	case x <= 0xff:
+		buf[pos] = 1
+		buf[pos+1] = byte(x)
+		pos += 2
+	case x <= 0xffff:
+		buf[pos] = 2
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
+		pos += 3
+	case x <= 0xffffffff:
+		buf[pos] = 4
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
+		pos += 5
+	default:
+		buf[pos] = 8
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
+		pos += 9
+	}
+	buf[pos] = 253
+	binary.BigEndian.PutUint16(buf[pos+1:], uint16(411))
+	pos += 3
+	switch x := value.NFibEntries; {
+	case x <= 0xff:
+		buf[pos] = 1
+		buf[pos+1] = byte(x)
+		pos += 2
+	case x <= 0xffff:
+		buf[pos] = 2
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
+		pos += 3
+	case x <= 0xffffffff:
+		buf[pos] = 4
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
+		pos += 5
+	default:
+		buf[pos] = 8
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
+		pos += 9
+	}
 }
 
 func (encoder *StatusEncoder) Encode(value *Status) enc.Wire {
@@ -1948,8 +2082,12 @@ func (context *StatusParsingContext) Parse(reader enc.ParseReader, ignoreCritica
 		return nil, enc.ErrBufferOverflow
 	}
 
+	var handled_Version bool = false
 	var handled_NetworkName bool = false
 	var handled_RouterName bool = false
+	var handled_NRibEntries bool = false
+	var handled_NNeighbors bool = false
+	var handled_NFibEntries bool = false
 
 	progress := -1
 	_ = progress
@@ -1979,14 +2117,83 @@ func (context *StatusParsingContext) Parse(reader enc.ParseReader, ignoreCritica
 			case 401:
 				if true {
 					handled = true
-					handled_NetworkName = true
-					value.NetworkName, err = context.NetworkName_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+					handled_Version = true
+					{
+						var builder strings.Builder
+						_, err = io.CopyN(&builder, reader, int64(l))
+						if err == nil {
+							value.Version = builder.String()
+						}
+					}
 				}
 			case 403:
 				if true {
 					handled = true
+					handled_NetworkName = true
+					value.NetworkName, err = context.NetworkName_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			case 405:
+				if true {
+					handled = true
 					handled_RouterName = true
 					value.RouterName, err = context.RouterName_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			case 407:
+				if true {
+					handled = true
+					handled_NRibEntries = true
+					value.NRibEntries = uint64(0)
+					{
+						for i := 0; i < int(l); i++ {
+							x := byte(0)
+							x, err = reader.ReadByte()
+							if err != nil {
+								if err == io.EOF {
+									err = io.ErrUnexpectedEOF
+								}
+								break
+							}
+							value.NRibEntries = uint64(value.NRibEntries<<8) | uint64(x)
+						}
+					}
+				}
+			case 409:
+				if true {
+					handled = true
+					handled_NNeighbors = true
+					value.NNeighbors = uint64(0)
+					{
+						for i := 0; i < int(l); i++ {
+							x := byte(0)
+							x, err = reader.ReadByte()
+							if err != nil {
+								if err == io.EOF {
+									err = io.ErrUnexpectedEOF
+								}
+								break
+							}
+							value.NNeighbors = uint64(value.NNeighbors<<8) | uint64(x)
+						}
+					}
+				}
+			case 411:
+				if true {
+					handled = true
+					handled_NFibEntries = true
+					value.NFibEntries = uint64(0)
+					{
+						for i := 0; i < int(l); i++ {
+							x := byte(0)
+							x, err = reader.ReadByte()
+							if err != nil {
+								if err == io.EOF {
+									err = io.ErrUnexpectedEOF
+								}
+								break
+							}
+							value.NFibEntries = uint64(value.NFibEntries<<8) | uint64(x)
+						}
+					}
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -2006,11 +2213,23 @@ func (context *StatusParsingContext) Parse(reader enc.ParseReader, ignoreCritica
 	startPos = reader.Pos()
 	err = nil
 
+	if !handled_Version && err == nil {
+		err = enc.ErrSkipRequired{Name: "Version", TypeNum: 401}
+	}
 	if !handled_NetworkName && err == nil {
 		value.NetworkName = nil
 	}
 	if !handled_RouterName && err == nil {
 		value.RouterName = nil
+	}
+	if !handled_NRibEntries && err == nil {
+		err = enc.ErrSkipRequired{Name: "NRibEntries", TypeNum: 407}
+	}
+	if !handled_NNeighbors && err == nil {
+		err = enc.ErrSkipRequired{Name: "NNeighbors", TypeNum: 409}
+	}
+	if !handled_NFibEntries && err == nil {
+		err = enc.ErrSkipRequired{Name: "NFibEntries", TypeNum: 411}
 	}
 
 	if err != nil {

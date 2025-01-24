@@ -10,6 +10,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 func Main(args []string) {
@@ -33,7 +34,7 @@ func Main(args []string) {
 
 	if printVersion {
 		fmt.Fprintln(os.Stderr, "YaNFD: Yet another NDN Forwarding Daemon")
-		fmt.Fprintln(os.Stderr, "Version: ", core.Version)
+		fmt.Fprintln(os.Stderr, "Version: ", utils.NDNdVersion)
 		fmt.Fprintln(os.Stderr, "Copyright (C) 2020-2024 University of California")
 		fmt.Fprintln(os.Stderr, "Released under the terms of the MIT License")
 		return

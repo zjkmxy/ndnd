@@ -137,15 +137,15 @@ func (s *rrSegFetcher) doCheck() {
 	defer s.doCheck()
 
 	// queue outgoing interest for the next segment
-	args := ExpressRArgs{
+	s.client.ExpressR(ndn.ExpressRArgs{
 		Name: state.fetchName.Append(enc.NewSegmentComponent(seg)),
 		Config: &ndn.InterestConfig{
 			MustBeFresh: false,
 		},
 		Retries: 3,
-	}
-	s.client.ExpressR(args, func(args ndn.ExpressCallbackArgs) {
-		s.client.seginpipe <- rrSegHandleDataArgs{state: state, args: args}
+		Callback: func(args ndn.ExpressCallbackArgs) {
+			s.client.seginpipe <- rrSegHandleDataArgs{state: state, args: args}
+		},
 	})
 }
 
@@ -159,15 +159,25 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 	}
 
 	if args.Result == ndn.InterestResultError {
-		state.finalizeError(fmt.Errorf("consume: fetch failed with error %v", args.Error))
+		state.finalizeError(fmt.Errorf("consume: fetch seg failed: %v", args.Error))
 		return
 	}
 
 	if args.Result != ndn.InterestResultData {
-		state.finalizeError(fmt.Errorf("consume: fetch failed with result %d", args.Result))
+		state.finalizeError(fmt.Errorf("consume: fetch seg failed with result: %s", args.Result))
 		return
 	}
 
+	s.client.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
+		if !valid {
+			state.finalizeError(fmt.Errorf("consume: validate seg failed: %v", err))
+		} else {
+			s.handleValidatedData(args, state)
+		}
+	})
+}
+
+func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *ConsumeState) {
 	// get the final block id if we don't know the segment count
 	if state.segCnt == -1 { // TODO: can change?
 		fbId := args.Data.FinalBlockID()

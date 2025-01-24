@@ -1,6 +1,7 @@
 package config
 
 import (
+	_ "embed"
 	"errors"
 	"time"
 
@@ -17,6 +18,9 @@ var MulticastStrategy = enc.LOCALHOST.Append(
 	enc.NewStringComponent(enc.TypeGenericNameComponent, "multicast"),
 )
 
+//go:embed schema.tlv
+var SchemaBytes []byte
+
 type Config struct {
 	// Network should be the same for all routers in the network.
 	Network string `json:"network"`
@@ -26,6 +30,10 @@ type Config struct {
 	AdvertisementSyncInterval_ms uint64 `json:"advertise_interval"`
 	// Time after which a neighbor is considered dead.
 	RouterDeadInterval_ms uint64 `json:"router_dead_interval"`
+	// URI specifying KeyChain location.
+	KeyChainUri string `json:"keychain"`
+	// List of trust anchor full names.
+	TrustAnchors []string `json:"trust_anchors"`
 
 	// Parsed Global Prefix
 	networkNameN enc.Name
@@ -39,12 +47,16 @@ type Config struct {
 	advSyncPassivePfxN enc.Name
 	// Advertisement Data Prefix
 	advDataPfxN enc.Name
+	// Universal router data prefix
+	routerDataPfxN enc.Name
 	// Prefix Table Sync Prefix
 	pfxSyncPfxN enc.Name
 	// Prefix Table Data Prefix
 	pfxDataPfxN enc.Name
 	// NLSR readvertise prefix
 	localPfxN enc.Name
+	// Trust anchor names
+	trustAnchorsN []enc.Name
 }
 
 func DefaultConfig() *Config {
@@ -73,6 +85,11 @@ func (c *Config) Parse() (err error) {
 		return err
 	}
 
+	// Make sure router is in the network
+	if !c.networkNameN.IsPrefix(c.routerNameN) {
+		return errors.New("network name is required to be a prefix of router name")
+	}
+
 	// Validate intervals are not too short
 	if c.AdvertisementSyncInterval() < 1*time.Second {
 		return errors.New("AdvertisementSyncInterval must be at least 1 second")
@@ -83,7 +100,17 @@ func (c *Config) Parse() (err error) {
 		return errors.New("RouterDeadInterval must be at least 2*AdvertisementSyncInterval")
 	}
 
-	// Create name table
+	// Validate trust anchors
+	c.trustAnchorsN = make([]enc.Name, 0, len(c.TrustAnchors))
+	for _, anchor := range c.TrustAnchors {
+		name, err := enc.NameFromStr(anchor)
+		if err != nil {
+			return err
+		}
+		c.trustAnchorsN = append(c.trustAnchorsN, name)
+	}
+
+	// Advertisement sync and data prefixes
 	c.advSyncPfxN = enc.LOCALHOP.Append(c.networkNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADS"),
@@ -98,14 +125,23 @@ func (c *Config) Parse() (err error) {
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
 	)...)
+
+	// Prefix table sync prefix
 	c.pfxSyncPfxN = c.networkNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFS"),
+	)
+
+	// Router data prefix including prefix data and certificates
+	c.routerDataPfxN = c.routerNameN.Append(
+		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 	)
 	c.pfxDataPfxN = c.routerNameN.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
 	)
+
+	// Local prefixes to NFD
 	c.localPfxN = enc.LOCALHOST.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
 	)
@@ -135,6 +171,10 @@ func (c *Config) AdvertisementSyncPassivePrefix() enc.Name {
 
 func (c *Config) AdvertisementDataPrefix() enc.Name {
 	return c.advDataPfxN
+}
+
+func (c *Config) RouterDataPrefix() enc.Name {
+	return c.routerDataPfxN
 }
 
 func (c *Config) PrefixTableSyncPrefix() enc.Name {
@@ -167,4 +207,12 @@ func (c *Config) AdvertisementSyncInterval() time.Duration {
 
 func (c *Config) RouterDeadInterval() time.Duration {
 	return time.Duration(c.RouterDeadInterval_ms) * time.Millisecond
+}
+
+func (c *Config) TrustAnchorNames() []enc.Name {
+	return c.trustAnchorsN
+}
+
+func (c *Config) SchemaBytes() []byte {
+	return SchemaBytes
 }

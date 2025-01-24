@@ -59,7 +59,7 @@ func TestBasicMatch(t *testing.T) {
 	// Remove /a/b/c will remove /a/b but not /a/c
 	name = utils.WithoutErr(enc.NameFromStr("/a/b/c"))
 	n = trie.ExactMatch(name)
-	n.Delete()
+	n.Prune()
 	name = utils.WithoutErr(enc.NameFromStr("/a/b"))
 	require.True(t, nil == trie.ExactMatch(name))
 	require.Equal(t, 1, trie.PrefixMatch(name).Depth())
@@ -67,42 +67,90 @@ func TestBasicMatch(t *testing.T) {
 	// Remove /a/c will remove everything except the root
 	name = utils.WithoutErr(enc.NameFromStr("/a/c"))
 	n = trie.ExactMatch(name)
-	n.Delete()
+	n.Prune()
 	require.False(t, trie.HasChildren())
 }
 
-func TestDeleteIf(t *testing.T) {
+func TestPruneIf(t *testing.T) {
 	utils.SetTestingT(t)
 
 	var name enc.Name
 	var n *basic_engine.NameTrie[int]
 	trie := basic_engine.NewNameTrie[int]()
 
-	// Create /a/b and /a/b/c
+	// /a/b - value
 	name = utils.WithoutErr(enc.NameFromStr("/a/b"))
-	n = trie.MatchAlways(name)
-	n.SetValue(10)
+	ab := trie.MatchAlways(name)
+	ab.SetValue(10)
+
+	// /a/b/c - no value
 	name = utils.WithoutErr(enc.NameFromStr("/a/b/c"))
-	n = trie.MatchAlways(name)
-	require.Equal(t, 3, n.Depth())
-	require.Equal(t, 10, n.Parent().Value())
+	abc := trie.MatchAlways(name)
+	abc.SetValue(0)
+	require.Equal(t, 3, abc.Depth())
+	require.Equal(t, 10, abc.Parent().Value())
 
-	noValue := func(x int) bool {
-		return x == 0
-	}
+	// /a/b/d - no value
+	name = utils.WithoutErr(enc.NameFromStr("/a/b/d"))
+	abd := trie.MatchAlways(name)
+	abd.SetValue(0)
 
-	// DeleteIf /a/b/c will not remove /a/b
+	// /e/f/g - value
+	name = utils.WithoutErr(enc.NameFromStr("/e/f/g"))
+	efg := trie.MatchAlways(name)
+	efg.SetValue(30)
+
+	// zero is no value
+	noValue := func(x int) bool { return x == 0 }
+
+	// PruneIf /a/b/c will not remove /a/b
 	name = utils.WithoutErr(enc.NameFromStr("/a/b/c"))
 	n = trie.ExactMatch(name)
-	n.DeleteIf(noValue)
-	require.True(t, nil == trie.ExactMatch(name))
+	require.Equal(t, abc, n)
+	n.PruneIf(noValue)
+	require.Nil(t, trie.ExactMatch(name))
 	name = utils.WithoutErr(enc.NameFromStr("/a/b"))
-	require.Equal(t, 10, trie.ExactMatch(name).Value())
+	require.Equal(t, ab, trie.ExactMatch(name))
 
-	// Create /a/b/c = 10. Now DeleteIf does nothing
+	// Prune again with /a/b set to zero
+	ab.SetValue(0)
+	name = utils.WithoutErr(enc.NameFromStr("/a/b/c"))
+	abc = trie.MatchAlways(name)
+	n = trie.ExactMatch(name)
+	require.Equal(t, abc, n)
+	n.PruneIf(noValue)
+	require.Nil(t, trie.ExactMatch(name))
+
+	// Make sure /a/b is not removed because it has other children
+	name = utils.WithoutErr(enc.NameFromStr("/a/b"))
+	require.Equal(t, ab, trie.ExactMatch(name))
+
+	// Prune /a/b/d
+	name = utils.WithoutErr(enc.NameFromStr("/a/b/d"))
+	n = trie.ExactMatch(name)
+	require.Equal(t, abd, n)
+	n.PruneIf(noValue)
+	require.Nil(t, trie.ExactMatch(name))
+
+	// Make sure /a/b is now removed
+	name = utils.WithoutErr(enc.NameFromStr("/a/b"))
+	require.Nil(t, trie.ExactMatch(name))
+
+	// /e/f/g is not removed
+	name = utils.WithoutErr(enc.NameFromStr("/e/f/g"))
+	require.Equal(t, efg, trie.ExactMatch(name))
+
+	// Prune /e/f should do nothing
+	name = utils.WithoutErr(enc.NameFromStr("/e/f"))
+	n = trie.ExactMatch(name)
+	n.PruneIf(noValue)
+	name = utils.WithoutErr(enc.NameFromStr("/e/f/g"))
+	require.Equal(t, efg, trie.ExactMatch(name))
+
+	// Create /a/b/c = 10. Now PruneIf does nothing
 	name = utils.WithoutErr(enc.NameFromStr("/a/b/c"))
 	n = trie.MatchAlways(name)
 	n.SetValue(10)
-	n.DeleteIf(noValue)
+	n.PruneIf(noValue)
 	require.Equal(t, n, trie.ExactMatch(name))
 }

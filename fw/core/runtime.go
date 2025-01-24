@@ -9,9 +9,6 @@ package core
 
 import "time"
 
-// Version of YaNFD.
-var Version string
-
 // StartTimestamp is the time the forwarder was started.
 var StartTimestamp time.Time
 

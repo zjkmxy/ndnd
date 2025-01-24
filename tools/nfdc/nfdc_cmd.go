@@ -21,6 +21,7 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 		kv := strings.SplitN(arg, "=", 2)
 		if len(kv) != 2 {
 			fmt.Fprintf(os.Stderr, "Invalid argument: %s (should be key=value)\n", arg)
+			os.Exit(9)
 			return
 		}
 
@@ -32,6 +33,7 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 	raw, execErr := n.engine.ExecMgmtCmd(mod, cmd, &ctrlArgs)
 	if raw == nil {
 		fmt.Fprintf(os.Stderr, "Error executing command: %+v\n", execErr)
+		os.Exit(1)
 		return
 	}
 
@@ -39,6 +41,7 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 	res, ok := raw.(*mgmt.ControlResponse)
 	if !ok || res == nil || res.Val == nil || res.Val.Params == nil {
 		fmt.Fprintf(os.Stderr, "Invalid or empty response type: %T\n", raw)
+		os.Exit(1)
 		return
 	}
 	n.printCtrlResponse(res)

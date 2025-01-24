@@ -2,6 +2,7 @@ package object
 
 import (
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
 )
 
 // MemoryFifoDir is a simple object directory that evicts the oldest name
@@ -38,7 +39,7 @@ func (d *MemoryFifoDir) Pop() enc.Name {
 }
 
 // Evict removes old names from a client until it reaches the desired size.
-func (d *MemoryFifoDir) Evict(client *Client) error {
+func (d *MemoryFifoDir) Evict(client ndn.Client) error {
 	for {
 		name := d.Pop()
 		if name == nil {

@@ -60,12 +60,19 @@ type ExpressCallbackFunc func(args ExpressCallbackArgs)
 
 // ExpressCallbackArgs represents the arguments passed to the ExpressCallbackFunc.
 type ExpressCallbackArgs struct {
-	Result     InterestResult
-	Data       Data
-	RawData    enc.Wire
+	// Result of the Interest expression.
+	// If the result is not InterestResultData, Data fields are invalid.
+	Result InterestResult
+	// Data fetched.
+	Data Data
+	// Raw Data wire.
+	RawData enc.Wire
+	// Signature covered part of the Data.
 	SigCovered enc.Wire
+	// NACK reason code, if the result is InterestResultNack.
 	NackReason uint64
-	Error      error // for InterestResultError
+	// Error, if the result is InterestResultError.
+	Error error
 }
 
 // InterestHandler represents the callback function for an Interest handler.

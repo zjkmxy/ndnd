@@ -55,8 +55,16 @@ type PrefixOpRemove struct {
 }
 
 type Status struct {
+	//+field:string
+	Version string `tlv:"0x191"`
 	//+field:struct:Destination
-	NetworkName *Destination `tlv:"0x191"`
+	NetworkName *Destination `tlv:"0x193"`
 	//+field:struct:Destination
-	RouterName *Destination `tlv:"0x193"`
+	RouterName *Destination `tlv:"0x195"`
+	//+field:natural
+	NRibEntries uint64 `tlv:"0x197"`
+	//+field:natural
+	NNeighbors uint64 `tlv:"0x199"`
+	//+field:natural
+	NFibEntries uint64 `tlv:"0x19B"`
 }

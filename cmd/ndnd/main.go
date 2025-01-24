@@ -9,6 +9,7 @@ import (
 	tools "github.com/named-data/ndnd/tools"
 	dvc "github.com/named-data/ndnd/tools/dvc"
 	nfdc "github.com/named-data/ndnd/tools/nfdc"
+	tools_sec "github.com/named-data/ndnd/tools/sec"
 )
 
 func main() {
@@ -36,6 +37,10 @@ func main() {
 				Help: "Start the NDN Distance Vector Routing Daemon",
 				Fun:  dv.Main,
 			}, {}, {
+				Name: "status",
+				Help: "Get general status of the router",
+				Fun:  dvc.RunDvStatus,
+			}, {
 				Name: "link create",
 				Help: "Create a new active neighbor link",
 				Fun:  dvc.RunDvLinkCreate(&nfdcTree),
@@ -46,6 +51,10 @@ func main() {
 			}},
 		}, {
 			// tools separator
+		}, {
+			Name: "sec",
+			Help: "NDN Security Utilities",
+			Sub:  tools_sec.GetSecCmdTree().Sub,
 		}, {
 			Name: "ping",
 			Help: "Send Interests to an NDN ping server",

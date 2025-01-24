@@ -5,6 +5,7 @@ import (
 	"github.com/named-data/ndnd/dv/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
+	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	"github.com/named-data/ndnd/std/utils"
@@ -16,7 +17,7 @@ var PREFIX_SNAP_COMP = enc.NewStringComponent(enc.TypeKeywordNameComponent, "SNA
 
 type PrefixTable struct {
 	config *config.Config
-	client *object.Client
+	client ndn.Client
 	svs    *ndn_sync.SvSync
 
 	routers map[string]*PrefixTableRouter
@@ -41,7 +42,7 @@ type PrefixEntry struct {
 
 func NewPrefixTable(
 	config *config.Config,
-	client *object.Client,
+	client ndn.Client,
 	svs *ndn_sync.SvSync,
 ) *PrefixTable {
 	pt := &PrefixTable{
@@ -221,7 +222,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 	pt.me.Latest = seq
 
 	// Produce the operation
-	name, err := pt.client.Produce(object.ProduceArgs{
+	name, err := pt.client.Produce(ndn.ProduceArgs{
 		Name: pt.config.PrefixTableDataPrefix().Append(
 			enc.NewTimestampComponent(pt.svs.GetBootTime()),
 			enc.NewSequenceNumComponent(seq),
@@ -257,7 +258,7 @@ func (pt *PrefixTable) publishSnap() {
 	}
 
 	// Produce the snapshot
-	name, err := pt.client.Produce(object.ProduceArgs{
+	name, err := pt.client.Produce(ndn.ProduceArgs{
 		Name:    pt.config.PrefixTableDataPrefix().Append(PREFIX_SNAP_COMP),
 		Content: snap.Encode(),
 		Version: utils.IdPtr(pt.me.Latest),

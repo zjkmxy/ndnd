@@ -1,0 +1,23 @@
+// Network name from config
+#network: network
+// Router name from config
+#router: #network/router
+
+// Advertisement Sync
+#adv_svs: /"localhop"/#network/"32=DV"/"32=ADS"/type & { type: "32=ACT"|"32=PSV" } <= #router_cert
+// Advertisement data
+#adv_data: /"localhop"/#router/"32=DV"/"32=ADV"/_ <= #router_cert
+
+// Prefix table Sync
+#pfx_svs: #network/"32=DV"/"32=PFS" <= #router_cert
+// Prefix table data
+#pfx_data: #router/"32=DV"/"32=PFX"/_/_ <= #router_cert
+// Prefix table snapshot
+#pfx_snap: #router/"32=DV"/"32=PFX"/"32=SNAP" <= #router_cert
+
+// Certificate definitions
+#network_cert: #network/#KEY
+#router_cert: #router/"32=DV"/#KEY <= #network_cert
+
+// Standard NDN conventions
+#KEY: "KEY"/_/_/_

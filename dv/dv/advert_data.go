@@ -6,7 +6,7 @@ import (
 	"github.com/named-data/ndnd/dv/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
-	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -18,7 +18,7 @@ func (a *advertModule) generate() {
 	a.seq++
 
 	// Produce the advertisement
-	name, err := a.dv.client.Produce(object.ProduceArgs{
+	name, err := a.dv.client.Produce(ndn.ProduceArgs{
 		Name: a.dv.config.AdvertisementDataPrefix().Append(
 			enc.NewTimestampComponent(a.bootTime),
 		),
@@ -52,7 +52,7 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 		enc.NewVersionComponent(seqNo),
 	)...)
 
-	a.dv.client.Consume(advName, func(state *object.ConsumeState) bool {
+	a.dv.client.Consume(advName, func(state ndn.ConsumeState) bool {
 		if !state.IsComplete() {
 			return true
 		}

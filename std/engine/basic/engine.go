@@ -93,7 +93,8 @@ func (e *Engine) DetachHandler(prefix enc.Name) error {
 	if n == nil {
 		return ndn.ErrInvalidValue{Item: "prefix", Value: prefix}
 	}
-	n.Delete()
+	n.SetValue(nil)
+	n.Prune()
 	return nil
 }
 
@@ -300,9 +301,7 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 		cur.SetValue(newList)
 	}
 
-	n.DeleteIf(func(lst []*pendInt) bool {
-		return len(lst) == 0
-	})
+	n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
 }
 
 func (e *Engine) onNack(name enc.Name, reason uint64) {
@@ -324,7 +323,8 @@ func (e *Engine) onNack(name enc.Name, reason uint64) {
 			panic("[BUG] PIT has empty entry")
 		}
 	}
-	n.Delete()
+	n.SetValue(nil)
+	n.Prune()
 }
 
 func (e *Engine) onError(err error) error {
@@ -410,9 +410,7 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 				}
 			}
 			n.SetValue(newLst)
-			n.DeleteIf(func(lst []*pendInt) bool {
-				return len(lst) == 0
-			})
+			n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
 		}
 		entry := &pendInt{
 			callback:      callback,
@@ -425,8 +423,22 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 		n.SetValue(append(n.Value(), entry))
 	}()
 
-	// Send interest
-	err := e.face.Send(interest.Wire)
+	// Wrap the interest in link packet if needed
+	wire := interest.Wire
+	if interest.Config.NextHopId != nil {
+		lpPkt := &spec.Packet{
+			LpPacket: &spec.LpPacket{
+				Fragment:      wire,
+				NextHopFaceId: interest.Config.NextHopId,
+			},
+		}
+		encoder := spec.PacketEncoder{}
+		encoder.Init(lpPkt)
+		wire = encoder.Encode(lpPkt)
+	}
+
+	// Send interest to face
+	err := e.face.Send(wire)
 	if err != nil {
 		log.Error(e, "Failed to send interest", "err", err)
 	}
@@ -442,8 +454,13 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 	}
 
 	intCfg := &ndn.InterestConfig{
-		Lifetime: utils.IdPtr(1 * time.Second),
-		Nonce:    utils.ConvertNonce(e.timer.Nonce()),
+		Lifetime:    utils.IdPtr(1 * time.Second),
+		Nonce:       utils.ConvertNonce(e.timer.Nonce()),
+		MustBeFresh: true,
+
+		// Signed interest shenanigans (NFD wants this)
+		SigNonce: e.timer.Nonce(),
+		SigTime:  utils.IdPtr(time.Duration(e.timer.Now().UnixMilli()) * time.Millisecond),
 	}
 	interest, err := e.mgmtConf.MakeCmd(module, cmd, cmdArgs, intCfg)
 	if err != nil {

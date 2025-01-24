@@ -17,12 +17,14 @@ func (n *Nfdc) ExecStrategyList(args []string) {
 	data, err := n.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 
 	status, err := mgmt.ParseStrategyChoiceMsg(enc.NewBufferReader(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing strategy list: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 

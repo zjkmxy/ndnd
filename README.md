@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://named-data.net/">
-    <img alt height="65" src="logo.svg"/>
+    <img alt height="65" src="docs/img/logo.svg"/>
   </a>
 
   <h1> Named Data Networking Daemon </h1>
@@ -44,6 +44,7 @@ Usage: ndnd [command]
   fw              NDN Forwarding Daemon
   dv              NDN Distance Vector Routing Daemon
 
+  sec             NDN Security Utilities
   ping            Send Interests to an NDN ping server
   pingserver      Start an NDN ping server under a prefix
   cat             Retrieve data under a prefix
@@ -64,7 +65,7 @@ ndnd fw run yanfd.config.yml
 A full configuration example can be found in [fw/yanfd.sample.yml](fw/yanfd.sample.yml).
 Note that the default configuration may require root privileges to bind to multicast interfaces.
 
-Once started, you can use the [forwarder control](tools/nfdc/README.md) tool to manage faces and routes.
+Once started, you can use the [forwarder control](docs/fw-control.md) tool to manage faces and routes.
 
 ## 📡 Distance Vector Router
 
@@ -79,7 +80,7 @@ ndnd dv run dv.config.yml
 A full configuration example can be found in [dv/dv.sample.yml](dv/dv.sample.yml).
 Make sure the network and router name are correctly configured and the forwarder is running.
 
-Once started, you can use the [router control](tools/dvc/README.md) tool to create and destroy neighbor links.
+Once started, you can use the [router control](docs/dv-control.md) tool to create and destroy neighbor links.
 
 ## 📚 Standard Library
 
@@ -88,11 +89,14 @@ The `ndnd/std` package implements `go-ndn`, a standard library for NDN applicati
 You can use this package to build your own NDN applications.
 Several examples are provided in the [std/examples](std/examples) directory.
 
+The standard library supports the [Light VerSec](https://python-ndn.readthedocs.io/en/latest/src/lvs/lvs.html) binary format for trust schema specification.
+
 ## 🛠️ Tools
 
 The `ndnd/tools` package provides basic utilities for NDN networks.
 These can be used directly using the `ndnd` CLI.
 
+- `sec`: security utilities for generating keys and certificates ([docs](docs/security-util.md))
 - `ping`/`pingserver`: test reachability between two NDN nodes
 - `cat`/`put`: segmented file transfer between a consumer and a producer
 

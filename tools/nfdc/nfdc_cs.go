@@ -6,6 +6,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 func (n *Nfdc) ExecCsInfo(args []string) {
@@ -17,23 +18,25 @@ func (n *Nfdc) ExecCsInfo(args []string) {
 	data, err := n.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 
 	status, err := mgmt.ParseCsInfoMsg(enc.NewBufferReader(data), true)
 	if err != nil || status.CsInfo == nil {
 		fmt.Fprintf(os.Stderr, "Error parsing CS info: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 
 	info := status.CsInfo
 
+	p := utils.StatusPrinter{File: os.Stdout, Padding: 10}
 	fmt.Println("CS information:")
-	n.statusPadding = 10
-	n.printStatusLine("capacity", info.Capacity)
-	n.printStatusLine("admit", info.Flags&mgmt.CsEnableAdmit != 0)
-	n.printStatusLine("serve", info.Flags&mgmt.CsEnableServe != 0)
-	n.printStatusLine("nEntries", info.NCsEntries)
-	n.printStatusLine("nHits", info.NHits)
-	n.printStatusLine("nMisses", info.NMisses)
+	p.Print("capacity", info.Capacity)
+	p.Print("admit", info.Flags&mgmt.CsEnableAdmit != 0)
+	p.Print("serve", info.Flags&mgmt.CsEnableServe != 0)
+	p.Print("nEntries", info.NCsEntries)
+	p.Print("nHits", info.NHits)
+	p.Print("nMisses", info.NMisses)
 }

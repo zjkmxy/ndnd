@@ -51,13 +51,6 @@ func (pc *PingClient) String() string {
 	return "ping"
 }
 
-func (pc *PingClient) usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s <prefix>\n", pc.args[0])
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Ping a NDN name prefix using Interests with name ndn:/name/prefix/ping/number.\n")
-	fmt.Fprintf(os.Stderr, "The numbers in the Interests are randomly generated\n")
-}
-
 func (pc *PingClient) send(seq uint64) {
 	name := pc.name.Append(enc.NewSequenceNumComponent(seq))
 
@@ -127,31 +120,32 @@ func (pc *PingClient) stats() {
 func (pc *PingClient) run() {
 	flagset := flag.NewFlagSet("ping", flag.ExitOnError)
 	flagset.Usage = func() {
-		pc.usage()
+		fmt.Fprintf(os.Stderr, "Usage: %s <prefix>\n", pc.args[0])
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Ping a NDN name prefix using Interests with name ndn:/name/prefix/ping/number\n")
+		fmt.Fprintf(os.Stderr, "The numbers in the Interests are randomly generated\n")
+		fmt.Fprintf(os.Stderr, "\n")
 		flagset.PrintDefaults()
 	}
-
 	flagset.IntVar(&pc.interval, "i", 1000, "ping interval, in milliseconds")
 	flagset.IntVar(&pc.timeout, "t", 4000, "timeout for each ping, in milliseconds")
 	flagset.IntVar(&pc.count, "c", 0, "number of pings to send")
 	flagset.Uint64Var(&pc.seq, "s", 0, "start sequence number")
-
-	// get name prefix
 	flagset.Parse(pc.args[1:])
-	prefix := flagset.Arg(0)
-	if prefix == "" {
+
+	argPrefix := flagset.Arg(0)
+	if argPrefix == "" {
 		flagset.Usage()
 		os.Exit(3)
 	}
 
-	// parse name prefix
-	prefixN, err := enc.NameFromStr(prefix)
+	prefix, err := enc.NameFromStr(argPrefix)
 	if err != nil {
 		log.Fatal(pc, "Invalid prefix", "name", pc.args[1])
 		return
 	}
-	pc.prefix = prefixN
-	pc.name = prefixN.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
+	pc.prefix = prefix
+	pc.name = prefix.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
 
 	// initialize sequence number
 	if pc.seq == 0 {

@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,7 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -26,7 +27,7 @@ type PingServer struct {
 func RunPingServer(args []string) {
 	(&PingServer{
 		args:   args,
-		signer: sec.NewSha256Signer(),
+		signer: signer.NewSha256Signer(),
 	}).run()
 }
 
@@ -34,24 +35,28 @@ func (ps *PingServer) String() string {
 	return "ping-server"
 }
 
-func (ps *PingServer) usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s <prefix>\n", ps.args[0])
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Starts a NDN ping server that responds to Interests under a prefix.\n")
-}
-
 func (ps *PingServer) run() {
-	if len(ps.args) < 2 {
-		ps.usage()
-		os.Exit(3)
+	flagset := flag.NewFlagSet("pingserver", flag.ExitOnError)
+	flagset.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s <prefix>\n", ps.args[0])
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Starts a NDN ping server that responds to Interests under a prefix.\n")
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(ps.args[1:])
+
+	argName := flagset.Arg(0)
+	if argName == "" {
+		flagset.Usage()
+		os.Exit(2)
 	}
 
-	prefix, err := enc.NameFromStr(ps.args[1])
+	name, err := enc.NameFromStr(argName)
 	if err != nil {
-		log.Fatal(ps, "Invalid prefix", "name", ps.args[1])
+		log.Fatal(ps, "Invalid prefix", "name", argName)
 		return
 	}
-	ps.name = prefix.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
+	ps.name = name.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
 
 	ps.app = engine.NewBasicEngine(engine.NewDefaultFace())
 	err = ps.app.Start()

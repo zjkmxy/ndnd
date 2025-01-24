@@ -4,10 +4,11 @@ package ndn
 type ContentType uint
 
 const (
-	ContentTypeBlob ContentType = 0
-	ContentTypeLink ContentType = 1
-	ContentTypeKey  ContentType = 2
-	ContentTypeNack ContentType = 3
+	ContentTypeBlob   ContentType = 0
+	ContentTypeLink   ContentType = 1
+	ContentTypeKey    ContentType = 2
+	ContentTypeNack   ContentType = 3
+	ContentTypeSigKey ContentType = 9
 )
 
 // SigType represents the type of signature.
@@ -22,6 +23,27 @@ const (
 	SignatureEd25519         SigType = 5
 	SignatureEmptyTest       SigType = 200
 )
+
+func (t SigType) String() string {
+	switch t {
+	case SignatureNone:
+		return "None"
+	case SignatureDigestSha256:
+		return "DigestSha256"
+	case SignatureSha256WithRsa:
+		return "Sha256WithRsa"
+	case SignatureSha256WithEcdsa:
+		return "Sha256WithEcdsa"
+	case SignatureHmacWithSha256:
+		return "HmacWithSha256"
+	case SignatureEd25519:
+		return "Ed25519"
+	case SignatureEmptyTest:
+		return "EmptyTest"
+	default:
+		return "Unknown"
+	}
+}
 
 // InterestResult represents the result of Interest expression.
 // Can be Data fetched (succeeded), NetworkNack received, or Timeout.
@@ -45,3 +67,24 @@ const (
 	// Other error happens during handling the fetched data. Not used by the engine itself.
 	InterestResultError
 )
+
+func (r InterestResult) String() string {
+	switch r {
+	case InterestResultNone:
+		return "None"
+	case InterestResultData:
+		return "Data"
+	case InterestResultNack:
+		return "Nack"
+	case InterestResultTimeout:
+		return "Timeout"
+	case InterestCancelled:
+		return "Cancelled"
+	case InterestResultUnverified:
+		return "Unverified"
+	case InterestResultError:
+		return "Error"
+	default:
+		return "Unknown"
+	}
+}

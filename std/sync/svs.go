@@ -14,7 +14,6 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
-	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -36,7 +35,7 @@ type SvSync struct {
 }
 
 type SvSyncOpts struct {
-	Engine      ndn.Engine
+	Client      ndn.Client
 	GroupPrefix enc.Name
 	OnUpdate    func(SvSyncUpdate)
 
@@ -55,8 +54,8 @@ type SvSyncUpdate struct {
 // NewSvSync creates a new SV Sync instance.
 func NewSvSync(opts SvSyncOpts) *SvSync {
 	// Check required options
-	if opts.Engine == nil {
-		panic("SvSync: Engine is required")
+	if opts.Client == nil {
+		panic("SvSync: Client is required")
 	}
 	if len(opts.GroupPrefix) == 0 {
 		panic("SvSync: GroupPrefix is required")
@@ -104,7 +103,7 @@ func (s *SvSync) String() string {
 
 // Start the SV Sync instance.
 func (s *SvSync) Start() (err error) {
-	err = s.o.Engine.AttachHandler(s.o.GroupPrefix, func(args ndn.InterestHandlerArgs) {
+	err = s.o.Client.Engine().AttachHandler(s.o.GroupPrefix, func(args ndn.InterestHandlerArgs) {
 		go s.onSyncInterest(args.Interest)
 	})
 	if err != nil {
@@ -118,7 +117,7 @@ func (s *SvSync) Start() (err error) {
 }
 
 func (s *SvSync) main() {
-	defer s.o.Engine.DetachHandler(s.o.GroupPrefix)
+	defer s.o.Client.Engine().DetachHandler(s.o.GroupPrefix)
 
 	s.running.Store(true)
 	defer s.running.Store(false)
@@ -315,13 +314,17 @@ func (s *SvSync) sendSyncInterest() {
 	// SVS v3 Sync Data
 	syncName := s.o.GroupPrefix.Append(enc.NewVersionComponent(3))
 
-	// TODO: sign the sync data
-	signer := sec.NewSha256Signer()
+	// Sign Sync Data
+	signer := s.o.Client.SuggestSigner(syncName)
+	if signer == nil {
+		log.Error(s, "SvSync failed to find valid signer", "name", syncName)
+		return
+	}
 
 	dataCfg := &ndn.DataConfig{
 		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 	}
-	data, err := s.o.Engine.Spec().MakeData(syncName, dataCfg, svWire, signer)
+	data, err := s.o.Client.Engine().Spec().MakeData(syncName, dataCfg, svWire, signer)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed make data", "err", err)
 		return
@@ -330,16 +333,16 @@ func (s *SvSync) sendSyncInterest() {
 	// Make SVS Sync Interest
 	intCfg := &ndn.InterestConfig{
 		Lifetime: utils.IdPtr(1 * time.Second),
-		Nonce:    utils.ConvertNonce(s.o.Engine.Timer().Nonce()),
+		Nonce:    utils.ConvertNonce(s.o.Client.Engine().Timer().Nonce()),
 	}
-	interest, err := s.o.Engine.Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
+	interest, err := s.o.Client.Engine().Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed make interest", "err", err)
 		return
 	}
 
 	// [Spec] Sync Ack Policy - Do not acknowledge Sync Interests
-	err = s.o.Engine.Express(interest, nil)
+	err = s.o.Client.Engine().Express(interest, nil)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed express", "err", err)
 	}
@@ -357,27 +360,29 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 	}
 
 	// Decode Sync Data
-	pkt, _, err := spec.ReadPacket(enc.NewWireReader(interest.AppParam()))
+	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(interest.AppParam()))
 	if err != nil {
 		log.Warn(s, "onSyncInterest failed to parse SyncData", "err", err)
 		return
 	}
-	if pkt.Data == nil {
-		log.Warn(s, "onSyncInterest no Data, ignoring")
-		return
-	}
 
-	// TODO: verify signature on Sync Data
+	// Validate signature
+	s.o.Client.Validate(data, sigCov, func(valid bool, err error) {
+		if !valid || err != nil {
+			log.Warn(s, "SvSync failed to validate signature", "name", data.Name(), "valid", valid, "err", err)
+			return
+		}
 
-	// Decode state vector
-	svWire := pkt.Data.Content().Join()
-	params, err := spec_svs.ParseSvsData(enc.NewBufferReader(svWire), false)
-	if err != nil || params.StateVector == nil {
-		log.Warn(s, "onSyncInterest failed to parse StateVec", "err", err)
-		return
-	}
+		// Decode state vector
+		svWire := data.Content().Join()
+		params, err := spec_svs.ParseSvsData(enc.NewBufferReader(svWire), false)
+		if err != nil || params.StateVector == nil {
+			log.Warn(s, "onSyncInterest failed to parse StateVec", "err", err)
+			return
+		}
 
-	s.recvSv <- params.StateVector
+		s.recvSv <- params.StateVector
+	})
 }
 
 // Call with mutex locked

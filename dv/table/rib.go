@@ -63,6 +63,11 @@ func (r *Rib) Print() {
 	}
 }
 
+// Size gets the number of entries in the RIB.
+func (r *Rib) Size() int {
+	return len(r.entries)
+}
+
 // Set a destination in the RIB. Returns true if the Advertisement might change.
 func (r *Rib) Set(destName enc.Name, nextHop enc.Name, cost uint64) bool {
 	destHash := destName.Hash()

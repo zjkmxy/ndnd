@@ -14,14 +14,10 @@ import (
 // maximum number of segments in an object (for safety)
 const maxObjectSeg = 1e8
 
-// callback for consume API
-// return true to continue fetching the object
-type ConsumeCallback func(status *ConsumeState) bool
-
 // arguments for the consume callback
 type ConsumeState struct {
 	// original arguments
-	args ConsumeExtArgs
+	args ndn.ConsumeExtArgs
 	// error that occurred during fetching
 	err error
 	// raw data contents.
@@ -98,23 +94,13 @@ func (a *ConsumeState) finalizeError(err error) {
 }
 
 // Consume an object with a given name
-func (c *Client) Consume(name enc.Name, callback ConsumeCallback) {
-	c.ConsumeExt(ConsumeExtArgs{Name: name, Callback: callback})
-}
-
-// ConsumeExtArgs are arguments for the ConsumeExt API
-type ConsumeExtArgs struct {
-	// name of the object to consume
-	Name enc.Name
-	// callback when data is available
-	Callback ConsumeCallback
-	// do not fetch metadata packet (advanced usage)
-	NoMetadata bool
+func (c *Client) Consume(name enc.Name, callback func(status ndn.ConsumeState) bool) {
+	c.ConsumeExt(ndn.ConsumeExtArgs{Name: name, Callback: callback})
 }
 
 // ConsumeExt is a more advanced consume API that allows for more control
 // over the fetching process.
-func (c *Client) ConsumeExt(args ConsumeExtArgs) {
+func (c *Client) ConsumeExt(args ndn.ConsumeExtArgs) {
 	// clone the name for good measure
 	args.Name = args.Name.Clone()
 
@@ -164,6 +150,7 @@ func (c *Client) consumeObject(state *ConsumeState) {
 				}
 				c.consumeObjectWithMeta(state, meta)
 			})
+			return
 		}
 
 		// fetch RDR metadata for this object
@@ -194,7 +181,7 @@ func (c *Client) fetchMetadata(
 	callback func(meta *rdr.MetaData, err error),
 ) {
 	log.Debug(c, "Fetching object metadata", "name", name)
-	args := ExpressRArgs{
+	c.ExpressR(ndn.ExpressRArgs{
 		Name: name.Append(rdr.METADATA),
 		Config: &ndn.InterestConfig{
 			CanBePrefix: true,
@@ -202,29 +189,37 @@ func (c *Client) fetchMetadata(
 			Lifetime:    utils.IdPtr(time.Millisecond * 1000),
 		},
 		Retries: 3,
-	}
-	c.ExpressR(args, func(args ndn.ExpressCallbackArgs) {
-		if args.Result == ndn.InterestResultError {
-			callback(nil, fmt.Errorf("consume: fetch failed with error %v", args.Error))
-			return
-		}
+		Callback: func(args ndn.ExpressCallbackArgs) {
+			if args.Result == ndn.InterestResultError {
+				callback(nil, fmt.Errorf("consume: fetch metadata failed: %v", args.Error))
+				return
+			}
 
-		if args.Result != ndn.InterestResultData {
-			callback(nil, fmt.Errorf("consume: fetch failed with result %d", args.Result))
-			return
-		}
+			if args.Result != ndn.InterestResultData {
+				callback(nil, fmt.Errorf("consume: fetch metadata failed with result: %s", args.Result))
+				return
+			}
 
-		// parse metadata
-		metadata, err := rdr.ParseMetaData(enc.NewWireReader(args.Data.Content()), false)
-		if err != nil {
-			callback(nil, fmt.Errorf("consume: failed to parse object metadata %v", err))
-			return
-		}
+			c.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
+				// validate with trust config
+				if !valid {
+					callback(nil, fmt.Errorf("consume: validate metadata failed: %v", err))
+					return
+				}
 
-		// clone fields for lifetime
-		metadata.Name = metadata.Name.Clone()
-		metadata.FinalBlockID = append([]byte{}, metadata.FinalBlockID...)
-		callback(metadata, nil)
+				// parse metadata
+				metadata, err := rdr.ParseMetaData(enc.NewWireReader(args.Data.Content()), false)
+				if err != nil {
+					callback(nil, fmt.Errorf("consume: failed to parse object metadata (%v)", err))
+					return
+				}
+
+				// clone fields for lifetime
+				metadata.Name = metadata.Name.Clone()
+				metadata.FinalBlockID = append([]byte{}, metadata.FinalBlockID...)
+				callback(metadata, nil)
+			})
+		},
 	})
 }
 
@@ -234,7 +229,7 @@ func (c *Client) fetchDataByPrefix(
 	callback func(data ndn.Data, err error),
 ) {
 	log.Debug(c, "Fetching data with prefix", "name", name)
-	args := ExpressRArgs{
+	c.ExpressR(ndn.ExpressRArgs{
 		Name: name,
 		Config: &ndn.InterestConfig{
 			CanBePrefix: true,
@@ -242,19 +237,26 @@ func (c *Client) fetchDataByPrefix(
 			Lifetime:    utils.IdPtr(time.Millisecond * 1000),
 		},
 		Retries: 3,
-	}
-	c.ExpressR(args, func(args ndn.ExpressCallbackArgs) {
-		if args.Result == ndn.InterestResultError {
-			callback(nil, fmt.Errorf("consume: fetch failed with error %v", args.Error))
-			return
-		}
+		Callback: func(args ndn.ExpressCallbackArgs) {
+			if args.Result == ndn.InterestResultError {
+				callback(nil, fmt.Errorf("consume: fetch by prefix failed: %v", args.Error))
+				return
+			}
 
-		if args.Result != ndn.InterestResultData {
-			callback(nil, fmt.Errorf("consume: fetch failed with result %d", args.Result))
-			return
-		}
+			if args.Result != ndn.InterestResultData {
+				callback(nil, fmt.Errorf("consume: fetch by prefix failed with result: %s", args.Result))
+				return
+			}
 
-		callback(args.Data, nil)
+			c.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
+				if !valid {
+					callback(nil, fmt.Errorf("consume: validate by prefix failed: %v", err))
+					return
+				}
+
+				callback(args.Data, nil)
+			})
+		},
 	})
 }
 

@@ -12,6 +12,9 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/object"
+	sec "github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/security/keychain"
+	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -21,8 +24,10 @@ type Router struct {
 	engine ndn.Engine
 	// config for this router
 	config *config.Config
+	// trust configuration
+	trust *sec.TrustConfig
 	// object client
-	client *object.Client
+	client ndn.Client
 	// nfd management thread
 	nfdc *nfdc.NfdMgmtThread
 	// single mutex for all operations
@@ -58,11 +63,35 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		return nil, err
 	}
 
+	// Create packet store
+	store := object.NewMemoryStore()
+
+	// Create security configuration
+	var trust *sec.TrustConfig = nil
+	if config.KeyChainUri == "insecure" {
+		log.Warn(nil, "Security is disabled - insecure mode")
+	} else {
+		kc, err := keychain.NewKeyChain(config.KeyChainUri, store)
+		if err != nil {
+			return nil, err
+		}
+		schema, err := trust_schema.NewLvsSchema(config.SchemaBytes())
+		if err != nil {
+			return nil, err
+		}
+		anchors := config.TrustAnchorNames()
+		trust, err = sec.NewTrustConfig(kc, schema, anchors)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Create the DV router
 	dv := &Router{
 		engine: engine,
 		config: config,
-		client: object.NewClient(engine, object.NewMemoryStore()),
+		trust:  trust,
+		client: object.NewClient(engine, store, trust),
 		nfdc:   nfdc.NewNfdMgmtThread(engine),
 		mutex:  sync.Mutex{},
 	}
@@ -77,7 +106,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 
 	// Create sync groups
 	dv.pfxSvs = ndn_sync.NewSvSync(ndn_sync.SvSyncOpts{
-		Engine:      engine,
+		Client:      dv.client,
 		GroupPrefix: config.PrefixTableSyncPrefix(),
 		OnUpdate:    func(ssu ndn_sync.SvSyncUpdate) { go dv.onPfxSyncUpdate(ssu) },
 		BootTime:    dv.advert.bootTime,
@@ -215,7 +244,7 @@ func (dv *Router) register() (err error) {
 		dv.config.AdvertisementSyncPrefix(),
 		dv.config.AdvertisementDataPrefix(),
 		dv.config.PrefixTableSyncPrefix(),
-		dv.config.PrefixTableDataPrefix(),
+		dv.config.RouterDataPrefix(),
 		dv.config.LocalPrefix(),
 	}
 	for _, prefix := range pfxs {

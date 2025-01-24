@@ -96,36 +96,28 @@ func (n *NameTrie[V]) HasChildren() bool {
 	return len(n.chd) > 0
 }
 
-// Delete deletes the node itself. Altomatically removes the parent node if it is empty.
-func (n *NameTrie[V]) Delete() {
-	if n.par != nil {
-		n.chd = nil
-		delete(n.par.chd, n.key)
-		if len(n.par.chd) == 0 {
-			n.par.Delete()
-		}
-	} else {
-		// Root node cannot be deleted.
-		n.chd = map[string]*NameTrie[V]{}
-	}
+// Prune deletes the node itself if no children.
+// Automatically removes ancestors if empty.
+func (n *NameTrie[V]) Prune() {
+	n.PruneIf(func(V) bool { return true })
 }
 
-// DeleteIf deletes the node and its ancestors if they are empty.
+// PruneIf deletes the node and its ancestors if they are empty.
 // Whether empty or not is defined by a given function.
-func (n *NameTrie[V]) DeleteIf(pred func(V) bool) {
-	if !pred(n.val) {
+func (n *NameTrie[V]) PruneIf(pred func(V) bool) {
+	// Root node cannot be deleted.
+	if n.par == nil {
 		return
 	}
-	if n.par != nil {
-		n.chd = nil
-		delete(n.par.chd, n.key)
-		if len(n.par.chd) == 0 {
-			n.par.DeleteIf(pred)
-		}
-	} else {
-		// Root node cannot be deleted.
-		n.chd = map[string]*NameTrie[V]{}
+
+	// Delete if no children and does not satisfy the predicate.
+	if n.HasChildren() || !pred(n.val) {
+		return
 	}
+
+	n.chd = nil // gc
+	delete(n.par.chd, n.key)
+	n.par.PruneIf(pred)
 }
 
 // Depth returns the depth of a node in the tree.

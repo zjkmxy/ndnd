@@ -19,12 +19,14 @@ func (n *Nfdc) ExecFaceList(args []string) {
 	data, err := n.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 
 	status, err := mgmt.ParseFaceStatusMsg(enc.NewBufferReader(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing face status: %+v\n", err)
+		os.Exit(1)
 		return
 	}
 

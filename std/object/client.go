@@ -5,6 +5,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
+	sec "github.com/named-data/ndnd/std/security"
 )
 
 type Client struct {
@@ -12,33 +13,39 @@ type Client struct {
 	engine ndn.Engine
 	// data storage
 	store ndn.Store
+	// trust configuration
+	trust *sec.TrustConfig
 	// segment fetcher
 	fetcher rrSegFetcher
 
 	// stop the client
 	stop chan bool
 	// outgoing interest pipeline
-	outpipe chan ExpressRArgs
+	outpipe chan ndn.ExpressRArgs
 	// [fetcher] incoming data pipeline
 	seginpipe chan rrSegHandleDataArgs
 	// [fetcher] queue for new object fetch
 	segfetch chan *ConsumeState
 	// [fetcher] recheck segment fetcher
 	segcheck chan bool
+	// [validate] queue for new object validation
+	validatepipe chan sec.TrustConfigValidateArgs
 }
 
 // Create a new client with given engine and store
-func NewClient(engine ndn.Engine, store ndn.Store) *Client {
+func NewClient(engine ndn.Engine, store ndn.Store, trust *sec.TrustConfig) ndn.Client {
 	client := new(Client)
 	client.engine = engine
 	client.store = store
+	client.trust = trust
 	client.fetcher = newRrSegFetcher(client)
 
 	client.stop = make(chan bool)
-	client.outpipe = make(chan ExpressRArgs, 1024)
-	client.seginpipe = make(chan rrSegHandleDataArgs, 1024)
+	client.outpipe = make(chan ndn.ExpressRArgs, 512)
+	client.seginpipe = make(chan rrSegHandleDataArgs, 512)
 	client.segfetch = make(chan *ConsumeState, 128)
 	client.segcheck = make(chan bool, 2)
+	client.validatepipe = make(chan sec.TrustConfigValidateArgs, 64)
 
 	return client
 }
@@ -63,8 +70,9 @@ func (c *Client) Start() error {
 }
 
 // Stop the client
-func (c *Client) Stop() {
+func (c *Client) Stop() error {
 	c.stop <- true
+	return nil
 }
 
 // Get the underlying engine
@@ -75,6 +83,11 @@ func (c *Client) Engine() ndn.Engine {
 // Get the underlying store
 func (c *Client) Store() ndn.Store {
 	return c.store
+}
+
+// Get the client interface
+func (c *Client) Client() ndn.Client {
+	return c
 }
 
 // Main goroutine for all client processing
@@ -91,6 +104,8 @@ func (c *Client) run() {
 			c.fetcher.add(state)
 		case <-c.segcheck:
 			c.fetcher.doCheck()
+		case args := <-c.validatepipe:
+			c.trust.Validate(args)
 		}
 	}
 }

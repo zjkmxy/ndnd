@@ -1,6 +1,7 @@
 package dv
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/named-data/ndnd/dv/table"
@@ -10,7 +11,6 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 	"github.com/named-data/ndnd/std/object"
-	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -62,9 +62,13 @@ func (a *advertModule) sendSyncInterestImpl(prefix enc.Name) (err error) {
 		},
 	}
 
-	// TODO: sign the sync data
-	signer := sec.NewSha256Signer()
+	// Sign the Sync Data
+	signer := a.dv.client.SuggestSigner(syncName)
+	if signer == nil {
+		return fmt.Errorf("no signer found for %s", syncName)
+	}
 
+	// Make Data packet
 	dataCfg := &ndn.DataConfig{
 		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 	}
@@ -108,26 +112,38 @@ func (a *advertModule) OnSyncInterest(args ndn.InterestHandlerArgs, active bool)
 	}
 
 	// Decode Sync Data
-	pkt, _, err := spec.ReadPacket(enc.NewWireReader(args.Interest.AppParam()))
+	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(args.Interest.AppParam()))
 	if err != nil {
 		log.Warn(a, "Failed to parse Sync Data", "err", err)
 		return
 	}
-	if pkt.Data == nil {
-		log.Warn(a, "No Sync Data, ignoring")
-		return
-	}
 
-	// TODO: verify signature on Sync Interest
+	// Validate signature
+	a.dv.client.ValidateExt(ndn.ValidateExtArgs{
+		Data:        data,
+		SigCovered:  sigCov,
+		CertNextHop: args.IncomingFaceId,
+		Callback: func(valid bool, err error) {
+			if !valid || err != nil {
+				log.Warn(a, "Failed to validate signature", "name", data.Name(), "valid", valid, "err", err)
+				return
+			}
 
-	// Decode state vector
-	svWire := pkt.Data.Content()
-	params, err := spec_svs.ParseSvsData(enc.NewWireReader(svWire), false)
-	if err != nil || params.StateVector == nil {
-		log.Warn(a, "Failed to parse StateVec", "err", err)
-		return
-	}
+			// Decode state vector
+			svWire := data.Content()
+			params, err := spec_svs.ParseSvsData(enc.NewWireReader(svWire), false)
+			if err != nil || params.StateVector == nil {
+				log.Warn(a, "Failed to parse StateVec", "err", err)
+				return
+			}
 
+			// Process the state vector
+			go a.onStateVector(params.StateVector, *args.IncomingFaceId, active)
+		},
+	})
+}
+
+func (a *advertModule) onStateVector(sv *spec_svs.StateVector, faceId uint64, active bool) {
 	// Process each entry in the state vector
 	a.dv.mutex.Lock()
 	defer a.dv.mutex.Unlock()
@@ -135,7 +151,7 @@ func (a *advertModule) OnSyncInterest(args ndn.InterestHandlerArgs, active bool)
 	// FIB needs update if face changes for any neighbor
 	fibDirty := false
 	markRecvPing := func(ns *table.NeighborState) {
-		err, faceDirty := ns.RecvPing(*args.IncomingFaceId, active)
+		err, faceDirty := ns.RecvPing(faceId, active)
 		if err != nil {
 			log.Warn(a, "Failed to update neighbor", "err", err)
 		}
@@ -143,7 +159,7 @@ func (a *advertModule) OnSyncInterest(args ndn.InterestHandlerArgs, active bool)
 	}
 
 	// There should only be one entry in the StateVector, but check all anyway
-	for _, node := range params.StateVector.Entries {
+	for _, node := range sv.Entries {
 		if len(node.SeqNoEntries) != 1 {
 			log.Warn(a, "Unexpected SeqNoEntries count", "count", len(node.SeqNoEntries), "router", node.Name)
 			return
@@ -152,7 +168,7 @@ func (a *advertModule) OnSyncInterest(args ndn.InterestHandlerArgs, active bool)
 
 		// Parse name from entry
 		if node.Name == nil {
-			log.Warn(a, "Failed to parse neighbor name", "err", err)
+			log.Warn(a, "Failed to parse neighbor name")
 			continue
 		}
 

@@ -42,12 +42,24 @@ type Interest interface {
 
 // InterestConfig is used to create a Interest.
 type InterestConfig struct {
+	// Standard Interest parameters
 	CanBePrefix    bool
 	MustBeFresh    bool
 	ForwardingHint []enc.Name
 	Nonce          *uint64
 	Lifetime       *time.Duration
 	HopLimit       *uint
+
+	// Signed Interest parameters.
+	// The use of signed interests is strongly discouraged, and will
+	// be gradually phased out, which is why these parameters are
+	// not directly provided by the signer.
+	SigNonce []byte
+	SigTime  *time.Duration
+	SigSeqNo *uint64
+
+	// NDNLPv2 parameters
+	NextHopId *uint64
 }
 
 // Container for an encoded Interest packet
@@ -69,15 +81,19 @@ type Data interface {
 	Freshness() *time.Duration
 	FinalBlockID() *enc.Component
 	Content() enc.Wire
-
 	Signature() Signature
 }
 
 // DataConfig is used to create a Data.
 type DataConfig struct {
+	// Standard Data parameters
 	ContentType  *ContentType
 	Freshness    *time.Duration
 	FinalBlockID *enc.Component
+
+	// Certificate parameters
+	SigNotBefore *time.Time
+	SigNotAfter  *time.Time
 }
 
 // Container for an encoded Data packet
