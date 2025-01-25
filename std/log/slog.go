@@ -80,6 +80,11 @@ func (l *Logger) log(t Tag, msg string, level Level, v ...any) {
 
 	// Log the message
 	l.slog.Log(context.Background(), slog.Level(level), msg, v...)
+
+	// Panic for fatal
+	if level == LevelFatal {
+		panic(msg)
+	}
 }
 
 // Trace level message.
