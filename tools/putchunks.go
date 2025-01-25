@@ -12,11 +12,14 @@ import (
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 type PutChunks struct {
-	args []string
+	args   []string
+	expose bool
 }
 
 func RunPutChunks(args []string) {
@@ -29,11 +32,13 @@ func (pc *PutChunks) String() string {
 
 func (pc *PutChunks) run() {
 	flagset := flag.NewFlagSet("put", flag.ExitOnError)
+	flagset.BoolVar(&pc.expose, "expose", false, "Use client origin for prefix registration")
 	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <name>\n", pc.args[0])
 		fmt.Fprintf(os.Stderr, "\n")
 		fmt.Fprintf(os.Stderr, "Publish data under the specified prefix.\n")
 		fmt.Fprintf(os.Stderr, "This tool expects data from the standard input.\n")
+		fmt.Fprintf(os.Stderr, "\n")
 		flagset.PrintDefaults()
 	}
 	flagset.Parse(pc.args[1:])
@@ -95,11 +100,19 @@ func (pc *PutChunks) run() {
 	log.Info(pc, "Object produced", "name", vname)
 
 	// register route to the object
-	err = app.RegisterRoute(name)
+	var origin *uint64
+	if pc.expose {
+		origin = utils.IdPtr(uint64(mgmt.RouteOriginClient))
+	}
+	_, err = app.ExecMgmtCmd("rib", "register", &mgmt.ControlArgs{
+		Name:   name,
+		Origin: origin,
+	})
 	if err != nil {
 		log.Fatal(pc, "Unable to register route", "err", err)
 		return
 	}
+	defer app.UnregisterRoute(name)
 
 	// wait forever
 	sigchan := make(chan os.Signal, 1)
