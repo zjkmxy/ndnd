@@ -7,10 +7,10 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/utils/toolutils"
 )
 
-func Tree() *utils.CmdTree {
+func Tree() *toolutils.CmdTree {
 	t := Tool{}
 
 	cmd := func(mod string, cmd string, defaults []string) func([]string) {
@@ -19,10 +19,10 @@ func Tree() *utils.CmdTree {
 		}
 	}
 
-	return &utils.CmdTree{
+	return &toolutils.CmdTree{
 		Name: "nfdc",
 		Help: "NDNd Forwarder Control",
-		Sub: []*utils.CmdTree{{
+		Sub: []*toolutils.CmdTree{{
 			Name: "status",
 			Help: "Print general status",
 			Fun:  t.ExecStatusGeneral,

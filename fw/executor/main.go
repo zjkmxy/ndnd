@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/goccy/go-yaml"
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/utils/toolutils"
 )
 
 func Main(args []string) {
@@ -47,18 +47,8 @@ func Main(args []string) {
 	}
 	config.Core.BaseDir = filepath.Dir(configfile)
 
-	f, err := os.Open(configfile)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to open configuration file: "+err.Error())
-		os.Exit(3)
-	}
-	defer f.Close()
-
-	dec := yaml.NewDecoder(f, yaml.Strict())
-	if err = dec.Decode(config); err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to parse configuration file: "+err.Error())
-		os.Exit(3)
-	}
+	// read configuration file
+	toolutils.ReadYaml(config, configfile)
 
 	// create YaNFD instance
 	yanfd := NewYaNFD(config)

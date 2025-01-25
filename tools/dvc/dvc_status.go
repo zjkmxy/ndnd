@@ -10,6 +10,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/utils/toolutils"
 )
 
 func (t *Tool) DvStatus() (*spec_dv.Status, error) {
@@ -65,7 +66,7 @@ func (t *Tool) RunDvStatus(args []string) {
 		os.Exit(1)
 	}
 
-	p := utils.StatusPrinter{File: os.Stdout, Padding: 12}
+	p := toolutils.StatusPrinter{File: os.Stdout, Padding: 12}
 	fmt.Println("General DV status:")
 	p.Print("version", status.Version)
 	p.Print("routerName", status.RouterName.Name)

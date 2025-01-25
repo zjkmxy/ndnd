@@ -6,16 +6,16 @@ import (
 
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/utils/toolutils"
 )
 
-func Tree() *utils.CmdTree {
+func Tree() *toolutils.CmdTree {
 	t := Tool{}
 
-	return &utils.CmdTree{
+	return &toolutils.CmdTree{
 		Name: "dvc",
 		Help: "NDN Distance Vector Control",
-		Sub: []*utils.CmdTree{{
+		Sub: []*toolutils.CmdTree{{
 			Name: "status",
 			Help: "Get general status of the router",
 			Fun:  t.RunDvStatus,

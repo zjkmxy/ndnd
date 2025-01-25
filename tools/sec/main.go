@@ -1,14 +1,14 @@
 package sec
 
 import (
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/utils/toolutils"
 )
 
-func Tree() utils.CmdTree {
-	return utils.CmdTree{
+func Tree() toolutils.CmdTree {
+	return toolutils.CmdTree{
 		Name: "sec",
 		Help: "NDN Security Utilities",
-		Sub: []*utils.CmdTree{{
+		Sub: []*toolutils.CmdTree{{
 			Name: "keygen",
 			Help: "Generate a new NDN key pair",
 			Fun:  keygen,

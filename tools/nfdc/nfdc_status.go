@@ -7,7 +7,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/utils/toolutils"
 )
 
 func (t *Tool) ExecStatusGeneral(args []string) {
@@ -33,7 +33,7 @@ func (t *Tool) ExecStatusGeneral(args []string) {
 		return
 	}
 
-	p := utils.StatusPrinter{File: os.Stdout, Padding: 24}
+	p := toolutils.StatusPrinter{File: os.Stdout, Padding: 24}
 	fmt.Println("General NFD status:")
 	p.Print("version", status.NfdVersion)
 	p.Print("startTime", time.Unix(0, int64(status.StartTimestamp)))

@@ -1,35 +1,33 @@
 package executor
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/goccy/go-yaml"
+	"github.com/named-data/ndnd/std/utils/toolutils"
 )
 
 func Main(args []string) {
-	if len(args) != 2 {
+	flagset := flag.NewFlagSet("ndn-dv", flag.ExitOnError)
+	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <config-file>\n", args[0])
-		os.Exit(2)
+		flagset.PrintDefaults()
 	}
+	flagset.Parse(args[1:])
 
-	f, err := os.Open(args[1])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to read configuration file: %s\n", err)
-		os.Exit(3)
-	}
-	defer f.Close()
-
-	dc := DefaultConfig()
-	dec := yaml.NewDecoder(f, yaml.Strict())
-	if err = dec.Decode(&dc); err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to parse configuration file: %s\n", err)
+	configfile := flagset.Arg(0)
+	if configfile == "" {
+		flagset.Usage()
 		os.Exit(3)
 	}
 
-	dve, err := NewDvExecutor(dc)
+	config := DefaultConfig()
+	toolutils.ReadYaml(&config, configfile)
+
+	dve, err := NewDvExecutor(config)
 	if err != nil {
 		panic(err)
 	}
