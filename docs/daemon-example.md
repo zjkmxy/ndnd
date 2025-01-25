@@ -79,3 +79,52 @@ cat /tmp/hello.txt
 ```
 
 This concludes the file transfer example. You can now experiment with more complex topologies by adding more nodes and creating more routing relationships. The routing protocol will automatically propagate prefixes to all nodes in the network.
+
+## Routing Security Example
+
+This example builds on the previous one by adding routing security to the network. We will use the `ndnd sec` tool to generate keys and certificates for the nodes, with an operator-controlled trust anchor.
+
+First, we must generate the trust anchor key and certificate. On a trusted node, run:
+
+```sh
+# generate an Ed25519 root key
+ndnd sec keygen /testnet ed25519 > root.key
+
+# generate a self-signed certificate for the root key
+ndnd sec sign-cert root.key < root.key > root.cert
+```
+
+The root cert is now generated. Note the `Name` of the generated certificate from the `root.cert` file. For this example, we assume the name looks like `/testnet/KEY/D%8E%F1%9C%82%19%A6a/NA/v=1737840838071`.
+
+Next, we generate keys and certificates for the nodes. Note that in this example, we generate all keys and certificates on the same trusted node. Each node may also generate it's own key and a self-signed certificate. This self-signed certificate can then be used as a CSR to be signed by the trust anchor (pass the CSR to `stdin` of `sign-cert` instead of the key).
+
+```sh
+# generate keys for alice and bob
+ndnd sec keygen /testnet/alice/32=DV ed25519 > alice.key
+ndnd sec keygen /testnet/bob/32=DV ed25519 > bob.key
+
+# generate certificates for alice and bob
+ndnd sec sign-cert root.key < alice.key > alice.cert
+ndnd sec sign-cert root.key < bob.key > bob.cert
+```
+
+Next, create a directory on each node to store the keys and certificates.
+Copy the keys and certificates to the respective nodes.
+The trust anchor certificate must be copied to all nodes in the network.
+For this example, we assume the keys and certificates are stored in `/etc/ndnd/keys` on each node.
+
+Update the configuration file on each node to use the generated keys and certificates:
+
+```yaml
+dv:
+  network: /testnet
+  router: /testnet/<node-name>
+  keychain: "dir:///etc/ndnd/keys"
+  trust_anchors:
+    - "/testnet/KEY/D%8E%F1%9C%82%19%A6a/NA/v=1737840838071" # root cert name
+
+fw:
+  # same as before
+```
+
+Now, restart the NDNd daemon on each node, and establish the neighbor relationships. If the configuration is correct, the routing protocol can now communicate securely.
