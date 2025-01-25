@@ -12,7 +12,7 @@ This example demonstrates a 2-node network where one node (`bob`) fetches a file
 
 On both nodes, we use the simple configuration file below. Put this config in a `conf.yml` file on each node. Remember to replace `<node-name>` with the actual node name (in this case, `alice` and `bob`).
 
-Full configuration examples with documentation for routing (`dv`) and forwarding (`fw`) can be found [here](../dv/dv.sample.yml) and [here](../fw/fw.sample.yml) respectively.
+Full configuration examples with documentation for routing (`dv`) and forwarding (`fw`) can be found [here](../dv/dv.sample.yml) and [here](../fw/yanfd.sample.yml) respectively.
 
 ```yaml
 dv:
