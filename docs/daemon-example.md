@@ -119,9 +119,9 @@ Update the configuration file on each node to use the generated keys and certifi
 dv:
   network: /testnet
   router: /testnet/<node-name>
-  keychain: "dir:///etc/ndnd/keys"
+  keychain: dir:///etc/ndnd/keys # absolute path to the keys directory
   trust_anchors:
-    - "/testnet/KEY/D%8E%F1%9C%82%19%A6a/NA/v=1737840838071" # root cert name
+    - /testnet/KEY/D%8E%F1%9C%82%19%A6a/NA/v=1737840838071 # root cert name
 
 fw:
   # same as before
