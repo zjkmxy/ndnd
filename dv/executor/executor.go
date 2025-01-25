@@ -2,6 +2,7 @@ package executor
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/named-data/ndnd/dv/config"
 	"github.com/named-data/ndnd/dv/dv"
@@ -9,30 +10,16 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-type DvConfig struct {
-	Config *config.Config `json:"dv"`
-}
-
-func DefaultConfig() DvConfig {
-	return DvConfig{
-		Config: config.DefaultConfig(),
-	}
-}
-
-func (dc DvConfig) Parse() error {
-	return dc.Config.Parse()
-}
-
 type DvExecutor struct {
 	engine ndn.Engine
 	router *dv.Router
 }
 
-func NewDvExecutor(dc DvConfig) (*DvExecutor, error) {
+func NewDvExecutor(config *config.Config) (*DvExecutor, error) {
 	dve := new(DvExecutor)
 
 	// Validate configuration sanity
-	err := dc.Parse()
+	err := config.Parse()
 	if err != nil {
 		return nil, errors.New("failed to validate dv config: " + err.Error())
 	}
@@ -41,7 +28,7 @@ func NewDvExecutor(dc DvConfig) (*DvExecutor, error) {
 	dve.engine = engine.NewBasicEngine(engine.NewDefaultFace())
 
 	// Create the DV router
-	dve.router, err = dv.NewRouter(dc.Config, dve.engine)
+	dve.router, err = dv.NewRouter(config, dve.engine)
 	if err != nil {
 		return nil, errors.New("failed to create dv router: " + err.Error())
 	}
@@ -49,19 +36,17 @@ func NewDvExecutor(dc DvConfig) (*DvExecutor, error) {
 	return dve, nil
 }
 
-func (dve *DvExecutor) Start() error {
+func (dve *DvExecutor) Start() {
 	err := dve.engine.Start()
 	if err != nil {
-		return errors.New("failed to start dv app: " + err.Error())
+		panic(fmt.Errorf("failed to start dv engine: %+v", err))
 	}
 	defer dve.engine.Stop()
 
 	err = dve.router.Start() // blocks forever
 	if err != nil {
-		return errors.New("failed to start dv router: " + err.Error())
+		panic(fmt.Errorf("failed to start dv router: %+v", err))
 	}
-
-	return nil
 }
 
 func (dve *DvExecutor) Stop() {
