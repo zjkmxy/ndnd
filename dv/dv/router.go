@@ -221,19 +221,10 @@ func (dv *Router) register() (err error) {
 		return err
 	}
 
-	// Readvertise Data
-	err = dv.engine.AttachHandler(dv.config.ReadvertisePrefix(),
+	// Router management
+	err = dv.engine.AttachHandler(dv.config.MgmtPrefix(),
 		func(args ndn.InterestHandlerArgs) {
-			go dv.readvertiseOnInterest(args)
-		})
-	if err != nil {
-		return err
-	}
-
-	// Router status
-	err = dv.engine.AttachHandler(dv.config.StatusPrefix(),
-		func(args ndn.InterestHandlerArgs) {
-			go dv.statusOnInterest(args)
+			go dv.mgmtOnInterest(args)
 		})
 	if err != nil {
 		return err
@@ -245,7 +236,7 @@ func (dv *Router) register() (err error) {
 		dv.config.AdvertisementDataPrefix(),
 		dv.config.PrefixTableSyncPrefix(),
 		dv.config.RouterDataPrefix(),
-		dv.config.LocalPrefix(),
+		dv.config.MgmtPrefix(),
 	}
 	for _, prefix := range pfxs {
 		dv.nfdc.Exec(nfdc.NfdMgmtCmd{

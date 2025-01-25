@@ -54,7 +54,7 @@ type Config struct {
 	// Prefix Table Data Prefix
 	pfxDataPfxN enc.Name
 	// NLSR readvertise prefix
-	localPfxN enc.Name
+	mgmtPrefix enc.Name
 	// Trust anchor names
 	trustAnchorsN []enc.Name
 }
@@ -142,7 +142,7 @@ func (c *Config) Parse() (err error) {
 	)
 
 	// Local prefixes to NFD
-	c.localPfxN = enc.LOCALHOST.Append(
+	c.mgmtPrefix = enc.LOCALHOST.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
 	)
 
@@ -185,20 +185,8 @@ func (c *Config) PrefixTableDataPrefix() enc.Name {
 	return c.pfxDataPfxN
 }
 
-func (c *Config) LocalPrefix() enc.Name {
-	return c.localPfxN
-}
-
-func (c *Config) ReadvertisePrefix() enc.Name {
-	return c.localPfxN.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
-	)
-}
-
-func (c *Config) StatusPrefix() enc.Name {
-	return c.localPfxN.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
-	)
+func (c *Config) MgmtPrefix() enc.Name {
+	return c.mgmtPrefix
 }
 
 func (c *Config) AdvertisementSyncInterval() time.Duration {

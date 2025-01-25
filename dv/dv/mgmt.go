@@ -3,6 +3,7 @@ package dv
 import (
 	"time"
 
+	"github.com/named-data/ndnd/dv/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
@@ -11,8 +12,57 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
+func (dv *Router) mgmtOnInterest(args ndn.InterestHandlerArgs) {
+	pfxLen := len(dv.config.MgmtPrefix())
+	name := args.Interest.Name()
+	if len(name) < pfxLen+1 {
+		log.Warn(dv, "Invalid management Interest", "name", name)
+		return
+	}
+
+	log.Trace(dv, "Received management Interest", "name", name)
+
+	switch name[pfxLen].String() {
+	case "status":
+		dv.mgmtOnStatus(args)
+	case "rib":
+		dv.mgmtOnRib(args)
+	default:
+		log.Warn(dv, "Unknown management command", "name", name)
+	}
+}
+
+func (dv *Router) mgmtOnStatus(args ndn.InterestHandlerArgs) {
+	status := func() tlv.Status {
+		dv.mutex.Lock()
+		defer dv.mutex.Unlock()
+		return tlv.Status{
+			Version:     utils.NDNdVersion,
+			NetworkName: &tlv.Destination{Name: dv.config.NetworkName()},
+			RouterName:  &tlv.Destination{Name: dv.config.RouterName()},
+			NRibEntries: uint64(dv.rib.Size()),
+			NNeighbors:  uint64(dv.neighbors.Size()),
+			NFibEntries: uint64(dv.fib.Size()),
+		}
+	}()
+
+	name := args.Interest.Name()
+	cfg := &ndn.DataConfig{
+		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+		Freshness:   utils.IdPtr(time.Second),
+	}
+
+	data, err := dv.engine.Spec().MakeData(name, cfg, status.Encode(), nil)
+	if err != nil {
+		log.Warn(dv, "Failed to make readvertise response Data", "err", err)
+		return
+	}
+
+	args.Reply(data.Wire)
+}
+
 // Received advertisement Interest
-func (dv *Router) readvertiseOnInterest(args ndn.InterestHandlerArgs) {
+func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 	res := &mgmt.ControlResponse{
 		Val: &mgmt.ControlResponseVal{
 			StatusCode: 400,
