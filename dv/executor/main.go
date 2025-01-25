@@ -15,14 +15,16 @@ func Main(args []string) {
 		os.Exit(2)
 	}
 
-	cfgBytes, err := os.ReadFile(args[1])
+	f, err := os.Open(args[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to read configuration file: %s\n", err)
 		os.Exit(3)
 	}
+	defer f.Close()
 
 	dc := DefaultConfig()
-	if err = yaml.Unmarshal(cfgBytes, &dc); err != nil {
+	dec := yaml.NewDecoder(f, yaml.Strict())
+	if err = dec.Decode(&dc); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to parse configuration file: %s\n", err)
 		os.Exit(3)
 	}
