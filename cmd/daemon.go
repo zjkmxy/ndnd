@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 
 	dv_config "github.com/named-data/ndnd/dv/config"
@@ -46,8 +47,10 @@ func Daemon(args []string) {
 	}
 
 	// point dv to the correct socket
-	// resolve path to socket
-	sock := config.Fw.ResolveRelPath(config.Fw.Faces.Unix.SocketPath)
+	sock := config.Fw.Faces.Unix.SocketPath
+	if runtime.GOOS != "windows" { // wrong slashes
+		sock = config.Fw.ResolveRelPath(sock)
+	}
 	os.Setenv("NDN_CLIENT_TRANSPORT", fmt.Sprintf("unix://%s", sock))
 
 	// setup signals
