@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/named-data/ndnd/cmd"
 	dv "github.com/named-data/ndnd/dv/executor"
 	fw "github.com/named-data/ndnd/fw/executor"
 	"github.com/named-data/ndnd/std/utils/toolutils"
@@ -34,6 +35,10 @@ func main() {
 				Fun:  dv.Main,
 			}, {},
 			}, dvc.Tree().Sub...),
+		}, {
+			Name: "daemon",
+			Help: "NDN Combined Daemon",
+			Fun:  cmd.Daemon,
 		}, {
 			// tools separator
 		}, {
