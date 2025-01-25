@@ -35,9 +35,9 @@ jobs:
           GOOS=darwin GOARCH=arm64 make ndnd
           mv ndnd ndnd-macos-aarch64
           GOOS=windows GOARCH=amd64 make ndnd
-          mv ndnd ndnd-windows-amd64
+          mv ndnd ndnd-windows-amd64.exe
           GOOS=windows GOARCH=arm64 make ndnd
-          mv ndnd ndnd-windows-aarch64
+          mv ndnd ndnd-windows-aarch64.exe
 
       - name: Upload to releases
         uses: svenstaro/upload-release-action@v2
