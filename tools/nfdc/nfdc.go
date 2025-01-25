@@ -10,90 +10,87 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-func GetNfdcCmdTree() utils.CmdTree {
-	nfdc := &Nfdc{}
+func Tree() *utils.CmdTree {
+	t := Tool{}
+
 	cmd := func(mod string, cmd string, defaults []string) func([]string) {
 		return func(args []string) {
-			nfdc.ExecCmd(mod, cmd, args, defaults)
-		}
-	}
-	start := func(fun func([]string)) func([]string) {
-		return func(args []string) {
-			nfdc.Start()
-			defer nfdc.Stop()
-			fun(args)
+			t.ExecCmd(mod, cmd, args, defaults)
 		}
 	}
 
-	return utils.CmdTree{
+	return &utils.CmdTree{
 		Name: "nfdc",
 		Help: "NDNd Forwarder Control",
 		Sub: []*utils.CmdTree{{
 			Name: "status",
 			Help: "Print general status",
-			Fun:  start(nfdc.ExecStatusGeneral),
+			Fun:  t.ExecStatusGeneral,
 		}, {
 			Name: "face list",
 			Help: "Print face table",
-			Fun:  start(nfdc.ExecFaceList),
+			Fun:  t.ExecFaceList,
 		}, {
 			Name: "face create",
 			Help: "Create a face",
-			Fun: start(cmd("faces", "create", []string{
+			Fun: cmd("faces", "create", []string{
 				"persistency=persistent",
-			})),
+			}),
 		}, {
 			Name: "face destroy",
 			Help: "Destroy a face",
-			Fun:  start(cmd("faces", "destroy", []string{})),
+			Fun:  cmd("faces", "destroy", []string{}),
 		}, {
 			Name: "route list",
 			Help: "Print RIB routes",
-			Fun:  start(nfdc.ExecRouteList),
+			Fun:  t.ExecRouteList,
 		}, {
 			Name: "route add",
 			Help: "Add a route to the RIB",
-			Fun: start(cmd("rib", "register", []string{
+			Fun: cmd("rib", "register", []string{
 				"cost=0", "origin=255",
-			})),
+			}),
 		}, {
 			Name: "route remove",
 			Help: "Remove a route from the RIB",
-			Fun: start(cmd("rib", "unregister", []string{
+			Fun: cmd("rib", "unregister", []string{
 				"origin=255",
-			})),
+			}),
 		}, {
 			Name: "fib list",
 			Help: "Print FIB entries",
-			Fun:  start(nfdc.ExecFibList),
+			Fun:  t.ExecFibList,
 		}, {
 			Name: "cs info",
 			Help: "Print content store info",
-			Fun:  start(nfdc.ExecCsInfo),
+			Fun:  t.ExecCsInfo,
 		}, {
 			Name: "strategy list",
 			Help: "Print strategy choices",
-			Fun:  start(nfdc.ExecStrategyList),
+			Fun:  t.ExecStrategyList,
 		}, {
 			Name: "strategy set",
 			Help: "Set strategy choice",
-			Fun:  start(cmd("strategy-choice", "set", []string{})),
+			Fun:  cmd("strategy-choice", "set", []string{}),
 		}, {
 			Name: "strategy unset",
 			Help: "Unset strategy choice",
-			Fun:  start(cmd("strategy-choice", "unset", []string{})),
+			Fun:  cmd("strategy-choice", "unset", []string{}),
 		}},
 	}
 }
 
-type Nfdc struct {
+type Tool struct {
 	engine ndn.Engine
 }
 
-func (n *Nfdc) Start() {
-	n.engine = engine.NewBasicEngine(engine.NewDefaultFace())
+func (t *Tool) Start() {
+	if t.engine != nil {
+		return
+	}
 
-	err := n.engine.Start()
+	t.engine = engine.NewBasicEngine(engine.NewDefaultFace())
+	err := t.engine.Start()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to start engine: %+v\n", err)
 		os.Exit(1)
@@ -101,11 +98,11 @@ func (n *Nfdc) Start() {
 	}
 }
 
-func (n *Nfdc) Stop() {
-	n.engine.Stop()
+func (t *Tool) Stop() {
+	t.engine.Stop()
 }
 
-func (n *Nfdc) GetPrefix() enc.Name {
+func (t *Tool) Prefix() enc.Name {
 	return enc.Name{
 		enc.LOCALHOST,
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd"),

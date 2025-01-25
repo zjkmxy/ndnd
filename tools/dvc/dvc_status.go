@@ -1,0 +1,76 @@
+package dvc
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"time"
+
+	spec_dv "github.com/named-data/ndnd/dv/tlv"
+	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/utils"
+)
+
+func (t *Tool) DvStatus() (*spec_dv.Status, error) {
+	name := enc.Name{
+		enc.LOCALHOST,
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
+		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
+	}
+	cfg := &ndn.InterestConfig{
+		MustBeFresh: true,
+		Lifetime:    utils.IdPtr(time.Second),
+		Nonce:       utils.ConvertNonce(t.engine.Timer().Nonce()),
+	}
+
+	interest, err := t.engine.Spec().MakeInterest(name, cfg, nil, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	ch := make(chan ndn.ExpressCallbackArgs)
+	err = t.engine.Express(interest, func(args ndn.ExpressCallbackArgs) { ch <- args })
+	if err != nil {
+		panic(err)
+	}
+	eargs := <-ch
+
+	if eargs.Result != ndn.InterestResultData {
+		return nil, fmt.Errorf("interest failed: %s", eargs.Result)
+	}
+
+	status, err := spec_dv.ParseStatus(enc.NewWireReader(eargs.Data.Content()), false)
+	if err != nil {
+		return nil, err
+	}
+
+	return status, nil
+}
+
+func (t *Tool) RunDvStatus(args []string) {
+	flagset := flag.NewFlagSet("dv-status", flag.ExitOnError)
+	flagset.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
+		flagset.PrintDefaults()
+	}
+	flagset.Parse(args[1:])
+
+	t.Start()
+	defer t.Stop()
+
+	status, err := t.DvStatus()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get router status: %+v\n", err)
+		os.Exit(1)
+	}
+
+	p := utils.StatusPrinter{File: os.Stdout, Padding: 12}
+	fmt.Println("General DV status:")
+	p.Print("version", status.Version)
+	p.Print("routerName", status.RouterName.Name)
+	p.Print("networkName", status.NetworkName.Name)
+	p.Print("nRibEntries", status.NRibEntries)
+	p.Print("nNeighbors", status.NNeighbors)
+	p.Print("nFibEntries", status.NFibEntries)
+}

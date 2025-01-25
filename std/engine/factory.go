@@ -12,7 +12,6 @@ import (
 	"github.com/named-data/ndnd/std/security/signer"
 )
 
-// TODO: this API will change once there is a real security model
 func NewBasicEngine(face face.Face) ndn.Engine {
 	timer := basic.NewTimer()
 	cmdSigner := signer.NewSha256Signer()

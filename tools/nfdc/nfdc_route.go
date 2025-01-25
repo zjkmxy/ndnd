@@ -10,13 +10,16 @@ import (
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 )
 
-func (n *Nfdc) ExecRouteList(args []string) {
+func (t *Tool) ExecRouteList(args []string) {
+	t.Start()
+	defer t.Stop()
+
 	suffix := enc.Name{
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	}
 
-	data, err := n.fetchStatusDataset(suffix)
+	data, err := t.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
 		return
@@ -51,13 +54,16 @@ func (n *Nfdc) ExecRouteList(args []string) {
 	}
 }
 
-func (n *Nfdc) ExecFibList(args []string) {
+func (t *Tool) ExecFibList(args []string) {
+	t.Start()
+	defer t.Stop()
+
 	suffix := enc.Name{
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "fib"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	}
 
-	data, err := n.fetchStatusDataset(suffix)
+	data, err := t.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
 		os.Exit(1)

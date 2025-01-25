@@ -6,17 +6,13 @@ import (
 	dv "github.com/named-data/ndnd/dv/executor"
 	fw "github.com/named-data/ndnd/fw/executor"
 	"github.com/named-data/ndnd/std/utils"
-	tools "github.com/named-data/ndnd/tools"
-	dvc "github.com/named-data/ndnd/tools/dvc"
-	nfdc "github.com/named-data/ndnd/tools/nfdc"
-	tools_sec "github.com/named-data/ndnd/tools/sec"
+	"github.com/named-data/ndnd/tools"
+	"github.com/named-data/ndnd/tools/dvc"
+	"github.com/named-data/ndnd/tools/nfdc"
+	"github.com/named-data/ndnd/tools/sec"
 )
 
 func main() {
-	// subtrees from other packages
-	nfdcTree := nfdc.GetNfdcCmdTree()
-
-	// create a command tree
 	tree := utils.CmdTree{
 		Name: "ndnd",
 		Help: "Named Data Networking Daemon",
@@ -28,33 +24,22 @@ func main() {
 				Help: "Start the NDN Forwarding Daemon",
 				Fun:  fw.Main,
 			}, {},
-			}, nfdcTree.Sub...),
+			}, nfdc.Tree().Sub...),
 		}, {
 			Name: "dv",
 			Help: "NDN Distance Vector Routing Daemon",
-			Sub: []*utils.CmdTree{{
+			Sub: append([]*utils.CmdTree{{
 				Name: "run",
 				Help: "Start the NDN Distance Vector Routing Daemon",
 				Fun:  dv.Main,
-			}, {}, {
-				Name: "status",
-				Help: "Get general status of the router",
-				Fun:  dvc.RunDvStatus,
-			}, {
-				Name: "link create",
-				Help: "Create a new active neighbor link",
-				Fun:  dvc.RunDvLinkCreate(&nfdcTree),
-			}, {
-				Name: "link destroy",
-				Help: "Destroy an active neighbor link",
-				Fun:  dvc.RunDvLinkDestroy(&nfdcTree),
-			}},
+			}, {},
+			}, dvc.Tree().Sub...),
 		}, {
 			// tools separator
 		}, {
 			Name: "sec",
 			Help: "NDN Security Utilities",
-			Sub:  tools_sec.GetSecCmdTree().Sub,
+			Sub:  sec.Tree().Sub,
 		}, {
 			Name: "ping",
 			Help: "Send Interests to an NDN ping server",

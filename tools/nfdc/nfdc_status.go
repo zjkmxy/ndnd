@@ -10,13 +10,16 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-func (n *Nfdc) ExecStatusGeneral(args []string) {
+func (t *Tool) ExecStatusGeneral(args []string) {
+	t.Start()
+	defer t.Stop()
+
 	suffix := enc.Name{
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "general"),
 	}
 
-	data, err := n.fetchStatusDataset(suffix)
+	data, err := t.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
 		os.Exit(1)

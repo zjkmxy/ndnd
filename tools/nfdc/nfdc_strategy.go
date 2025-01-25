@@ -8,13 +8,16 @@ import (
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 )
 
-func (n *Nfdc) ExecStrategyList(args []string) {
+func (t *Tool) ExecStrategyList(args []string) {
+	t.Start()
+	defer t.Stop()
+
 	suffix := enc.Name{
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy-choice"),
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
 	}
 
-	data, err := n.fetchStatusDataset(suffix)
+	data, err := t.fetchStatusDataset(suffix)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status dataset: %+v\n", err)
 		os.Exit(1)

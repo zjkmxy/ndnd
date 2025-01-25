@@ -12,7 +12,10 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string) {
+func (t *Tool) ExecCmd(mod string, cmd string, args []string, defaults []string) {
+	t.Start()
+	defer t.Stop()
+
 	// parse command arguments
 	ctrlArgs := mgmt.ControlArgs{}
 
@@ -25,12 +28,12 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 			return
 		}
 
-		key, val := n.preprocessArg(&ctrlArgs, mod, cmd, kv[0], kv[1])
-		n.convCmdArg(&ctrlArgs, key, val)
+		key, val := t.preprocessArg(&ctrlArgs, mod, cmd, kv[0], kv[1])
+		t.convCmdArg(&ctrlArgs, key, val)
 	}
 
 	// execute command
-	raw, execErr := n.engine.ExecMgmtCmd(mod, cmd, &ctrlArgs)
+	raw, execErr := t.engine.ExecMgmtCmd(mod, cmd, &ctrlArgs)
 	if raw == nil {
 		fmt.Fprintf(os.Stderr, "Error executing command: %+v\n", execErr)
 		os.Exit(1)
@@ -44,14 +47,14 @@ func (n *Nfdc) ExecCmd(mod string, cmd string, args []string, defaults []string)
 		os.Exit(1)
 		return
 	}
-	n.printCtrlResponse(res)
+	t.printCtrlResponse(res)
 
 	if execErr != nil {
 		os.Exit(1)
 	}
 }
 
-func (n *Nfdc) preprocessArg(
+func (n *Tool) preprocessArg(
 	ctrlArgs *mgmt.ControlArgs,
 	mod string, cmd string,
 	key string, val string,
@@ -138,7 +141,7 @@ func (n *Nfdc) preprocessArg(
 	return key, val
 }
 
-func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
+func (n *Tool) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 	// helper function to parse uint64 values
 	parseUint := func(val string) uint64 {
 		v, err := strconv.ParseUint(val, 10, 64)
@@ -199,7 +202,7 @@ func (n *Nfdc) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 	}
 }
 
-func (n *Nfdc) printCtrlResponse(res *mgmt.ControlResponse) {
+func (n *Tool) printCtrlResponse(res *mgmt.ControlResponse) {
 	// print status code and text
 	fmt.Printf("Status=%d (%s)\n", res.Val.StatusCode, res.Val.StatusText)
 

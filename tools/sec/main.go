@@ -4,7 +4,7 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-func GetSecCmdTree() utils.CmdTree {
+func Tree() utils.CmdTree {
 	return utils.CmdTree{
 		Name: "sec",
 		Help: "NDN Security Utilities",
