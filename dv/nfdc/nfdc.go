@@ -59,8 +59,6 @@ func (m *NfdMgmtThread) Start() {
 
 func (m *NfdMgmtThread) Stop() {
 	m.stop <- true
-	close(m.channel)
-	close(m.stop)
 }
 
 func (m *NfdMgmtThread) Exec(mgmt_cmd NfdMgmtCmd) {
