@@ -13,7 +13,7 @@ type ClientConfig struct {
 func GetClientConfig() ClientConfig {
 	// Default configuration
 	config := ClientConfig{
-		TransportUri: "unix:///var/run/nfd/nfd.sock",
+		TransportUri: "unix:///run/nfd/nfd.sock",
 	}
 
 	// Order of increasing priority
