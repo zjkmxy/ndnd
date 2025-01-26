@@ -114,26 +114,7 @@ func (context *KeyLocatorParsingContext) Parse(reader enc.ParseReader, ignoreCri
 				if true {
 					handled = true
 					handled_Name = true
-					value.Name = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.Name {
-						if reader.Pos() >= endName {
-							value.Name = value.Name[:j]
-							break
-						}
-						var err1, err3 error
-						value.Name[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.Name[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			case 29:
 				if true {
@@ -344,26 +325,7 @@ func (context *LinksParsingContext) Parse(reader enc.ParseReader, ignoreCritical
 						}{}
 						{
 							value := &pseudoValue
-							value.Names = make(enc.Name, l/2+1)
-							startName := reader.Pos()
-							endName := startName + int(l)
-							for j := range value.Names {
-								if reader.Pos() >= endName {
-									value.Names = value.Names[:j]
-									break
-								}
-								var err1, err3 error
-								value.Names[j].Typ, err1 = enc.ReadTLNum(reader)
-								l, err2 := enc.ReadTLNum(reader)
-								value.Names[j].Val, err3 = reader.ReadBuf(int(l))
-								if err1 != nil || err2 != nil || err3 != nil {
-									err = io.ErrUnexpectedEOF
-									break
-								}
-							}
-							if err == nil && reader.Pos() != endName {
-								err = enc.ErrBufferOverflow
-							}
+							value.Names, err = enc.ReadName(reader.Delegate(int(l)))
 							_ = value
 						}
 						value.Names = append(value.Names, pseudoValue.Names)
@@ -3390,26 +3352,7 @@ func (context *DataParsingContext) Parse(reader enc.ParseReader, ignoreCritical 
 				if progress+1 == 2 {
 					handled = true
 					handled_NameV = true
-					value.NameV = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.NameV {
-						if reader.Pos() >= endName {
-							value.NameV = value.NameV[:j]
-							break
-						}
-						var err1, err3 error
-						value.NameV[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.NameV[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.NameV, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			case 20:
 				if progress+1 == 3 {

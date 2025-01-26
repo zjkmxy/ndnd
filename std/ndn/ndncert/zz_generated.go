@@ -205,26 +205,7 @@ func (context *CaProfileParsingContext) Parse(reader enc.ParseReader, ignoreCrit
 				if true {
 					handled = true
 					handled_CaPrefix = true
-					value.CaPrefix = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.CaPrefix {
-						if reader.Pos() >= endName {
-							value.CaPrefix = value.CaPrefix[:j]
-							break
-						}
-						var err1, err3 error
-						value.CaPrefix[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.CaPrefix[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.CaPrefix, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			case 131:
 				if true {
@@ -684,26 +665,7 @@ func (context *ProbeResParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 				if true {
 					handled = true
 					handled_Response = true
-					value.Response = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.Response {
-						if reader.Pos() >= endName {
-							value.Response = value.Response[:j]
-							break
-						}
-						var err1, err3 error
-						value.Response[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.Response[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.Response, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -2135,51 +2097,13 @@ func (context *ChallengeDataPlainParsingContext) Parse(reader enc.ParseReader, i
 				if true {
 					handled = true
 					handled_CertName = true
-					value.CertName = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.CertName {
-						if reader.Pos() >= endName {
-							value.CertName = value.CertName[:j]
-							break
-						}
-						var err1, err3 error
-						value.CertName[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.CertName[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.CertName, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			case 30:
 				if true {
 					handled = true
 					handled_ForwardingHint = true
-					value.ForwardingHint = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.ForwardingHint {
-						if reader.Pos() >= endName {
-							value.ForwardingHint = value.ForwardingHint[:j]
-							break
-						}
-						var err1, err3 error
-						value.ForwardingHint[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.ForwardingHint[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.ForwardingHint, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			case 133:
 				if true {

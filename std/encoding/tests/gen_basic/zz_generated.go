@@ -552,26 +552,7 @@ func (context *WireNameFieldParsingContext) Parse(reader enc.ParseReader, ignore
 				if true {
 					handled = true
 					handled_Name = true
-					value.Name = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.Name {
-						if reader.Pos() >= endName {
-							value.Name = value.Name[:j]
-							break
-						}
-						var err1, err3 error
-						value.Name[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.Name[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -761,26 +742,7 @@ func (context *MarkersParsingContext) Parse(reader enc.ParseReader, ignoreCritic
 				if progress+1 == 3 {
 					handled = true
 					handled_Name = true
-					value.Name = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.Name {
-						if reader.Pos() >= endName {
-							value.Name = value.Name[:j]
-							break
-						}
-						var err1, err3 error
-						value.Name[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.Name[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
