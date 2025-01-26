@@ -7,7 +7,6 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 type NfdMgmtCmd struct {
@@ -70,12 +69,9 @@ func (m *NfdMgmtThread) Exec(mgmt_cmd NfdMgmtCmd) {
 // CreatePermFace creates a new permanent face to the given neighbor.
 // This is a blocking call.
 // returns: face ID of the created link, whether the face was created, error
-func (m *NfdMgmtThread) CreatePermFace(uri string) (uint64, bool, error) {
+func (m *NfdMgmtThread) CreateFace(args *mgmt.ControlArgs) (uint64, bool, error) {
 	// create a new face or get the existing one
-	raw, err := m.engine.ExecMgmtCmd("faces", "create", &mgmt.ControlArgs{
-		Uri:             utils.IdPtr(uri),
-		FacePersistency: utils.IdPtr(uint64(mgmt.PersistencyPermanent)),
-	})
+	raw, err := m.engine.ExecMgmtCmd("faces", "create", args)
 	// don't check error here, as the face may already exist (409)
 
 	res, ok := raw.(*mgmt.ControlResponse)

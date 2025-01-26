@@ -278,7 +278,16 @@ func (dv *Router) register() (err error) {
 // createFaces creates faces to all neighbors.
 func (dv *Router) createFaces() {
 	for i, neighbor := range dv.config.Neighbors {
-		faceId, created, err := dv.nfdc.CreatePermFace(neighbor.Uri)
+		var mtu *uint64 = nil
+		if neighbor.Mtu > 0 {
+			mtu = utils.IdPtr(neighbor.Mtu)
+		}
+
+		faceId, created, err := dv.nfdc.CreateFace(&mgmt.ControlArgs{
+			Uri:             utils.IdPtr(neighbor.Uri),
+			FacePersistency: utils.IdPtr(uint64(mgmt.PersistencyPermanent)),
+			Mtu:             mtu,
+		})
 		if err != nil {
 			log.Error(dv, "Failed to create face to neighbor", "uri", neighbor.Uri, "err", err)
 			continue

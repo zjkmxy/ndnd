@@ -64,6 +64,8 @@ type Config struct {
 type Neighbor struct {
 	// Remote URI of the neighbor.
 	Uri string `json:"uri"`
+	// MTU of the link face.
+	Mtu uint64 `json:"mtu"`
 
 	// FaceId of the neighbor.
 	FaceId uint64 `json:"-"`

@@ -14,9 +14,9 @@ dv:
 
   # [optional] List of permanent neighbors
   # Example with all options:
-  #   - uri: udp4://suns.cs.ucla.edu:6363
-  neighbors:
-    - uri: udp4://suns.cs.ucla.edu:6363
+  #   - uri: udp4://suns.cs.ucla.edu:6363   # required
+  #     mtu: 1420                           # optional
+  neighbors: []
 
   # [optional] Period of Advertisement Sync Interests (ms)
   advertise_interval: 5000
