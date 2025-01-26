@@ -1,5 +1,7 @@
 // Network name from config
-#network: network
+#network: net1
+#network: net1/net2
+#network: net1/net2/net3
 // Router name from config
 #router: #network/router
 
