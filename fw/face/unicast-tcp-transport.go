@@ -238,8 +238,11 @@ func (t *UnicastTCPTransport) runReceive() {
 				*t.expirationTime = time.Now().Add(CfgTCPLifetime())
 				t.linkService.handleIncomingFrame(b)
 			}, nil)
-			if err == nil || t.closed {
+			if err == nil && t.Persistency() != spec_mgmt.PersistencyPermanent {
 				break // EOF
+			}
+			if t.closed {
+				break // permanent close
 			}
 
 			core.Log.Warn(t, "Unable to read from socket - Face DOWN", "err", err)
