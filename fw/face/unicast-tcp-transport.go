@@ -187,7 +187,7 @@ func (t *UnicastTCPTransport) reconnect() {
 		conn, err := t.dialer.Dial(t.remoteURI.Scheme(), remote)
 		if err != nil {
 			core.Log.Warn(t, "Unable to connect to remote endpoint", "err", err, "attempt", attempt)
-			time.Sleep(5 * time.Second) // TODO: configurable
+			time.Sleep(time.Duration(core.C.Faces.Tcp.ReconnectInterval) * time.Second)
 			continue
 		}
 

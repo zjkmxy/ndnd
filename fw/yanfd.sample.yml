@@ -38,6 +38,8 @@ faces:
     port_unicast: 6363
     # Lifetime of on-demand faces (in seconds)
     lifetime: 600
+    # Reconnect interval for permanent faces (in seconds)
+    reconnect_interval: 10
 
   unix:
     # Whether to enable Unix stream transports

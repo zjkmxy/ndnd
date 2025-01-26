@@ -67,6 +67,8 @@ type Config struct {
 			PortUnicast uint16 `json:"port_unicast"`
 			// Lifetime of on-demand faces (in seconds)
 			Lifetime uint64 `json:"lifetime"`
+			// Reconnect interval for permanent faces (in seconds)
+			ReconnectInterval uint64 `json:"reconnect_interval"`
 		} `json:"tcp"`
 
 		Unix struct {
@@ -175,6 +177,7 @@ func DefaultConfig() *Config {
 	c.Faces.Tcp.Enabled = true
 	c.Faces.Tcp.PortUnicast = 6363
 	c.Faces.Tcp.Lifetime = 600
+	c.Faces.Tcp.ReconnectInterval = 10
 
 	c.Faces.Unix.Enabled = true
 	c.Faces.Unix.SocketPath = "/run/nfd/nfd.sock"
