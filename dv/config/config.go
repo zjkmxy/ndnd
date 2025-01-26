@@ -100,9 +100,19 @@ func (c *Config) Parse() (err error) {
 		return err
 	}
 
+	// Max 3 components in network name due to the trust schema
+	if len(c.networkNameN) > 3 {
+		return errors.New("network name can have at most 3 components")
+	}
+
 	// Make sure router is in the network
 	if !c.networkNameN.IsPrefix(c.routerNameN) {
 		return errors.New("network name is required to be a prefix of router name")
+	}
+
+	// Make sure router length is exactly one more than network
+	if len(c.routerNameN) != len(c.networkNameN)+1 {
+		return errors.New("router name must be exactly one component longer than network name")
 	}
 
 	// Validate intervals are not too short
