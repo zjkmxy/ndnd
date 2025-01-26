@@ -51,7 +51,7 @@ func MakeMulticastUDPTransport(localURI *defn.URI) (*MulticastUDPTransport, erro
 		defn.DecodeURIString(remote),
 		localURI, spec_mgmt.PersistencyPermanent,
 		defn.NonLocal, defn.MultiAccess,
-		defn.MaxNDNPacketSize)
+		int(core.C.Faces.Udp.DefaultMtu))
 
 	// Format group and local addresses
 	t.groupAddr.IP = net.ParseIP(t.remoteURI.PathHost())

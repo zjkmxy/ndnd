@@ -30,6 +30,8 @@ faces:
     multicast_address_ipv6: ff02::114
     # Lifetime of on-demand faces (in seconds)
     lifetime: 600
+    # Default MTU for UDP faces
+    default_mtu: 1420
 
   tcp:
     # Whether to enable TCP listener

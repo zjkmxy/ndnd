@@ -58,6 +58,8 @@ type Config struct {
 			MulticastAddressIpv6 string `json:"multicast_address_ipv6"`
 			// Lifetime of on-demand faces (in seconds)
 			Lifetime uint64 `json:"lifetime"`
+			// Default MTU for UDP faces
+			DefaultMtu uint16 `json:"default_mtu"`
 		} `json:"udp"`
 
 		Tcp struct {
@@ -173,6 +175,7 @@ func DefaultConfig() *Config {
 	c.Faces.Udp.MulticastAddressIpv4 = "224.0.23.170"
 	c.Faces.Udp.MulticastAddressIpv6 = "ff02::114"
 	c.Faces.Udp.Lifetime = 600
+	c.Faces.Udp.DefaultMtu = 1420
 
 	c.Faces.Tcp.Enabled = true
 	c.Faces.Tcp.PortUnicast = 6363

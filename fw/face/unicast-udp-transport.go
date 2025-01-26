@@ -48,7 +48,10 @@ func MakeUnicastUDPTransport(
 
 	// Construct transport
 	t := new(UnicastUDPTransport)
-	t.makeTransportBase(remoteURI, localURI, persistency, defn.NonLocal, defn.PointToPoint, defn.MaxNDNPacketSize)
+	t.makeTransportBase(
+		remoteURI, localURI, persistency,
+		defn.NonLocal, defn.PointToPoint,
+		int(core.C.Faces.Udp.DefaultMtu))
 	t.expirationTime = new(time.Time)
 	*t.expirationTime = time.Now().Add(CfgUDPLifetime())
 
