@@ -30,30 +30,12 @@ func (encoder *KeyLocatorEncoder) Init(value *KeyLocator) {
 	l := uint(0)
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 	if value.KeyDigest != nil {
 		l += 1
-		switch x := len(value.KeyDigest); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.KeyDigest)).EncodingLength())
 		l += uint(len(value.KeyDigest))
 	}
 	encoder.length = l
@@ -71,23 +53,7 @@ func (encoder *KeyLocatorEncoder) EncodeInto(value *KeyLocator, buf []byte) {
 	if value.Name != nil {
 		buf[pos] = byte(7)
 		pos += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
 		for _, c := range value.Name {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
@@ -95,23 +61,7 @@ func (encoder *KeyLocatorEncoder) EncodeInto(value *KeyLocator, buf []byte) {
 	if value.KeyDigest != nil {
 		buf[pos] = byte(29)
 		pos += 1
-		switch x := len(value.KeyDigest); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.KeyDigest)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.KeyDigest)
 		pos += uint(len(value.KeyDigest))
 	}
@@ -164,26 +114,7 @@ func (context *KeyLocatorParsingContext) Parse(reader enc.ParseReader, ignoreCri
 				if true {
 					handled = true
 					handled_Name = true
-					value.Name = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.Name {
-						if reader.Pos() >= endName {
-							value.Name = value.Name[:j]
-							break
-						}
-						var err1, err3 error
-						value.Name[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.Name[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			case 29:
 				if true {
@@ -293,16 +224,7 @@ func (encoder *LinksEncoder) Init(value *Links) {
 				value := &pseudoValue
 				if value.Names != nil {
 					l += 1
-					switch x := encoder.Names_length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.Names_length).EncodingLength())
 					l += encoder.Names_length
 				}
 				_ = encoder
@@ -336,23 +258,7 @@ func (encoder *LinksEncoder) EncodeInto(value *Links, buf []byte) {
 				if value.Names != nil {
 					buf[pos] = byte(7)
 					pos += 1
-					switch x := encoder.Names_length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.Names_length).EncodeInto(buf[pos:]))
 					for _, c := range value.Names {
 						pos += uint(c.EncodeInto(buf[pos:]))
 					}
@@ -419,26 +325,7 @@ func (context *LinksParsingContext) Parse(reader enc.ParseReader, ignoreCritical
 						}{}
 						{
 							value := &pseudoValue
-							value.Names = make(enc.Name, l/2+1)
-							startName := reader.Pos()
-							endName := startName + int(l)
-							for j := range value.Names {
-								if reader.Pos() >= endName {
-									value.Names = value.Names[:j]
-									break
-								}
-								var err1, err3 error
-								value.Names[j].Typ, err1 = enc.ReadTLNum(reader)
-								l, err2 := enc.ReadTLNum(reader)
-								value.Names[j].Val, err3 = reader.ReadBuf(int(l))
-								if err1 != nil || err2 != nil || err3 != nil {
-									err = io.ErrUnexpectedEOF
-									break
-								}
-							}
-							if err == nil && reader.Pos() != endName {
-								err = enc.ErrBufferOverflow
-							}
+							value.Names, err = enc.ReadName(reader.Delegate(int(l)))
 							_ = value
 						}
 						value.Names = append(value.Names, pseudoValue.Names)
@@ -502,42 +389,15 @@ func (encoder *MetaInfoEncoder) Init(value *MetaInfo) {
 	l := uint(0)
 	if value.ContentType != nil {
 		l += 1
-		switch x := *value.ContentType; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.ContentType).EncodingLength())
 	}
 	if value.FreshnessPeriod != nil {
 		l += 1
-		switch x := uint64(*value.FreshnessPeriod / time.Millisecond); {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(uint64(*value.FreshnessPeriod/time.Millisecond)).EncodingLength())
 	}
 	if value.FinalBlockID != nil {
 		l += 1
-		switch x := len(value.FinalBlockID); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.FinalBlockID)).EncodingLength())
 		l += uint(len(value.FinalBlockID))
 	}
 	encoder.length = l
@@ -555,67 +415,23 @@ func (encoder *MetaInfoEncoder) EncodeInto(value *MetaInfo, buf []byte) {
 	if value.ContentType != nil {
 		buf[pos] = byte(24)
 		pos += 1
-		switch x := *value.ContentType; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.ContentType).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.FreshnessPeriod != nil {
 		buf[pos] = byte(25)
 		pos += 1
-		switch x := uint64(*value.FreshnessPeriod / time.Millisecond); {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(uint64(*value.FreshnessPeriod / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.FinalBlockID != nil {
 		buf[pos] = byte(26)
 		pos += 1
-		switch x := len(value.FinalBlockID); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.FinalBlockID)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.FinalBlockID)
 		pos += uint(len(value.FinalBlockID))
 	}
@@ -781,28 +597,10 @@ func (encoder *ValidityPeriodEncoder) Init(value *ValidityPeriod) {
 
 	l := uint(0)
 	l += 3
-	switch x := len(value.NotBefore); {
-	case x <= 0xfc:
-		l += 1
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(enc.TLNum(len(value.NotBefore)).EncodingLength())
 	l += uint(len(value.NotBefore))
 	l += 3
-	switch x := len(value.NotAfter); {
-	case x <= 0xfc:
-		l += 1
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(enc.TLNum(len(value.NotAfter)).EncodingLength())
 	l += uint(len(value.NotAfter))
 	encoder.length = l
 
@@ -819,45 +617,13 @@ func (encoder *ValidityPeriodEncoder) EncodeInto(value *ValidityPeriod, buf []by
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(254))
 	pos += 3
-	switch x := len(value.NotBefore); {
-	case x <= 0xfc:
-		buf[pos] = byte(x)
-		pos += 1
-	case x <= 0xffff:
-		buf[pos] = 0xfd
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 0xfe
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 0xff
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+	pos += uint(enc.TLNum(len(value.NotBefore)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.NotBefore)
 	pos += uint(len(value.NotBefore))
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(255))
 	pos += 3
-	switch x := len(value.NotAfter); {
-	case x <= 0xfc:
-		buf[pos] = byte(x)
-		pos += 1
-	case x <= 0xffff:
-		buf[pos] = 0xfd
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 0xfe
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 0xff
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+	pos += uint(enc.TLNum(len(value.NotAfter)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.NotAfter)
 	pos += uint(len(value.NotAfter))
 }
@@ -988,28 +754,10 @@ func (encoder *CertDescriptionEntryEncoder) Init(value *CertDescriptionEntry) {
 
 	l := uint(0)
 	l += 3
-	switch x := len(value.DescriptionKey); {
-	case x <= 0xfc:
-		l += 1
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(enc.TLNum(len(value.DescriptionKey)).EncodingLength())
 	l += uint(len(value.DescriptionKey))
 	l += 3
-	switch x := len(value.DescriptionValue); {
-	case x <= 0xfc:
-		l += 1
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(enc.TLNum(len(value.DescriptionValue)).EncodingLength())
 	l += uint(len(value.DescriptionValue))
 	encoder.length = l
 
@@ -1026,45 +774,13 @@ func (encoder *CertDescriptionEntryEncoder) EncodeInto(value *CertDescriptionEnt
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(513))
 	pos += 3
-	switch x := len(value.DescriptionKey); {
-	case x <= 0xfc:
-		buf[pos] = byte(x)
-		pos += 1
-	case x <= 0xffff:
-		buf[pos] = 0xfd
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 0xfe
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 0xff
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+	pos += uint(enc.TLNum(len(value.DescriptionKey)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.DescriptionKey)
 	pos += uint(len(value.DescriptionKey))
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(514))
 	pos += 3
-	switch x := len(value.DescriptionValue); {
-	case x <= 0xfc:
-		buf[pos] = byte(x)
-		pos += 1
-	case x <= 0xffff:
-		buf[pos] = 0xfd
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 0xfe
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 0xff
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+	pos += uint(enc.TLNum(len(value.DescriptionValue)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.DescriptionValue)
 	pos += uint(len(value.DescriptionValue))
 }
@@ -1235,16 +951,7 @@ func (encoder *CertAdditionalDescriptionEncoder) Init(value *CertAdditionalDescr
 				value := &pseudoValue
 				if value.DescriptionEntries != nil {
 					l += 3
-					switch x := encoder.DescriptionEntries_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.DescriptionEntries_encoder.length).EncodingLength())
 					l += encoder.DescriptionEntries_encoder.length
 				}
 				_ = encoder
@@ -1279,23 +986,7 @@ func (encoder *CertAdditionalDescriptionEncoder) EncodeInto(value *CertAdditiona
 					buf[pos] = 253
 					binary.BigEndian.PutUint16(buf[pos+1:], uint16(512))
 					pos += 3
-					switch x := encoder.DescriptionEntries_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.DescriptionEntries_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.DescriptionEntries_encoder.length > 0 {
 						encoder.DescriptionEntries_encoder.EncodeInto(value.DescriptionEntries, buf[pos:])
 						pos += encoder.DescriptionEntries_encoder.length
@@ -1446,96 +1137,33 @@ func (encoder *SignatureInfoEncoder) Init(value *SignatureInfo) {
 
 	l := uint(0)
 	l += 1
-	switch x := value.SignatureType; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.SignatureType).EncodingLength())
 	if value.KeyLocator != nil {
 		l += 1
-		switch x := encoder.KeyLocator_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.KeyLocator_encoder.length).EncodingLength())
 		l += encoder.KeyLocator_encoder.length
 	}
 	if value.SignatureNonce != nil {
 		l += 1
-		switch x := len(value.SignatureNonce); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.SignatureNonce)).EncodingLength())
 		l += uint(len(value.SignatureNonce))
 	}
 	if value.SignatureTime != nil {
 		l += 1
-		switch x := uint64(*value.SignatureTime / time.Millisecond); {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(uint64(*value.SignatureTime/time.Millisecond)).EncodingLength())
 	}
 	if value.SignatureSeqNum != nil {
 		l += 1
-		switch x := *value.SignatureSeqNum; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.SignatureSeqNum).EncodingLength())
 	}
 	if value.ValidityPeriod != nil {
 		l += 3
-		switch x := encoder.ValidityPeriod_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.ValidityPeriod_encoder.length).EncodingLength())
 		l += encoder.ValidityPeriod_encoder.length
 	}
 	if value.AdditionalDescription != nil {
 		l += 3
-		switch x := encoder.AdditionalDescription_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.AdditionalDescription_encoder.length).EncodingLength())
 		l += encoder.AdditionalDescription_encoder.length
 	}
 	encoder.length = l
@@ -1556,44 +1184,13 @@ func (encoder *SignatureInfoEncoder) EncodeInto(value *SignatureInfo, buf []byte
 
 	buf[pos] = byte(27)
 	pos += 1
-	switch x := value.SignatureType; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.SignatureType).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	if value.KeyLocator != nil {
 		buf[pos] = byte(28)
 		pos += 1
-		switch x := encoder.KeyLocator_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.KeyLocator_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.KeyLocator_encoder.length > 0 {
 			encoder.KeyLocator_encoder.EncodeInto(value.KeyLocator, buf[pos:])
 			pos += encoder.KeyLocator_encoder.length
@@ -1602,91 +1199,31 @@ func (encoder *SignatureInfoEncoder) EncodeInto(value *SignatureInfo, buf []byte
 	if value.SignatureNonce != nil {
 		buf[pos] = byte(38)
 		pos += 1
-		switch x := len(value.SignatureNonce); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.SignatureNonce)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.SignatureNonce)
 		pos += uint(len(value.SignatureNonce))
 	}
 	if value.SignatureTime != nil {
 		buf[pos] = byte(40)
 		pos += 1
-		switch x := uint64(*value.SignatureTime / time.Millisecond); {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(uint64(*value.SignatureTime / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.SignatureSeqNum != nil {
 		buf[pos] = byte(42)
 		pos += 1
-		switch x := *value.SignatureSeqNum; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.SignatureSeqNum).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.ValidityPeriod != nil {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(253))
 		pos += 3
-		switch x := encoder.ValidityPeriod_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.ValidityPeriod_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.ValidityPeriod_encoder.length > 0 {
 			encoder.ValidityPeriod_encoder.EncodeInto(value.ValidityPeriod, buf[pos:])
 			pos += encoder.ValidityPeriod_encoder.length
@@ -1696,23 +1233,7 @@ func (encoder *SignatureInfoEncoder) EncodeInto(value *SignatureInfo, buf []byte
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(258))
 		pos += 3
-		switch x := encoder.AdditionalDescription_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.AdditionalDescription_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.AdditionalDescription_encoder.length > 0 {
 			encoder.AdditionalDescription_encoder.EncodeInto(value.AdditionalDescription, buf[pos:])
 			pos += encoder.AdditionalDescription_encoder.length
@@ -1933,16 +1454,7 @@ func (encoder *NetworkNackEncoder) Init(value *NetworkNack) {
 
 	l := uint(0)
 	l += 3
-	switch x := value.Reason; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Reason).EncodingLength())
 	encoder.length = l
 
 }
@@ -1958,24 +1470,9 @@ func (encoder *NetworkNackEncoder) EncodeInto(value *NetworkNack, buf []byte) {
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(801))
 	pos += 3
-	switch x := value.Reason; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Reason).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
 func (encoder *NetworkNackEncoder) Encode(value *NetworkNack) enc.Wire {
@@ -2095,16 +1592,7 @@ func (encoder *CachePolicyEncoder) Init(value *CachePolicy) {
 
 	l := uint(0)
 	l += 3
-	switch x := value.CachePolicyType; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.CachePolicyType).EncodingLength())
 	encoder.length = l
 
 }
@@ -2120,24 +1608,9 @@ func (encoder *CachePolicyEncoder) EncodeInto(value *CachePolicy, buf []byte) {
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(821))
 	pos += 3
-	switch x := value.CachePolicyType; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.CachePolicyType).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
 func (encoder *CachePolicyEncoder) Encode(value *CachePolicy) enc.Wire {
@@ -2295,110 +1768,38 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 	}
 	if value.FragIndex != nil {
 		l += 1
-		switch x := *value.FragIndex; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.FragIndex).EncodingLength())
 	}
 	if value.FragCount != nil {
 		l += 1
-		switch x := *value.FragCount; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.FragCount).EncodingLength())
 	}
 	if value.PitToken != nil {
 		l += 1
-		switch x := len(value.PitToken); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.PitToken)).EncodingLength())
 		l += uint(len(value.PitToken))
 	}
 	if value.Nack != nil {
 		l += 3
-		switch x := encoder.Nack_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Nack_encoder.length).EncodingLength())
 		l += encoder.Nack_encoder.length
 	}
 	if value.IncomingFaceId != nil {
 		l += 3
-		switch x := *value.IncomingFaceId; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.IncomingFaceId).EncodingLength())
 	}
 	if value.NextHopFaceId != nil {
 		l += 3
-		switch x := *value.NextHopFaceId; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.NextHopFaceId).EncodingLength())
 	}
 	if value.CachePolicy != nil {
 		l += 3
-		switch x := encoder.CachePolicy_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.CachePolicy_encoder.length).EncodingLength())
 		l += encoder.CachePolicy_encoder.length
 	}
 	if value.CongestionMark != nil {
 		l += 3
-		switch x := *value.CongestionMark; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.CongestionMark).EncodingLength())
 	}
 	if value.Ack != nil {
 		l += 3
@@ -2414,30 +1815,12 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 	}
 	if value.PrefixAnnouncement != nil {
 		l += 3
-		switch x := encoder.PrefixAnnouncement_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.PrefixAnnouncement_length).EncodingLength())
 		l += encoder.PrefixAnnouncement_length
 	}
 	if value.Fragment != nil {
 		l += 1
-		switch x := encoder.Fragment_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Fragment_length).EncodingLength())
 		l += encoder.Fragment_length
 	}
 	encoder.length = l
@@ -2450,110 +1833,38 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 	}
 	if value.FragIndex != nil {
 		l += 1
-		switch x := *value.FragIndex; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.FragIndex).EncodingLength())
 	}
 	if value.FragCount != nil {
 		l += 1
-		switch x := *value.FragCount; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.FragCount).EncodingLength())
 	}
 	if value.PitToken != nil {
 		l += 1
-		switch x := len(value.PitToken); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.PitToken)).EncodingLength())
 		l += uint(len(value.PitToken))
 	}
 	if value.Nack != nil {
 		l += 3
-		switch x := encoder.Nack_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Nack_encoder.length).EncodingLength())
 		l += encoder.Nack_encoder.length
 	}
 	if value.IncomingFaceId != nil {
 		l += 3
-		switch x := *value.IncomingFaceId; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.IncomingFaceId).EncodingLength())
 	}
 	if value.NextHopFaceId != nil {
 		l += 3
-		switch x := *value.NextHopFaceId; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.NextHopFaceId).EncodingLength())
 	}
 	if value.CachePolicy != nil {
 		l += 3
-		switch x := encoder.CachePolicy_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.CachePolicy_encoder.length).EncodingLength())
 		l += encoder.CachePolicy_encoder.length
 	}
 	if value.CongestionMark != nil {
 		l += 3
-		switch x := *value.CongestionMark; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.CongestionMark).EncodingLength())
 	}
 	if value.Ack != nil {
 		l += 3
@@ -2569,16 +1880,7 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 	}
 	if value.PrefixAnnouncement != nil {
 		l += 3
-		switch x := encoder.PrefixAnnouncement_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.PrefixAnnouncement_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.PrefixAnnouncement {
@@ -2588,16 +1890,7 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 	}
 	if value.Fragment != nil {
 		l += 1
-		switch x := encoder.Fragment_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Fragment_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.Fragment {
@@ -2636,67 +1929,23 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 	if value.FragIndex != nil {
 		buf[pos] = byte(82)
 		pos += 1
-		switch x := *value.FragIndex; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.FragIndex).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.FragCount != nil {
 		buf[pos] = byte(83)
 		pos += 1
-		switch x := *value.FragCount; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.FragCount).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.PitToken != nil {
 		buf[pos] = byte(98)
 		pos += 1
-		switch x := len(value.PitToken); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.PitToken)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.PitToken)
 		pos += uint(len(value.PitToken))
 	}
@@ -2704,23 +1953,7 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(800))
 		pos += 3
-		switch x := encoder.Nack_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Nack_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.Nack_encoder.length > 0 {
 			encoder.Nack_encoder.EncodeInto(value.Nack, buf[pos:])
 			pos += encoder.Nack_encoder.length
@@ -2730,69 +1963,25 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(812))
 		pos += 3
-		switch x := *value.IncomingFaceId; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.IncomingFaceId).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.NextHopFaceId != nil {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(816))
 		pos += 3
-		switch x := *value.NextHopFaceId; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.NextHopFaceId).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.CachePolicy != nil {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(820))
 		pos += 3
-		switch x := encoder.CachePolicy_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.CachePolicy_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.CachePolicy_encoder.length > 0 {
 			encoder.CachePolicy_encoder.EncodeInto(value.CachePolicy, buf[pos:])
 			pos += encoder.CachePolicy_encoder.length
@@ -2802,24 +1991,10 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(832))
 		pos += 3
-		switch x := *value.CongestionMark; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.CongestionMark).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.Ack != nil {
 		buf[pos] = 253
@@ -2848,23 +2023,7 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(848))
 		pos += 3
-		switch x := encoder.PrefixAnnouncement_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.PrefixAnnouncement_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {
@@ -2886,23 +2045,7 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 	if value.Fragment != nil {
 		buf[pos] = byte(80)
 		pos += 1
-		switch x := encoder.Fragment_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Fragment_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {
@@ -3353,16 +2496,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 
 	if value.NameV != nil {
 		l += 1
-		switch x := encoder.NameV_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
 		l += encoder.NameV_length
 	}
 	if value.CanBePrefixV {
@@ -3375,16 +2509,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 	}
 	if value.ForwardingHintV != nil {
 		l += 1
-		switch x := encoder.ForwardingHintV_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.ForwardingHintV_encoder.length).EncodingLength())
 		l += encoder.ForwardingHintV_encoder.length
 	}
 	if value.NonceV != nil {
@@ -3393,16 +2518,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 	}
 	if value.InterestLifetimeV != nil {
 		l += 1
-		switch x := uint64(*value.InterestLifetimeV / time.Millisecond); {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(uint64(*value.InterestLifetimeV/time.Millisecond)).EncodingLength())
 	}
 	if value.HopLimitV != nil {
 		l += 1
@@ -3412,44 +2528,17 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 	encoder.digestCoverStart = int(l)
 	if value.ApplicationParameters != nil {
 		l += 1
-		switch x := encoder.ApplicationParameters_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodingLength())
 		l += encoder.ApplicationParameters_length
 	}
 	if value.SignatureInfo != nil {
 		l += 1
-		switch x := encoder.SignatureInfo_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.length).EncodingLength())
 		l += encoder.SignatureInfo_encoder.length
 	}
 	if encoder.SignatureValue_estLen > 0 {
 		l += 1
-		switch x := encoder.SignatureValue_estLen; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
 		l += encoder.SignatureValue_estLen
 	}
 	encoder.digestCoverEnd = int(l)
@@ -3460,16 +2549,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 
 	if value.NameV != nil {
 		l += 1
-		switch x := encoder.NameV_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
 		l += encoder.NameV_length
 	}
 	if value.CanBePrefixV {
@@ -3482,16 +2562,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 	}
 	if value.ForwardingHintV != nil {
 		l += 1
-		switch x := encoder.ForwardingHintV_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.ForwardingHintV_encoder.length).EncodingLength())
 		l += encoder.ForwardingHintV_encoder.length
 	}
 	if value.NonceV != nil {
@@ -3500,16 +2571,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 	}
 	if value.InterestLifetimeV != nil {
 		l += 1
-		switch x := uint64(*value.InterestLifetimeV / time.Millisecond); {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(uint64(*value.InterestLifetimeV/time.Millisecond)).EncodingLength())
 	}
 	if value.HopLimitV != nil {
 		l += 1
@@ -3518,16 +2580,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 
 	if value.ApplicationParameters != nil {
 		l += 1
-		switch x := encoder.ApplicationParameters_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.ApplicationParameters {
@@ -3537,30 +2590,12 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 	}
 	if value.SignatureInfo != nil {
 		l += 1
-		switch x := encoder.SignatureInfo_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.length).EncodingLength())
 		l += encoder.SignatureInfo_encoder.length
 	}
 	if encoder.SignatureValue_estLen > 0 {
 		l += 1
-		switch x := encoder.SignatureValue_estLen; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		encoder.SignatureValue_wireIdx = len(wirePlan)
@@ -3593,23 +2628,7 @@ func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
 	if value.NameV != nil {
 		buf[pos] = byte(7)
 		pos += 1
-		switch x := encoder.NameV_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.NameV_length).EncodeInto(buf[pos:]))
 		sigCoverStart := pos
 
 		i := 0
@@ -3644,23 +2663,7 @@ func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
 	if value.ForwardingHintV != nil {
 		buf[pos] = byte(30)
 		pos += 1
-		switch x := encoder.ForwardingHintV_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.ForwardingHintV_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.ForwardingHintV_encoder.length > 0 {
 			encoder.ForwardingHintV_encoder.EncodeInto(value.ForwardingHintV, buf[pos:])
 			pos += encoder.ForwardingHintV_encoder.length
@@ -3676,24 +2679,10 @@ func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
 	if value.InterestLifetimeV != nil {
 		buf[pos] = byte(12)
 		pos += 1
-		switch x := uint64(*value.InterestLifetimeV / time.Millisecond); {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(uint64(*value.InterestLifetimeV / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.HopLimitV != nil {
 		buf[pos] = byte(34)
@@ -3709,23 +2698,7 @@ func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
 	if value.ApplicationParameters != nil {
 		buf[pos] = byte(36)
 		pos += 1
-		switch x := encoder.ApplicationParameters_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {
@@ -3747,23 +2720,7 @@ func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
 	if value.SignatureInfo != nil {
 		buf[pos] = byte(44)
 		pos += 1
-		switch x := encoder.SignatureInfo_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.SignatureInfo_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.SignatureInfo_encoder.length > 0 {
 			encoder.SignatureInfo_encoder.EncodeInto(value.SignatureInfo, buf[pos:])
 			pos += encoder.SignatureInfo_encoder.length
@@ -3773,23 +2730,7 @@ func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
 		startPos := int(pos)
 		buf[pos] = byte(46)
 		pos += 1
-		switch x := encoder.SignatureValue_estLen; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodeInto(buf[pos:]))
 		if encoder.sigCoverStart_wireIdx == int(wireIdx) {
 			coveredPart := buf[encoder.sigCoverStart:startPos]
 			encoder.sigCovered = append(encoder.sigCovered, coveredPart)
@@ -4189,72 +3130,27 @@ func (encoder *DataEncoder) Init(value *Data) {
 	encoder.sigCoverStart = int(l)
 	if value.NameV != nil {
 		l += 1
-		switch x := encoder.NameV_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
 		l += encoder.NameV_length
 	}
 	if value.MetaInfo != nil {
 		l += 1
-		switch x := encoder.MetaInfo_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.MetaInfo_encoder.length).EncodingLength())
 		l += encoder.MetaInfo_encoder.length
 	}
 	if value.ContentV != nil {
 		l += 1
-		switch x := encoder.ContentV_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.ContentV_length).EncodingLength())
 		l += encoder.ContentV_length
 	}
 	if value.SignatureInfo != nil {
 		l += 1
-		switch x := encoder.SignatureInfo_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.length).EncodingLength())
 		l += encoder.SignatureInfo_encoder.length
 	}
 	if encoder.SignatureValue_estLen > 0 {
 		l += 1
-		switch x := encoder.SignatureValue_estLen; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
 		l += encoder.SignatureValue_estLen
 	}
 	encoder.length = l
@@ -4264,44 +3160,17 @@ func (encoder *DataEncoder) Init(value *Data) {
 
 	if value.NameV != nil {
 		l += 1
-		switch x := encoder.NameV_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
 		l += encoder.NameV_length
 	}
 	if value.MetaInfo != nil {
 		l += 1
-		switch x := encoder.MetaInfo_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.MetaInfo_encoder.length).EncodingLength())
 		l += encoder.MetaInfo_encoder.length
 	}
 	if value.ContentV != nil {
 		l += 1
-		switch x := encoder.ContentV_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.ContentV_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.ContentV {
@@ -4311,30 +3180,12 @@ func (encoder *DataEncoder) Init(value *Data) {
 	}
 	if value.SignatureInfo != nil {
 		l += 1
-		switch x := encoder.SignatureInfo_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.length).EncodingLength())
 		l += encoder.SignatureInfo_encoder.length
 	}
 	if encoder.SignatureValue_estLen > 0 {
 		l += 1
-		switch x := encoder.SignatureValue_estLen; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		encoder.SignatureValue_wireIdx = len(wirePlan)
@@ -4367,23 +3218,7 @@ func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
 	if value.NameV != nil {
 		buf[pos] = byte(7)
 		pos += 1
-		switch x := encoder.NameV_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.NameV_length).EncodeInto(buf[pos:]))
 		for _, c := range value.NameV {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
@@ -4391,23 +3226,7 @@ func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
 	if value.MetaInfo != nil {
 		buf[pos] = byte(20)
 		pos += 1
-		switch x := encoder.MetaInfo_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.MetaInfo_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.MetaInfo_encoder.length > 0 {
 			encoder.MetaInfo_encoder.EncodeInto(value.MetaInfo, buf[pos:])
 			pos += encoder.MetaInfo_encoder.length
@@ -4416,23 +3235,7 @@ func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
 	if value.ContentV != nil {
 		buf[pos] = byte(21)
 		pos += 1
-		switch x := encoder.ContentV_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.ContentV_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {
@@ -4454,23 +3257,7 @@ func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
 	if value.SignatureInfo != nil {
 		buf[pos] = byte(22)
 		pos += 1
-		switch x := encoder.SignatureInfo_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.SignatureInfo_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.SignatureInfo_encoder.length > 0 {
 			encoder.SignatureInfo_encoder.EncodeInto(value.SignatureInfo, buf[pos:])
 			pos += encoder.SignatureInfo_encoder.length
@@ -4480,23 +3267,7 @@ func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
 		startPos := int(pos)
 		buf[pos] = byte(23)
 		pos += 1
-		switch x := encoder.SignatureValue_estLen; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodeInto(buf[pos:]))
 		if encoder.sigCoverStart_wireIdx == int(wireIdx) {
 			coveredPart := buf[encoder.sigCoverStart:startPos]
 			encoder.sigCovered = append(encoder.sigCovered, coveredPart)
@@ -4581,26 +3352,7 @@ func (context *DataParsingContext) Parse(reader enc.ParseReader, ignoreCritical 
 				if progress+1 == 2 {
 					handled = true
 					handled_NameV = true
-					value.NameV = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.NameV {
-						if reader.Pos() >= endName {
-							value.NameV = value.NameV[:j]
-							break
-						}
-						var err1, err3 error
-						value.NameV[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.NameV[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.NameV, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			case 20:
 				if progress+1 == 3 {
@@ -4730,44 +3482,17 @@ func (encoder *PacketEncoder) Init(value *Packet) {
 	l := uint(0)
 	if value.Interest != nil {
 		l += 1
-		switch x := encoder.Interest_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Interest_encoder.length).EncodingLength())
 		l += encoder.Interest_encoder.length
 	}
 	if value.Data != nil {
 		l += 1
-		switch x := encoder.Data_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Data_encoder.length).EncodingLength())
 		l += encoder.Data_encoder.length
 	}
 	if value.LpPacket != nil {
 		l += 1
-		switch x := encoder.LpPacket_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.LpPacket_encoder.length).EncodingLength())
 		l += encoder.LpPacket_encoder.length
 	}
 	encoder.length = l
@@ -4776,16 +3501,7 @@ func (encoder *PacketEncoder) Init(value *Packet) {
 	l = uint(0)
 	if value.Interest != nil {
 		l += 1
-		switch x := encoder.Interest_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Interest_encoder.length).EncodingLength())
 		if encoder.Interest_encoder.length > 0 {
 			l += encoder.Interest_encoder.wirePlan[0]
 			for i := 1; i < len(encoder.Interest_encoder.wirePlan); i++ {
@@ -4801,16 +3517,7 @@ func (encoder *PacketEncoder) Init(value *Packet) {
 	}
 	if value.Data != nil {
 		l += 1
-		switch x := encoder.Data_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Data_encoder.length).EncodingLength())
 		if encoder.Data_encoder.length > 0 {
 			l += encoder.Data_encoder.wirePlan[0]
 			for i := 1; i < len(encoder.Data_encoder.wirePlan); i++ {
@@ -4826,16 +3533,7 @@ func (encoder *PacketEncoder) Init(value *Packet) {
 	}
 	if value.LpPacket != nil {
 		l += 1
-		switch x := encoder.LpPacket_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.LpPacket_encoder.length).EncodingLength())
 		if encoder.LpPacket_encoder.length > 0 {
 			l += encoder.LpPacket_encoder.wirePlan[0]
 			for i := 1; i < len(encoder.LpPacket_encoder.wirePlan); i++ {
@@ -4871,23 +3569,7 @@ func (encoder *PacketEncoder) EncodeInto(value *Packet, wire enc.Wire) {
 	if value.Interest != nil {
 		buf[pos] = byte(5)
 		pos += 1
-		switch x := encoder.Interest_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Interest_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.Interest_encoder.length > 0 {
 			{
 				subWire := make(enc.Wire, len(encoder.Interest_encoder.wirePlan))
@@ -4921,23 +3603,7 @@ func (encoder *PacketEncoder) EncodeInto(value *Packet, wire enc.Wire) {
 	if value.Data != nil {
 		buf[pos] = byte(6)
 		pos += 1
-		switch x := encoder.Data_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Data_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.Data_encoder.length > 0 {
 			{
 				subWire := make(enc.Wire, len(encoder.Data_encoder.wirePlan))
@@ -4971,23 +3637,7 @@ func (encoder *PacketEncoder) EncodeInto(value *Packet, wire enc.Wire) {
 	if value.LpPacket != nil {
 		buf[pos] = byte(100)
 		pos += 1
-		switch x := encoder.LpPacket_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.LpPacket_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.LpPacket_encoder.length > 0 {
 			{
 				subWire := make(enc.Wire, len(encoder.LpPacket_encoder.wirePlan))

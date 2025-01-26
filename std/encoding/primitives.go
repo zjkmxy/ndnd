@@ -109,22 +109,20 @@ func (v Nat) EncodingLength() int {
 }
 
 func (v Nat) EncodeInto(buf Buffer) int {
-	pos := 0
 	switch x := uint64(v); {
 	case x <= 0xff:
-		buf[pos] = byte(x)
-		pos += 1
+		buf[0] = byte(x)
+		return 1
 	case x <= 0xffff:
 		binary.BigEndian.PutUint16(buf, uint16(x))
-		pos += 2
+		return 2
 	case x <= 0xffffffff:
 		binary.BigEndian.PutUint32(buf, uint32(x))
-		pos += 4
+		return 4
 	default:
 		binary.BigEndian.PutUint64(buf, uint64(x))
-		pos += 8
+		return 8
 	}
-	return pos
 }
 
 func (v Nat) Bytes() []byte {

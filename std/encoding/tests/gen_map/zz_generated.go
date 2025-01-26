@@ -2,7 +2,6 @@
 package gen_map
 
 import (
-	"encoding/binary"
 	"io"
 	"strings"
 
@@ -58,29 +57,11 @@ func (encoder *StringMapEncoder) Init(value *StringMap) {
 				encoder := pseudoEncoder
 				value := &pseudoValue
 				l += 1
-				switch x := len(value.Params_k); {
-				case x <= 0xfc:
-					l += 1
-				case x <= 0xffff:
-					l += 3
-				case x <= 0xffffffff:
-					l += 5
-				default:
-					l += 9
-				}
+				l += uint(enc.TLNum(len(value.Params_k)).EncodingLength())
 				l += uint(len(value.Params_k))
 				if value.Params_v != nil {
 					l += 1
-					switch x := len(value.Params_v); {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(len(value.Params_v)).EncodingLength())
 					l += uint(len(value.Params_v))
 				}
 				_ = encoder
@@ -115,45 +96,13 @@ func (encoder *StringMapEncoder) EncodeInto(value *StringMap, buf []byte) {
 				value := &pseudoValue
 				buf[pos] = byte(133)
 				pos += 1
-				switch x := len(value.Params_k); {
-				case x <= 0xfc:
-					buf[pos] = byte(x)
-					pos += 1
-				case x <= 0xffff:
-					buf[pos] = 0xfd
-					binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-					pos += 3
-				case x <= 0xffffffff:
-					buf[pos] = 0xfe
-					binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-					pos += 5
-				default:
-					buf[pos] = 0xff
-					binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-					pos += 9
-				}
+				pos += uint(enc.TLNum(len(value.Params_k)).EncodeInto(buf[pos:]))
 				copy(buf[pos:], value.Params_k)
 				pos += uint(len(value.Params_k))
 				if value.Params_v != nil {
 					buf[pos] = byte(135)
 					pos += 1
-					switch x := len(value.Params_v); {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(len(value.Params_v)).EncodeInto(buf[pos:]))
 					copy(buf[pos:], value.Params_v)
 					pos += uint(len(value.Params_v))
 				}
@@ -304,16 +253,7 @@ func (encoder *InnerEncoder) Init(value *Inner) {
 
 	l := uint(0)
 	l += 1
-	switch x := value.Num; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Num).EncodingLength())
 	encoder.length = l
 
 }
@@ -328,24 +268,9 @@ func (encoder *InnerEncoder) EncodeInto(value *Inner, buf []byte) {
 
 	buf[pos] = byte(1)
 	pos += 1
-	switch x := value.Num; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Num).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
 func (encoder *InnerEncoder) Encode(value *Inner) enc.Wire {
@@ -509,28 +434,10 @@ func (encoder *IntStructMapEncoder) Init(value *IntStructMap) {
 				encoder := pseudoEncoder
 				value := &pseudoValue
 				l += 1
-				switch x := value.Params_k; {
-				case x <= 0xff:
-					l += 2
-				case x <= 0xffff:
-					l += 3
-				case x <= 0xffffffff:
-					l += 5
-				default:
-					l += 9
-				}
+				l += uint(1 + enc.Nat(value.Params_k).EncodingLength())
 				if value.Params_v != nil {
 					l += 1
-					switch x := encoder.Params_v_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.Params_v_encoder.length).EncodingLength())
 					l += encoder.Params_v_encoder.length
 				}
 				_ = encoder
@@ -565,44 +472,13 @@ func (encoder *IntStructMapEncoder) EncodeInto(value *IntStructMap, buf []byte) 
 				value := &pseudoValue
 				buf[pos] = byte(133)
 				pos += 1
-				switch x := value.Params_k; {
-				case x <= 0xff:
-					buf[pos] = 1
-					buf[pos+1] = byte(x)
-					pos += 2
-				case x <= 0xffff:
-					buf[pos] = 2
-					binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-					pos += 3
-				case x <= 0xffffffff:
-					buf[pos] = 4
-					binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-					pos += 5
-				default:
-					buf[pos] = 8
-					binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-					pos += 9
-				}
+
+				buf[pos] = byte(enc.Nat(value.Params_k).EncodeInto(buf[pos+1:]))
+				pos += uint(1 + buf[pos])
 				if value.Params_v != nil {
 					buf[pos] = byte(135)
 					pos += 1
-					switch x := encoder.Params_v_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.Params_v_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.Params_v_encoder.length > 0 {
 						encoder.Params_v_encoder.EncodeInto(value.Params_v, buf[pos:])
 						pos += encoder.Params_v_encoder.length

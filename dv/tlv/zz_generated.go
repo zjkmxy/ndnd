@@ -32,30 +32,12 @@ func (encoder *PacketEncoder) Init(value *Packet) {
 	l := uint(0)
 	if value.Advertisement != nil {
 		l += 1
-		switch x := encoder.Advertisement_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Advertisement_encoder.length).EncodingLength())
 		l += encoder.Advertisement_encoder.length
 	}
 	if value.PrefixOpList != nil {
 		l += 3
-		switch x := encoder.PrefixOpList_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.PrefixOpList_encoder.length).EncodingLength())
 		l += encoder.PrefixOpList_encoder.length
 	}
 	encoder.length = l
@@ -74,23 +56,7 @@ func (encoder *PacketEncoder) EncodeInto(value *Packet, buf []byte) {
 	if value.Advertisement != nil {
 		buf[pos] = byte(201)
 		pos += 1
-		switch x := encoder.Advertisement_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Advertisement_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.Advertisement_encoder.length > 0 {
 			encoder.Advertisement_encoder.EncodeInto(value.Advertisement, buf[pos:])
 			pos += encoder.Advertisement_encoder.length
@@ -100,23 +66,7 @@ func (encoder *PacketEncoder) EncodeInto(value *Packet, buf []byte) {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(301))
 		pos += 3
-		switch x := encoder.PrefixOpList_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.PrefixOpList_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.PrefixOpList_encoder.length > 0 {
 			encoder.PrefixOpList_encoder.EncodeInto(value.PrefixOpList, buf[pos:])
 			pos += encoder.PrefixOpList_encoder.length
@@ -278,16 +228,7 @@ func (encoder *AdvertisementEncoder) Init(value *Advertisement) {
 				value := &pseudoValue
 				if value.Entries != nil {
 					l += 1
-					switch x := encoder.Entries_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.Entries_encoder.length).EncodingLength())
 					l += encoder.Entries_encoder.length
 				}
 				_ = encoder
@@ -321,23 +262,7 @@ func (encoder *AdvertisementEncoder) EncodeInto(value *Advertisement, buf []byte
 				if value.Entries != nil {
 					buf[pos] = byte(202)
 					pos += 1
-					switch x := encoder.Entries_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.Entries_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.Entries_encoder.length > 0 {
 						encoder.Entries_encoder.EncodeInto(value.Entries, buf[pos:])
 						pos += encoder.Entries_encoder.length
@@ -480,54 +405,18 @@ func (encoder *AdvEntryEncoder) Init(value *AdvEntry) {
 	l := uint(0)
 	if value.Destination != nil {
 		l += 1
-		switch x := encoder.Destination_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Destination_encoder.length).EncodingLength())
 		l += encoder.Destination_encoder.length
 	}
 	if value.NextHop != nil {
 		l += 1
-		switch x := encoder.NextHop_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.NextHop_encoder.length).EncodingLength())
 		l += encoder.NextHop_encoder.length
 	}
 	l += 1
-	switch x := value.Cost; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Cost).EncodingLength())
 	l += 1
-	switch x := value.OtherCost; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.OtherCost).EncodingLength())
 	encoder.length = l
 
 }
@@ -545,23 +434,7 @@ func (encoder *AdvEntryEncoder) EncodeInto(value *AdvEntry, buf []byte) {
 	if value.Destination != nil {
 		buf[pos] = byte(204)
 		pos += 1
-		switch x := encoder.Destination_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Destination_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.Destination_encoder.length > 0 {
 			encoder.Destination_encoder.EncodeInto(value.Destination, buf[pos:])
 			pos += encoder.Destination_encoder.length
@@ -570,23 +443,7 @@ func (encoder *AdvEntryEncoder) EncodeInto(value *AdvEntry, buf []byte) {
 	if value.NextHop != nil {
 		buf[pos] = byte(206)
 		pos += 1
-		switch x := encoder.NextHop_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.NextHop_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.NextHop_encoder.length > 0 {
 			encoder.NextHop_encoder.EncodeInto(value.NextHop, buf[pos:])
 			pos += encoder.NextHop_encoder.length
@@ -594,44 +451,14 @@ func (encoder *AdvEntryEncoder) EncodeInto(value *AdvEntry, buf []byte) {
 	}
 	buf[pos] = byte(208)
 	pos += 1
-	switch x := value.Cost; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Cost).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	buf[pos] = byte(210)
 	pos += 1
-	switch x := value.OtherCost; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.OtherCost).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
 func (encoder *AdvEntryEncoder) Encode(value *AdvEntry) enc.Wire {
@@ -803,16 +630,7 @@ func (encoder *DestinationEncoder) Init(value *Destination) {
 	l := uint(0)
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 	encoder.length = l
@@ -830,23 +648,7 @@ func (encoder *DestinationEncoder) EncodeInto(value *Destination, buf []byte) {
 	if value.Name != nil {
 		buf[pos] = byte(7)
 		pos += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
 		for _, c := range value.Name {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
@@ -899,26 +701,7 @@ func (context *DestinationParsingContext) Parse(reader enc.ParseReader, ignoreCr
 				if true {
 					handled = true
 					handled_Name = true
-					value.Name = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.Name {
-						if reader.Pos() >= endName {
-							value.Name = value.Name[:j]
-							break
-						}
-						var err1, err3 error
-						value.Name[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.Name[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -1040,16 +823,7 @@ func (encoder *PrefixOpListEncoder) Init(value *PrefixOpList) {
 	l := uint(0)
 	if value.ExitRouter != nil {
 		l += 1
-		switch x := encoder.ExitRouter_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.ExitRouter_encoder.length).EncodingLength())
 		l += encoder.ExitRouter_encoder.length
 	}
 	if value.PrefixOpReset {
@@ -1069,16 +843,7 @@ func (encoder *PrefixOpListEncoder) Init(value *PrefixOpList) {
 				value := &pseudoValue
 				if value.PrefixOpAdds != nil {
 					l += 3
-					switch x := encoder.PrefixOpAdds_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.PrefixOpAdds_encoder.length).EncodingLength())
 					l += encoder.PrefixOpAdds_encoder.length
 				}
 				_ = encoder
@@ -1099,16 +864,7 @@ func (encoder *PrefixOpListEncoder) Init(value *PrefixOpList) {
 				value := &pseudoValue
 				if value.PrefixOpRemoves != nil {
 					l += 3
-					switch x := encoder.PrefixOpRemoves_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.PrefixOpRemoves_encoder.length).EncodingLength())
 					l += encoder.PrefixOpRemoves_encoder.length
 				}
 				_ = encoder
@@ -1134,23 +890,7 @@ func (encoder *PrefixOpListEncoder) EncodeInto(value *PrefixOpList, buf []byte) 
 	if value.ExitRouter != nil {
 		buf[pos] = byte(204)
 		pos += 1
-		switch x := encoder.ExitRouter_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.ExitRouter_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.ExitRouter_encoder.length > 0 {
 			encoder.ExitRouter_encoder.EncodeInto(value.ExitRouter, buf[pos:])
 			pos += encoder.ExitRouter_encoder.length
@@ -1178,23 +918,7 @@ func (encoder *PrefixOpListEncoder) EncodeInto(value *PrefixOpList, buf []byte) 
 					buf[pos] = 253
 					binary.BigEndian.PutUint16(buf[pos+1:], uint16(304))
 					pos += 3
-					switch x := encoder.PrefixOpAdds_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.PrefixOpAdds_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.PrefixOpAdds_encoder.length > 0 {
 						encoder.PrefixOpAdds_encoder.EncodeInto(value.PrefixOpAdds, buf[pos:])
 						pos += encoder.PrefixOpAdds_encoder.length
@@ -1220,23 +944,7 @@ func (encoder *PrefixOpListEncoder) EncodeInto(value *PrefixOpList, buf []byte) 
 					buf[pos] = 253
 					binary.BigEndian.PutUint16(buf[pos+1:], uint16(306))
 					pos += 3
-					switch x := encoder.PrefixOpRemoves_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.PrefixOpRemoves_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.PrefixOpRemoves_encoder.length > 0 {
 						encoder.PrefixOpRemoves_encoder.EncodeInto(value.PrefixOpRemoves, buf[pos:])
 						pos += encoder.PrefixOpRemoves_encoder.length
@@ -1420,29 +1128,11 @@ func (encoder *PrefixOpAddEncoder) Init(value *PrefixOpAdd) {
 	l := uint(0)
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 	l += 1
-	switch x := value.Cost; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Cost).EncodingLength())
 	encoder.length = l
 
 }
@@ -1458,47 +1148,16 @@ func (encoder *PrefixOpAddEncoder) EncodeInto(value *PrefixOpAdd, buf []byte) {
 	if value.Name != nil {
 		buf[pos] = byte(7)
 		pos += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
 		for _, c := range value.Name {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
 	}
 	buf[pos] = byte(208)
 	pos += 1
-	switch x := value.Cost; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Cost).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
 func (encoder *PrefixOpAddEncoder) Encode(value *PrefixOpAdd) enc.Wire {
@@ -1548,26 +1207,7 @@ func (context *PrefixOpAddParsingContext) Parse(reader enc.ParseReader, ignoreCr
 				if true {
 					handled = true
 					handled_Name = true
-					value.Name = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.Name {
-						if reader.Pos() >= endName {
-							value.Name = value.Name[:j]
-							break
-						}
-						var err1, err3 error
-						value.Name[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.Name[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			case 208:
 				if true {
@@ -1656,16 +1296,7 @@ func (encoder *PrefixOpRemoveEncoder) Init(value *PrefixOpRemove) {
 	l := uint(0)
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 	encoder.length = l
@@ -1683,23 +1314,7 @@ func (encoder *PrefixOpRemoveEncoder) EncodeInto(value *PrefixOpRemove, buf []by
 	if value.Name != nil {
 		buf[pos] = byte(7)
 		pos += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
 		for _, c := range value.Name {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
@@ -1752,26 +1367,7 @@ func (context *PrefixOpRemoveParsingContext) Parse(reader enc.ParseReader, ignor
 				if true {
 					handled = true
 					handled_Name = true
-					value.Name = make(enc.Name, l/2+1)
-					startName := reader.Pos()
-					endName := startName + int(l)
-					for j := range value.Name {
-						if reader.Pos() >= endName {
-							value.Name = value.Name[:j]
-							break
-						}
-						var err1, err3 error
-						value.Name[j].Typ, err1 = enc.ReadTLNum(reader)
-						l, err2 := enc.ReadTLNum(reader)
-						value.Name[j].Val, err3 = reader.ReadBuf(int(l))
-						if err1 != nil || err2 != nil || err3 != nil {
-							err = io.ErrUnexpectedEOF
-							break
-						}
-					}
-					if err == nil && reader.Pos() != endName {
-						err = enc.ErrBufferOverflow
-					}
+					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -1841,78 +1437,24 @@ func (encoder *StatusEncoder) Init(value *Status) {
 
 	l := uint(0)
 	l += 3
-	switch x := len(value.Version); {
-	case x <= 0xfc:
-		l += 1
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(enc.TLNum(len(value.Version)).EncodingLength())
 	l += uint(len(value.Version))
 	if value.NetworkName != nil {
 		l += 3
-		switch x := encoder.NetworkName_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.NetworkName_encoder.length).EncodingLength())
 		l += encoder.NetworkName_encoder.length
 	}
 	if value.RouterName != nil {
 		l += 3
-		switch x := encoder.RouterName_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.RouterName_encoder.length).EncodingLength())
 		l += encoder.RouterName_encoder.length
 	}
 	l += 3
-	switch x := value.NRibEntries; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.NRibEntries).EncodingLength())
 	l += 3
-	switch x := value.NNeighbors; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.NNeighbors).EncodingLength())
 	l += 3
-	switch x := value.NFibEntries; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.NFibEntries).EncodingLength())
 	encoder.length = l
 
 }
@@ -1931,46 +1473,14 @@ func (encoder *StatusEncoder) EncodeInto(value *Status, buf []byte) {
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(401))
 	pos += 3
-	switch x := len(value.Version); {
-	case x <= 0xfc:
-		buf[pos] = byte(x)
-		pos += 1
-	case x <= 0xffff:
-		buf[pos] = 0xfd
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 0xfe
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 0xff
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+	pos += uint(enc.TLNum(len(value.Version)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.Version)
 	pos += uint(len(value.Version))
 	if value.NetworkName != nil {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(403))
 		pos += 3
-		switch x := encoder.NetworkName_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.NetworkName_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.NetworkName_encoder.length > 0 {
 			encoder.NetworkName_encoder.EncodeInto(value.NetworkName, buf[pos:])
 			pos += encoder.NetworkName_encoder.length
@@ -1980,23 +1490,7 @@ func (encoder *StatusEncoder) EncodeInto(value *Status, buf []byte) {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(405))
 		pos += 3
-		switch x := encoder.RouterName_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.RouterName_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.RouterName_encoder.length > 0 {
 			encoder.RouterName_encoder.EncodeInto(value.RouterName, buf[pos:])
 			pos += encoder.RouterName_encoder.length
@@ -2005,66 +1499,21 @@ func (encoder *StatusEncoder) EncodeInto(value *Status, buf []byte) {
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(407))
 	pos += 3
-	switch x := value.NRibEntries; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.NRibEntries).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(409))
 	pos += 3
-	switch x := value.NNeighbors; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.NNeighbors).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	buf[pos] = 253
 	binary.BigEndian.PutUint16(buf[pos+1:], uint16(411))
 	pos += 3
-	switch x := value.NFibEntries; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.NFibEntries).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
 func (encoder *StatusEncoder) Encode(value *Status) enc.Wire {
