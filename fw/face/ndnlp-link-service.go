@@ -348,11 +348,8 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 			copy(pkt.PitToken, LP.PitToken)
 		}
 
-		// Copy fragment to wire buffer
-		wire = wire[:0]
-		for _, b := range fragment {
-			wire = append(wire, b...)
-		}
+		// No allocation if single fragment
+		wire = fragment.Join()
 
 		// Parse inner packet in place
 		L3, err := readPacketUnverified(enc.NewBufferReader(wire))
