@@ -103,13 +103,25 @@ func AcceptUnicastTCPTransport(
 	t.expirationTime = utils.IdPtr(time.Now().Add(CfgTCPLifetime()))
 	t.rechan = make(chan bool, 1)
 
-	var success bool
-	t.conn, success = remoteConn.(*net.TCPConn)
+	conn, success := remoteConn.(*net.TCPConn)
 	if !success {
 		core.Log.Error(t, "Specified connection is not a net.TCPConn", "conn", remoteConn)
 		return nil, errors.New("specified connection is not a net.TCPConn")
 	}
 	t.running.Store(true)
+
+	// Set connection
+	t.setConn(conn)
+
+	// Set remote address
+	t.remoteAddr.IP = net.ParseIP(remoteURI.Path())
+	t.remoteAddr.Port = int(remoteURI.Port())
+
+	// Override local address if specified
+	if localURI != nil {
+		t.localAddr.IP = net.ParseIP(localURI.Path())
+		t.localAddr.Port = int(localURI.Port())
+	}
 
 	// Set scope
 	ip := net.ParseIP(remoteURI.Path())
@@ -118,18 +130,6 @@ func AcceptUnicastTCPTransport(
 	} else {
 		t.scope = defn.NonLocal
 	}
-
-	// Set local and remote addresses
-	if localURI != nil {
-		t.localAddr.IP = net.ParseIP(localURI.Path())
-		t.localAddr.Port = int(localURI.Port())
-	} else {
-		t.localAddr = *t.conn.LocalAddr().(*net.TCPAddr)
-		t.localURI = defn.DecodeURIString(fmt.Sprintf("tcp://%s", &t.localAddr))
-	}
-
-	t.remoteAddr.IP = net.ParseIP(remoteURI.Path())
-	t.remoteAddr.Port = int(remoteURI.Port())
 
 	return t, nil
 }
@@ -155,7 +155,7 @@ func (t *UnicastTCPTransport) GetSendQueueSize() uint64 {
 func (t *UnicastTCPTransport) setConn(conn *net.TCPConn) {
 	t.conn = conn
 	t.localAddr = *t.conn.LocalAddr().(*net.TCPAddr)
-	t.localURI = defn.DecodeURIString("tcp://" + t.localAddr.String())
+	t.localURI = defn.DecodeURIString(fmt.Sprintf("tcp://%s", &t.localAddr))
 }
 
 // Attempt to reconnect to the remote transport.
