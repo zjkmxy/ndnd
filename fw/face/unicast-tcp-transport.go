@@ -21,6 +21,9 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
+// URI to use when the local URI is unknown.
+var StubTcpUri = defn.DecodeURIString("tcp://127.0.0.1:0")
+
 // UnicastTCPTransport is a unicast TCP transport.
 type UnicastTCPTransport struct {
 	transportBase
@@ -79,7 +82,7 @@ func MakeUnicastTCPTransport(
 	// We will attempt to connect in the receive loop instead
 
 	// Fake for filling up the response
-	t.localURI = defn.DecodeURIString("tcp://127.0.0.1:0")
+	t.localURI = StubTcpUri
 
 	return t, nil
 }
@@ -160,6 +163,7 @@ func (t *UnicastTCPTransport) reconnect() {
 	// Shut down the existing socket
 	if t.conn != nil {
 		t.conn.Close()
+		t.localURI = StubTcpUri
 	}
 
 	// Number of attempts we have made so far
