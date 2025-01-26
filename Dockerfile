@@ -1,8 +1,8 @@
-FROM golang:1.23-alpine3.21 AS build
+FROM golang:1.23 AS build
 WORKDIR /app
 COPY . .
-RUN env CGO_ENABLED=0 GOBIN=/build go install ./cmd/ndnd
+RUN make
 
 FROM scratch
-COPY --from=build /build/* /app/*/*.sample.yml /
+COPY --from=build /app/ndnd /app/*/*.sample.yml /
 ENTRYPOINT ["/ndnd"]
