@@ -2,7 +2,6 @@
 package gen_signature
 
 import (
-	"encoding/binary"
 	"io"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -41,56 +40,20 @@ func (encoder *T1Encoder) Init(value *T1) {
 
 	l := uint(0)
 	l += 1
-	switch x := value.H1; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.H1).EncodingLength())
 	encoder.sigCoverStart = int(l)
 	if value.H2 != nil {
 		l += 1
-		switch x := *value.H2; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.H2).EncodingLength())
 	}
 	if value.C != nil {
 		l += 1
-		switch x := encoder.C_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.C_length).EncodingLength())
 		l += encoder.C_length
 	}
 	if encoder.Sig_estLen > 0 {
 		l += 1
-		switch x := encoder.Sig_estLen; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Sig_estLen).EncodingLength())
 		l += encoder.Sig_estLen
 	}
 
@@ -99,42 +62,15 @@ func (encoder *T1Encoder) Init(value *T1) {
 	wirePlan := make([]uint, 0)
 	l = uint(0)
 	l += 1
-	switch x := value.H1; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.H1).EncodingLength())
 
 	if value.H2 != nil {
 		l += 1
-		switch x := *value.H2; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.H2).EncodingLength())
 	}
 	if value.C != nil {
 		l += 1
-		switch x := encoder.C_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.C_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.C {
@@ -144,16 +80,7 @@ func (encoder *T1Encoder) Init(value *T1) {
 	}
 	if encoder.Sig_estLen > 0 {
 		l += 1
-		switch x := encoder.Sig_estLen; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Sig_estLen).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		encoder.Sig_wireIdx = len(wirePlan)
@@ -182,68 +109,23 @@ func (encoder *T1Encoder) EncodeInto(value *T1, wire enc.Wire) {
 
 	buf[pos] = byte(1)
 	pos += 1
-	switch x := value.H1; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.H1).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	encoder.sigCoverStart_wireIdx = int(wireIdx)
 	encoder.sigCoverStart_pos = int(pos)
 	if value.H2 != nil {
 		buf[pos] = byte(2)
 		pos += 1
-		switch x := *value.H2; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.H2).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.C != nil {
 		buf[pos] = byte(3)
 		pos += 1
-		switch x := encoder.C_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.C_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {
@@ -266,23 +148,7 @@ func (encoder *T1Encoder) EncodeInto(value *T1, wire enc.Wire) {
 		startPos := int(pos)
 		buf[pos] = byte(4)
 		pos += 1
-		switch x := encoder.Sig_estLen; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Sig_estLen).EncodeInto(buf[pos:]))
 		if encoder.sigCoverStart_wireIdx == int(wireIdx) {
 			coveredPart := buf[encoder.sigCoverStart:startPos]
 			encoder.sigCovered = append(encoder.sigCovered, coveredPart)
@@ -548,46 +414,19 @@ func (encoder *T2Encoder) Init(value *T2) {
 	l := uint(0)
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 	encoder.sigCoverStart = int(l)
 	encoder.digestCoverStart = int(l)
 	if value.C != nil {
 		l += 1
-		switch x := encoder.C_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.C_length).EncodingLength())
 		l += encoder.C_length
 	}
 	if encoder.Sig_estLen > 0 {
 		l += 1
-		switch x := encoder.Sig_estLen; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Sig_estLen).EncodingLength())
 		l += encoder.Sig_estLen
 	}
 	encoder.digestCoverEnd = int(l)
@@ -598,31 +437,13 @@ func (encoder *T2Encoder) Init(value *T2) {
 	l = uint(0)
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 
 	if value.C != nil {
 		l += 1
-		switch x := encoder.C_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.C_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.C {
@@ -632,16 +453,7 @@ func (encoder *T2Encoder) Init(value *T2) {
 	}
 	if encoder.Sig_estLen > 0 {
 		l += 1
-		switch x := encoder.Sig_estLen; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Sig_estLen).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		encoder.Sig_wireIdx = len(wirePlan)
@@ -671,23 +483,7 @@ func (encoder *T2Encoder) EncodeInto(value *T2, wire enc.Wire) {
 	if value.Name != nil {
 		buf[pos] = byte(1)
 		pos += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
 		sigCoverStart := pos
 
 		i := 0
@@ -714,23 +510,7 @@ func (encoder *T2Encoder) EncodeInto(value *T2, wire enc.Wire) {
 	if value.C != nil {
 		buf[pos] = byte(3)
 		pos += 1
-		switch x := encoder.C_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.C_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {
@@ -753,23 +533,7 @@ func (encoder *T2Encoder) EncodeInto(value *T2, wire enc.Wire) {
 		startPos := int(pos)
 		buf[pos] = byte(4)
 		pos += 1
-		switch x := encoder.Sig_estLen; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Sig_estLen).EncodeInto(buf[pos:]))
 		if encoder.sigCoverStart_wireIdx == int(wireIdx) {
 			coveredPart := buf[encoder.sigCoverStart:startPos]
 			encoder.sigCovered = append(encoder.sigCovered, coveredPart)

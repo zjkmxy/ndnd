@@ -2,7 +2,6 @@
 package trust_schema
 
 import (
-	"encoding/binary"
 	"io"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -20,30 +19,12 @@ func (encoder *LvsUserFnArgEncoder) Init(value *LvsUserFnArg) {
 	l := uint(0)
 	if value.Value != nil {
 		l += 1
-		switch x := len(value.Value); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.Value)).EncodingLength())
 		l += uint(len(value.Value))
 	}
 	if value.Tag != nil {
 		l += 1
-		switch x := *value.Tag; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.Tag).EncodingLength())
 	}
 	encoder.length = l
 
@@ -60,47 +41,17 @@ func (encoder *LvsUserFnArgEncoder) EncodeInto(value *LvsUserFnArg, buf []byte) 
 	if value.Value != nil {
 		buf[pos] = byte(33)
 		pos += 1
-		switch x := len(value.Value); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.Value)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.Value)
 		pos += uint(len(value.Value))
 	}
 	if value.Tag != nil {
 		buf[pos] = byte(35)
 		pos += 1
-		switch x := *value.Tag; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.Tag).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 }
 
@@ -266,16 +217,7 @@ func (encoder *LvsUserFnCallEncoder) Init(value *LvsUserFnCall) {
 	l := uint(0)
 	if value.FnId != nil {
 		l += 1
-		switch x := len(value.FnId); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.FnId)).EncodingLength())
 		l += uint(len(value.FnId))
 	}
 	if value.Args != nil {
@@ -291,16 +233,7 @@ func (encoder *LvsUserFnCallEncoder) Init(value *LvsUserFnCall) {
 				value := &pseudoValue
 				if value.Args != nil {
 					l += 1
-					switch x := encoder.Args_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.Args_encoder.length).EncodingLength())
 					l += encoder.Args_encoder.length
 				}
 				_ = encoder
@@ -324,23 +257,7 @@ func (encoder *LvsUserFnCallEncoder) EncodeInto(value *LvsUserFnCall, buf []byte
 	if value.FnId != nil {
 		buf[pos] = byte(39)
 		pos += 1
-		switch x := len(value.FnId); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.FnId)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.FnId)
 		pos += uint(len(value.FnId))
 	}
@@ -358,23 +275,7 @@ func (encoder *LvsUserFnCallEncoder) EncodeInto(value *LvsUserFnCall, buf []byte
 				if value.Args != nil {
 					buf[pos] = byte(51)
 					pos += 1
-					switch x := encoder.Args_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.Args_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.Args_encoder.length > 0 {
 						encoder.Args_encoder.EncodeInto(value.Args, buf[pos:])
 						pos += encoder.Args_encoder.length
@@ -524,43 +425,16 @@ func (encoder *LvsConstraintOptionEncoder) Init(value *LvsConstraintOption) {
 	l := uint(0)
 	if value.Value != nil {
 		l += 1
-		switch x := len(value.Value); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.Value)).EncodingLength())
 		l += uint(len(value.Value))
 	}
 	if value.Tag != nil {
 		l += 1
-		switch x := *value.Tag; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.Tag).EncodingLength())
 	}
 	if value.Fn != nil {
 		l += 1
-		switch x := encoder.Fn_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Fn_encoder.length).EncodingLength())
 		l += encoder.Fn_encoder.length
 	}
 	encoder.length = l
@@ -579,68 +453,22 @@ func (encoder *LvsConstraintOptionEncoder) EncodeInto(value *LvsConstraintOption
 	if value.Value != nil {
 		buf[pos] = byte(33)
 		pos += 1
-		switch x := len(value.Value); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.Value)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.Value)
 		pos += uint(len(value.Value))
 	}
 	if value.Tag != nil {
 		buf[pos] = byte(35)
 		pos += 1
-		switch x := *value.Tag; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.Tag).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.Fn != nil {
 		buf[pos] = byte(49)
 		pos += 1
-		switch x := encoder.Fn_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Fn_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.Fn_encoder.length > 0 {
 			encoder.Fn_encoder.EncodeInto(value.Fn, buf[pos:])
 			pos += encoder.Fn_encoder.length
@@ -830,16 +658,7 @@ func (encoder *LvsPatternConstraintEncoder) Init(value *LvsPatternConstraint) {
 				value := &pseudoValue
 				if value.ConsOptions != nil {
 					l += 1
-					switch x := encoder.ConsOptions_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.ConsOptions_encoder.length).EncodingLength())
 					l += encoder.ConsOptions_encoder.length
 				}
 				_ = encoder
@@ -873,23 +692,7 @@ func (encoder *LvsPatternConstraintEncoder) EncodeInto(value *LvsPatternConstrai
 				if value.ConsOptions != nil {
 					buf[pos] = byte(65)
 					pos += 1
-					switch x := encoder.ConsOptions_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.ConsOptions_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.ConsOptions_encoder.length > 0 {
 						encoder.ConsOptions_encoder.EncodeInto(value.ConsOptions, buf[pos:])
 						pos += encoder.ConsOptions_encoder.length
@@ -1049,27 +852,9 @@ func (encoder *LvsPatternEdgeEncoder) Init(value *LvsPatternEdge) {
 
 	l := uint(0)
 	l += 1
-	switch x := value.Dest; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Dest).EncodingLength())
 	l += 1
-	switch x := value.Tag; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Tag).EncodingLength())
 	if value.ConsSets != nil {
 		for seq_i, seq_v := range value.ConsSets {
 			pseudoEncoder := &encoder.ConsSets_subencoder[seq_i]
@@ -1083,16 +868,7 @@ func (encoder *LvsPatternEdgeEncoder) Init(value *LvsPatternEdge) {
 				value := &pseudoValue
 				if value.ConsSets != nil {
 					l += 1
-					switch x := encoder.ConsSets_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.ConsSets_encoder.length).EncodingLength())
 					l += encoder.ConsSets_encoder.length
 				}
 				_ = encoder
@@ -1115,44 +891,14 @@ func (encoder *LvsPatternEdgeEncoder) EncodeInto(value *LvsPatternEdge, buf []by
 
 	buf[pos] = byte(37)
 	pos += 1
-	switch x := value.Dest; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Dest).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	buf[pos] = byte(35)
 	pos += 1
-	switch x := value.Tag; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Tag).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	if value.ConsSets != nil {
 		for seq_i, seq_v := range value.ConsSets {
 			pseudoEncoder := &encoder.ConsSets_subencoder[seq_i]
@@ -1167,23 +913,7 @@ func (encoder *LvsPatternEdgeEncoder) EncodeInto(value *LvsPatternEdge, buf []by
 				if value.ConsSets != nil {
 					buf[pos] = byte(67)
 					pos += 1
-					switch x := encoder.ConsSets_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.ConsSets_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.ConsSets_encoder.length > 0 {
 						encoder.ConsSets_encoder.EncodeInto(value.ConsSets, buf[pos:])
 						pos += encoder.ConsSets_encoder.length
@@ -1360,28 +1090,10 @@ func (encoder *LvsValueEdgeEncoder) Init(value *LvsValueEdge) {
 
 	l := uint(0)
 	l += 1
-	switch x := value.Dest; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Dest).EncodingLength())
 	if value.Value != nil {
 		l += 1
-		switch x := len(value.Value); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.Value)).EncodingLength())
 		l += uint(len(value.Value))
 	}
 	encoder.length = l
@@ -1398,44 +1110,13 @@ func (encoder *LvsValueEdgeEncoder) EncodeInto(value *LvsValueEdge, buf []byte) 
 
 	buf[pos] = byte(37)
 	pos += 1
-	switch x := value.Dest; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Dest).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	if value.Value != nil {
 		buf[pos] = byte(33)
 		pos += 1
-		switch x := len(value.Value); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.Value)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.Value)
 		pos += uint(len(value.Value))
 	}
@@ -1669,28 +1350,10 @@ func (encoder *LvsNodeEncoder) Init(value *LvsNode) {
 
 	l := uint(0)
 	l += 1
-	switch x := value.Id; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Id).EncodingLength())
 	if value.Parent != nil {
 		l += 1
-		switch x := *value.Parent; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.Parent).EncodingLength())
 	}
 	if value.RuleName != nil {
 		for seq_i, seq_v := range value.RuleName {
@@ -1705,16 +1368,7 @@ func (encoder *LvsNodeEncoder) Init(value *LvsNode) {
 				value := &pseudoValue
 				if value.RuleName != nil {
 					l += 1
-					switch x := len(value.RuleName); {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(len(value.RuleName)).EncodingLength())
 					l += uint(len(value.RuleName))
 				}
 				_ = encoder
@@ -1735,16 +1389,7 @@ func (encoder *LvsNodeEncoder) Init(value *LvsNode) {
 				value := &pseudoValue
 				if value.Edges != nil {
 					l += 1
-					switch x := encoder.Edges_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.Edges_encoder.length).EncodingLength())
 					l += encoder.Edges_encoder.length
 				}
 				_ = encoder
@@ -1765,16 +1410,7 @@ func (encoder *LvsNodeEncoder) Init(value *LvsNode) {
 				value := &pseudoValue
 				if value.PatternEdges != nil {
 					l += 1
-					switch x := encoder.PatternEdges_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.PatternEdges_encoder.length).EncodingLength())
 					l += encoder.PatternEdges_encoder.length
 				}
 				_ = encoder
@@ -1794,16 +1430,7 @@ func (encoder *LvsNodeEncoder) Init(value *LvsNode) {
 				encoder := pseudoEncoder
 				value := &pseudoValue
 				l += 1
-				switch x := value.SignCons; {
-				case x <= 0xff:
-					l += 2
-				case x <= 0xffff:
-					l += 3
-				case x <= 0xffffffff:
-					l += 5
-				default:
-					l += 9
-				}
+				l += uint(1 + enc.Nat(value.SignCons).EncodingLength())
 				_ = encoder
 				_ = value
 			}
@@ -1826,45 +1453,16 @@ func (encoder *LvsNodeEncoder) EncodeInto(value *LvsNode, buf []byte) {
 
 	buf[pos] = byte(37)
 	pos += 1
-	switch x := value.Id; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Id).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	if value.Parent != nil {
 		buf[pos] = byte(87)
 		pos += 1
-		switch x := *value.Parent; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.Parent).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.RuleName != nil {
 		for seq_i, seq_v := range value.RuleName {
@@ -1880,23 +1478,7 @@ func (encoder *LvsNodeEncoder) EncodeInto(value *LvsNode, buf []byte) {
 				if value.RuleName != nil {
 					buf[pos] = byte(41)
 					pos += 1
-					switch x := len(value.RuleName); {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(len(value.RuleName)).EncodeInto(buf[pos:]))
 					copy(buf[pos:], value.RuleName)
 					pos += uint(len(value.RuleName))
 				}
@@ -1919,23 +1501,7 @@ func (encoder *LvsNodeEncoder) EncodeInto(value *LvsNode, buf []byte) {
 				if value.Edges != nil {
 					buf[pos] = byte(81)
 					pos += 1
-					switch x := encoder.Edges_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.Edges_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.Edges_encoder.length > 0 {
 						encoder.Edges_encoder.EncodeInto(value.Edges, buf[pos:])
 						pos += encoder.Edges_encoder.length
@@ -1960,23 +1526,7 @@ func (encoder *LvsNodeEncoder) EncodeInto(value *LvsNode, buf []byte) {
 				if value.PatternEdges != nil {
 					buf[pos] = byte(83)
 					pos += 1
-					switch x := encoder.PatternEdges_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.PatternEdges_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.PatternEdges_encoder.length > 0 {
 						encoder.PatternEdges_encoder.EncodeInto(value.PatternEdges, buf[pos:])
 						pos += encoder.PatternEdges_encoder.length
@@ -2000,24 +1550,9 @@ func (encoder *LvsNodeEncoder) EncodeInto(value *LvsNode, buf []byte) {
 				value := &pseudoValue
 				buf[pos] = byte(85)
 				pos += 1
-				switch x := value.SignCons; {
-				case x <= 0xff:
-					buf[pos] = 1
-					buf[pos+1] = byte(x)
-					pos += 2
-				case x <= 0xffff:
-					buf[pos] = 2
-					binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-					pos += 3
-				case x <= 0xffffffff:
-					buf[pos] = 4
-					binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-					pos += 5
-				default:
-					buf[pos] = 8
-					binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-					pos += 9
-				}
+
+				buf[pos] = byte(enc.Nat(value.SignCons).EncodeInto(buf[pos+1:]))
+				pos += uint(1 + buf[pos])
 				_ = encoder
 				_ = value
 			}
@@ -2280,29 +1815,11 @@ func (encoder *LvsTagSymbolEncoder) Init(value *LvsTagSymbol) {
 	l := uint(0)
 	if value.Tag != nil {
 		l += 1
-		switch x := *value.Tag; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.Tag).EncodingLength())
 	}
 	if value.Ident != nil {
 		l += 1
-		switch x := len(value.Ident); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.Ident)).EncodingLength())
 		l += uint(len(value.Ident))
 	}
 	encoder.length = l
@@ -2320,45 +1837,15 @@ func (encoder *LvsTagSymbolEncoder) EncodeInto(value *LvsTagSymbol, buf []byte) 
 	if value.Tag != nil {
 		buf[pos] = byte(35)
 		pos += 1
-		switch x := *value.Tag; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.Tag).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.Ident != nil {
 		buf[pos] = byte(41)
 		pos += 1
-		switch x := len(value.Ident); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.Ident)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.Ident)
 		pos += uint(len(value.Ident))
 	}
@@ -2552,38 +2039,11 @@ func (encoder *LvsModelEncoder) Init(value *LvsModel) {
 
 	l := uint(0)
 	l += 1
-	switch x := value.Version; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Version).EncodingLength())
 	l += 1
-	switch x := value.StartId; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.StartId).EncodingLength())
 	l += 1
-	switch x := value.NamedPatternCnt; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.NamedPatternCnt).EncodingLength())
 	if value.Nodes != nil {
 		for seq_i, seq_v := range value.Nodes {
 			pseudoEncoder := &encoder.Nodes_subencoder[seq_i]
@@ -2597,16 +2057,7 @@ func (encoder *LvsModelEncoder) Init(value *LvsModel) {
 				value := &pseudoValue
 				if value.Nodes != nil {
 					l += 1
-					switch x := encoder.Nodes_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.Nodes_encoder.length).EncodingLength())
 					l += encoder.Nodes_encoder.length
 				}
 				_ = encoder
@@ -2627,16 +2078,7 @@ func (encoder *LvsModelEncoder) Init(value *LvsModel) {
 				value := &pseudoValue
 				if value.Symbols != nil {
 					l += 1
-					switch x := encoder.Symbols_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.Symbols_encoder.length).EncodingLength())
 					l += encoder.Symbols_encoder.length
 				}
 				_ = encoder
@@ -2660,64 +2102,19 @@ func (encoder *LvsModelEncoder) EncodeInto(value *LvsModel, buf []byte) {
 
 	buf[pos] = byte(97)
 	pos += 1
-	switch x := value.Version; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Version).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	buf[pos] = byte(37)
 	pos += 1
-	switch x := value.StartId; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.StartId).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	buf[pos] = byte(105)
 	pos += 1
-	switch x := value.NamedPatternCnt; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.NamedPatternCnt).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	if value.Nodes != nil {
 		for seq_i, seq_v := range value.Nodes {
 			pseudoEncoder := &encoder.Nodes_subencoder[seq_i]
@@ -2732,23 +2129,7 @@ func (encoder *LvsModelEncoder) EncodeInto(value *LvsModel, buf []byte) {
 				if value.Nodes != nil {
 					buf[pos] = byte(99)
 					pos += 1
-					switch x := encoder.Nodes_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.Nodes_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.Nodes_encoder.length > 0 {
 						encoder.Nodes_encoder.EncodeInto(value.Nodes, buf[pos:])
 						pos += encoder.Nodes_encoder.length
@@ -2773,23 +2154,7 @@ func (encoder *LvsModelEncoder) EncodeInto(value *LvsModel, buf []byte) {
 				if value.Symbols != nil {
 					buf[pos] = byte(103)
 					pos += 1
-					switch x := encoder.Symbols_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.Symbols_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.Symbols_encoder.length > 0 {
 						encoder.Symbols_encoder.EncodeInto(value.Symbols, buf[pos:])
 						pos += encoder.Symbols_encoder.length

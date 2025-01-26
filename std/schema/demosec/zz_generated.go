@@ -2,7 +2,6 @@
 package demosec
 
 import (
-	"encoding/binary"
 	"io"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -31,55 +30,19 @@ func (encoder *EncryptedContentEncoder) Init(value *EncryptedContent) {
 	l := uint(0)
 	if value.KeyId != nil {
 		l += 1
-		switch x := len(value.KeyId); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.KeyId)).EncodingLength())
 		l += uint(len(value.KeyId))
 	}
 	if value.Iv != nil {
 		l += 1
-		switch x := len(value.Iv); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.Iv)).EncodingLength())
 		l += uint(len(value.Iv))
 	}
 	l += 1
-	switch x := value.ContentLength; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.ContentLength).EncodingLength())
 	if value.CipherText != nil {
 		l += 1
-		switch x := encoder.CipherText_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.CipherText_length).EncodingLength())
 		l += encoder.CipherText_length
 	}
 	encoder.length = l
@@ -88,55 +51,19 @@ func (encoder *EncryptedContentEncoder) Init(value *EncryptedContent) {
 	l = uint(0)
 	if value.KeyId != nil {
 		l += 1
-		switch x := len(value.KeyId); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.KeyId)).EncodingLength())
 		l += uint(len(value.KeyId))
 	}
 	if value.Iv != nil {
 		l += 1
-		switch x := len(value.Iv); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.Iv)).EncodingLength())
 		l += uint(len(value.Iv))
 	}
 	l += 1
-	switch x := value.ContentLength; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.ContentLength).EncodingLength())
 	if value.CipherText != nil {
 		l += 1
-		switch x := encoder.CipherText_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.CipherText_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.CipherText {
@@ -164,89 +91,26 @@ func (encoder *EncryptedContentEncoder) EncodeInto(value *EncryptedContent, wire
 	if value.KeyId != nil {
 		buf[pos] = byte(130)
 		pos += 1
-		switch x := len(value.KeyId); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.KeyId)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.KeyId)
 		pos += uint(len(value.KeyId))
 	}
 	if value.Iv != nil {
 		buf[pos] = byte(132)
 		pos += 1
-		switch x := len(value.Iv); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.Iv)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.Iv)
 		pos += uint(len(value.Iv))
 	}
 	buf[pos] = byte(134)
 	pos += 1
-	switch x := value.ContentLength; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.ContentLength).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	if value.CipherText != nil {
 		buf[pos] = byte(136)
 		pos += 1
-		switch x := encoder.CipherText_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.CipherText_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {

@@ -2,7 +2,6 @@
 package sync
 
 import (
-	"encoding/binary"
 	"io"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -26,16 +25,7 @@ func (encoder *SvsDataEncoder) Init(value *SvsData) {
 	l := uint(0)
 	if value.StateVector != nil {
 		l += 1
-		switch x := encoder.StateVector_encoder.length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.StateVector_encoder.length).EncodingLength())
 		l += encoder.StateVector_encoder.length
 	}
 	encoder.length = l
@@ -53,23 +43,7 @@ func (encoder *SvsDataEncoder) EncodeInto(value *SvsData, buf []byte) {
 	if value.StateVector != nil {
 		buf[pos] = byte(201)
 		pos += 1
-		switch x := encoder.StateVector_encoder.length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.StateVector_encoder.length).EncodeInto(buf[pos:]))
 		if encoder.StateVector_encoder.length > 0 {
 			encoder.StateVector_encoder.EncodeInto(value.StateVector, buf[pos:])
 			pos += encoder.StateVector_encoder.length
@@ -221,16 +195,7 @@ func (encoder *StateVectorEncoder) Init(value *StateVector) {
 				value := &pseudoValue
 				if value.Entries != nil {
 					l += 1
-					switch x := encoder.Entries_encoder.length; {
-					case x <= 0xfc:
-						l += 1
-					case x <= 0xffff:
-						l += 3
-					case x <= 0xffffffff:
-						l += 5
-					default:
-						l += 9
-					}
+					l += uint(enc.TLNum(encoder.Entries_encoder.length).EncodingLength())
 					l += encoder.Entries_encoder.length
 				}
 				_ = encoder
@@ -264,23 +229,7 @@ func (encoder *StateVectorEncoder) EncodeInto(value *StateVector, buf []byte) {
 				if value.Entries != nil {
 					buf[pos] = byte(202)
 					pos += 1
-					switch x := encoder.Entries_encoder.length; {
-					case x <= 0xfc:
-						buf[pos] = byte(x)
-						pos += 1
-					case x <= 0xffff:
-						buf[pos] = 0xfd
-						binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-						pos += 3
-					case x <= 0xffffffff:
-						buf[pos] = 0xfe
-						binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-						pos += 5
-					default:
-						buf[pos] = 0xff
-						binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-						pos += 9
-					}
+					pos += uint(enc.TLNum(encoder.Entries_encoder.length).EncodeInto(buf[pos:]))
 					if encoder.Entries_encoder.length > 0 {
 						encoder.Entries_encoder.EncodeInto(value.Entries, buf[pos:])
 						pos += encoder.Entries_encoder.length
@@ -420,29 +369,11 @@ func (encoder *StateVectorEntryEncoder) Init(value *StateVectorEntry) {
 	l := uint(0)
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 	l += 1
-	switch x := value.SeqNo; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.SeqNo).EncodingLength())
 	encoder.length = l
 
 }
@@ -458,47 +389,16 @@ func (encoder *StateVectorEntryEncoder) EncodeInto(value *StateVectorEntry, buf 
 	if value.Name != nil {
 		buf[pos] = byte(7)
 		pos += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
 		for _, c := range value.Name {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
 	}
 	buf[pos] = byte(204)
 	pos += 1
-	switch x := value.SeqNo; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.SeqNo).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
 func (encoder *StateVectorEntryEncoder) Encode(value *StateVectorEntry) enc.Wire {

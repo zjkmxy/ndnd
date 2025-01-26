@@ -21,39 +21,12 @@ func (encoder *FakeMetaInfoEncoder) Init(value *FakeMetaInfo) {
 
 	l := uint(0)
 	l += 1
-	switch x := value.Number; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Number).EncodingLength())
 	l += 1
-	switch x := uint64(value.Time / time.Millisecond); {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(uint64(value.Time/time.Millisecond)).EncodingLength())
 	if value.Binary != nil {
 		l += 1
-		switch x := len(value.Binary); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.Binary)).EncodingLength())
 		l += uint(len(value.Binary))
 	}
 	encoder.length = l
@@ -70,64 +43,18 @@ func (encoder *FakeMetaInfoEncoder) EncodeInto(value *FakeMetaInfo, buf []byte) 
 
 	buf[pos] = byte(24)
 	pos += 1
-	switch x := value.Number; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Number).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	buf[pos] = byte(25)
 	pos += 1
-	switch x := uint64(value.Time / time.Millisecond); {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(uint64(value.Time / time.Millisecond)).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	if value.Binary != nil {
 		buf[pos] = byte(26)
 		pos += 1
-		switch x := len(value.Binary); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.Binary)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.Binary)
 		pos += uint(len(value.Binary))
 	}
@@ -289,42 +216,15 @@ func (encoder *OptFieldEncoder) Init(value *OptField) {
 	l := uint(0)
 	if value.Number != nil {
 		l += 1
-		switch x := *value.Number; {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(*value.Number).EncodingLength())
 	}
 	if value.Time != nil {
 		l += 1
-		switch x := uint64(*value.Time / time.Millisecond); {
-		case x <= 0xff:
-			l += 2
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(1 + enc.Nat(uint64(*value.Time/time.Millisecond)).EncodingLength())
 	}
 	if value.Binary != nil {
 		l += 1
-		switch x := len(value.Binary); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(value.Binary)).EncodingLength())
 		l += uint(len(value.Binary))
 	}
 	if value.Bool {
@@ -346,67 +246,23 @@ func (encoder *OptFieldEncoder) EncodeInto(value *OptField, buf []byte) {
 	if value.Number != nil {
 		buf[pos] = byte(24)
 		pos += 1
-		switch x := *value.Number; {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(*value.Number).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.Time != nil {
 		buf[pos] = byte(25)
 		pos += 1
-		switch x := uint64(*value.Time / time.Millisecond); {
-		case x <= 0xff:
-			buf[pos] = 1
-			buf[pos+1] = byte(x)
-			pos += 2
-		case x <= 0xffff:
-			buf[pos] = 2
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 4
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 8
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+
+		buf[pos] = byte(enc.Nat(uint64(*value.Time / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
 	}
 	if value.Binary != nil {
 		buf[pos] = byte(26)
 		pos += 1
-		switch x := len(value.Binary); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(value.Binary)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], value.Binary)
 		pos += uint(len(value.Binary))
 	}
@@ -604,30 +460,12 @@ func (encoder *WireNameFieldEncoder) Init(value *WireNameField) {
 	l := uint(0)
 	if value.Wire != nil {
 		l += 1
-		switch x := encoder.Wire_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Wire_length).EncodingLength())
 		l += encoder.Wire_length
 	}
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 	encoder.length = l
@@ -645,23 +483,7 @@ func (encoder *WireNameFieldEncoder) EncodeInto(value *WireNameField, buf []byte
 	if value.Wire != nil {
 		buf[pos] = byte(1)
 		pos += 1
-		switch x := encoder.Wire_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Wire_length).EncodeInto(buf[pos:]))
 		for _, w := range value.Wire {
 			copy(buf[pos:], w)
 			pos += uint(len(w))
@@ -670,23 +492,7 @@ func (encoder *WireNameFieldEncoder) EncodeInto(value *WireNameField, buf []byte
 	if value.Name != nil {
 		buf[pos] = byte(2)
 		pos += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
 		for _, c := range value.Name {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
@@ -855,31 +661,13 @@ func (encoder *MarkersEncoder) Init(value *Markers) {
 	encoder.startMarker = int(l)
 	if value.Wire != nil {
 		l += 1
-		switch x := encoder.Wire_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Wire_length).EncodingLength())
 		l += encoder.Wire_length
 	}
 
 	if value.Name != nil {
 		l += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
 	encoder.endMarker = int(l)
@@ -899,23 +687,7 @@ func (encoder *MarkersEncoder) EncodeInto(value *Markers, buf []byte) {
 	if value.Wire != nil {
 		buf[pos] = byte(1)
 		pos += 1
-		switch x := encoder.Wire_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Wire_length).EncodeInto(buf[pos:]))
 		for _, w := range value.Wire {
 			copy(buf[pos:], w)
 			pos += uint(len(w))
@@ -925,23 +697,7 @@ func (encoder *MarkersEncoder) EncodeInto(value *Markers, buf []byte) {
 	if value.Name != nil {
 		buf[pos] = byte(2)
 		pos += 1
-		switch x := encoder.Name_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
 		for _, c := range value.Name {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
@@ -1115,41 +871,14 @@ func (encoder *NoCopyStructEncoder) Init(value *NoCopyStruct) {
 	l := uint(0)
 	if value.Wire1 != nil {
 		l += 1
-		switch x := encoder.Wire1_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Wire1_length).EncodingLength())
 		l += encoder.Wire1_length
 	}
 	l += 1
-	switch x := value.Number; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Number).EncodingLength())
 	if value.Wire2 != nil {
 		l += 1
-		switch x := encoder.Wire2_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Wire2_length).EncodingLength())
 		l += encoder.Wire2_length
 	}
 	encoder.length = l
@@ -1158,16 +887,7 @@ func (encoder *NoCopyStructEncoder) Init(value *NoCopyStruct) {
 	l = uint(0)
 	if value.Wire1 != nil {
 		l += 1
-		switch x := encoder.Wire1_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Wire1_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.Wire1 {
@@ -1176,28 +896,10 @@ func (encoder *NoCopyStructEncoder) Init(value *NoCopyStruct) {
 		}
 	}
 	l += 1
-	switch x := value.Number; {
-	case x <= 0xff:
-		l += 2
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(1 + enc.Nat(value.Number).EncodingLength())
 	if value.Wire2 != nil {
 		l += 1
-		switch x := encoder.Wire2_length; {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(encoder.Wire2_length).EncodingLength())
 		wirePlan = append(wirePlan, l)
 		l = 0
 		for range value.Wire2 {
@@ -1225,23 +927,7 @@ func (encoder *NoCopyStructEncoder) EncodeInto(value *NoCopyStruct, wire enc.Wir
 	if value.Wire1 != nil {
 		buf[pos] = byte(1)
 		pos += 1
-		switch x := encoder.Wire1_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Wire1_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {
@@ -1262,44 +948,13 @@ func (encoder *NoCopyStructEncoder) EncodeInto(value *NoCopyStruct, wire enc.Wir
 	}
 	buf[pos] = byte(2)
 	pos += 1
-	switch x := value.Number; {
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	case x <= 0xffff:
-		buf[pos] = 2
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+
+	buf[pos] = byte(enc.Nat(value.Number).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 	if value.Wire2 != nil {
 		buf[pos] = byte(3)
 		pos += 1
-		switch x := encoder.Wire2_length; {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(encoder.Wire2_length).EncodeInto(buf[pos:]))
 		wireIdx++
 		pos = 0
 		if wireIdx < len(wire) {
@@ -1460,29 +1115,11 @@ func (encoder *StrFieldEncoder) Init(value *StrField) {
 
 	l := uint(0)
 	l += 1
-	switch x := len(value.Str1); {
-	case x <= 0xfc:
-		l += 1
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}
+	l += uint(enc.TLNum(len(value.Str1)).EncodingLength())
 	l += uint(len(value.Str1))
 	if value.Str2 != nil {
 		l += 1
-		switch x := len(*value.Str2); {
-		case x <= 0xfc:
-			l += 1
-		case x <= 0xffff:
-			l += 3
-		case x <= 0xffffffff:
-			l += 5
-		default:
-			l += 9
-		}
+		l += uint(enc.TLNum(len(*value.Str2)).EncodingLength())
 		l += uint(len(*value.Str2))
 	}
 	encoder.length = l
@@ -1499,45 +1136,13 @@ func (encoder *StrFieldEncoder) EncodeInto(value *StrField, buf []byte) {
 
 	buf[pos] = byte(1)
 	pos += 1
-	switch x := len(value.Str1); {
-	case x <= 0xfc:
-		buf[pos] = byte(x)
-		pos += 1
-	case x <= 0xffff:
-		buf[pos] = 0xfd
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = 0xfe
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = 0xff
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}
+	pos += uint(enc.TLNum(len(value.Str1)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.Str1)
 	pos += uint(len(value.Str1))
 	if value.Str2 != nil {
 		buf[pos] = byte(2)
 		pos += 1
-		switch x := len(*value.Str2); {
-		case x <= 0xfc:
-			buf[pos] = byte(x)
-			pos += 1
-		case x <= 0xffff:
-			buf[pos] = 0xfd
-			binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-			pos += 3
-		case x <= 0xffffffff:
-			buf[pos] = 0xfe
-			binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-			pos += 5
-		default:
-			buf[pos] = 0xff
-			binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-			pos += 9
-		}
+		pos += uint(enc.TLNum(len(*value.Str2)).EncodeInto(buf[pos:]))
 		copy(buf[pos:], *value.Str2)
 		pos += uint(len(*value.Str2))
 	}

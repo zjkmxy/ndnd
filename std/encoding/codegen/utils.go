@@ -44,69 +44,31 @@ func GenEncodeTypeNum(typeNum uint64) (string, error) {
 }
 
 func GenNaturalNumberLen(code string, isTlv bool) (string, error) {
-	const Temp = `switch x := {{.Code}}; {
-	{{- if .IsTlv}}
-	case x <= 0xfc:
-		l += 1
-	{{- else}}
-	case x <= 0xff:
-		l += 2
-	{{- end}}
-	case x <= 0xffff:
-		l += 3
-	case x <= 0xffffffff:
-		l += 5
-	default:
-		l += 9
-	}`
-	t := template.Must(template.New("NaturalNumberLen").Parse(Temp))
-	data := struct {
-		IsTlv bool
-		Code  string
-	}{
-		IsTlv: isTlv,
-		Code:  code,
+	var temp string
+	if isTlv {
+		temp = `l += uint(enc.TLNum({{.}}).EncodingLength())`
+	} else {
+		temp = `l += uint(1 + enc.Nat({{.}}).EncodingLength())`
 	}
+	t := template.Must(template.New("NaturalNumberLen").Parse(temp))
 	b := strings.Builder{}
-	err := t.Execute(&b, data)
+	err := t.Execute(&b, code)
 	return b.String(), err
 }
 
 func GenNaturalNumberEncode(code string, isTlv bool) (string, error) {
-	const Temp = `switch x := {{.Code}}; {
-	{{- if .IsTlv}}
-	case x <= 0xfc:
-		buf[pos] = byte(x)
-		pos += 1
-	{{- else}}
-	case x <= 0xff:
-		buf[pos] = 1
-		buf[pos+1] = byte(x)
-		pos += 2
-	{{- end}}
-	case x <= 0xffff:
-		buf[pos] = {{if .IsTlv -}} 0xfd {{- else -}} 2 {{- end}}
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(x))
-		pos += 3
-	case x <= 0xffffffff:
-		buf[pos] = {{if .IsTlv -}} 0xfe {{- else -}} 4 {{- end}}
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(x))
-		pos += 5
-	default:
-		buf[pos] = {{if .IsTlv -}} 0xff {{- else -}} 8 {{- end}}
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(x))
-		pos += 9
-	}`
-	t := template.Must(template.New("NaturalNumberEncode").Parse(Temp))
-	data := struct {
-		IsTlv bool
-		Code  string
-	}{
-		IsTlv: isTlv,
-		Code:  code,
+	var temp string
+	if isTlv {
+		temp = `pos += uint(enc.TLNum({{.}}).EncodeInto(buf[pos:]))`
+	} else {
+		temp = `
+			buf[pos] = byte(enc.Nat({{.}}).EncodeInto(buf[pos+1:]))
+			pos += uint(1 + buf[pos])
+		`
 	}
+	t := template.Must(template.New("NaturalNumberEncode").Parse(temp))
 	b := strings.Builder{}
-	err := t.Execute(&b, data)
+	err := t.Execute(&b, code)
 	return b.String(), err
 }
 
