@@ -231,7 +231,14 @@ func (y *YaNFD) Start() {
 
 // Stop shuts down YaNFD.
 func (y *YaNFD) Stop() {
+	// Close log file last
+	defer core.CloseLogger()
+
+	// Stop the forwarder
 	core.Log.Info(y, "Stopping NDN forwarder")
+	defer core.Log.Info(y, "Stopped NDN forwarder")
+
+	// Break all loops
 	core.ShouldQuit = true
 
 	// Stop profiler
@@ -269,7 +276,4 @@ func (y *YaNFD) Stop() {
 	for _, fw := range fw.Threads {
 		<-fw.HasQuit
 	}
-
-	// Close log file
-	core.CloseLogger()
 }

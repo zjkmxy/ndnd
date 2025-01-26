@@ -75,5 +75,6 @@ func Daemon(args []string) {
 	// wait for signal
 	<-sigchan
 	dve.Stop()
+	<-sigchan
 	yanfd.Stop()
 }

@@ -116,6 +116,10 @@ func (t *InternalTransport) sendFrame(frame []byte) {
 		return
 	}
 
+	if !t.running.Load() {
+		return
+	}
+
 	t.nOutBytes += uint64(len(frame))
 
 	frameCopy := make([]byte, len(frame))

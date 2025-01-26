@@ -79,7 +79,7 @@ func (m *NfdMgmtThread) CreatePermFace(uri string) (uint64, bool, error) {
 	// don't check error here, as the face may already exist (409)
 
 	res, ok := raw.(*mgmt.ControlResponse)
-	if !ok || res.Val == nil || res.Val.Params == nil || res.Val.Params.FaceId == nil {
+	if !ok || res == nil || res.Val == nil || res.Val.Params == nil || res.Val.Params.FaceId == nil {
 		return 0, false, fmt.Errorf("failed to create face: %+v", err)
 	}
 
