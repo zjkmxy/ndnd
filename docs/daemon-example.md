@@ -55,6 +55,14 @@ ndnd dv link create "udp://<bob-ip>:6363"
 ```
 
 After a few seconds, logs should show up on both nodes indicating that the neighbor relationship has been established.
+You can make this relationship permanent by adding the link to the configuration file:
+
+```yaml
+dv:
+  ...
+  neighbors:
+    - uri: "udp://<bob-ip>:6363"
+```
 
 Now, we can start serving the file on `alice` using the `put` tool:
 

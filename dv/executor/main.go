@@ -48,4 +48,5 @@ func Main(args []string) {
 	// wait for interrupt
 	<-sigchan
 	dve.Stop()
+	<-sigchan
 }

@@ -134,6 +134,10 @@ func (dv *Router) Start() (err error) {
 	// Initialize channels
 	dv.stop = make(chan bool, 1)
 
+	// Register neighbor faces
+	dv.createFaces()
+	defer dv.destroyFaces()
+
 	// Start timers
 	dv.heartbeat = time.NewTicker(dv.config.AdvertisementSyncInterval())
 	dv.deadcheck = time.NewTicker(dv.config.RouterDeadInterval())
@@ -149,14 +153,12 @@ func (dv *Router) Start() (err error) {
 	defer dv.nfdc.Stop()
 
 	// Configure face
-	err = dv.configureFace()
-	if err != nil {
+	if err = dv.configureFace(); err != nil {
 		return err
 	}
 
 	// Register interest handlers
-	err = dv.register()
-	if err != nil {
+	if err = dv.register(); err != nil {
 		return err
 	}
 
@@ -271,4 +273,55 @@ func (dv *Router) register() (err error) {
 	}
 
 	return nil
+}
+
+// createFaces creates faces to all neighbors.
+func (dv *Router) createFaces() {
+	for i, neighbor := range dv.config.Neighbors {
+		faceId, created, err := dv.nfdc.CreatePermFace(neighbor.Uri)
+		if err != nil {
+			log.Error(dv, "Failed to create face to neighbor", "uri", neighbor.Uri, "err", err)
+			continue
+		}
+		log.Info(dv, "Created face to neighbor", "uri", neighbor.Uri, "faceId", faceId)
+
+		dv.mutex.Lock()
+		dv.config.Neighbors[i].FaceId = faceId
+		dv.config.Neighbors[i].Created = created
+		dv.mutex.Unlock()
+
+		dv.nfdc.Exec(nfdc.NfdMgmtCmd{
+			Module: "rib",
+			Cmd:    "register",
+			Args: &mgmt.ControlArgs{
+				Name:   dv.config.AdvertisementSyncActivePrefix(),
+				Cost:   utils.IdPtr(uint64(1)),
+				Origin: utils.IdPtr(config.NlsrOrigin),
+				FaceId: utils.IdPtr(faceId),
+			},
+			Retries: 3,
+		})
+	}
+}
+
+// destroyFaces synchronously destroys our faces to neighbors.
+func (dv *Router) destroyFaces() {
+	for _, neighbor := range dv.config.Neighbors {
+		if neighbor.FaceId == 0 {
+			continue
+		}
+
+		dv.engine.ExecMgmtCmd("rib", "unregister", &mgmt.ControlArgs{
+			Name:   dv.config.AdvertisementSyncActivePrefix(),
+			Origin: utils.IdPtr(config.NlsrOrigin),
+			FaceId: utils.IdPtr(neighbor.FaceId),
+		})
+
+		// only destroy faces that we created
+		if neighbor.Created {
+			dv.engine.ExecMgmtCmd("faces", "destroy", &mgmt.ControlArgs{
+				FaceId: utils.IdPtr(neighbor.FaceId),
+			})
+		}
+	}
 }

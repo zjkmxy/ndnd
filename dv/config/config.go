@@ -34,6 +34,8 @@ type Config struct {
 	KeyChainUri string `json:"keychain"`
 	// List of trust anchor full names.
 	TrustAnchors []string `json:"trust_anchors"`
+	// List of permanent neighbors.
+	Neighbors []Neighbor `json:"neighbors"`
 
 	// Parsed Global Prefix
 	networkNameN enc.Name
@@ -59,12 +61,23 @@ type Config struct {
 	trustAnchorsN []enc.Name
 }
 
+type Neighbor struct {
+	// Remote URI of the neighbor.
+	Uri string `json:"uri"`
+
+	// FaceId of the neighbor.
+	FaceId uint64 `json:"-"`
+	// Whether this instance created this face
+	Created bool `json:"-"`
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		Network:                      "", // invalid
 		Router:                       "", // invalid
 		AdvertisementSyncInterval_ms: 5000,
 		RouterDeadInterval_ms:        30000,
+		KeyChainUri:                  "undefined",
 	}
 }
 

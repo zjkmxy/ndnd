@@ -286,7 +286,7 @@ func (f *FaceModule) create(interest *Interest) {
 	f.fillFaceProperties(responseParams, linkService)
 	f.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 
-	core.Log.Info(f, "Created face ", "uri", URI)
+	core.Log.Info(f, "Created face", "uri", URI)
 }
 
 func (f *FaceModule) update(interest *Interest) {
