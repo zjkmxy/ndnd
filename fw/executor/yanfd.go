@@ -20,6 +20,7 @@ import (
 	"github.com/named-data/ndnd/fw/fw"
 	"github.com/named-data/ndnd/fw/mgmt"
 	"github.com/named-data/ndnd/fw/table"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 // YaNFD is the wrapper class for the NDN Forwarding Daemon.
@@ -63,7 +64,7 @@ func (y *YaNFD) String() string {
 // Start runs YaNFD. Note: this function may exit the program when there is error.
 // This function is non-blocking.
 func (y *YaNFD) Start() {
-	core.Log.Info(y, "Starting NDN forwarder")
+	core.Log.Info(y, "Starting NDN forwarder", "version", utils.NDNdVersion)
 
 	// Start profiler
 	y.profiler.Start()

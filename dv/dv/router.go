@@ -128,7 +128,7 @@ func (dv *Router) String() string {
 
 // Start the DV router. Blocks until Stop() is called.
 func (dv *Router) Start() (err error) {
-	log.Info(dv, "Starting DV router")
+	log.Info(dv, "Starting DV router", "version", utils.NDNdVersion)
 	defer log.Info(dv, "Stopped DV router")
 
 	// Initialize channels
