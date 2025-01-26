@@ -45,13 +45,14 @@ func (cc *CatChunks) run() {
 	name, err := enc.NameFromStr(argName)
 	if err != nil {
 		log.Fatal(cc, "Invalid name", "name", argName)
+		return
 	}
 
 	// start face and engine
 	app := engine.NewBasicEngine(engine.NewDefaultFace())
 	err = app.Start()
 	if err != nil {
-		log.Error(cc, "Unable to start engine", "err", err)
+		log.Fatal(cc, "Unable to start engine", "err", err)
 		return
 	}
 	defer app.Stop()
@@ -60,7 +61,7 @@ func (cc *CatChunks) run() {
 	cli := object.NewClient(app, object.NewMemoryStore(), nil)
 	err = cli.Start()
 	if err != nil {
-		log.Error(cc, "Unable to start object client", "err", err)
+		log.Fatal(cc, "Unable to start object client", "err", err)
 		return
 	}
 	defer cli.Stop()
@@ -95,7 +96,7 @@ func (cc *CatChunks) run() {
 	state := <-done
 
 	if state.Error() != nil {
-		log.Error(cc, "Error fetching object", "err", state.Error())
+		log.Fatal(cc, "Error fetching object", "err", state.Error())
 		return
 	}
 

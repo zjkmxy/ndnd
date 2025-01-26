@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"os"
 	"runtime"
 	"strings"
 )
@@ -83,7 +84,7 @@ func (l *Logger) log(t Tag, msg string, level Level, v ...any) {
 
 	// Panic for fatal
 	if level == LevelFatal {
-		panic(msg)
+		os.Exit(13)
 	}
 }
 

@@ -61,7 +61,7 @@ func (pc *PingClient) send(seq uint64) {
 
 	interest, err := pc.app.Spec().MakeInterest(name, cfg, nil, nil)
 	if err != nil {
-		log.Error(pc, "Unable to make Interest", "err", err)
+		log.Fatal(pc, "Unable to make Interest", "err", err)
 		return
 	}
 
@@ -98,7 +98,8 @@ func (pc *PingClient) send(seq uint64) {
 		}
 	})
 	if err != nil {
-		log.Error(pc, "Unable to send Interest", "err", err)
+		log.Fatal(pc, "Unable to send Interest", "err", err)
+		return
 	}
 }
 

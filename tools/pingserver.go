@@ -103,12 +103,12 @@ func (ps *PingServer) onInterest(args ndn.InterestHandlerArgs) {
 		args.Interest.AppParam(),
 		ps.signer)
 	if err != nil {
-		log.Error(ps, "Unable to encode data", "err", err)
+		log.Fatal(ps, "Unable to encode data", "err", err)
 		return
 	}
 	err = args.Reply(data.Wire)
 	if err != nil {
-		log.Error(ps, "Unable to reply with data", "err", err)
+		log.Fatal(ps, "Unable to reply with data", "err", err)
 		return
 	}
 }
