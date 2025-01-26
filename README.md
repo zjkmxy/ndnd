@@ -29,6 +29,7 @@ Once Go is installed, run `make` to build the `ndnd` executable, followed by `ma
 NDNd provides several independent modules that can be used separately or together.
 
 You can use the `ndnd` CLI to list available modules and get more info on their usage.
+A tutorial example for running a simple NDN network can be found [here](docs/daemon-example.md).
 
 ```text
 root@0037b98ec2ac:~# ndnd
@@ -43,6 +44,7 @@ Named Data Networking Daemon (ndnd)
 Usage: ndnd [command]
   fw              NDN Forwarding Daemon
   dv              NDN Distance Vector Routing Daemon
+  daemon          NDN Combined Daemon
 
   sec             NDN Security Utilities
   ping            Send Interests to an NDN ping server
