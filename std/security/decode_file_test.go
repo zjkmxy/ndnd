@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/named-data/ndnd/std/security"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDecodeFile(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	// Decode TLV certificate
 	certRootTlv, _ := base64.StdEncoding.DecodeString(CERT_ROOT)

@@ -11,11 +11,12 @@ import (
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func executeTest(t *testing.T, main func(*dummy.DummyFace, *basic_engine.Engine, *dummy.Timer, ndn.Signer)) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	passAll := func(enc.Name, enc.Wire, ndn.Signature) bool {
 		return true
@@ -41,7 +42,7 @@ func TestConsumerBasic(t *testing.T) {
 		hitCnt := 0
 
 		spec := engine.Spec()
-		name := utils.WithoutErr(enc.NameFromStr("/example/testApp/randomData/t=1570430517101"))
+		name := tu.NoErr(enc.NameFromStr("/example/testApp/randomData/t=1570430517101"))
 		config := &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: false,
@@ -57,7 +58,7 @@ func TestConsumerBasic(t *testing.T) {
 			require.Equal(t, []byte("Hello, world!"), args.Data.Content().Join())
 		})
 		require.NoError(t, err)
-		buf := utils.WithoutErr(face.Consume())
+		buf := tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer(
 			"\x050\x07(\x08\x07example\x08\x07testApp\x08\nrandomData"+
 				"\x38\x08\x00\x00\x01m\xa4\xf3\xffm\x12\x00\x0c\x02\x17p"),
@@ -80,7 +81,7 @@ func TestInterestNack(t *testing.T) {
 		hitCnt := 0
 
 		spec := engine.Spec()
-		name := utils.WithoutErr(enc.NameFromStr("/localhost/nfd/faces/events"))
+		name := tu.NoErr(enc.NameFromStr("/localhost/nfd/faces/events"))
 		config := &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
@@ -94,7 +95,7 @@ func TestInterestNack(t *testing.T) {
 			require.Equal(t, spec_2022.NackReasonNoRoute, args.NackReason)
 		})
 		require.NoError(t, err)
-		buf := utils.WithoutErr(face.Consume())
+		buf := tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer(
 			"\x05)\x07\x1f\x08\tlocalhost\x08\x03nfd\x08\x05faces\x08\x06events"+
 				"\x21\x00\x12\x00\x0c\x02\x03\xe8"),
@@ -115,7 +116,7 @@ func TestInterestTimeout(t *testing.T) {
 		hitCnt := 0
 
 		spec := engine.Spec()
-		name := utils.WithoutErr(enc.NameFromStr("not important"))
+		name := tu.NoErr(enc.NameFromStr("not important"))
 		config := &ndn.InterestConfig{
 			Lifetime: utils.IdPtr(10 * time.Millisecond),
 		}
@@ -126,7 +127,7 @@ func TestInterestTimeout(t *testing.T) {
 			require.Equal(t, ndn.InterestResultTimeout, args.Result)
 		})
 		require.NoError(t, err)
-		buf := utils.WithoutErr(face.Consume())
+		buf := tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer("\x05\x14\x07\x0f\x08\rnot important\x0c\x01\x0a"), buf)
 		timer.MoveForward(50 * time.Millisecond)
 
@@ -143,8 +144,8 @@ func TestInterestCanBePrefix(t *testing.T) {
 		hitCnt := 0
 
 		spec := engine.Spec()
-		name1 := utils.WithoutErr(enc.NameFromStr("/not"))
-		name2 := utils.WithoutErr(enc.NameFromStr("/not/important"))
+		name1 := tu.NoErr(enc.NameFromStr("/not"))
+		name2 := tu.NoErr(enc.NameFromStr("/not/important"))
 		config1 := &ndn.InterestConfig{
 			Lifetime:    utils.IdPtr(5 * time.Millisecond),
 			CanBePrefix: false,
@@ -186,11 +187,11 @@ func TestInterestCanBePrefix(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		buf := utils.WithoutErr(face.Consume())
+		buf := tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer("\x05\x0a\x07\x05\x08\x03not\x0c\x01\x05"), buf)
-		buf = utils.WithoutErr(face.Consume())
+		buf = tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer("\x05\x0c\x07\x05\x08\x03not\x21\x00\x0c\x01\x05"), buf)
-		buf = utils.WithoutErr(face.Consume())
+		buf = tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer("\x05\x15\x07\x10\x08\x03not\x08\timportant\x0c\x01\x05"), buf)
 
 		timer.MoveForward(4 * time.Millisecond)
@@ -206,9 +207,9 @@ func TestImplicitSha256(t *testing.T) {
 		hitCnt := 0
 
 		spec := engine.Spec()
-		name1 := utils.WithoutErr(enc.NameFromStr(
+		name1 := tu.NoErr(enc.NameFromStr(
 			"/test/sha256digest=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
-		name2 := utils.WithoutErr(enc.NameFromStr(
+		name2 := tu.NoErr(enc.NameFromStr(
 			"/test/sha256digest=5488f2c11b566d49e9904fb52aa6f6f9e66a954168109ce156eea2c92c57e4c2"))
 		config := &ndn.InterestConfig{
 			Lifetime: utils.IdPtr(5 * time.Millisecond),
@@ -226,19 +227,19 @@ func TestImplicitSha256(t *testing.T) {
 		err = engine.Express(interest2, func(args ndn.ExpressCallbackArgs) {
 			hitCnt += 1
 			require.Equal(t, ndn.InterestResultData, args.Result)
-			require.True(t, args.Data.Name().Equal(utils.WithoutErr(enc.NameFromStr("/test"))))
+			require.True(t, args.Data.Name().Equal(tu.NoErr(enc.NameFromStr("/test"))))
 			require.Equal(t, []byte("test"), args.Data.Content().Join())
 		})
 		require.NoError(t, err)
 
-		buf := utils.WithoutErr(face.Consume())
+		buf := tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer(
 			"\x05\x2d\x07\x28\x08\x04test\x01\x20"+
 				"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"+
 				"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"+
 				"\x0c\x01\x05",
 		), buf)
-		buf = utils.WithoutErr(face.Consume())
+		buf = tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer(
 			"\x05\x2d\x07\x28\x08\x04test\x01\x20"+
 				"\x54\x88\xf2\xc1\x1b\x56\x6d\x49\xe9\x90\x4f\xb5\x2a\xa6\xf6\xf9"+
@@ -280,11 +281,11 @@ func TestRoute(t *testing.T) {
 			args.Reply(data.Wire)
 		}
 
-		prefix := utils.WithoutErr(enc.NameFromStr("/not"))
+		prefix := tu.NoErr(enc.NameFromStr("/not"))
 		engine.AttachHandler(prefix, handler)
 		face.FeedPacket([]byte("\x05\x15\x07\x10\x08\x03not\x08\timportant\x0c\x01\x05"))
 		require.Equal(t, 1, hitCnt)
-		buf := utils.WithoutErr(face.Consume())
+		buf := tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer(
 			"\x06\x22\x07\x10\x08\x03not\x08\timportant\x14\x03\x18\x01\x00\x15\x04test"+
 				"\x16\x03\x1b\x01\xc8",
@@ -310,13 +311,13 @@ func TestPitToken(t *testing.T) {
 			args.Reply(data.Wire)
 		}
 
-		prefix := utils.WithoutErr(enc.NameFromStr("/not"))
+		prefix := tu.NoErr(enc.NameFromStr("/not"))
 		engine.AttachHandler(prefix, handler)
 		face.FeedPacket([]byte(
 			"\x64\x1f\x62\x04\x01\x02\x03\x04\x50\x17" +
 				"\x05\x15\x07\x10\x08\x03not\x08\timportant\x0c\x01\x05",
 		))
-		buf := utils.WithoutErr(face.Consume())
+		buf := tu.NoErr(face.Consume())
 		require.Equal(t, enc.Buffer(
 			"\x64\x2c\x62\x04\x01\x02\x03\x04\x50\x24"+
 				"\x06\x22\x07\x10\x08\x03not\x08\timportant\x14\x03\x18\x01\x00\x15\x04test"+

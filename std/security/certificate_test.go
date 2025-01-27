@@ -9,12 +9,12 @@ import (
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSignCertInvalid(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	_, err := sec.SignCert(sec.SignCertArgs{
 		Signer:   nil,
@@ -25,11 +25,11 @@ func TestSignCertInvalid(t *testing.T) {
 }
 
 func TestSignCertSelf(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	aliceKey, _ := base64.StdEncoding.DecodeString(KEY_ALICE)
 	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferReader(aliceKey))
-	aliceSigner := utils.WithoutErr(signer.UnmarshalSecret(aliceKeyData))
+	aliceSigner := tu.NoErr(signer.UnmarshalSecret(aliceKeyData))
 
 	// self-sign alice's key
 	aliceCert, err := sec.SignCert(sec.SignCertArgs{
@@ -53,7 +53,7 @@ func TestSignCertSelf(t *testing.T) {
 
 	// check data content is public key
 	require.Equal(t, ndn.ContentTypeKey, *cert.ContentType())
-	alicePub := utils.WithoutErr(aliceSigner.Public())
+	alicePub := tu.NoErr(aliceSigner.Public())
 	require.Equal(t, alicePub, cert.Content().Join())
 
 	// check signature format
@@ -68,15 +68,15 @@ func TestSignCertSelf(t *testing.T) {
 
 	// check signature
 	require.Equal(t, 64, len(signature.SigValue())) // ed25519
-	require.True(t, utils.WithoutErr(signer.ValidateData(cert, certSigCov, cert)))
+	require.True(t, tu.NoErr(signer.ValidateData(cert, certSigCov, cert)))
 }
 
 func TestSignCertOther(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	aliceKey, _ := base64.StdEncoding.DecodeString(KEY_ALICE)
 	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferReader(aliceKey))
-	aliceSigner := utils.WithoutErr(signer.UnmarshalSecret(aliceKeyData))
+	aliceSigner := tu.NoErr(signer.UnmarshalSecret(aliceKeyData))
 
 	// self signed alice's key
 	aliceCert, err := sec.SignCert(sec.SignCertArgs{
@@ -131,5 +131,5 @@ func TestSignCertOther(t *testing.T) {
 
 	// check signature
 	require.Equal(t, 64, len(signature.SigValue())) // ed25519
-	require.True(t, utils.WithoutErr(signer.ValidateData(newCert, newSigCov, aliceCertData)))
+	require.True(t, tu.NoErr(signer.ValidateData(newCert, newSigCov, aliceCertData)))
 }

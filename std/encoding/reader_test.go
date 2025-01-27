@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBasic(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	wire := enc.Wire{
 		[]byte{0x01, 0x02, 0x03},
@@ -32,8 +32,8 @@ func TestBasic(t *testing.T) {
 	testRead := func(l int) {
 		b1 := make([]byte, l)
 		b2 := make([]byte, l)
-		n1 := utils.WithoutErr(io.ReadFull(wr, b1))
-		n2 := utils.WithoutErr(io.ReadFull(br, b2))
+		n1 := tu.NoErr(io.ReadFull(wr, b1))
+		n2 := tu.NoErr(io.ReadFull(br, b2))
 		require.Equal(t, n1, n2)
 		require.Equal(t, b1, b2)
 		require.Equal(t, wr.Pos(), br.Pos())
@@ -96,8 +96,8 @@ func TestBasic(t *testing.T) {
 	testRead(1)
 
 	testReadWire := func(l int) {
-		w1 := utils.WithoutErr(wr.ReadWire(l))
-		w2 := utils.WithoutErr(br.ReadWire(l))
+		w1 := tu.NoErr(wr.ReadWire(l))
+		w2 := tu.NoErr(br.ReadWire(l))
 		require.Equal(t, w1.Join(), w2.Join())
 	}
 	wr = enc.NewWireReader(wire)
@@ -113,8 +113,8 @@ func TestBasic(t *testing.T) {
 	testDelegate := func(l int) {
 		r1 := wr.Delegate(l)
 		r2 := br.Delegate(l)
-		b1 := utils.WithoutErr(io.ReadAll(r1))
-		b2 := utils.WithoutErr(io.ReadAll(r2))
+		b1 := tu.NoErr(io.ReadAll(r1))
+		b2 := tu.NoErr(io.ReadAll(r2))
 		require.Equal(t, b1, b2)
 	}
 	wr = enc.NewWireReader(wire)

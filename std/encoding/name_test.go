@@ -6,140 +6,140 @@ import (
 	"testing"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestComponentFromStrBasic(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
-	comp := utils.WithoutErr(enc.ComponentFromStr("aa"))
+	comp := tu.NoErr(enc.ComponentFromStr("aa"))
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte("aa")}, comp)
 
-	comp = utils.WithoutErr(enc.ComponentFromStr("a%20a"))
+	comp = tu.NoErr(enc.ComponentFromStr("a%20a"))
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte("a a")}, comp)
 
-	comp = utils.WithoutErr(enc.ComponentFromStr("v=10"))
+	comp = tu.NoErr(enc.ComponentFromStr("v=10"))
 	require.Equal(t, enc.Component{enc.TypeVersionNameComponent, []byte{0x0a}}, comp)
 
-	comp = utils.WithoutErr(enc.ComponentFromStr("params-sha256=3d319b4802e56af766c0e73d2ced4f1560fba2b7"))
+	comp = tu.NoErr(enc.ComponentFromStr("params-sha256=3d319b4802e56af766c0e73d2ced4f1560fba2b7"))
 	require.Equal(t,
 		enc.Component{enc.TypeParametersSha256DigestComponent,
 			[]byte{0x3d, 0x31, 0x9b, 0x48, 0x02, 0xe5, 0x6a, 0xf7, 0x66, 0xc0, 0xe7, 0x3d,
 				0x2c, 0xed, 0x4f, 0x15, 0x60, 0xfb, 0xa2, 0xb7}},
 		comp)
 
-	comp = utils.WithoutErr(enc.ComponentFromStr(""))
+	comp = tu.NoErr(enc.ComponentFromStr(""))
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte("")}, comp)
 }
 
 func TestGenericComponent(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	var buf = []byte("\x08\x0andn-python")
-	c := utils.WithoutErr(enc.ComponentFromBytes(buf))
+	c := tu.NoErr(enc.ComponentFromBytes(buf))
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte("ndn-python")}, c)
-	c2 := utils.WithoutErr(enc.ComponentFromStr("ndn-python"))
+	c2 := tu.NoErr(enc.ComponentFromStr("ndn-python"))
 	require.Equal(t, c, c2)
-	c2 = utils.WithoutErr(enc.ComponentFromStr("8=ndn-python"))
+	c2 = tu.NoErr(enc.ComponentFromStr("8=ndn-python"))
 	require.Equal(t, c, c2)
 	require.Equal(t, buf, c.Bytes())
 
 	buf = []byte("\x08\x07foo%bar")
-	c = utils.WithoutErr(enc.ComponentFromBytes(buf))
+	c = tu.NoErr(enc.ComponentFromBytes(buf))
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte("foo%bar")}, c)
 	require.Equal(t, "foo%25bar", c.String())
-	c2 = utils.WithoutErr(enc.ComponentFromStr("foo%25bar"))
+	c2 = tu.NoErr(enc.ComponentFromStr("foo%25bar"))
 	require.Equal(t, c, c2)
-	c2 = utils.WithoutErr(enc.ComponentFromStr("8=foo%25bar"))
+	c2 = tu.NoErr(enc.ComponentFromStr("8=foo%25bar"))
 	require.Equal(t, c, c2)
 	require.Equal(t, buf, c.Bytes())
 
 	buf = []byte("\x08\x04-._~")
-	c = utils.WithoutErr(enc.ComponentFromBytes(buf))
+	c = tu.NoErr(enc.ComponentFromBytes(buf))
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte("-._~")}, c)
 	require.Equal(t, "-._~", c.String())
-	c2 = utils.WithoutErr(enc.ComponentFromStr("-._~"))
+	c2 = tu.NoErr(enc.ComponentFromStr("-._~"))
 	require.Equal(t, c, c2)
-	c2 = utils.WithoutErr(enc.ComponentFromStr("8=-._~"))
+	c2 = tu.NoErr(enc.ComponentFromStr("8=-._~"))
 	require.Equal(t, c, c2)
 	require.Equal(t, buf, c.Bytes())
 
-	err := utils.WithErr(enc.ComponentFromStr(":/?#[]@"))
+	err := tu.Err(enc.ComponentFromStr(":/?#[]@"))
 	require.IsType(t, enc.ErrFormat{}, err)
 	buf = []byte(":/?#[]@")
 	c = enc.Component{enc.TypeGenericNameComponent, buf}
 	require.Equal(t, "%3A%2F%3F%23%5B%5D%40", c.String())
-	c2 = utils.WithoutErr(enc.ComponentFromStr("%3A%2F%3F%23%5B%5D%40"))
+	c2 = tu.NoErr(enc.ComponentFromStr("%3A%2F%3F%23%5B%5D%40"))
 	require.Equal(t, c, c2)
 
-	err = utils.WithErr(enc.ComponentFromStr("/"))
+	err = tu.Err(enc.ComponentFromStr("/"))
 	require.IsType(t, enc.ErrFormat{}, err)
 	c = enc.Component{enc.TypeGenericNameComponent, []byte{}}
 	require.Equal(t, "", c.String())
 	require.Equal(t, c.Bytes(), []byte("\x08\x00"))
-	c2 = utils.WithoutErr(enc.ComponentFromStr(""))
+	c2 = tu.NoErr(enc.ComponentFromStr(""))
 	require.Equal(t, c, c2)
 }
 
 func TestComponentTypes(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	hexText := "28bad4b5275bd392dbb670c75cf0b66f13f7942b21e80f55c0e86b374753a548"
-	value := utils.WithoutErr(hex.DecodeString(hexText))
+	value := tu.NoErr(hex.DecodeString(hexText))
 
 	buf := make([]byte, len(value)+2)
 	buf[0] = byte(enc.TypeImplicitSha256DigestComponent)
 	buf[1] = 0x20
 	copy(buf[2:], value)
-	c := utils.WithoutErr(enc.ComponentFromBytes(buf))
+	c := tu.NoErr(enc.ComponentFromBytes(buf))
 	require.Equal(t, enc.Component{enc.TypeImplicitSha256DigestComponent, value}, c)
 	require.Equal(t, "sha256digest="+hexText, c.String())
-	c2 := utils.WithoutErr(enc.ComponentFromStr("sha256digest=" + hexText))
+	c2 := tu.NoErr(enc.ComponentFromStr("sha256digest=" + hexText))
 	require.Equal(t, c, c2)
-	c2 = utils.WithoutErr(enc.ComponentFromStr("sha256digest=" + strings.ToUpper(hexText)))
+	c2 = tu.NoErr(enc.ComponentFromStr("sha256digest=" + strings.ToUpper(hexText)))
 	require.Equal(t, c, c2)
 
 	buf = make([]byte, len(value)+2)
 	buf[0] = byte(enc.TypeParametersSha256DigestComponent)
 	buf[1] = 0x20
 	copy(buf[2:], value)
-	c = utils.WithoutErr(enc.ComponentFromBytes(buf))
+	c = tu.NoErr(enc.ComponentFromBytes(buf))
 	require.Equal(t, enc.Component{enc.TypeParametersSha256DigestComponent, value}, c)
 	require.Equal(t, "params-sha256="+hexText, c.String())
-	c2 = utils.WithoutErr(enc.ComponentFromStr("params-sha256=" + hexText))
+	c2 = tu.NoErr(enc.ComponentFromStr("params-sha256=" + hexText))
 	require.Equal(t, c, c2)
-	c2 = utils.WithoutErr(enc.ComponentFromStr("params-sha256=" + strings.ToUpper(hexText)))
+	c2 = tu.NoErr(enc.ComponentFromStr("params-sha256=" + strings.ToUpper(hexText)))
 	require.Equal(t, c, c2)
 
-	c = utils.WithoutErr(enc.ComponentFromBytes([]byte{0x09, 0x03, '9', 0x3d, 'A'}))
+	c = tu.NoErr(enc.ComponentFromBytes([]byte{0x09, 0x03, '9', 0x3d, 'A'}))
 	require.Equal(t, "9=9%3DA", c.String())
 	require.Equal(t, 9, int(c.Typ))
-	c2 = utils.WithoutErr(enc.ComponentFromStr("9=9%3DA"))
+	c2 = tu.NoErr(enc.ComponentFromStr("9=9%3DA"))
 	require.Equal(t, c, c2)
 
-	c = utils.WithoutErr(enc.ComponentFromBytes([]byte{0xfd, 0xff, 0xff, 0x00}))
+	c = tu.NoErr(enc.ComponentFromBytes([]byte{0xfd, 0xff, 0xff, 0x00}))
 	require.Equal(t, "65535=", c.String())
 	require.Equal(t, 0xffff, int(c.Typ))
-	c2 = utils.WithoutErr(enc.ComponentFromStr("65535="))
+	c2 = tu.NoErr(enc.ComponentFromStr("65535="))
 	require.Equal(t, c, c2)
 
-	c = utils.WithoutErr(enc.ComponentFromBytes([]byte{0xfd, 0x57, 0x65, 0x01, 0x2e}))
+	c = tu.NoErr(enc.ComponentFromBytes([]byte{0xfd, 0x57, 0x65, 0x01, 0x2e}))
 	require.Equal(t, "22373=.", c.String())
 	require.Equal(t, 0x5765, int(c.Typ))
-	c2 = utils.WithoutErr(enc.ComponentFromStr("22373=%2e"))
+	c2 = tu.NoErr(enc.ComponentFromStr("22373=%2e"))
 	require.Equal(t, c, c2)
 
-	utils.WithErr(enc.ComponentFromStr("0=A"))
-	utils.WithErr(enc.ComponentFromStr("-1=A"))
-	utils.WithErr(enc.ComponentFromStr("+=A"))
-	utils.WithErr(enc.ComponentFromStr("1=2=A"))
-	utils.WithErr(enc.ComponentFromStr("==A"))
-	utils.WithErr(enc.ComponentFromStr("%%"))
-	utils.WithErr(enc.ComponentFromStr("ABCD%EF%0"))
-	utils.WithErr(enc.ComponentFromStr("ABCD%GH"))
-	utils.WithErr(enc.ComponentFromStr("sha256digest=a04z"))
-	utils.WithErr(enc.ComponentFromStr("65536=a04z"))
+	tu.Err(enc.ComponentFromStr("0=A"))
+	tu.Err(enc.ComponentFromStr("-1=A"))
+	tu.Err(enc.ComponentFromStr("+=A"))
+	tu.Err(enc.ComponentFromStr("1=2=A"))
+	tu.Err(enc.ComponentFromStr("==A"))
+	tu.Err(enc.ComponentFromStr("%%"))
+	tu.Err(enc.ComponentFromStr("ABCD%EF%0"))
+	tu.Err(enc.ComponentFromStr("ABCD%GH"))
+	tu.Err(enc.ComponentFromStr("sha256digest=a04z"))
+	tu.Err(enc.ComponentFromStr("65536=a04z"))
 
 	require.Equal(t, []byte("\x32\x01\r"), enc.NewSegmentComponent(13).Bytes())
 	require.Equal(t, []byte("\x34\x01\r"), enc.NewByteOffsetComponent(13).Bytes())
@@ -150,27 +150,27 @@ func TestComponentTypes(t *testing.T) {
 }
 
 func TestComponentCompare(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	comps := []enc.Component{
-		{1, utils.WithoutErr(hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000000"))},
-		{1, utils.WithoutErr(hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001"))},
-		{1, utils.WithoutErr(hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))},
-		{2, utils.WithoutErr(hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000000"))},
-		{2, utils.WithoutErr(hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001"))},
-		{2, utils.WithoutErr(hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))},
+		{1, tu.NoErr(hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000000"))},
+		{1, tu.NoErr(hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001"))},
+		{1, tu.NoErr(hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))},
+		{2, tu.NoErr(hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000000"))},
+		{2, tu.NoErr(hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001"))},
+		{2, tu.NoErr(hex.DecodeString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))},
 		{3, []byte{}},
 		{3, []byte{0x44}},
 		{3, []byte{0x46}},
 		{3, []byte{0x41, 0x41}},
-		utils.WithoutErr(enc.ComponentFromStr("")),
-		utils.WithoutErr(enc.ComponentFromStr("D")),
-		utils.WithoutErr(enc.ComponentFromStr("F")),
-		utils.WithoutErr(enc.ComponentFromStr("AA")),
-		utils.WithoutErr(enc.ComponentFromStr("21426=")),
-		utils.WithoutErr(enc.ComponentFromStr("21426=%44")),
-		utils.WithoutErr(enc.ComponentFromStr("21426=%46")),
-		utils.WithoutErr(enc.ComponentFromStr("21426=%41%41")),
+		tu.NoErr(enc.ComponentFromStr("")),
+		tu.NoErr(enc.ComponentFromStr("D")),
+		tu.NoErr(enc.ComponentFromStr("F")),
+		tu.NoErr(enc.ComponentFromStr("AA")),
+		tu.NoErr(enc.ComponentFromStr("21426=")),
+		tu.NoErr(enc.ComponentFromStr("21426=%44")),
+		tu.NoErr(enc.ComponentFromStr("21426=%46")),
+		tu.NoErr(enc.ComponentFromStr("21426=%41%41")),
 	}
 
 	for i := 0; i < len(comps); i++ {
@@ -188,13 +188,13 @@ func TestComponentCompare(t *testing.T) {
 }
 
 func TestNameBasic(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	uri := "/Emid/25042=P3//./%1C%9F/sha256digest=0415e3624a151850ac686c84f155f29808c0dd73819aa4a4c20be73a4d8a874c"
-	name := utils.WithoutErr(enc.NameFromStr(uri))
+	name := tu.NoErr(enc.NameFromStr(uri))
 	require.Equal(t, 6, len(name))
-	require.Equal(t, utils.WithoutErr(enc.ComponentFromStr("Emid")), name[0])
-	require.Equal(t, utils.WithoutErr(enc.ComponentFromBytes([]byte("\xfd\x61\xd2\x02\x50\x33"))), name[1])
+	require.Equal(t, tu.NoErr(enc.ComponentFromStr("Emid")), name[0])
+	require.Equal(t, tu.NoErr(enc.ComponentFromBytes([]byte("\xfd\x61\xd2\x02\x50\x33"))), name[1])
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte{}}, name[2])
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte{'.'}}, name[3])
 	require.Equal(t, enc.Component{enc.TypeGenericNameComponent, []byte{'\x1c', '\x9f'}}, name[4])
@@ -208,10 +208,10 @@ func TestNameBasic(t *testing.T) {
 }
 
 func TestNameString(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	tester := func(sIn, sOut string) {
-		require.Equal(t, sOut, utils.WithoutErr(enc.NameFromStr(sIn)).String())
+		require.Equal(t, sOut, tu.NoErr(enc.NameFromStr(sIn)).String())
 	}
 
 	tester("/hello/world", "/hello/world")
@@ -232,7 +232,7 @@ func TestNameString(t *testing.T) {
 }
 
 func TestNameCompare(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	strs := []string{
 		"/",
@@ -275,7 +275,7 @@ func TestNameCompare(t *testing.T) {
 	}
 	names := make([]enc.Name, len(strs))
 	for i, s := range strs {
-		names[i] = utils.WithoutErr(enc.NameFromStr(s))
+		names[i] = tu.NoErr(enc.NameFromStr(s))
 	}
 	for i := 0; i < len(names); i++ {
 		for j := 0; j < len(names); j++ {
@@ -292,16 +292,16 @@ func TestNameCompare(t *testing.T) {
 }
 
 func TestNameIsPrefix(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	testTrue := func(s1, s2 string) {
-		n1 := utils.WithoutErr(enc.NameFromStr(s1))
-		n2 := utils.WithoutErr(enc.NameFromStr(s2))
+		n1 := tu.NoErr(enc.NameFromStr(s1))
+		n2 := tu.NoErr(enc.NameFromStr(s2))
 		require.True(t, n1.IsPrefix(n2))
 	}
 	testFalse := func(s1, s2 string) {
-		n1 := utils.WithoutErr(enc.NameFromStr(s1))
-		n2 := utils.WithoutErr(enc.NameFromStr(s2))
+		n1 := tu.NoErr(enc.NameFromStr(s1))
+		n2 := tu.NoErr(enc.NameFromStr(s2))
 		require.False(t, n1.IsPrefix(n2))
 	}
 
@@ -322,32 +322,32 @@ func TestNameIsPrefix(t *testing.T) {
 }
 
 func TestNameBytes(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
-	n := utils.WithoutErr(enc.NameFromStr("/a/b/c/d"))
+	n := tu.NoErr(enc.NameFromStr("/a/b/c/d"))
 	require.Equal(t, []byte("\x07\x0c\x08\x01a\x08\x01b\x08\x01c\x08\x01d"), n.Bytes())
 	require.Equal(t, []byte("\x07\x00"), enc.Name{}.Bytes())
 
-	n2 := utils.WithoutErr(enc.NameFromBytes([]byte("\x07\x0c\x08\x01a\x08\x01b\x08\x01c\x08\x01d")))
+	n2 := tu.NoErr(enc.NameFromBytes([]byte("\x07\x0c\x08\x01a\x08\x01b\x08\x01c\x08\x01d")))
 	require.True(t, n.Equal(n2))
 }
 
 func TestNameAppend(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	// This section illustrates the issue with using append()
 	// If we have a prefix which has an underlying array larger than the slice itself,
 	// then subsequent appends will modify the same array. This will overwrite any
 	// names created from the same prefix.
-	prefix := utils.WithoutErr(enc.NameFromStr("/a/b/c/z/z/z"))[:3]
-	name1 := append(prefix, utils.WithoutErr(enc.NameFromStr("d1/e1/f1"))...)
-	name2 := append(prefix, utils.WithoutErr(enc.NameFromStr("d2/e2/f2"))...)
+	prefix := tu.NoErr(enc.NameFromStr("/a/b/c/z/z/z"))[:3]
+	name1 := append(prefix, tu.NoErr(enc.NameFromStr("d1/e1/f1"))...)
+	name2 := append(prefix, tu.NoErr(enc.NameFromStr("d2/e2/f2"))...)
 	require.Equal(t, name1.String(), name2.String()) // should not be equal
 
 	// This section illustrates the correct way to append names
 	// The Append function allocates a new array for the new name
-	name3 := prefix.Append(utils.WithoutErr(enc.NameFromStr("d3/e3/f3"))...)
-	name4 := prefix.Append(utils.WithoutErr(enc.NameFromStr("d4/e4/f4"))...)
+	name3 := prefix.Append(tu.NoErr(enc.NameFromStr("d3/e3/f3"))...)
+	name4 := prefix.Append(tu.NoErr(enc.NameFromStr("d4/e4/f4"))...)
 	require.Equal(t, "/a/b/c/d3/e3/f3", name3.String())
 	require.Equal(t, "/a/b/c/d4/e4/f4", name4.String())
 }

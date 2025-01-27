@@ -5,12 +5,12 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	sec "github.com/named-data/ndnd/std/security"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestKeyName(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	id, _ := enc.NameFromStr("/my/test/identity")
 	keyPfx, _ := enc.NameFromStr("/my/test/identity/KEY")

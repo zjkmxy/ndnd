@@ -5,12 +5,12 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine/dummy"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBasicConsume(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	testOnData := func([]byte) error {
 		t.Fatal("No data should be received in this test.")
@@ -23,33 +23,33 @@ func TestBasicConsume(t *testing.T) {
 	}
 
 	face := dummy.NewDummyFace()
-	utils.WithErr(face.Consume())
+	tu.Err(face.Consume())
 	require.Error(t, face.Open())
 	face.SetCallback(testOnData, testOnError)
 	require.NoError(t, face.Open())
-	utils.WithErr(face.Consume())
+	tu.Err(face.Consume())
 
 	err := face.Send(enc.Wire{enc.Buffer{0x05, 0x03, 0x01, 0x02, 0x03}})
 	require.NoError(t, err)
-	data := utils.WithoutErr(face.Consume())
+	data := tu.NoErr(face.Consume())
 	require.Equal(t, enc.Buffer{0x05, 0x03, 0x01, 0x02, 0x03}, data)
-	utils.WithErr(face.Consume())
+	tu.Err(face.Consume())
 
 	err = face.Send(enc.Wire{enc.Buffer{0x05, 0x01, 0x01}})
 	require.NoError(t, err)
 	err = face.Send(enc.Wire{enc.Buffer{0x05, 0x04, 0x01, 0x02, 0x03, 0x04}})
 	require.NoError(t, err)
-	data = utils.WithoutErr(face.Consume())
+	data = tu.NoErr(face.Consume())
 	require.Equal(t, enc.Buffer{0x05, 0x01, 0x01}, data)
-	data = utils.WithoutErr(face.Consume())
+	data = tu.NoErr(face.Consume())
 	require.Equal(t, enc.Buffer{0x05, 0x04, 0x01, 0x02, 0x03, 0x04}, data)
-	utils.WithErr(face.Consume())
+	tu.Err(face.Consume())
 
 	require.NoError(t, face.Close())
 }
 
 func TestBasicFeed(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	cnt := 0
 
 	testOnData := func(frame []byte) error {
@@ -57,15 +57,15 @@ func TestBasicFeed(t *testing.T) {
 		cnt++
 		switch cnt {
 		case 1:
-			buf := utils.WithoutErr(r.ReadBuf(r.Length()))
+			buf := tu.NoErr(r.ReadBuf(r.Length()))
 			require.Equal(t, enc.Buffer{0x05, 0x03, 0x01, 0x02, 0x03}, buf)
 			return nil
 		case 2:
-			buf := utils.WithoutErr(r.ReadBuf(r.Length()))
+			buf := tu.NoErr(r.ReadBuf(r.Length()))
 			require.Equal(t, enc.Buffer{0x05, 0x01, 0x01}, buf)
 			return nil
 		case 3:
-			buf := utils.WithoutErr(r.ReadBuf(r.Length()))
+			buf := tu.NoErr(r.ReadBuf(r.Length()))
 			require.Equal(t, enc.Buffer{0x05, 0x04, 0x01, 0x02, 0x03, 0x04}, buf)
 			return nil
 		}

@@ -8,7 +8,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -38,14 +38,14 @@ qEa4Xg1H5/+zKy2mdI82/AcbsQJslRxC32g0ZfmDPKs=
 var RSA_KEY_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/e%9A%F2%15%21%FF2%F1")
 
 func TestMarshalSecret(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	// create signer
 	secret, _ := base64.StdEncoding.DecodeString(RSA_KEY_SECRET)
-	signer := utils.WithoutErr(sig.ParseRsa(RSA_KEY_NAME, secret))
+	signer := tu.NoErr(sig.ParseRsa(RSA_KEY_NAME, secret))
 
 	// encode signer secret
-	wire := utils.WithoutErr(sig.MarshalSecret(signer))
+	wire := tu.NoErr(sig.MarshalSecret(signer))
 
 	// check output data
 	data, _, err := spec.Spec{}.ReadData(enc.NewWireReader(wire))
@@ -56,10 +56,10 @@ func TestMarshalSecret(t *testing.T) {
 }
 
 func TestUnmarshalSecret(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	// get static secret data
-	dataRaw := utils.WithoutErr(base64.StdEncoding.DecodeString(RSA_KEY_DATA))
+	dataRaw := tu.NoErr(base64.StdEncoding.DecodeString(RSA_KEY_DATA))
 	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(dataRaw))
 	require.NoError(t, err)
 

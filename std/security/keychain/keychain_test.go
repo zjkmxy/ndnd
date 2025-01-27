@@ -13,7 +13,7 @@ import (
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +43,7 @@ var KEY_ALICE_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/X%DC%B6%FAg%29%A4%82")
 
 func signCert(t *testing.T, signer ndn.Signer) []byte {
 	certData, _, _ := spec.Spec{}.ReadData(enc.NewWireReader(
-		utils.WithoutErr(sig.MarshalSecret(signer))))
+		tu.NoErr(sig.MarshalSecret(signer))))
 	cert, err := sec.SignCert(sec.SignCertArgs{
 		Signer:    signer,
 		Data:      certData,
@@ -56,14 +56,14 @@ func signCert(t *testing.T, signer ndn.Signer) []byte {
 }
 
 func TestKeyChainMem(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	store := object.NewMemoryStore()
 	kc := keychain.NewKeyChainMem(store)
 
 	// Insert a key
 	idName1, _ := enc.NameFromStr("/my/test/identity")
-	signer11 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName1)))
+	signer11 := tu.NoErr(sig.KeygenEd25519(sec.MakeKeyName(idName1)))
 	require.NoError(t, kc.InsertKey(signer11))
 
 	// Check key in keychain
@@ -74,7 +74,7 @@ func TestKeyChainMem(t *testing.T) {
 	require.Equal(t, signer11, identity1.Keys()[0].Signer())
 
 	// Insert another key for the same identity
-	signer12 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName1)))
+	signer12 := tu.NoErr(sig.KeygenEd25519(sec.MakeKeyName(idName1)))
 	require.NoError(t, kc.InsertKey(signer12))
 	require.Len(t, identity1.Keys(), 2)
 
@@ -104,7 +104,7 @@ func TestKeyChainMem(t *testing.T) {
 	require.Nil(t, kc.IdentityByName(idName2))
 
 	// Insert key for identity2
-	signer21 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
+	signer21 := tu.NoErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
 	require.NoError(t, kc.InsertKey(signer21))
 	identity2 := kc.IdentityByName(idName2)
 	require.NotNil(t, identity2)
@@ -112,7 +112,7 @@ func TestKeyChainMem(t *testing.T) {
 	require.Equal(t, signer21, identity2.Keys()[0].Signer())
 
 	// Insert cert for another key for identity2 before key
-	signer22 := utils.WithoutErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
+	signer22 := tu.NoErr(sig.KeygenEd25519(sec.MakeKeyName(idName2)))
 	cert22 := signCert(t, signer22)
 	require.NoError(t, kc.InsertCert(cert22))
 	require.Len(t, identity2.Keys(), 1)
@@ -135,7 +135,7 @@ func TestKeyChainMem(t *testing.T) {
 }
 
 func TestKeyChainDir(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	store := object.NewMemoryStore()
 

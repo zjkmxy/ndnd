@@ -5,7 +5,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/security/trust_schema"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -111,11 +111,11 @@ var TEST_MODEL_COMPLEX = []byte{
 }
 
 func sname(n string) enc.Name {
-	return utils.WithoutErr(enc.NameFromStr(n))
+	return tu.NoErr(enc.NameFromStr(n))
 }
 
 func TestParseModel(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	m, err := trust_schema.ParseLvsModel(enc.NewBufferReader(TEST_MODEL), false)
 	require.NoError(t, err)
@@ -129,7 +129,7 @@ func TestParseModel(t *testing.T) {
 }
 
 func TestModelSimpleMatch(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	s, err := trust_schema.NewLvsSchema(TEST_MODEL)
 	require.NoError(t, err)
@@ -176,7 +176,7 @@ func TestModelSimpleMatch(t *testing.T) {
 }
 
 func TestModelComplexMatch(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	s, err := trust_schema.NewLvsSchema(TEST_MODEL_COMPLEX)
 	require.NoError(t, err)
@@ -227,7 +227,7 @@ func TestModelComplexMatch(t *testing.T) {
 }
 
 func TestModelSimpleCheck(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	s, err := trust_schema.NewLvsSchema(TEST_MODEL)
 	require.NoError(t, err)
@@ -240,7 +240,7 @@ func TestModelSimpleCheck(t *testing.T) {
 }
 
 func TestModelComplexCheck(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	s, err := trust_schema.NewLvsSchema(TEST_MODEL_COMPLEX)
 	require.NoError(t, err)

@@ -7,7 +7,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -176,14 +176,14 @@ func testStoreTxn(t *testing.T, store ndn.Store) {
 }
 
 func TestMemoryStore(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	store := object.NewMemoryStore()
 	testStoreBasic(t, store)
 	testStoreTxn(t, store)
 }
 
 func TestBoltStore(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	filename := "test.db"
 	os.Remove(filename)
 	defer os.Remove(filename)

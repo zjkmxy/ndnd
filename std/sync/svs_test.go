@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	ndn_sync "github.com/named-data/ndnd/std/sync"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,7 @@ func makeSvMap() ndn_sync.SvMap {
 }
 
 func TestSvMapBasic(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	m := makeSvMap()
 
@@ -36,7 +36,7 @@ func TestSvMapBasic(t *testing.T) {
 }
 
 func TestSvMapNewer(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	m1 := makeSvMap()
 	m2 := makeSvMap()
@@ -68,7 +68,7 @@ func TestSvMapNewer(t *testing.T) {
 }
 
 func TestSvMapTLV(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	// Add entries to test ordering
 	m := ndn_sync.NewSvMap(0)

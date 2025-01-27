@@ -6,16 +6,16 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestHmacSigner(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	// Create a signature.
 	signer := sig.NewHmacSigner([]byte("mykey"))
-	signature := utils.WithoutErr(signer.Sign(enc.Wire{[]byte("hello")}))
+	signature := tu.NoErr(signer.Sign(enc.Wire{[]byte("hello")}))
 
 	require.Equal(t, ndn.SignatureHmacWithSha256, signer.Type())
 	require.Equal(t, uint(32), signer.EstimateSize())
