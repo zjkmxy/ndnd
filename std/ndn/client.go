@@ -95,7 +95,9 @@ type ExpressRArgs struct {
 	Signer Signer
 	// Number of retries.
 	Retries int
-	// Callback for the result.
+	// Callback for the result. This will be called on the engine's
+	// main thread, so make sure it is either non-blocking and very fast,
+	// or use a goroutine to handle the result.
 	Callback ExpressCallbackFunc
 }
 
