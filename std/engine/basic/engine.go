@@ -255,18 +255,13 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 	}
 
 	for cur := n; cur != nil; cur = cur.Parent() {
-		curListSize := len(cur.Value())
-		if curListSize <= 0 {
-			continue
-		}
+		entries := cur.Value()
+		for i := 0; i < len(entries); i++ {
+			entry := entries[i]
 
-		newList := make([]*pendInt, 0, curListSize)
-		for _, entry := range cur.Value() {
 			// we don't check MustBeFresh, as it is the job of the cache/forwarder.
-
 			// check CanBePrefix
 			if cur.Depth() < len(pkt.NameV) && !entry.canBePrefix {
-				newList = append(newList, entry)
 				continue
 			}
 
@@ -278,10 +273,14 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 				}
 				digest := h.Sum(nil)
 				if !bytes.Equal(entry.impSha256, digest) {
-					newList = append(newList, entry)
 					continue
 				}
 			}
+
+			// remove entry
+			entries[i] = entries[len(entries)-1]
+			entries = entries[:len(entries)-1]
+			i-- // recheck the current index
 
 			// entry satisfied
 			entry.timeoutCancel()
@@ -298,7 +297,7 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 			})
 		}
 
-		cur.SetValue(newList)
+		cur.SetValue(entries)
 	}
 
 	n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
