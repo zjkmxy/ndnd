@@ -98,7 +98,11 @@ func (e *Engine) DetachHandler(prefix enc.Name) error {
 	return nil
 }
 
-func (e *Engine) onPacket(reader enc.ParseReader) error {
+func (e *Engine) onPacket(frame []byte) error {
+	frameCopy := make([]byte, len(frame))
+	copy(frameCopy, frame)
+	reader := enc.NewBufferReader(frameCopy)
+
 	var nackReason uint64 = spec.NackReasonNone
 	var pitToken []byte = nil
 	var incomingFaceId *uint64 = nil

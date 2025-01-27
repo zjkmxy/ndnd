@@ -12,7 +12,7 @@ import (
 func TestBasicConsume(t *testing.T) {
 	utils.SetTestingT(t)
 
-	testOnData := func(r enc.ParseReader) error {
+	testOnData := func([]byte) error {
 		t.Fatal("No data should be received in this test.")
 		return nil
 	}
@@ -52,7 +52,8 @@ func TestBasicFeed(t *testing.T) {
 	utils.SetTestingT(t)
 	cnt := 0
 
-	testOnData := func(r enc.ParseReader) error {
+	testOnData := func(frame []byte) error {
+		r := enc.NewBufferReader(frame)
 		cnt++
 		switch cnt {
 		case 1:

@@ -1,7 +1,6 @@
 package face
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"net"
@@ -9,6 +8,7 @@ import (
 	"sync/atomic"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	ndn_io "github.com/named-data/ndnd/std/utils/io"
 )
 
 type StreamFace struct {
@@ -17,56 +17,24 @@ type StreamFace struct {
 	local   bool
 	conn    net.Conn
 	running atomic.Bool
-	onPkt   func(r enc.ParseReader) error
+	onPkt   func(frame []byte) error
 	onError func(err error) error
 	sendMut sync.Mutex
 }
 
 func (f *StreamFace) Run() {
-	r := bufio.NewReader(f.conn)
-	for f.running.Load() {
-		t, err := enc.ReadTLNum(r)
-		if err != nil {
-			if !f.running.Load() {
-				break
-			}
-			err = f.onError(err)
-			if err != nil {
-				break
-			}
+	err := ndn_io.ReadTlvStream(f.conn, func(b []byte) bool {
+		if err := f.onPkt(b); err != nil {
+			return false // break
 		}
-		l, err := enc.ReadTLNum(r)
-		if err != nil {
-			if !f.running.Load() {
-				break
-			}
-			err = f.onError(err)
-			if err != nil {
-				break
-			}
-		}
-		l0 := t.EncodingLength()
-		l1 := l.EncodingLength()
-		buf := make([]byte, l0+l1+int(l))
-		t.EncodeInto(buf)
-		l.EncodeInto(buf[l0:])
-		_, err = io.ReadFull(r, buf[l0+l1:])
-		if err != nil {
-			if !f.running.Load() {
-				break
-			}
-			err = f.onError(err)
-			if err != nil {
-				break
-			}
-		}
-		err = f.onPkt(enc.NewBufferReader(buf))
-		if err != nil {
-			// Note: err returned by the engine's callback is used to interrupt the face loop
-			// If it is recoverable, the engine should return log message and continue
-			break
-		}
+		return f.IsRunning()
+	}, nil)
+	if err != nil {
+		f.onError(err)
+	} else {
+		f.onError(io.EOF)
 	}
+
 	f.running.Store(false)
 	f.conn = nil
 }
@@ -104,11 +72,9 @@ func (f *StreamFace) Send(pkt enc.Wire) error {
 	}
 	f.sendMut.Lock()
 	defer f.sendMut.Unlock()
-	for _, buf := range pkt {
-		_, err := f.conn.Write(buf)
-		if err != nil {
-			return err
-		}
+	_, err := f.conn.Write(pkt.Join())
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -121,7 +87,7 @@ func (f *StreamFace) IsLocal() bool {
 	return f.local
 }
 
-func (f *StreamFace) SetCallback(onPkt func(r enc.ParseReader) error,
+func (f *StreamFace) SetCallback(onPkt func(frame []byte) error,
 	onError func(err error) error) {
 	f.onPkt = onPkt
 	f.onError = onError
