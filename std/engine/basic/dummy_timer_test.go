@@ -1,10 +1,10 @@
-package dummy_test
+package basic_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/named-data/ndnd/std/engine/dummy"
+	basic_engine "github.com/named-data/ndnd/std/engine/basic"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -12,7 +12,7 @@ import (
 func TestClock(t *testing.T) {
 	tu.SetT(t)
 
-	tm := dummy.NewTimer()
+	tm := basic_engine.NewDummyTimer()
 	require.Equal(t, tu.NoErr(time.Parse(time.RFC3339, "1970-01-01T00:00:00Z")), tm.Now())
 	tm.MoveForward(10 * time.Second)
 	require.Equal(t, tu.NoErr(time.Parse(time.RFC3339, "1970-01-01T00:00:10Z")), tm.Now())
@@ -23,7 +23,7 @@ func TestClock(t *testing.T) {
 func TestSchedule(t *testing.T) {
 	tu.SetT(t)
 
-	tm := dummy.NewTimer()
+	tm := basic_engine.NewDummyTimer()
 	val := 0
 	tm.Schedule(10*time.Second, func() {
 		val = 1
@@ -52,7 +52,7 @@ func TestSchedule(t *testing.T) {
 func TestCancel(t *testing.T) {
 	tu.SetT(t)
 
-	tm := dummy.NewTimer()
+	tm := basic_engine.NewDummyTimer()
 	val := 0
 	cancel := tm.Schedule(10*time.Second, func() {
 		val = 1

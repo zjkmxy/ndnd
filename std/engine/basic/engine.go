@@ -354,11 +354,15 @@ func (e *Engine) Start() error {
 	if e.face.IsRunning() {
 		return errors.New("face is already running")
 	}
-	e.face.SetCallback(e.onPacket, e.onError)
+
+	e.face.OnPacket(e.onPacket)
+	e.face.OnError(e.onError)
+
 	err := e.face.Open()
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

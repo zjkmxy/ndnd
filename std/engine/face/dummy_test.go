@@ -1,10 +1,10 @@
-package dummy_test
+package face_test
 
 import (
 	"testing"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/engine/dummy"
+	"github.com/named-data/ndnd/std/engine/face"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -22,10 +22,11 @@ func TestBasicConsume(t *testing.T) {
 		return err
 	}
 
-	face := dummy.NewDummyFace()
+	face := face.NewDummyFace()
 	tu.Err(face.Consume())
 	require.Error(t, face.Open())
-	face.SetCallback(testOnData, testOnError)
+	face.OnPacket(testOnData)
+	face.OnError(testOnError)
 	require.NoError(t, face.Open())
 	tu.Err(face.Consume())
 
@@ -77,8 +78,9 @@ func TestBasicFeed(t *testing.T) {
 		return err
 	}
 
-	face := dummy.NewDummyFace()
-	face.SetCallback(testOnData, testOnError)
+	face := face.NewDummyFace()
+	face.OnPacket(testOnData)
+	face.OnError(testOnError)
 	require.NoError(t, face.Open())
 
 	err := face.FeedPacket(enc.Buffer{0x05, 0x03, 0x01, 0x02, 0x03})

@@ -6,7 +6,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	basic_engine "github.com/named-data/ndnd/std/engine/basic"
-	"github.com/named-data/ndnd/std/engine/dummy"
+	"github.com/named-data/ndnd/std/engine/face"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
@@ -15,15 +15,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func executeTest(t *testing.T, main func(*dummy.DummyFace, *basic_engine.Engine, *dummy.Timer, ndn.Signer)) {
+func executeTest(t *testing.T, main func(*face.DummyFace, *basic_engine.Engine, *basic_engine.DummyTimer, ndn.Signer)) {
 	tu.SetT(t)
 
 	passAll := func(enc.Name, enc.Wire, ndn.Signature) bool {
 		return true
 	}
 
-	face := dummy.NewDummyFace()
-	timer := dummy.NewTimer()
+	face := face.NewDummyFace()
+	timer := basic_engine.NewDummyTimer()
 	signer := sig.NewSha256Signer()
 	engine := basic_engine.NewEngine(face, timer, signer, passAll)
 	require.NoError(t, engine.Start())
@@ -34,11 +34,12 @@ func executeTest(t *testing.T, main func(*dummy.DummyFace, *basic_engine.Engine,
 }
 
 func TestEngineStart(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {})
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	})
 }
 
 func TestConsumerBasic(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -77,7 +78,7 @@ func TestConsumerBasic(t *testing.T) {
 // TODO: TestInterestCancel
 
 func TestInterestNack(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -112,7 +113,7 @@ func TestInterestNack(t *testing.T) {
 }
 
 func TestInterestTimeout(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -140,7 +141,7 @@ func TestInterestTimeout(t *testing.T) {
 }
 
 func TestInterestCanBePrefix(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -203,7 +204,7 @@ func TestInterestCanBePrefix(t *testing.T) {
 }
 
 func TestImplicitSha256(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -260,7 +261,7 @@ func TestImplicitSha256(t *testing.T) {
 // No need to test AppParam for expression. If `spec.MakeInterest` works, `engine.Express` will.
 
 func TestRoute(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
 		hitCnt := 0
 		spec := engine.Spec()
 
@@ -294,7 +295,7 @@ func TestRoute(t *testing.T) {
 }
 
 func TestPitToken(t *testing.T) {
-	executeTest(t, func(face *dummy.DummyFace, engine *basic_engine.Engine, timer *dummy.Timer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
 		hitCnt := 0
 		spec := engine.Spec()
 

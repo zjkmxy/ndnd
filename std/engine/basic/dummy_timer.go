@@ -1,4 +1,4 @@
-package dummy
+package basic
 
 import (
 	"errors"
@@ -6,41 +6,41 @@ import (
 	"time"
 )
 
-type event struct {
+type dummyEvent struct {
 	t time.Time
 	f func()
 }
 
-type Timer struct {
+type DummyTimer struct {
 	now    time.Time
-	events []event
+	events []dummyEvent
 	// Lock is not an very important thing because:
 	//   1. Basic engine itself is single-threaded
 	//   2. This timer is for test only, and there is a low chance for race.
 	lock sync.Mutex
 }
 
-func NewTimer() *Timer {
+func NewDummyTimer() *DummyTimer {
 	now, err := time.Parse(time.RFC3339, "1970-01-01T00:00:00Z")
 	if err != nil {
 		return nil
 	}
-	return &Timer{
+	return &DummyTimer{
 		now:    now,
-		events: make([]event, 0),
+		events: make([]dummyEvent, 0),
 	}
 }
 
-func (tm *Timer) Now() time.Time {
+func (tm *DummyTimer) Now() time.Time {
 	return tm.now
 }
 
-func (tm *Timer) MoveForward(d time.Duration) {
-	events := func() []event {
+func (tm *DummyTimer) MoveForward(d time.Duration) {
+	events := func() []dummyEvent {
 		tm.lock.Lock()
 		defer tm.lock.Unlock()
 		tm.now = tm.now.Add(d)
-		ret := make([]event, len(tm.events))
+		ret := make([]dummyEvent, len(tm.events))
 		copy(ret, tm.events)
 		return ret
 	}()
@@ -62,7 +62,7 @@ func (tm *Timer) MoveForward(d time.Duration) {
 	}()
 }
 
-func (tm *Timer) Schedule(d time.Duration, f func()) func() error {
+func (tm *DummyTimer) Schedule(d time.Duration, f func()) func() error {
 	t := tm.now.Add(d)
 	tm.lock.Lock()
 	defer tm.lock.Unlock()
@@ -75,12 +75,12 @@ func (tm *Timer) Schedule(d time.Duration, f func()) func() error {
 		}
 	}
 	if idx == len(tm.events) {
-		tm.events = append(tm.events, event{
+		tm.events = append(tm.events, dummyEvent{
 			t: t,
 			f: f,
 		})
 	} else {
-		tm.events[idx] = event{
+		tm.events[idx] = dummyEvent{
 			t: t,
 			f: f,
 		}
@@ -101,7 +101,7 @@ func (tm *Timer) Schedule(d time.Duration, f func()) func() error {
 	}
 }
 
-func (tm *Timer) Sleep(d time.Duration) {
+func (tm *DummyTimer) Sleep(d time.Duration) {
 	ch := make(chan struct{})
 	tm.Schedule(d, func() {
 		ch <- struct{}{}
@@ -110,6 +110,6 @@ func (tm *Timer) Sleep(d time.Duration) {
 	<-ch
 }
 
-func (*Timer) Nonce() []byte {
+func (*DummyTimer) Nonce() []byte {
 	return []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
 }
