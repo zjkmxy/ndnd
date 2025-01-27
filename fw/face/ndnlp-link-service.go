@@ -185,7 +185,10 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 	// Calculate effective MTU after accounting for packet-specific overhead
 	effectiveMtu := l.transport.MTU() - l.headerOverhead
-	if pkt.PitToken != nil {
+	if pl := len(out.PitToken); pl > 0 {
+		if pl != 6 {
+			panic("[BUG] Outgoing PIT token length must be 6 bytes")
+		}
 		effectiveMtu -= pitTokenOverhead
 	}
 	if congestionMark != nil {

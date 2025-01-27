@@ -117,7 +117,8 @@ func (t *UnicastUDPTransport) sendFrame(frame []byte) {
 	}
 
 	if len(frame) > t.MTU() {
-		core.Log.Warn(t, "Attempted to send frame larger than MTU")
+		core.Log.Error(t, "Attempted to send frame larger than MTU",
+			"size", len(frame), "MTU", t.MTU())
 		return
 	}
 
