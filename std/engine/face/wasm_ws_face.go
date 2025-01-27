@@ -4,7 +4,6 @@ package face
 
 import (
 	"errors"
-	"net/url"
 	"sync/atomic"
 	"syscall/js"
 
@@ -13,8 +12,7 @@ import (
 )
 
 type WasmWsFace struct {
-	network string
-	addr    string
+	url     string
 	local   bool
 	conn    js.Value
 	running atomic.Bool
@@ -66,14 +64,9 @@ func (f *WasmWsFace) Open() error {
 	if !f.conn.IsNull() {
 		return errors.New("face is already running")
 	}
-	u := url.URL{
-		Scheme: f.network,
-		Host:   f.addr,
-		Path:   "/",
-	}
 	ch := make(chan struct{}, 1)
 	// It seems now Go cannot handle exceptions thrown by JS
-	f.conn = js.Global().Get("WebSocket").New(u.String())
+	f.conn = js.Global().Get("WebSocket").New(f.url)
 	f.conn.Set("binaryType", "arraybuffer")
 	f.conn.Call("addEventListener", "open", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		ch <- struct{}{}
@@ -112,10 +105,9 @@ func (f *WasmWsFace) SetCallback(onPkt func(frame []byte) error,
 	f.onError = onError
 }
 
-func NewWasmWsFace(network string, addr string, local bool) *WasmWsFace {
+func NewWasmWsFace(url string, local bool) *WasmWsFace {
 	return &WasmWsFace{
-		network: network,
-		addr:    addr,
+		url:     url,
 		local:   local,
 		onPkt:   nil,
 		onError: nil,

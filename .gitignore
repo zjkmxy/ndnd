@@ -4,6 +4,9 @@
 /gondn_tlv_gen.exe
 coverage.out
 
+# Go wasm files
+wasm_exec.js
+
 # Compiler folders
 .vscode
 .idea
