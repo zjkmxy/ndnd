@@ -99,6 +99,7 @@ func (e *Engine) DetachHandler(prefix enc.Name) error {
 }
 
 func (e *Engine) onPacket(frame []byte) error {
+	// Copy received buffer from face so face can reuse it
 	frameCopy := make([]byte, len(frame))
 	copy(frameCopy, frame)
 	reader := enc.NewBufferReader(frameCopy)
@@ -113,12 +114,14 @@ func (e *Engine) onPacket(frame []byte) error {
 		log.Trace(e, "Received packet bytes", "wire", hex.EncodeToString(wire.Join()))
 	}
 
+	// Parse the outer packet - could be either L2 or L3
 	pkt, ctx, err := spec.ReadPacket(reader)
 	if err != nil {
-		log.Error(e, "Failed to parse packet", "err", err)
 		// Recoverable error. Should continue.
+		log.Error(e, "Failed to parse packet", "err", err)
 		return nil
 	}
+
 	// Now, exactly one of Interest, Data, LpPacket is not nil
 	// First check LpPacket, and do further parse.
 	if pkt.LpPacket != nil {
@@ -127,6 +130,7 @@ func (e *Engine) onPacket(frame []byte) error {
 			log.Warn(e, "Fragmented LpPackets are not supported - DROP")
 			return nil
 		}
+
 		// Parse the inner packet.
 		raw = pkt.LpPacket.Fragment
 		if len(raw) == 1 {
@@ -134,15 +138,19 @@ func (e *Engine) onPacket(frame []byte) error {
 		} else {
 			pkt, ctx, err = spec.ReadPacket(enc.NewWireReader(raw))
 		}
+
+		// Make sure there is an inner packet.
 		if err != nil || (pkt.Data == nil) == (pkt.Interest == nil) {
-			log.Error(e, "Failed to parse packet in LpPacket", "err", err)
 			if hasLogTrace() {
 				wire := reader.Range(0, reader.Length())
 				log.Trace(e, "Failed to parse packet bytes", "wire", hex.EncodeToString(wire.Join()))
 			}
+
 			// Recoverable error. Should continue.
+			log.Error(e, "Failed to parse packet in LpPacket", "err", err)
 			return nil
 		}
+
 		// Set parameters
 		if lpPkt.Nack != nil {
 			nackReason = lpPkt.Nack.Reason
@@ -152,6 +160,7 @@ func (e *Engine) onPacket(frame []byte) error {
 	} else {
 		raw = reader.Range(0, reader.Length())
 	}
+
 	// Now pkt is either Data or Interest (including Nack).
 	if nackReason != spec.NackReasonNone {
 		if pkt.Interest == nil {
@@ -174,8 +183,9 @@ func (e *Engine) onPacket(frame []byte) error {
 		// PitToken is not used for now
 		e.onData(pkt.Data, ctx.Data_context.SigCovered(), raw, pitToken)
 	} else {
-		panic("unexpected packet type")
+		panic("[BUG] unexpected packet type") // checked above
 	}
+
 	return nil
 }
 
