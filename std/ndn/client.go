@@ -65,7 +65,7 @@ type ConsumeState interface {
 	IsComplete() bool
 	// Content is the currently available buffer in the content.
 	// any subsequent calls to Content() will return data after the previous call.
-	Content() []byte
+	Content() enc.Wire
 	// Progress counter
 	Progress() int
 	// ProgressMax is the max value for the progress counter (-1 for unknown).

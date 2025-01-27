@@ -24,7 +24,7 @@ func (t *Tool) ExecStrategyList(args []string) {
 		return
 	}
 
-	status, err := mgmt.ParseStrategyChoiceMsg(enc.NewBufferReader(data), true)
+	status, err := mgmt.ParseStrategyChoiceMsg(enc.NewWireReader(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing strategy list: %+v\n", err)
 		os.Exit(1)

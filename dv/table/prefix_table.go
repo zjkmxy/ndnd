@@ -186,7 +186,7 @@ func (r *PrefixTableRouter) GetNextDataName() enc.Name {
 }
 
 // Process the received prefix data. Returns if dirty.
-func (pt *PrefixTable) ApplyData(name enc.Name, data []byte, router *PrefixTableRouter) bool {
+func (pt *PrefixTable) ApplyData(name enc.Name, data enc.Wire, router *PrefixTableRouter) bool {
 	if len(name) < 2 {
 		log.Warn(pt, "Unexpected name length", "len", len(name))
 		return false
@@ -204,7 +204,7 @@ func (pt *PrefixTable) ApplyData(name enc.Name, data []byte, router *PrefixTable
 	}
 
 	// Parse the prefix data
-	ops, err := tlv.ParsePrefixOpList(enc.NewBufferReader(data), true)
+	ops, err := tlv.ParsePrefixOpList(enc.NewWireReader(data), true)
 	if err != nil {
 		log.Warn(pt, "Failed to parse PrefixOpList", "err", err)
 		return false

@@ -73,9 +73,10 @@ func (cc *CatChunks) run() {
 	// calling Content() on a status object clears the buffer
 	// and returns the new data the next time it is called
 	write := func(status ndn.ConsumeState) {
-		content := status.Content()
-		os.Stdout.Write(content)
-		byteCount += len(content)
+		for _, chunk := range status.Content() {
+			os.Stdout.Write(chunk)
+			byteCount += len(chunk)
+		}
 	}
 
 	// fetch object
