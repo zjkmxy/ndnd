@@ -2,6 +2,7 @@ package object
 
 import (
 	"fmt"
+	"sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -12,6 +13,8 @@ import (
 // no lock is needed because there is a single goroutine that does both
 // check() and handleData() in the client class
 type rrSegFetcher struct {
+	// mutex for the fetcher
+	mutex sync.Mutex
 	// ref to parent
 	client *Client
 	// list of active streams
@@ -26,6 +29,7 @@ type rrSegFetcher struct {
 
 func newRrSegFetcher(client *Client) rrSegFetcher {
 	return rrSegFetcher{
+		mutex:       sync.Mutex{},
 		client:      client,
 		streams:     make([]*ConsumeState, 0),
 		window:      10,
@@ -41,11 +45,14 @@ func (s *rrSegFetcher) String() string {
 // add a stream to the fetch queue
 func (s *rrSegFetcher) add(state *ConsumeState) {
 	log.Debug(s, "Adding stream to fetch queue", "name", state.fetchName)
+	s.mutex.Lock()
 	s.streams = append(s.streams, state)
+	s.mutex.Unlock()
 	s.check()
 }
 
 // remove a stream from the fetch queue
+// requires the mutex to be locked
 func (s *rrSegFetcher) remove(state *ConsumeState) {
 	for i, stream := range s.streams {
 		if stream == state {
@@ -55,27 +62,30 @@ func (s *rrSegFetcher) remove(state *ConsumeState) {
 	}
 }
 
-// round-robin selection of the next stream to fetch
-func (s *rrSegFetcher) next() *ConsumeState {
-	if len(s.streams) == 0 {
+// find another state to work on
+func (s *rrSegFetcher) findWork() *ConsumeState {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.outstanding >= s.window {
 		return nil
 	}
-	s.rrIndex = (s.rrIndex + 1) % len(s.streams)
-	return s.streams[s.rrIndex]
-}
 
-// check for more work
-func (s *rrSegFetcher) check() {
-	if s.outstanding >= s.window {
-		return
+	// round-robin selection of the next stream to fetch
+	next := func() *ConsumeState {
+		if len(s.streams) == 0 {
+			return nil
+		}
+		s.rrIndex = (s.rrIndex + 1) % len(s.streams)
+		return s.streams[s.rrIndex]
 	}
 
 	// check all states for a workable one
 	var state *ConsumeState = nil
 	for i := 0; i < len(s.streams); i++ {
-		check := s.next()
+		check := next()
 		if check == nil {
-			return // nothing to do here
+			return nil // nothing to do here
 		}
 
 		if check.complete {
@@ -85,7 +95,7 @@ func (s *rrSegFetcher) check() {
 			// check if this was the last one
 			if len(s.streams) == 0 {
 				s.rrIndex = 0
-				return
+				return nil
 			}
 
 			// check this index again
@@ -112,37 +122,44 @@ func (s *rrSegFetcher) check() {
 		break // found a state to work on
 	}
 
-	// exit if there's nothing to work on
-	if state == nil {
-		return
-	}
-
-	// update window parameters
-	seg := uint64(state.wnd[2])
-	s.outstanding++
-	state.wnd[2]++
-
-	// queue outgoing interest for the next segment
-	s.client.ExpressR(ndn.ExpressRArgs{
-		Name: state.fetchName.Append(enc.NewSegmentComponent(seg)),
-		Config: &ndn.InterestConfig{
-			MustBeFresh: false,
-		},
-		Retries: 3,
-		Callback: func(args ndn.ExpressCallbackArgs) {
-			s.handleData(args, state)
-		},
-	})
-
-	// check for more work
-	s.check()
+	return state
 }
 
-// handle incoming data
-func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeState) {
-	s.outstanding--
+func (s *rrSegFetcher) check() {
+	for {
+		state := s.findWork()
+		if state == nil {
+			return
+		}
 
-	if state.complete {
+		// update window parameters
+		seg := uint64(state.wnd[2])
+		s.outstanding++
+		state.wnd[2]++
+
+		// queue outgoing interest for the next segment
+		s.client.ExpressR(ndn.ExpressRArgs{
+			Name: state.fetchName.Append(enc.NewSegmentComponent(seg)),
+			Config: &ndn.InterestConfig{
+				MustBeFresh: false,
+			},
+			Retries: 3,
+			Callback: func(args ndn.ExpressCallbackArgs) {
+				s.handleData(args, state)
+			},
+		})
+	}
+}
+
+// handleData is called when a data packet is received.
+// It is necessary that this function be called only from one goroutine - the engine.
+func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeState) {
+	s.mutex.Lock()
+	s.outstanding--
+	isComplete := state.complete
+	s.mutex.Unlock()
+
+	if isComplete {
 		return
 	}
 
@@ -221,8 +238,11 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 
 		if state.wnd[1] == state.segCnt {
 			log.Debug(s, "Stream completed successfully", "name", state.fetchName)
+
+			s.mutex.Lock()
 			state.complete = true
 			s.remove(state)
+			s.mutex.Unlock()
 		}
 
 		state.args.Callback(state) // progress
