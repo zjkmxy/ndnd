@@ -14,7 +14,7 @@ import (
 	"github.com/named-data/ndnd/std/security/keychain"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/security/trust_schema"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -75,7 +75,7 @@ var TRUST_CONFIG_TEST_LVS = []byte{
 
 // Helper to create a name
 func sname(n string) enc.Name {
-	return utils.WithoutErr(enc.NameFromStr(n))
+	return tu.NoErr(enc.NameFromStr(n))
 }
 
 // Helper to sign a certificate
@@ -99,19 +99,19 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 	// ------------- Keys and certs -------------
 	// Root key
 	rootSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	rootCertWire, rootCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(rootSigner)))
+	rootCertWire, rootCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(rootSigner)))
 	network[rootCertData.Name().String()] = rootCertWire
 	keychain.InsertCert(rootCertWire.Join())
 
 	// Second root key
 	root2Signer, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	root2CertWire, root2CertData := signCert(root2Signer, utils.WithoutErr(signer.MarshalSecret(root2Signer)))
+	root2CertWire, root2CertData := signCert(root2Signer, tu.NoErr(signer.MarshalSecret(root2Signer)))
 	network[root2CertData.Name().String()] = root2CertWire
 	keychain.InsertCert(root2CertWire.Join())
 
 	// Alice key (us)
 	aliceSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
-	aliceCertWire, aliceCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(aliceSigner)))
+	aliceCertWire, aliceCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(aliceSigner)))
 	network[aliceCertData.Name().String()] = aliceCertWire
 	keychain.InsertCert(aliceCertWire.Join())
 	keychain.InsertKey(aliceSigner)
@@ -122,20 +122,20 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 
 	// Alice admin key
 	aliceAdminSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/admin/alice")))
-	aliceAdminCertWire, aliceAdminCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(aliceAdminSigner)))
+	aliceAdminCertWire, aliceAdminCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(aliceAdminSigner)))
 	network[aliceAdminCertData.Name().String()] = aliceAdminCertWire
 	keychain.InsertCert(aliceAdminCertWire.Join())
 	keychain.InsertKey(aliceAdminSigner)
 
 	// Bob key
 	bobSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/bob")))
-	bobCertWire, bobCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(bobSigner)))
+	bobCertWire, bobCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(bobSigner)))
 	network[bobCertData.Name().String()] = bobCertWire
 	// Bob is not present in the keychain
 
 	// Cathy key (also us)
 	cathySigner, _ := signer.KeygenEcc(sec.MakeKeyName(sname("/test/cathy")), elliptic.P384())
-	cathyCertWire, cathyCertData := signCert(rootSigner, utils.WithoutErr(signer.MarshalSecret(cathySigner)))
+	cathyCertWire, cathyCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(cathySigner)))
 	network[cathyCertData.Name().String()] = cathyCertWire
 	keychain.InsertCert(cathyCertWire.Join())
 	keychain.InsertKey(cathySigner)
@@ -146,7 +146,7 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 
 	// Fred's key is signed with the second root
 	fredSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/fred")))
-	fredCertBytes, fredCertData := signCert(root2Signer, utils.WithoutErr(signer.MarshalSecret(fredSigner)))
+	fredCertBytes, fredCertData := signCert(root2Signer, tu.NoErr(signer.MarshalSecret(fredSigner)))
 	network[fredCertData.Name().String()] = fredCertBytes
 	// Fred is not present in the keychain
 	// -----------------------------------
@@ -154,17 +154,17 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 	// ------------- Mallory -------------
 	// Mallory root key
 	malloryRootSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	malloryRootCertWire, malloryRootCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(malloryRootSigner)))
+	malloryRootCertWire, malloryRootCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(malloryRootSigner)))
 	network[malloryRootCertData.Name().String()] = malloryRootCertWire
 
 	// Mallory key
 	mallorySigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/mallory")))
-	malloryCertWire, malloryCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(mallorySigner)))
+	malloryCertWire, malloryCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(mallorySigner)))
 	network[malloryCertData.Name().String()] = malloryCertWire
 
 	// Mallory Alice key
 	mAliceSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
-	mAliceCertWire, mAliceCertData := signCert(malloryRootSigner, utils.WithoutErr(signer.MarshalSecret(mAliceSigner)))
+	mAliceCertWire, mAliceCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(mAliceSigner)))
 	network[mAliceCertData.Name().String()] = mAliceCertWire
 	// -----------------------------------
 
@@ -281,7 +281,7 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 }
 
 func TestTrustConfigLvs(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	store := object.NewMemoryStore()
 	keychain := keychain.NewKeyChainMem(store)

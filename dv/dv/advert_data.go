@@ -75,7 +75,7 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 }
 
 // Received advertisement Data
-func (a *advertModule) dataHandler(nName enc.Name, seqNo uint64, data []byte) {
+func (a *advertModule) dataHandler(nName enc.Name, seqNo uint64, data enc.Wire) {
 	// Lock DV state
 	a.dv.mutex.Lock()
 	defer a.dv.mutex.Unlock()
@@ -92,7 +92,7 @@ func (a *advertModule) dataHandler(nName enc.Name, seqNo uint64, data []byte) {
 	}
 
 	// Parse the advertisement
-	advert, err := tlv.ParseAdvertisement(enc.NewBufferReader(data), false)
+	advert, err := tlv.ParseAdvertisement(enc.NewWireReader(data), false)
 	if err != nil {
 		log.Error(a, "Failed to parse advertisement", "err", err)
 		return

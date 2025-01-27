@@ -6,7 +6,7 @@ import (
 	"github.com/named-data/ndnd/std/object"
 )
 
-func (t *Tool) fetchStatusDataset(suffix enc.Name) ([]byte, error) {
+func (t *Tool) fetchStatusDataset(suffix enc.Name) (enc.Wire, error) {
 	// consume-only client, no need for a store
 	client := object.NewClient(t.engine, nil, nil)
 	client.Start()

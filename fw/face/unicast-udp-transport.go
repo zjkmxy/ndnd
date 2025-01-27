@@ -19,6 +19,7 @@ import (
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/face/impl"
 	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	ndn_io "github.com/named-data/ndnd/std/utils/io"
 )
 
 // UnicastUDPTransport is a unicast UDP transport.
@@ -136,10 +137,11 @@ func (t *UnicastUDPTransport) sendFrame(frame []byte) {
 func (t *UnicastUDPTransport) runReceive() {
 	defer t.Close()
 
-	err := readTlvStream(t.conn, func(b []byte) {
+	err := ndn_io.ReadTlvStream(t.conn, func(b []byte) bool {
 		t.nInBytes += uint64(len(b))
 		*t.expirationTime = time.Now().Add(CfgUDPLifetime())
 		t.linkService.handleIncomingFrame(b)
+		return true
 	}, func(err error) bool {
 		// Ignore since UDP is a connectionless protocol
 		// This happens if the other side is not listening (ICMP)

@@ -65,7 +65,7 @@ type ConsumeState interface {
 	IsComplete() bool
 	// Content is the currently available buffer in the content.
 	// any subsequent calls to Content() will return data after the previous call.
-	Content() []byte
+	Content() enc.Wire
 	// Progress counter
 	Progress() int
 	// ProgressMax is the max value for the progress counter (-1 for unknown).
@@ -95,7 +95,9 @@ type ExpressRArgs struct {
 	Signer Signer
 	// Number of retries.
 	Retries int
-	// Callback for the result.
+	// Callback for the result. This will be called on the engine's
+	// main thread, so make sure it is either non-blocking and very fast,
+	// or use a goroutine to handle the result.
 	Callback ExpressCallbackFunc
 }
 

@@ -8,16 +8,16 @@ import (
 
 var testT *testing.T
 
-func SetTestingT(t *testing.T) {
+func SetT(t *testing.T) {
 	testT = t
 }
 
-func WithoutErr[T any](v T, err error) T {
+func NoErr[T any](v T, err error) T {
 	require.NoError(testT, err)
 	return v
 }
 
-func WithErr[T any](_ T, err error) error {
+func Err[T any](_ T, err error) error {
 	require.Error(testT, err)
 	return err
 }

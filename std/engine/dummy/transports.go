@@ -9,7 +9,7 @@ import (
 type DummyFace struct {
 	sendPkts []enc.Buffer
 	running  bool
-	onPkt    func(r enc.ParseReader) error
+	onPkt    func(frame []byte) error
 	onError  func(err error) error
 }
 
@@ -21,7 +21,7 @@ func (f *DummyFace) IsLocal() bool {
 	return true
 }
 
-func (f *DummyFace) SetCallback(onPkt func(r enc.ParseReader) error,
+func (f *DummyFace) SetCallback(onPkt func(frame []byte) error,
 	onError func(err error) error) {
 	f.onPkt = onPkt
 	f.onError = onError
@@ -52,7 +52,7 @@ func (f *DummyFace) FeedPacket(pkt enc.Buffer) error {
 	if !f.running {
 		return errors.New("face is not running")
 	}
-	return f.onPkt(enc.NewBufferReader(pkt))
+	return f.onPkt(pkt)
 }
 
 // Consume consumes a packet from the engine

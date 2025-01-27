@@ -5,12 +5,12 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	def "github.com/named-data/ndnd/std/encoding/tests/gen_map"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestStringMap(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	f := def.StringMap{
 		Params: map[string][]byte{
@@ -24,7 +24,7 @@ func TestStringMap(t *testing.T) {
 	// require.Equal(t, []byte{0x85, 0x1, 0x61, 0x87, 0x1, 0x61,
 	// 	0x85, 0x1, 0x62, 0x87, 0x2, 0x62, 0x62,
 	// 	0x85, 0x2, 0x63, 0x63, 0x87, 0x4, 0x63, 0x63, 0x63, 0x63}, buf)
-	f2 := utils.WithoutErr(def.ParseStringMap(enc.NewBufferReader(buf), false))
+	f2 := tu.NoErr(def.ParseStringMap(enc.NewBufferReader(buf), false))
 	require.Equal(t, f, *f2)
 
 	f = def.StringMap{
@@ -32,12 +32,12 @@ func TestStringMap(t *testing.T) {
 	}
 	buf = f.Bytes()
 	require.Equal(t, []byte{}, buf)
-	f2 = utils.WithoutErr(def.ParseStringMap(enc.NewBufferReader(buf), false))
+	f2 = tu.NoErr(def.ParseStringMap(enc.NewBufferReader(buf), false))
 	require.Equal(t, 0, len(f2.Params))
 }
 
 func TestIntStructMap(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	f := def.IntStructMap{
 		Params: map[uint64]*def.Inner{
@@ -51,7 +51,7 @@ func TestIntStructMap(t *testing.T) {
 	// require.Equal(t, []byte{0x85, 0x1, 0x2, 0x87, 0x3, 0x1, 0x1, 0x2,
 	// 	0x85, 0x1, 0x3, 0x87, 0x3, 0x1, 0x1, 0x3,
 	// 	0x85, 0x1, 0x1, 0x87, 0x3, 0x1, 0x1, 0x1}, buf)
-	f2 := utils.WithoutErr(def.ParseIntStructMap(enc.NewBufferReader(buf), false))
+	f2 := tu.NoErr(def.ParseIntStructMap(enc.NewBufferReader(buf), false))
 	require.Equal(t, f, *f2)
 
 	f = def.IntStructMap{
@@ -59,6 +59,6 @@ func TestIntStructMap(t *testing.T) {
 	}
 	buf = f.Bytes()
 	require.Equal(t, []byte{}, buf)
-	f2 = utils.WithoutErr(def.ParseIntStructMap(enc.NewBufferReader(buf), false))
+	f2 = tu.NoErr(def.ParseIntStructMap(enc.NewBufferReader(buf), false))
 	require.Equal(t, 0, len(f2.Params))
 }

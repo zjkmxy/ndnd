@@ -1,10 +1,11 @@
 all: main.wasm
 
-main.wasm: main.go
+main.wasm: clean main.go
+	cp $(go env GOROOT)/usr/local/go/misc/wasm/wasm_exec.js .
 	GOOS=js GOARCH=wasm go build -o main.wasm
 
 clean:
-	rm main.wasm
+	rm -f main.wasm wasm_exec.js
 
 serve:
-	gondn_wasm_server -path . -port 9090
+	python3 -m http.server

@@ -6,12 +6,13 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-// (advanced) express a single interest with reliability
+// Express a single interest with reliability
 func (c *Client) ExpressR(args ndn.ExpressRArgs) {
-	c.outpipe <- args
+	ExpressR(c.engine, args)
 }
 
-func (c *Client) expressRImpl(args ndn.ExpressRArgs) {
+// Express a single interest with reliability
+func ExpressR(engine ndn.Engine, args ndn.ExpressRArgs) {
 	sendErr := func(err error) {
 		args.Callback(ndn.ExpressCallbackArgs{
 			Result: ndn.InterestResultError,
@@ -20,10 +21,10 @@ func (c *Client) expressRImpl(args ndn.ExpressRArgs) {
 	}
 
 	// new nonce for each call
-	args.Config.Nonce = utils.ConvertNonce(c.engine.Timer().Nonce())
+	args.Config.Nonce = utils.ConvertNonce(engine.Timer().Nonce())
 
 	// create interest packet
-	interest, err := c.engine.Spec().MakeInterest(args.Name, args.Config, args.AppParam, args.Signer)
+	interest, err := engine.Spec().MakeInterest(args.Name, args.Config, args.AppParam, args.Signer)
 	if err != nil {
 		sendErr(err)
 		return
@@ -31,9 +32,9 @@ func (c *Client) expressRImpl(args ndn.ExpressRArgs) {
 
 	// send the interest
 	// TODO: reexpress faster than lifetime
-	err = c.engine.Express(interest, func(res ndn.ExpressCallbackArgs) {
+	err = engine.Express(interest, func(res ndn.ExpressCallbackArgs) {
 		if res.Result == ndn.InterestResultTimeout {
-			log.Debug(c, "ExpressR Interest timeout", "name", args.Name)
+			log.Debug(nil, "ExpressR Interest timeout", "name", args.Name)
 
 			// check if retries are exhausted
 			if args.Retries == 0 {
@@ -43,7 +44,7 @@ func (c *Client) expressRImpl(args ndn.ExpressRArgs) {
 
 			// retry on timeout
 			args.Retries--
-			c.ExpressR(args)
+			ExpressR(engine, args)
 		} else {
 			// all other results / errors are final
 			args.Callback(res)

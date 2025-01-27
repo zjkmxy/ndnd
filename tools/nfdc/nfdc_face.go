@@ -26,7 +26,7 @@ func (t *Tool) ExecFaceList(args []string) {
 		return
 	}
 
-	status, err := mgmt.ParseFaceStatusMsg(enc.NewBufferReader(data), true)
+	status, err := mgmt.ParseFaceStatusMsg(enc.NewWireReader(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing face status: %+v\n", err)
 		os.Exit(1)

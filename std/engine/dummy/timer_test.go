@@ -5,23 +5,23 @@ import (
 	"time"
 
 	"github.com/named-data/ndnd/std/engine/dummy"
-	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestClock(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	tm := dummy.NewTimer()
-	require.Equal(t, utils.WithoutErr(time.Parse(time.RFC3339, "1970-01-01T00:00:00Z")), tm.Now())
+	require.Equal(t, tu.NoErr(time.Parse(time.RFC3339, "1970-01-01T00:00:00Z")), tm.Now())
 	tm.MoveForward(10 * time.Second)
-	require.Equal(t, utils.WithoutErr(time.Parse(time.RFC3339, "1970-01-01T00:00:10Z")), tm.Now())
+	require.Equal(t, tu.NoErr(time.Parse(time.RFC3339, "1970-01-01T00:00:10Z")), tm.Now())
 	tm.MoveForward(50 * time.Second)
-	require.Equal(t, utils.WithoutErr(time.Parse(time.RFC3339, "1970-01-01T00:01:00Z")), tm.Now())
+	require.Equal(t, tu.NoErr(time.Parse(time.RFC3339, "1970-01-01T00:01:00Z")), tm.Now())
 }
 
 func TestSchedule(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	tm := dummy.NewTimer()
 	val := 0
@@ -50,7 +50,7 @@ func TestSchedule(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	tm := dummy.NewTimer()
 	val := 0

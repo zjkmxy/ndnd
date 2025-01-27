@@ -98,7 +98,11 @@ func (e *Engine) DetachHandler(prefix enc.Name) error {
 	return nil
 }
 
-func (e *Engine) onPacket(reader enc.ParseReader) error {
+func (e *Engine) onPacket(frame []byte) error {
+	frameCopy := make([]byte, len(frame))
+	copy(frameCopy, frame)
+	reader := enc.NewBufferReader(frameCopy)
+
 	var nackReason uint64 = spec.NackReasonNone
 	var pitToken []byte = nil
 	var incomingFaceId *uint64 = nil
@@ -244,29 +248,25 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 	handler(args)
 }
 
-func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitToken []byte) {
+func (e *Engine) onDataMatch(pkt *spec.Data, raw enc.Wire) pitEntry {
 	e.pitLock.Lock()
 	defer e.pitLock.Unlock()
 
 	n := e.pit.PrefixMatch(pkt.NameV)
 	if n == nil {
 		log.Warn(e, "Received data for an unknown interest - DROP", "name", pkt.Name())
-		return
+		return nil
 	}
 
+	ret := make(pitEntry, 0, 4)
 	for cur := n; cur != nil; cur = cur.Parent() {
-		curListSize := len(cur.Value())
-		if curListSize <= 0 {
-			continue
-		}
+		entries := cur.Value()
+		for i := 0; i < len(entries); i++ {
+			entry := entries[i]
 
-		newList := make([]*pendInt, 0, curListSize)
-		for _, entry := range cur.Value() {
 			// we don't check MustBeFresh, as it is the job of the cache/forwarder.
-
 			// check CanBePrefix
 			if cur.Depth() < len(pkt.NameV) && !entry.canBePrefix {
-				newList = append(newList, entry)
 				continue
 			}
 
@@ -278,53 +278,70 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 				}
 				digest := h.Sum(nil)
 				if !bytes.Equal(entry.impSha256, digest) {
-					newList = append(newList, entry)
 					continue
 				}
 			}
 
-			// entry satisfied
-			entry.timeoutCancel()
-			if entry.callback == nil {
-				panic("[BUG] PIT has empty entry")
-			}
-
-			entry.callback(ndn.ExpressCallbackArgs{
-				Result:     ndn.InterestResultData,
-				Data:       pkt,
-				RawData:    raw,
-				SigCovered: sigCovered,
-				NackReason: spec.NackReasonNone,
-			})
+			// pop entry
+			entries[i] = entries[len(entries)-1]
+			entries = entries[:len(entries)-1]
+			i-- // recheck the current index
+			ret = append(ret, entry)
 		}
-
-		cur.SetValue(newList)
+		cur.SetValue(entries)
 	}
 
 	n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
+
+	return ret
+}
+
+func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitToken []byte) {
+	for _, entry := range e.onDataMatch(pkt, raw) {
+		entry.timeoutCancel()
+		if entry.callback == nil {
+			panic("[BUG] PIT has empty entry")
+		}
+
+		entry.callback(ndn.ExpressCallbackArgs{
+			Result:     ndn.InterestResultData,
+			Data:       pkt,
+			RawData:    raw,
+			SigCovered: sigCovered,
+			NackReason: spec.NackReasonNone,
+		})
+	}
 }
 
 func (e *Engine) onNack(name enc.Name, reason uint64) {
-	e.pitLock.Lock()
-	defer e.pitLock.Unlock()
-	n := e.pit.ExactMatch(name)
-	if n == nil {
-		log.Warn(e, "Received Nack for an unknown interest - DROP", "name", name)
-		return
-	}
-	for _, entry := range n.Value() {
+	entries := func() []*pendInt {
+		e.pitLock.Lock()
+		defer e.pitLock.Unlock()
+
+		n := e.pit.ExactMatch(name)
+		if n == nil {
+			log.Warn(e, "Received Nack for an unknown interest - DROP", "name", name)
+			return nil
+		}
+
+		ret := n.Value()
+		n.SetValue(nil)
+		n.Prune()
+		return ret
+	}()
+
+	for _, entry := range entries {
 		entry.timeoutCancel()
-		if entry.callback != nil {
-			entry.callback(ndn.ExpressCallbackArgs{
-				Result:     ndn.InterestResultNack,
-				NackReason: reason,
-			})
-		} else {
+
+		if entry.callback == nil {
 			panic("[BUG] PIT has empty entry")
 		}
+
+		entry.callback(ndn.ExpressCallbackArgs{
+			Result:     ndn.InterestResultNack,
+			NackReason: reason,
+		})
 	}
-	n.SetValue(nil)
-	n.Prune()
 }
 
 func (e *Engine) onError(err error) error {
@@ -354,6 +371,46 @@ func (e *Engine) Stop() error {
 
 func (e *Engine) IsRunning() bool {
 	return e.face.IsRunning()
+}
+
+func (e *Engine) onExpressTimeout(n *NameTrie[pitEntry]) {
+	now := e.timer.Now()
+
+	expired := func() []*pendInt {
+		e.pitLock.Lock()
+		defer e.pitLock.Unlock()
+
+		ret := make([]*pendInt, 0, 4)
+		entries := n.Value()
+		for i := 0; i < len(entries); i++ {
+			entry := entries[i]
+			if entry.deadline.After(now) {
+				continue
+			}
+
+			// pop entry
+			entries[i] = entries[len(entries)-1]
+			entries = entries[:len(entries)-1]
+			i-- // recheck the current index
+			ret = append(ret, entry)
+		}
+
+		n.SetValue(entries)
+		n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
+
+		return ret
+	}()
+
+	for _, entry := range expired {
+		if entry.callback == nil {
+			panic("[BUG] PIT has empty entry")
+		}
+
+		entry.callback(ndn.ExpressCallbackArgs{
+			Result:     ndn.InterestResultTimeout,
+			NackReason: spec.NackReasonNone,
+		})
+	}
 }
 
 func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCallbackFunc) error {
@@ -389,36 +446,15 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 		defer e.pitLock.Unlock()
 
 		n := e.pit.MatchAlways(nodeName)
-		timeoutFunc := func() {
-			e.pitLock.Lock()
-			defer e.pitLock.Unlock()
-			now := e.timer.Now()
-			lst := n.Value()
-			newLst := make([]*pendInt, 0, len(lst))
-			for _, entry := range lst {
-				if entry.deadline.After(now) {
-					newLst = append(newLst, entry)
-				} else {
-					if entry.callback != nil {
-						entry.callback(ndn.ExpressCallbackArgs{
-							Result:     ndn.InterestResultTimeout,
-							NackReason: spec.NackReasonNone,
-						})
-					} else {
-						panic("[BUG] PIT has empty entry")
-					}
-				}
-			}
-			n.SetValue(newLst)
-			n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
-		}
 		entry := &pendInt{
-			callback:      callback,
-			deadline:      deadline,
-			canBePrefix:   interest.Config.CanBePrefix,
-			mustBeFresh:   interest.Config.MustBeFresh,
-			impSha256:     impSha256,
-			timeoutCancel: e.timer.Schedule(lifetime+TimeoutMargin, timeoutFunc),
+			callback:    callback,
+			deadline:    deadline,
+			canBePrefix: interest.Config.CanBePrefix,
+			mustBeFresh: interest.Config.MustBeFresh,
+			impSha256:   impSha256,
+			timeoutCancel: e.timer.Schedule(lifetime+TimeoutMargin, func() {
+				e.onExpressTimeout(n)
+			}),
 		}
 		n.SetValue(append(n.Value(), entry))
 	}()

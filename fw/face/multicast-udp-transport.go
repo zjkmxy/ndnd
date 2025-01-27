@@ -17,6 +17,7 @@ import (
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/face/impl"
 	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	ndn_io "github.com/named-data/ndnd/std/utils/io"
 )
 
 // MulticastUDPTransport is a multicast UDP transport.
@@ -160,9 +161,10 @@ func (t *MulticastUDPTransport) runReceive() {
 	defer t.Close()
 
 	for t.running.Load() {
-		err := readTlvStream(t.recvConn, func(b []byte) {
+		err := ndn_io.ReadTlvStream(t.recvConn, func(b []byte) bool {
 			t.nInBytes += uint64(len(b))
 			t.linkService.handleIncomingFrame(b)
+			return true
 		}, func(err error) bool {
 			// Same as unicast UDP transport
 			return strings.Contains(err.Error(), "connection refused")

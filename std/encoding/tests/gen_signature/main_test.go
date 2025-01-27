@@ -7,11 +7,12 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	def "github.com/named-data/ndnd/std/encoding/tests/gen_signature"
 	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestT1(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	// Normal case (w/ & w/o sig.)
 	f := &def.T1{
@@ -127,11 +128,11 @@ func TestT1(t *testing.T) {
 }
 
 func TestT2(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	// Normal case (w/o & w/ digest)
 	f := &def.T2{
-		Name: utils.WithoutErr(enc.NameFromStr("/ndn/test")),
+		Name: tu.NoErr(enc.NameFromStr("/ndn/test")),
 		C: enc.Wire{
 			[]byte{0x01, 0x02, 0x03},
 			[]byte{0x04, 0x05, 0x06},
@@ -189,7 +190,7 @@ func TestT2(t *testing.T) {
 
 	// User provided digest component
 	f = &def.T2{
-		Name: utils.WithoutErr(enc.NameFromStr("/ndn/test/params-sha256=000102030405")),
+		Name: tu.NoErr(enc.NameFromStr("/ndn/test/params-sha256=000102030405")),
 		C: enc.Wire{
 			[]byte{0x01, 0x02, 0x03},
 			[]byte{0x04, 0x05, 0x06},

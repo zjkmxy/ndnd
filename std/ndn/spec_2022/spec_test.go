@@ -11,16 +11,17 @@ import (
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMakeDataBasic(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	spec := spec_2022.Spec{}
 
 	data, err := spec.MakeData(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
 			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 		},
@@ -37,7 +38,7 @@ func TestMakeDataBasic(t *testing.T) {
 		data.Wire.Join())
 
 	data, err = spec.MakeData(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
 			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 		},
@@ -55,7 +56,7 @@ func TestMakeDataBasic(t *testing.T) {
 		data.Wire.Join())
 
 	data, err = spec.MakeData(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
 			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 		},
@@ -69,7 +70,7 @@ func TestMakeDataBasic(t *testing.T) {
 		data.Wire.Join())
 
 	data, err = spec.MakeData(
-		utils.WithoutErr(enc.NameFromStr("/E")),
+		tu.NoErr(enc.NameFromStr("/E")),
 		&ndn.DataConfig{
 			ContentType: nil,
 		},
@@ -77,7 +78,7 @@ func TestMakeDataBasic(t *testing.T) {
 		signer.NewSha256Signer(),
 	)
 	require.NoError(t, err)
-	require.Equal(t, utils.WithoutErr(hex.DecodeString(
+	require.Equal(t, tu.NoErr(hex.DecodeString(
 		"06300703080145"+
 			"1400150016031b0100"+
 			"1720f965ee682c6973c3cbaa7b69e4c7063680f83be93a46be2ccc98686134354b66")),
@@ -85,11 +86,11 @@ func TestMakeDataBasic(t *testing.T) {
 }
 
 func TestMakeDataMetaInfo(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	data, err := spec.MakeData(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix/37=%00")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix/37=%00")),
 		&ndn.DataConfig{
 			ContentType:  utils.IdPtr(ndn.ContentTypeBlob),
 			Freshness:    utils.IdPtr(1000 * time.Millisecond),
@@ -135,11 +136,11 @@ func (testSigner) Public() ([]byte, error) {
 }
 
 func TestMakeDataShrink(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	data, err := spec.MakeData(
-		utils.WithoutErr(enc.NameFromStr("/test")),
+		tu.NoErr(enc.NameFromStr("/test")),
 		&ndn.DataConfig{
 			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 		},
@@ -155,7 +156,7 @@ func TestMakeDataShrink(t *testing.T) {
 }
 
 func TestReadDataBasic(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	data, covered, err := spec.ReadData(enc.NewBufferReader([]byte(
@@ -214,7 +215,7 @@ func TestReadDataBasic(t *testing.T) {
 	require.True(t, data.Content() == nil)
 	require.True(t, data.Signature().SigValue() == nil)
 
-	data, covered, err = spec.ReadData(enc.NewBufferReader(utils.WithoutErr(hex.DecodeString(
+	data, covered, err = spec.ReadData(enc.NewBufferReader(tu.NoErr(hex.DecodeString(
 		"06300703080145" +
 			"1400150016031b0100" +
 			"1720f965ee682c6973c3cbaa7b69e4c7063680f83be93a46be2ccc98686134354b66"),
@@ -235,7 +236,7 @@ func TestReadDataBasic(t *testing.T) {
 }
 
 func TestReadDataMetaInfo(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	data, covered, err := spec.ReadData(enc.NewBufferReader([]byte(
@@ -260,11 +261,11 @@ func TestReadDataMetaInfo(t *testing.T) {
 }
 
 func TestMakeIntBasic(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	interest, err := spec.MakeInterest(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
 			Lifetime: utils.IdPtr(4 * time.Second),
 		},
@@ -277,7 +278,7 @@ func TestMakeIntBasic(t *testing.T) {
 		interest.Wire.Join())
 
 	interest, err = spec.MakeInterest(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,
@@ -295,14 +296,14 @@ func TestMakeIntBasic(t *testing.T) {
 		interest.Wire.Join())
 
 	interest, err = spec.MakeInterest(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
 			Lifetime: utils.IdPtr(4 * time.Second),
 			Nonce:    utils.IdPtr[uint64](0x01020304),
 			ForwardingHint: []enc.Name{
-				utils.WithoutErr(enc.NameFromStr("/name/A")),
-				utils.WithoutErr(enc.NameFromStr("/ndn/B")),
-				utils.WithoutErr(enc.NameFromBytes([]byte("\x07\x0d\x08\x0bshekkuenseu"))),
+				tu.NoErr(enc.NameFromStr("/name/A")),
+				tu.NoErr(enc.NameFromStr("/ndn/B")),
+				tu.NoErr(enc.NameFromBytes([]byte("\x07\x0d\x08\x0bshekkuenseu"))),
 			},
 		},
 		nil,
@@ -319,7 +320,7 @@ func TestMakeIntBasic(t *testing.T) {
 }
 
 func TestMakeIntLargeAppParam(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	appParam := make([]byte, 384)
@@ -327,7 +328,7 @@ func TestMakeIntLargeAppParam(t *testing.T) {
 		appParam[i] = byte(i & 0xff)
 	}
 	encoded, err := spec.MakeInterest(
-		utils.WithoutErr(enc.NameFromStr("/interest/with/large/prefix")),
+		tu.NoErr(enc.NameFromStr("/interest/with/large/prefix")),
 		&ndn.InterestConfig{
 			Lifetime: utils.IdPtr(4 * time.Second),
 		},
@@ -343,11 +344,11 @@ func TestMakeIntLargeAppParam(t *testing.T) {
 }
 
 func TestMakeIntSign(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	interest, err := spec.MakeInterest(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
 			Lifetime: utils.IdPtr(4 * time.Second),
 		},
@@ -368,7 +369,7 @@ func TestMakeIntSign(t *testing.T) {
 	// "/test/params-sha256=FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF/ndn" is not supported yet
 
 	interest, err = spec.MakeInterest(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
 			Lifetime: utils.IdPtr(4 * time.Second),
 			Nonce:    utils.IdPtr[uint64](0x6c211166),
@@ -392,7 +393,7 @@ func TestMakeIntSign(t *testing.T) {
 		interest.Wire.Join())
 
 	interest, err = spec.MakeInterest(
-		utils.WithoutErr(enc.NameFromStr("/local/ndn/prefix")),
+		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
 			Lifetime: utils.IdPtr(4 * time.Second),
 			Nonce:    utils.IdPtr[uint64](0x6c211166),
@@ -417,7 +418,7 @@ func TestMakeIntSign(t *testing.T) {
 }
 
 func TestReadIntBasic(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	interest, _, err := spec.ReadInterest(enc.NewBufferReader([]byte(
@@ -523,7 +524,7 @@ func TestReadIntBasic(t *testing.T) {
 }
 
 func TestReadIntErrors(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
 	_, _, err := spec.ReadInterest(enc.NewBufferReader([]byte(

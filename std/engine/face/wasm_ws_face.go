@@ -4,7 +4,6 @@ package face
 
 import (
 	"errors"
-	"net/url"
 	"sync/atomic"
 	"syscall/js"
 
@@ -13,13 +12,20 @@ import (
 )
 
 type WasmWsFace struct {
-	network string
-	addr    string
+	url     string
 	local   bool
 	conn    js.Value
 	running atomic.Bool
-	onPkt   func(r enc.ParseReader) error
+	onPkt   func(frame []byte) error
 	onError func(err error) error
+}
+
+func (f *WasmWsFace) String() string {
+	return "wasm-sim-face"
+}
+
+func (f *WasmWsFace) Trait() Face {
+	return f
 }
 
 func (f *WasmWsFace) onMessage(this js.Value, args []js.Value) any {
@@ -31,7 +37,7 @@ func (f *WasmWsFace) onMessage(this js.Value, args []js.Value) any {
 	buf := make([]byte, data.Get("byteLength").Int())
 	view := js.Global().Get("Uint8Array").New(data)
 	js.CopyBytesToGo(buf, view)
-	err := f.onPkt(enc.NewBufferReader(buf))
+	err := f.onPkt(buf)
 	if err != nil {
 		f.running.Store(false)
 		f.conn.Call("close")
@@ -58,14 +64,9 @@ func (f *WasmWsFace) Open() error {
 	if !f.conn.IsNull() {
 		return errors.New("face is already running")
 	}
-	u := url.URL{
-		Scheme: f.network,
-		Host:   f.addr,
-		Path:   "/",
-	}
 	ch := make(chan struct{}, 1)
 	// It seems now Go cannot handle exceptions thrown by JS
-	f.conn = js.Global().Get("WebSocket").New(u.String())
+	f.conn = js.Global().Get("WebSocket").New(f.url)
 	f.conn.Set("binaryType", "arraybuffer")
 	f.conn.Call("addEventListener", "open", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		ch <- struct{}{}
@@ -73,9 +74,9 @@ func (f *WasmWsFace) Open() error {
 		return nil
 	}))
 	f.conn.Call("addEventListener", "message", js.FuncOf(f.onMessage))
-	log.WithField("module", "WasmWsFace").Info("Waiting for WebSocket connection ...")
+	log.Info(f, "Waiting for WebSocket connection ...")
 	<-ch
-	log.WithField("module", "WasmWsFace").Info("WebSocket connected ...")
+	log.Info(f, "WebSocket connected")
 	f.running.Store(true)
 	return nil
 }
@@ -98,16 +99,15 @@ func (f *WasmWsFace) IsLocal() bool {
 	return f.local
 }
 
-func (f *WasmWsFace) SetCallback(onPkt func(r enc.ParseReader) error,
+func (f *WasmWsFace) SetCallback(onPkt func(frame []byte) error,
 	onError func(err error) error) {
 	f.onPkt = onPkt
 	f.onError = onError
 }
 
-func NewWasmWsFace(network string, addr string, local bool) *WasmWsFace {
+func NewWasmWsFace(url string, local bool) *WasmWsFace {
 	return &WasmWsFace{
-		network: network,
-		addr:    addr,
+		url:     url,
 		local:   local,
 		onPkt:   nil,
 		onError: nil,

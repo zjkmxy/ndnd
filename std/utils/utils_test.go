@@ -5,25 +5,26 @@ import (
 	"time"
 
 	"github.com/named-data/ndnd/std/utils"
+	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestIdPtr(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	p := utils.IdPtr(uint64(42))
 	require.Equal(t, uint64(42), *p)
 }
 
 func TestMakeTimestamp(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	date := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	require.Equal(t, uint64(1609459200000), utils.MakeTimestamp(date))
 }
 
 func TestConvertNonce(t *testing.T) {
-	utils.SetTestingT(t)
+	tu.SetT(t)
 
 	nonce := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06}
 	require.Equal(t, uint64(0x010203040506), *utils.ConvertNonce(nonce))

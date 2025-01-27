@@ -17,19 +17,6 @@ type Client struct {
 	trust *sec.TrustConfig
 	// segment fetcher
 	fetcher rrSegFetcher
-
-	// stop the client
-	stop chan bool
-	// outgoing interest pipeline
-	outpipe chan ndn.ExpressRArgs
-	// [fetcher] incoming data pipeline
-	seginpipe chan rrSegHandleDataArgs
-	// [fetcher] queue for new object fetch
-	segfetch chan *ConsumeState
-	// [fetcher] recheck segment fetcher
-	segcheck chan bool
-	// [validate] queue for new object validation
-	validatepipe chan sec.TrustConfigValidateArgs
 }
 
 // Create a new client with given engine and store
@@ -39,14 +26,6 @@ func NewClient(engine ndn.Engine, store ndn.Store, trust *sec.TrustConfig) ndn.C
 	client.store = store
 	client.trust = trust
 	client.fetcher = newRrSegFetcher(client)
-
-	client.stop = make(chan bool)
-	client.outpipe = make(chan ndn.ExpressRArgs, 512)
-	client.seginpipe = make(chan rrSegHandleDataArgs, 512)
-	client.segfetch = make(chan *ConsumeState, 128)
-	client.segcheck = make(chan bool, 2)
-	client.validatepipe = make(chan sec.TrustConfigValidateArgs, 64)
-
 	return client
 }
 
@@ -65,13 +44,11 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	go c.run()
 	return nil
 }
 
 // Stop the client
 func (c *Client) Stop() error {
-	c.stop <- true
 	return nil
 }
 
@@ -88,24 +65,4 @@ func (c *Client) Store() ndn.Store {
 // Get the client interface
 func (c *Client) Client() ndn.Client {
 	return c
-}
-
-// Main goroutine for all client processing
-func (c *Client) run() {
-	for {
-		select {
-		case <-c.stop:
-			return
-		case args := <-c.outpipe:
-			c.expressRImpl(args)
-		case args := <-c.seginpipe:
-			c.fetcher.handleData(args.args, args.state)
-		case state := <-c.segfetch:
-			c.fetcher.add(state)
-		case <-c.segcheck:
-			c.fetcher.doCheck()
-		case args := <-c.validatepipe:
-			c.trust.Validate(args)
-		}
-	}
 }

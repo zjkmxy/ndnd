@@ -1,8 +1,6 @@
 package object
 
 import (
-	"fmt"
-
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	sec "github.com/named-data/ndnd/std/security"
@@ -41,20 +39,16 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 		overrideName = args.OverrideName
 	}
 
-	// Add to queue of validation
-	select {
-	case c.validatepipe <- sec.TrustConfigValidateArgs{
+	c.trust.Validate(sec.TrustConfigValidateArgs{
 		Data:         args.Data,
 		DataSigCov:   args.SigCovered,
 		Callback:     args.Callback,
 		OverrideName: overrideName,
 		Fetch: func(name enc.Name, config *ndn.InterestConfig, callback ndn.ExpressCallbackFunc) {
-			// Pass through extra options
 			if args.CertNextHop != nil {
 				config.NextHopId = args.CertNextHop
 			}
 
-			// Express the interest with reliability
 			c.ExpressR(ndn.ExpressRArgs{
 				Name:     name,
 				Config:   config,
@@ -62,11 +56,7 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 				Callback: callback,
 			})
 		},
-	}:
-		// Queued successfully
-	default:
-		args.Callback(false, fmt.Errorf("validation queue full"))
-	}
+	})
 }
 
 // removeSegVer removes the segment and version components from a name

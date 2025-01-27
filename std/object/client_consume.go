@@ -61,17 +61,18 @@ func (a *ConsumeState) IsComplete() bool {
 
 // returns the currently available buffer in the content
 // any subsequent calls to Content() will return data after the previous call
-func (a *ConsumeState) Content() []byte {
+func (a *ConsumeState) Content() enc.Wire {
 	// return valid range of buffer (can be empty)
-	buf := a.content[a.wnd[0]:a.wnd[1]].Join()
+	wire := make(enc.Wire, a.wnd[1]-a.wnd[0])
 
 	// free buffers
 	for i := a.wnd[0]; i < a.wnd[1]; i++ {
-		a.content[i] = nil // gc
+		wire[i-a.wnd[0]] = a.content[i] // retain
+		a.content[i] = nil              // gc
 	}
 
 	a.wnd[0] = a.wnd[1]
-	return buf
+	return wire
 }
 
 // get the progress counter
@@ -165,7 +166,7 @@ func (c *Client) consumeObject(state *ConsumeState) {
 	}
 
 	// passes ownership of state and callback to fetcher
-	c.segfetch <- state
+	c.fetcher.add(state)
 }
 
 // consumeObjectWithMeta consumes an object with a given metadata

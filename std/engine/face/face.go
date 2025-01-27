@@ -8,6 +8,6 @@ type Face interface {
 	Send(pkt enc.Wire) error
 	IsRunning() bool
 	IsLocal() bool
-	SetCallback(onPkt func(r enc.ParseReader) error,
+	SetCallback(onPkt func(frame []byte) error,
 		onError func(err error) error)
 }

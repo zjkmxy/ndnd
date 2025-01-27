@@ -1,5 +1,8 @@
 package ndn
 
+// MaxNDNPacketSize is the maximum allowed NDN packet size
+const MaxNDNPacketSize = 8800
+
 // ContentType represents the type of Data content in MetaInfo.
 type ContentType uint
 
