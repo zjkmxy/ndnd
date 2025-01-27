@@ -244,18 +244,21 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 	handler(args)
 }
 
-func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitToken []byte) {
+func (e *Engine) onDataMatch(pkt *spec.Data, raw enc.Wire) pitEntry {
 	e.pitLock.Lock()
 	defer e.pitLock.Unlock()
 
 	n := e.pit.PrefixMatch(pkt.NameV)
 	if n == nil {
 		log.Warn(e, "Received data for an unknown interest - DROP", "name", pkt.Name())
-		return
+		return nil
 	}
 
+	ret := make(pitEntry, 0, 4)
 	for cur := n; cur != nil; cur = cur.Parent() {
 		entries := cur.Value()
+		changed := false
+
 		for i := 0; i < len(entries); i++ {
 			entry := entries[i]
 
@@ -277,30 +280,39 @@ func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitTo
 				}
 			}
 
-			// remove entry
+			// pop entry
 			entries[i] = entries[len(entries)-1]
 			entries = entries[:len(entries)-1]
 			i-- // recheck the current index
-
-			// entry satisfied
-			entry.timeoutCancel()
-			if entry.callback == nil {
-				panic("[BUG] PIT has empty entry")
-			}
-
-			entry.callback(ndn.ExpressCallbackArgs{
-				Result:     ndn.InterestResultData,
-				Data:       pkt,
-				RawData:    raw,
-				SigCovered: sigCovered,
-				NackReason: spec.NackReasonNone,
-			})
+			ret = append(ret, entry)
+			changed = true
 		}
 
-		cur.SetValue(entries)
+		if changed {
+			cur.SetValue(entries)
+		}
 	}
 
 	n.PruneIf(func(lst []*pendInt) bool { return len(lst) == 0 })
+
+	return ret
+}
+
+func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitToken []byte) {
+	for _, entry := range e.onDataMatch(pkt, raw) {
+		entry.timeoutCancel()
+		if entry.callback == nil {
+			panic("[BUG] PIT has empty entry")
+		}
+
+		entry.callback(ndn.ExpressCallbackArgs{
+			Result:     ndn.InterestResultData,
+			Data:       pkt,
+			RawData:    raw,
+			SigCovered: sigCovered,
+			NackReason: spec.NackReasonNone,
+		})
+	}
 }
 
 func (e *Engine) onNack(name enc.Name, reason uint64) {

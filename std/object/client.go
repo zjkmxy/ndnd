@@ -26,8 +26,6 @@ type Client struct {
 	seginpipe chan rrSegHandleDataArgs
 	// [fetcher] queue for new object fetch
 	segfetch chan *ConsumeState
-	// [fetcher] recheck segment fetcher
-	segcheck chan bool
 	// [validate] queue for new object validation
 	validatepipe chan sec.TrustConfigValidateArgs
 }
@@ -44,7 +42,6 @@ func NewClient(engine ndn.Engine, store ndn.Store, trust *sec.TrustConfig) ndn.C
 	client.outpipe = make(chan ndn.ExpressRArgs, 512)
 	client.seginpipe = make(chan rrSegHandleDataArgs, 512)
 	client.segfetch = make(chan *ConsumeState, 128)
-	client.segcheck = make(chan bool, 2)
 	client.validatepipe = make(chan sec.TrustConfigValidateArgs, 64)
 
 	return client
@@ -102,8 +99,6 @@ func (c *Client) run() {
 			c.fetcher.handleData(args.args, args.state)
 		case state := <-c.segfetch:
 			c.fetcher.add(state)
-		case <-c.segcheck:
-			c.fetcher.doCheck()
 		case args := <-c.validatepipe:
 			c.trust.Validate(args)
 		}

@@ -47,7 +47,7 @@ func (s *rrSegFetcher) String() string {
 func (s *rrSegFetcher) add(state *ConsumeState) {
 	log.Debug(s, "Adding stream to fetch queue", "name", state.fetchName)
 	s.streams = append(s.streams, state)
-	s.queueCheck()
+	s.check()
 }
 
 // remove a stream from the fetch queue
@@ -69,16 +69,8 @@ func (s *rrSegFetcher) next() *ConsumeState {
 	return s.streams[s.rrIndex]
 }
 
-// queue a check for more work
-func (s *rrSegFetcher) queueCheck() {
-	select {
-	case s.client.segcheck <- true:
-	default: // already scheduled
-	}
-}
-
 // check for more work
-func (s *rrSegFetcher) doCheck() {
+func (s *rrSegFetcher) check() {
 	if s.outstanding >= s.window {
 		return
 	}
@@ -134,7 +126,6 @@ func (s *rrSegFetcher) doCheck() {
 	seg := uint64(state.wnd[2])
 	s.outstanding++
 	state.wnd[2]++
-	defer s.doCheck()
 
 	// queue outgoing interest for the next segment
 	s.client.ExpressR(ndn.ExpressRArgs{
@@ -147,12 +138,14 @@ func (s *rrSegFetcher) doCheck() {
 			s.client.seginpipe <- rrSegHandleDataArgs{state: state, args: args}
 		},
 	})
+
+	// check for more work
+	s.check()
 }
 
 // handle incoming data
 func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeState) {
 	s.outstanding--
-	s.queueCheck()
 
 	if state.complete {
 		return
@@ -174,6 +167,7 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 		} else {
 			s.handleValidatedData(args, state)
 		}
+		s.check()
 	})
 }
 
