@@ -1,4 +1,6 @@
 package defn
 
+import "github.com/named-data/ndnd/std/ndn"
+
 // MaxNDNPacketSize is the maximum allowed NDN packet size
-const MaxNDNPacketSize = 8800
+const MaxNDNPacketSize = ndn.MaxNDNPacketSize

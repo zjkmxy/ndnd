@@ -15,6 +15,7 @@ import (
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/face/impl"
 	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	ndn_io "github.com/named-data/ndnd/std/utils/io"
 )
 
 // UnixStreamTransport is a Unix stream transport for communicating with local applications.
@@ -90,9 +91,10 @@ func (t *UnixStreamTransport) sendFrame(frame []byte) {
 func (t *UnixStreamTransport) runReceive() {
 	defer t.Close()
 
-	err := readTlvStream(t.conn, func(b []byte) {
+	err := ndn_io.ReadTlvStream(t.conn, func(b []byte) bool {
 		t.nInBytes += uint64(len(b))
 		t.linkService.handleIncomingFrame(b)
+		return true
 	}, nil)
 	if err != nil && t.running.Load() {
 		core.Log.Warn(t, "Unable to read from socket - Face DOWN", "err", err)

@@ -1,19 +1,19 @@
-package face
+package io
 
 import (
 	"errors"
 	"io"
 
-	defn "github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
 )
 
-func readTlvStream(
+func ReadTlvStream(
 	reader io.Reader,
-	onFrame func([]byte),
+	onFrame func([]byte) bool,
 	ignoreError func(error) bool,
 ) error {
-	recvBuf := make([]byte, defn.MaxNDNPacketSize*32)
+	recvBuf := make([]byte, ndn.MaxNDNPacketSize*32)
 	recvOff := 0
 	tlvOff := 0
 
@@ -50,9 +50,12 @@ func readTlvStream(
 
 			if recvOff-tlvOff >= tlvSize {
 				// Packet was successfully received, send up to link service
-				onFrame(recvBuf[tlvOff : tlvOff+tlvSize])
+				shouldContinue := onFrame(recvBuf[tlvOff : tlvOff+tlvSize])
+				if !shouldContinue {
+					return nil
+				}
 				tlvOff += tlvSize
-			} else if recvOff-tlvOff > defn.MaxNDNPacketSize {
+			} else if recvOff-tlvOff > ndn.MaxNDNPacketSize {
 				// Invalid packet, something went wrong
 				return errors.New("received too much data without valid TLV block")
 			} else {
@@ -62,7 +65,7 @@ func readTlvStream(
 		}
 
 		// If less than one packet space remains in buffer, shift to beginning
-		if recvOff-tlvOff < defn.MaxNDNPacketSize {
+		if recvOff-tlvOff < ndn.MaxNDNPacketSize {
 			copy(recvBuf, recvBuf[tlvOff:recvOff])
 			recvOff -= tlvOff
 			tlvOff = 0

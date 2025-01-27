@@ -19,6 +19,7 @@ import (
 	"github.com/named-data/ndnd/fw/face/impl"
 	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/utils"
+	ndn_io "github.com/named-data/ndnd/std/utils/io"
 )
 
 // URI to use when the local URI is unknown.
@@ -237,10 +238,11 @@ func (t *UnicastTCPTransport) runReceive() {
 		// The connection can be nil if the initial connection attempt
 		// failed for a persistent face. In that case we will reconnect.
 		if t.conn != nil {
-			err := readTlvStream(t.conn, func(b []byte) {
+			err := ndn_io.ReadTlvStream(t.conn, func(b []byte) bool {
 				t.nInBytes += uint64(len(b))
 				*t.expirationTime = time.Now().Add(CfgTCPLifetime())
 				t.linkService.handleIncomingFrame(b)
+				return true
 			}, nil)
 			if err == nil && t.Persistency() != spec_mgmt.PersistencyPermanent {
 				break // EOF
