@@ -2,6 +2,7 @@ package face
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -32,7 +33,7 @@ func NewStreamFace(network string, addr string, local bool) *StreamFace {
 }
 
 func (f *StreamFace) String() string {
-	return "stream-face"
+	return fmt.Sprintf("stream-face (%s://%s)", f.network, f.addr)
 }
 
 func (f *StreamFace) Trait() Face {

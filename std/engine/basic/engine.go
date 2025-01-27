@@ -355,7 +355,7 @@ func (e *Engine) onNack(name enc.Name, reason uint64) {
 }
 
 func (e *Engine) onError(err error) error {
-	log.Error(e, "Error on face", "err", err)
+	log.Error(e, "Error on face", "err", err, "face", e.face)
 	// TODO: Handle Interest cancellation
 	return err
 }

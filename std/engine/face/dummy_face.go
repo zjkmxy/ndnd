@@ -18,6 +18,10 @@ func NewDummyFace() *DummyFace {
 	}
 }
 
+func (f *DummyFace) String() string {
+	return "dummy-face"
+}
+
 func (f *DummyFace) Open() error {
 	if f.onError == nil || f.onPkt == nil {
 		return errors.New("face callbacks are not set")

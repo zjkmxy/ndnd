@@ -4,6 +4,7 @@ package face
 
 import (
 	"errors"
+	"fmt"
 	"syscall/js"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -16,20 +17,20 @@ type WasmWsFace struct {
 	conn js.Value
 }
 
-func (f *WasmWsFace) String() string {
-	return "wasm-ws-face"
-}
-
-func (f *WasmWsFace) Trait() Face {
-	return f
-}
-
 func NewWasmWsFace(url string, local bool) *WasmWsFace {
 	return &WasmWsFace{
 		baseFace: newBaseFace(local),
 		url:      url,
 		conn:     js.Null(),
 	}
+}
+
+func (f *WasmWsFace) String() string {
+	return fmt.Sprintf("wasm-ws-face (%s)", f.url)
+}
+
+func (f *WasmWsFace) Trait() Face {
+	return f
 }
 
 func (f *WasmWsFace) Open() error {

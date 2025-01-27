@@ -2,6 +2,7 @@ package face
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/gorilla/websocket"
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -18,6 +19,14 @@ func NewWebSocketFace(url string, local bool) *WebSocketFace {
 		baseFace: newBaseFace(local),
 		url:      url,
 	}
+}
+
+func (f *WebSocketFace) String() string {
+	return fmt.Sprintf("websocket-face (%s)", f.url)
+}
+
+func (f *WebSocketFace) Trait() Face {
+	return f
 }
 
 func (f *WebSocketFace) Open() error {

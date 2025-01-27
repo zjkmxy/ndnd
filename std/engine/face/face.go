@@ -3,6 +3,8 @@ package face
 import enc "github.com/named-data/ndnd/std/encoding"
 
 type Face interface {
+	// String returns the log identifier.
+	String() string
 	// IsRunning returns true if the face is running.
 	IsRunning() bool
 	// IsLocal returns true if the face is local.
