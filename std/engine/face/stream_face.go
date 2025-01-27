@@ -37,10 +37,12 @@ func (f *StreamFace) Run() {
 		}
 		return f.IsRunning()
 	}, nil)
-	if err != nil {
-		f.onError(err)
-	} else {
-		f.onError(io.EOF)
+	if f.IsRunning() {
+		if err != nil {
+			f.onError(err)
+		} else {
+			f.onError(io.EOF)
+		}
 	}
 
 	f.running.Store(false)
