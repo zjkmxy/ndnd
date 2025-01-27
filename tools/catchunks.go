@@ -80,6 +80,7 @@ func (cc *CatChunks) run() {
 	}
 
 	// fetch object
+	progress := 0
 	cli.Consume(name, func(status ndn.ConsumeState) {
 		if status.IsComplete() {
 			t2 = time.Now()
@@ -88,7 +89,8 @@ func (cc *CatChunks) run() {
 			return
 		}
 
-		if status.Progress()%1000 == 0 {
+		if status.Progress()-progress >= 1000 {
+			progress = status.Progress()
 			log.Debug(cc, "Consume progress", "progress", float64(status.Progress())/float64(status.ProgressMax())*100)
 			write(status)
 		}
