@@ -20,8 +20,6 @@ type Client struct {
 
 	// stop the client
 	stop chan bool
-	// outgoing interest pipeline
-	outpipe chan ndn.ExpressRArgs
 	// [fetcher] incoming data pipeline
 	seginpipe chan rrSegHandleDataArgs
 	// [fetcher] queue for new object fetch
@@ -39,7 +37,6 @@ func NewClient(engine ndn.Engine, store ndn.Store, trust *sec.TrustConfig) ndn.C
 	client.fetcher = newRrSegFetcher(client)
 
 	client.stop = make(chan bool)
-	client.outpipe = make(chan ndn.ExpressRArgs, 512)
 	client.seginpipe = make(chan rrSegHandleDataArgs, 512)
 	client.segfetch = make(chan *ConsumeState, 128)
 	client.validatepipe = make(chan sec.TrustConfigValidateArgs, 64)
@@ -93,8 +90,6 @@ func (c *Client) run() {
 		select {
 		case <-c.stop:
 			return
-		case args := <-c.outpipe:
-			c.expressRImpl(args)
 		case args := <-c.seginpipe:
 			c.fetcher.handleData(args.args, args.state)
 		case state := <-c.segfetch:
