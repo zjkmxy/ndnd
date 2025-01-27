@@ -24,11 +24,6 @@ type rrSegFetcher struct {
 	window int
 }
 
-type rrSegHandleDataArgs struct {
-	state *ConsumeState
-	args  ndn.ExpressCallbackArgs
-}
-
 func newRrSegFetcher(client *Client) rrSegFetcher {
 	return rrSegFetcher{
 		client:      client,
@@ -135,7 +130,7 @@ func (s *rrSegFetcher) check() {
 		},
 		Retries: 3,
 		Callback: func(args ndn.ExpressCallbackArgs) {
-			s.client.seginpipe <- rrSegHandleDataArgs{state: state, args: args}
+			s.handleData(args, state)
 		},
 	})
 

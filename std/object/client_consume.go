@@ -165,7 +165,7 @@ func (c *Client) consumeObject(state *ConsumeState) {
 	}
 
 	// passes ownership of state and callback to fetcher
-	c.segfetch <- state
+	c.fetcher.add(state)
 }
 
 // consumeObjectWithMeta consumes an object with a given metadata
