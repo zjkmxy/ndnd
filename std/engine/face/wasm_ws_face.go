@@ -18,8 +18,16 @@ type WasmWsFace struct {
 	local   bool
 	conn    js.Value
 	running atomic.Bool
-	onPkt   func(r enc.ParseReader) error
+	onPkt   func(frame []byte) error
 	onError func(err error) error
+}
+
+func (f *WasmWsFace) String() string {
+	return "wasm-sim-face"
+}
+
+func (f *WasmWsFace) Trait() Face {
+	return f
 }
 
 func (f *WasmWsFace) onMessage(this js.Value, args []js.Value) any {
@@ -31,7 +39,7 @@ func (f *WasmWsFace) onMessage(this js.Value, args []js.Value) any {
 	buf := make([]byte, data.Get("byteLength").Int())
 	view := js.Global().Get("Uint8Array").New(data)
 	js.CopyBytesToGo(buf, view)
-	err := f.onPkt(enc.NewBufferReader(buf))
+	err := f.onPkt(buf)
 	if err != nil {
 		f.running.Store(false)
 		f.conn.Call("close")
@@ -73,9 +81,9 @@ func (f *WasmWsFace) Open() error {
 		return nil
 	}))
 	f.conn.Call("addEventListener", "message", js.FuncOf(f.onMessage))
-	log.WithField("module", "WasmWsFace").Info("Waiting for WebSocket connection ...")
+	log.Info(f, "Waiting for WebSocket connection ...")
 	<-ch
-	log.WithField("module", "WasmWsFace").Info("WebSocket connected ...")
+	log.Info(f, "WebSocket connected")
 	f.running.Store(true)
 	return nil
 }
@@ -98,7 +106,7 @@ func (f *WasmWsFace) IsLocal() bool {
 	return f.local
 }
 
-func (f *WasmWsFace) SetCallback(onPkt func(r enc.ParseReader) error,
+func (f *WasmWsFace) SetCallback(onPkt func(frame []byte) error,
 	onError func(err error) error) {
 	f.onPkt = onPkt
 	f.onError = onError

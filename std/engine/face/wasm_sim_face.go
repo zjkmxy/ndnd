@@ -14,8 +14,16 @@ import (
 type WasmSimFace struct {
 	gosim   js.Value
 	running atomic.Bool
-	onPkt   func(r enc.ParseReader) error
+	onPkt   func(frame []byte) error
 	onError func(err error) error
+}
+
+func (f *WasmSimFace) String() string {
+	return "wasm-sim-face"
+}
+
+func (f *WasmSimFace) Trait() Face {
+	return f
 }
 
 func (f *WasmSimFace) onMessage(this js.Value, args []js.Value) any {
@@ -25,10 +33,10 @@ func (f *WasmSimFace) onMessage(this js.Value, args []js.Value) any {
 	}
 	buf := make([]byte, pkt.Get("byteLength").Int())
 	js.CopyBytesToGo(buf, pkt)
-	err := f.onPkt(enc.NewBufferReader(buf))
+	err := f.onPkt(buf)
 	if err != nil {
 		f.running.Store(false)
-		log.Errorf("Unable to handle packet: %+v", err)
+		log.Error(f, "Unable to handle packet: %+v", err)
 	}
 	return nil
 }
@@ -54,7 +62,8 @@ func (f *WasmSimFace) Open() error {
 	// It seems now Go cannot handle exceptions thrown by JS
 	f.gosim = js.Global().Get("gondnsim")
 	f.gosim.Call("setRecvPktCallback", js.FuncOf(f.onMessage))
-	log.WithField("module", "WasmSimFace").Info("Sim face started.")
+
+	log.Info(f, "Face opened")
 	f.running.Store(true)
 	return nil
 }
@@ -79,7 +88,7 @@ func (f *WasmSimFace) IsLocal() bool {
 	return true
 }
 
-func (f *WasmSimFace) SetCallback(onPkt func(r enc.ParseReader) error,
+func (f *WasmSimFace) SetCallback(onPkt func(frame []byte) error,
 	onError func(err error) error) {
 	f.onPkt = onPkt
 	f.onError = onError

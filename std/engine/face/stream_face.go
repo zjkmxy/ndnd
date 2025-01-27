@@ -22,6 +22,14 @@ type StreamFace struct {
 	sendMut sync.Mutex
 }
 
+func (f *StreamFace) String() string {
+	return "stream-face"
+}
+
+func (f *StreamFace) Trait() Face {
+	return f
+}
+
 func (f *StreamFace) Run() {
 	err := ndn_io.ReadTlvStream(f.conn, func(b []byte) bool {
 		if err := f.onPkt(b); err != nil {
