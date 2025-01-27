@@ -21,7 +21,7 @@ type WasmWsFace struct {
 }
 
 func (f *WasmWsFace) String() string {
-	return "wasm-sim-face"
+	return "wasm-ws-face"
 }
 
 func (f *WasmWsFace) Trait() Face {
