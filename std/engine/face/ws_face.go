@@ -15,15 +15,13 @@ type WebSocketFace struct {
 
 func NewWebSocketFace(url string, local bool) *WebSocketFace {
 	return &WebSocketFace{
-		baseFace: baseFace{
-			local: local,
-		},
-		url: url,
+		baseFace: newBaseFace(local),
+		url:      url,
 	}
 }
 
 func (f *WebSocketFace) Open() error {
-	if f.running.Load() {
+	if f.IsRunning() {
 		return errors.New("face is already running")
 	}
 
@@ -37,36 +35,38 @@ func (f *WebSocketFace) Open() error {
 	}
 
 	f.conn = c
-	f.running.Store(true)
-
+	f.setStateUp()
 	go f.receive()
 
 	return nil
 }
 
 func (f *WebSocketFace) Close() error {
-	if !f.running.Swap(false) {
-		return errors.New("face is not running")
+	if f.setStateClosed() {
+		return f.conn.Close()
 	}
 
-	return f.conn.Close()
+	return nil
 }
 
 func (f *WebSocketFace) Send(pkt enc.Wire) error {
-	if !f.running.Load() {
+	if !f.IsRunning() {
 		return errors.New("face is not running")
 	}
+
 	return f.conn.WriteMessage(websocket.BinaryMessage, pkt.Join())
 }
 
 func (f *WebSocketFace) receive() {
-	for f.running.Load() {
+	defer f.setStateDown()
+
+	for f.IsRunning() {
 		messageType, pkt, err := f.conn.ReadMessage()
 		if err != nil {
-			if f.running.Load() {
+			if f.IsRunning() {
 				f.onError(err)
 			}
-			break
+			return
 		}
 
 		if messageType != websocket.BinaryMessage {
@@ -75,10 +75,8 @@ func (f *WebSocketFace) receive() {
 
 		err = f.onPkt(pkt)
 		if err != nil {
-			break
+			f.Close() // engine error
+			return
 		}
 	}
-
-	f.running.Store(false)
-	f.conn = nil
 }

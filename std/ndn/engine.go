@@ -16,7 +16,9 @@ type Engine interface {
 	// Timer returns a Timer managed by the engine.
 	Timer() Timer
 
-	// Start processing packets. Should not block.
+	// Start processing packets.
+	// If the engine is attached to a face, this will attempt
+	// to open the face, and may block until the face is up.
 	Start() error
 	// Stops processing packets.
 	Stop() error

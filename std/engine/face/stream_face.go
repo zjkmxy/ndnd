@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"os"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	ndn_io "github.com/named-data/ndnd/std/utils/io"
@@ -18,13 +19,16 @@ type StreamFace struct {
 }
 
 func NewStreamFace(network string, addr string, local bool) *StreamFace {
-	return &StreamFace{
-		baseFace: baseFace{
-			local: local,
-		},
-		network: network,
-		addr:    addr,
+	s := &StreamFace{
+		baseFace: newBaseFace(local),
+		network:  network,
+		addr:     addr,
 	}
+
+	// Quit app by default when stream face fails
+	s.OnDown(func() { os.Exit(106) })
+
+	return s
 }
 
 func (f *StreamFace) String() string {
@@ -36,7 +40,7 @@ func (f *StreamFace) Trait() Face {
 }
 
 func (f *StreamFace) Open() error {
-	if f.running.Load() {
+	if f.IsRunning() {
 		return errors.New("face is already running")
 	}
 
@@ -50,27 +54,24 @@ func (f *StreamFace) Open() error {
 	}
 
 	f.conn = c
-	f.running.Store(true)
-
+	f.setStateUp()
 	go f.receive()
 
 	return nil
 }
 
 func (f *StreamFace) Close() error {
-	if !f.running.Swap(false) {
-		return nil
-	}
-
-	if f.conn != nil {
-		return f.conn.Close()
+	if f.setStateClosed() {
+		if f.conn != nil {
+			return f.conn.Close()
+		}
 	}
 
 	return nil
 }
 
 func (f *StreamFace) Send(pkt enc.Wire) error {
-	if !f.running.Load() {
+	if !f.IsRunning() {
 		return errors.New("face is not running")
 	}
 
@@ -86,14 +87,17 @@ func (f *StreamFace) Send(pkt enc.Wire) error {
 }
 
 func (f *StreamFace) receive() {
+	defer f.setStateDown()
+
 	err := ndn_io.ReadTlvStream(f.conn, func(b []byte) bool {
 		if err := f.onPkt(b); err != nil {
+			f.Close()    // engine error
 			return false // break
 		}
 		return f.IsRunning()
 	}, nil)
 
-	if f.running.Swap(false) {
+	if f.IsRunning() {
 		if err != nil {
 			f.onError(err)
 		} else {

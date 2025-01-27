@@ -13,6 +13,7 @@ type DummyFace struct {
 
 func NewDummyFace() *DummyFace {
 	return &DummyFace{
+		baseFace: newBaseFace(true),
 		sendPkts: make([]enc.Buffer, 0),
 	}
 }

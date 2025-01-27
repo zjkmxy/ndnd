@@ -26,55 +26,54 @@ func (f *WasmWsFace) Trait() Face {
 
 func NewWasmWsFace(url string, local bool) *WasmWsFace {
 	return &WasmWsFace{
-		baseFace: baseFace{
-			local: local,
-		},
-		url:  url,
-		conn: js.Null(),
+		baseFace: newBaseFace(local),
+		url:      url,
+		conn:     js.Null(),
 	}
 }
 
 func (f *WasmWsFace) Open() error {
+	if f.IsRunning() {
+		return errors.New("face is already running")
+	}
+
 	if f.onError == nil || f.onPkt == nil {
 		return errors.New("face callbacks are not set")
 	}
 
-	if !f.conn.IsNull() {
-		return errors.New("face is already running")
-	}
+	// It seems now Go cannot handle exceptions thrown by JS
+	conn := js.Global().Get("WebSocket").New(f.url)
+	conn.Set("binaryType", "arraybuffer")
 
 	ch := make(chan struct{}, 1)
-	// It seems now Go cannot handle exceptions thrown by JS
-	f.conn = js.Global().Get("WebSocket").New(f.url)
-	f.conn.Set("binaryType", "arraybuffer")
-	f.conn.Call("addEventListener", "open", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	conn.Call("addEventListener", "message", js.FuncOf(f.receive))
+	conn.Call("addEventListener", "open", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		ch <- struct{}{}
 		close(ch)
 		return nil
 	}))
 
-	f.conn.Call("addEventListener", "message", js.FuncOf(f.receive))
 	log.Info(f, "Waiting for WebSocket connection ...")
 	<-ch
 	log.Info(f, "WebSocket connected")
 
-	f.running.Store(true)
+	f.conn = conn
+	f.setStateUp()
 
 	return nil
 }
 
 func (f *WasmWsFace) Close() error {
-	if f.conn.IsNull() {
-		return errors.New("face is not running")
+	if f.setStateClosed() {
+		f.conn.Call("close")
+		f.conn = js.Null()
 	}
-	f.running.Store(false)
-	f.conn.Call("close")
-	f.conn = js.Null()
+
 	return nil
 }
 
 func (f *WasmWsFace) Send(pkt enc.Wire) error {
-	if !f.running.Load() {
+	if !f.IsRunning() {
 		return errors.New("face is not running")
 	}
 
@@ -99,9 +98,7 @@ func (f *WasmWsFace) receive(this js.Value, args []js.Value) any {
 
 	err := f.onPkt(buf)
 	if err != nil {
-		f.running.Store(false)
-		f.conn.Call("close")
-		f.conn = js.Null()
+		f.Close()
 	}
 
 	return nil
