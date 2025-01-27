@@ -52,9 +52,9 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 		enc.NewVersionComponent(seqNo),
 	)...)
 
-	a.dv.client.Consume(advName, func(state ndn.ConsumeState) bool {
+	a.dv.client.Consume(advName, func(state ndn.ConsumeState) {
 		if !state.IsComplete() {
-			return true
+			return
 		}
 
 		go func() {
@@ -69,8 +69,6 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 			// Process the advertisement
 			a.dataHandler(nName, seqNo, state.Content())
 		}()
-
-		return true
 	})
 }
 

@@ -60,9 +60,9 @@ func (dv *Router) prefixDataFetch(nName enc.Name) {
 	log.Debug(dv.pfx, "Fetching prefix data", "router", nName, "known", router.Known, "latest", router.Latest)
 
 	name := router.GetNextDataName()
-	dv.client.Consume(name, func(state ndn.ConsumeState) bool {
+	dv.client.Consume(name, func(state ndn.ConsumeState) {
 		if !state.IsComplete() {
-			return true
+			return
 		}
 
 		go func() {
@@ -85,7 +85,5 @@ func (dv *Router) prefixDataFetch(nName enc.Name) {
 			router.Fetching = false
 			dv.prefixDataFetch(nName)
 		}()
-
-		return true
 	})
 }

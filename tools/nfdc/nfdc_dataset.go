@@ -16,13 +16,12 @@ func (t *Tool) fetchStatusDataset(suffix enc.Name) (enc.Wire, error) {
 	client.ConsumeExt(ndn.ConsumeExtArgs{
 		Name:       t.Prefix().Append(suffix...),
 		NoMetadata: true, // NFD has no RDR metadata
-		Callback: func(status ndn.ConsumeState) bool {
+		Callback: func(status ndn.ConsumeState) {
 			if !status.IsComplete() {
-				return true
+				return
 			}
 			ch <- status
 			close(ch)
-			return true
 		},
 	})
 

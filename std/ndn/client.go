@@ -24,7 +24,7 @@ type Client interface {
 	// Remove removes an object from the client's store by name.
 	Remove(name enc.Name) error
 	// Consume fetches an object with a given name
-	Consume(name enc.Name, callback func(status ConsumeState) bool)
+	Consume(name enc.Name, callback func(status ConsumeState))
 	// ConsumeExt is a more advanced consume API that allows for
 	// more control over the fetching process.
 	ConsumeExt(args ConsumeExtArgs)
@@ -70,6 +70,8 @@ type ConsumeState interface {
 	Progress() int
 	// ProgressMax is the max value for the progress counter (-1 for unknown).
 	ProgressMax() int
+	// Cancel the consume operation.
+	Cancel()
 }
 
 // ConsumeExtArgs are arguments for the ConsumeExt API.
@@ -78,7 +80,7 @@ type ConsumeExtArgs struct {
 	Name enc.Name
 	// Callback is called when data is available.
 	// True should be returned to continue fetching the object.
-	Callback func(status ConsumeState) bool
+	Callback func(status ConsumeState)
 	// NoMetadata disables fetching RDR metadata (advanced usage).
 	NoMetadata bool
 }

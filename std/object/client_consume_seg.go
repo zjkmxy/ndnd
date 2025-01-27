@@ -88,7 +88,7 @@ func (s *rrSegFetcher) findWork() *ConsumeState {
 			return nil // nothing to do here
 		}
 
-		if check.complete.Load() {
+		if check.IsComplete() {
 			// lazy remove completed streams
 			s.remove(check)
 
@@ -239,13 +239,19 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 		if state.wnd[1] == state.segCnt {
 			log.Debug(s, "Stream completed successfully", "name", state.fetchName)
 
-			state.complete.Store(true)
 			s.mutex.Lock()
 			s.remove(state)
 			s.mutex.Unlock()
+
+			if !state.complete.Swap(true) {
+				state.args.Callback(state) // complete
+			}
+			return
 		}
 
-		state.args.Callback(state) // progress
+		if !state.IsComplete() {
+			state.args.Callback(state) // progress
+		}
 	}
 
 	// if segNum%1000 == 0 {

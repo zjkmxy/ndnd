@@ -1,6 +1,7 @@
 package object
 
 import (
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -86,6 +87,13 @@ func (a *ConsumeState) ProgressMax() int {
 	return a.segCnt
 }
 
+// cancel the consume operation
+func (a *ConsumeState) Cancel() {
+	if !a.complete.Swap(true) {
+		a.err = errors.New("operation cancelled")
+	}
+}
+
 // send a fatal error to the callback
 func (a *ConsumeState) finalizeError(err error) {
 	if !a.complete.Swap(true) {
@@ -95,7 +103,7 @@ func (a *ConsumeState) finalizeError(err error) {
 }
 
 // Consume an object with a given name
-func (c *Client) Consume(name enc.Name, callback func(status ndn.ConsumeState) bool) {
+func (c *Client) Consume(name enc.Name, callback func(status ndn.ConsumeState)) {
 	c.ConsumeExt(ndn.ConsumeExtArgs{Name: name, Callback: callback})
 }
 

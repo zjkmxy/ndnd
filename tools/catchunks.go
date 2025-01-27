@@ -80,19 +80,18 @@ func (cc *CatChunks) run() {
 	}
 
 	// fetch object
-	cli.Consume(name, func(status ndn.ConsumeState) bool {
+	cli.Consume(name, func(status ndn.ConsumeState) {
 		if status.IsComplete() {
 			t2 = time.Now()
 			write(status)
 			done <- status
+			return
 		}
 
 		if status.Progress()%1000 == 0 {
 			log.Debug(cc, "Consume progress", "progress", float64(status.Progress())/float64(status.ProgressMax())*100)
 			write(status)
 		}
-
-		return true
 	})
 	state := <-done
 
