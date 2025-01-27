@@ -88,7 +88,7 @@ func (s *rrSegFetcher) findWork() *ConsumeState {
 			return nil // nothing to do here
 		}
 
-		if check.complete {
+		if check.complete.Load() {
 			// lazy remove completed streams
 			s.remove(check)
 
@@ -153,13 +153,13 @@ func (s *rrSegFetcher) check() {
 
 // handleData is called when a data packet is received.
 // It is necessary that this function be called only from one goroutine - the engine.
+// The notable exception here is when there is a timeout, which has a separate goroutine.
 func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeState) {
 	s.mutex.Lock()
 	s.outstanding--
-	isComplete := state.complete
 	s.mutex.Unlock()
 
-	if isComplete {
+	if state.IsComplete() {
 		return
 	}
 
@@ -239,8 +239,8 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 		if state.wnd[1] == state.segCnt {
 			log.Debug(s, "Stream completed successfully", "name", state.fetchName)
 
+			state.complete.Store(true)
 			s.mutex.Lock()
-			state.complete = true
 			s.remove(state)
 			s.mutex.Unlock()
 		}

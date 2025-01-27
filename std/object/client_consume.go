@@ -2,6 +2,7 @@ package object
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -23,7 +24,7 @@ type ConsumeState struct {
 	// raw data contents.
 	content enc.Wire
 	// fetching is completed
-	complete bool
+	complete atomic.Bool
 	// fetched metadata
 	meta *rdr.MetaData
 	// versioned object name
@@ -56,7 +57,7 @@ func (a *ConsumeState) Error() error {
 
 // returns true if the content has been completely fetched
 func (a *ConsumeState) IsComplete() bool {
-	return a.complete
+	return a.complete.Load()
 }
 
 // returns the currently available buffer in the content
@@ -87,9 +88,8 @@ func (a *ConsumeState) ProgressMax() int {
 
 // send a fatal error to the callback
 func (a *ConsumeState) finalizeError(err error) {
-	if !a.complete {
+	if !a.complete.Swap(true) {
 		a.err = err
-		a.complete = true
 		a.args.Callback(a)
 	}
 }
@@ -110,7 +110,7 @@ func (c *Client) ConsumeExt(args ndn.ConsumeExtArgs) {
 		args:      args,
 		err:       nil,
 		content:   make(enc.Wire, 0), // just in case
-		complete:  false,
+		complete:  atomic.Bool{},
 		meta:      nil,
 		fetchName: args.Name,
 		wnd:       [3]int{0, 0},
