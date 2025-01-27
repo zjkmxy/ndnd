@@ -49,6 +49,10 @@ func (c *Client) Start() error {
 
 // Stop the client
 func (c *Client) Stop() error {
+	if err := c.engine.DetachHandler(enc.Name{}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
