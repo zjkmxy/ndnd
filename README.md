@@ -47,6 +47,8 @@ Usage: ndnd [command]
   daemon          NDN Combined Daemon
 
   sec             NDN Security Utilities
+  certcli         NDNCERT Certificate Client
+
   ping            Send Interests to an NDN ping server
   pingserver      Start an NDN ping server under a prefix
   cat             Retrieve data under a prefix
@@ -99,6 +101,7 @@ The `ndnd/tools` package provides basic utilities for NDN networks.
 These can be used directly using the `ndnd` CLI.
 
 - `sec`: security utilities for generating keys and certificates ([docs](docs/security-util.md))
+- `certcli`: interactive NDNCERT client ([docs](docs/certcli.md))
 - `ping`/`pingserver`: test reachability between two NDN nodes
 - `cat`/`put`: segmented file transfer between a consumer and a producer
 

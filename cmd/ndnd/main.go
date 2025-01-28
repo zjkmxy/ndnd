@@ -48,7 +48,7 @@ func main() {
 			Help: "NDN Security Utilities",
 			Sub:  sec.Tree().Sub,
 		}, {
-			Name: "cert cli",
+			Name: "certcli",
 			Help: "NDNCERT Certificate Client",
 			Fun:  tools.RunCertClient,
 		}, {
