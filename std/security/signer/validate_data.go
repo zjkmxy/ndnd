@@ -19,7 +19,7 @@ func ValidateData(data ndn.Data, sigCovered enc.Wire, cert ndn.Data) (bool, erro
 			return false, err
 		}
 		if pub, ok := pkey.(*rsa.PublicKey); ok {
-			return validateRsa(sigCovered, data.Signature(), pub), nil
+			return ValidateRsa(sigCovered, data.Signature(), pub), nil
 		}
 	case ndn.SignatureSha256WithEcdsa:
 		pkey, err := x509.ParsePKIXPublicKey(cert.Content().Join())

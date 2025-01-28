@@ -9,7 +9,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/security/signer"
+	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
@@ -26,7 +26,7 @@ func TestMakeDataBasic(t *testing.T) {
 			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 		},
 		nil,
-		signer.NewSha256Signer(),
+		sig.NewSha256Signer(),
 	)
 	require.NoError(t, err)
 	require.Equal(t, []byte(
@@ -43,7 +43,7 @@ func TestMakeDataBasic(t *testing.T) {
 			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
 		},
 		enc.Wire{[]byte("01020304")},
-		signer.NewSha256Signer(),
+		sig.NewSha256Signer(),
 	)
 	require.NoError(t, err)
 	require.Equal(t, []byte(
@@ -75,7 +75,7 @@ func TestMakeDataBasic(t *testing.T) {
 			ContentType: nil,
 		},
 		enc.Wire{},
-		signer.NewSha256Signer(),
+		sig.NewSha256Signer(),
 	)
 	require.NoError(t, err)
 	require.Equal(t, tu.NoErr(hex.DecodeString(
@@ -97,7 +97,7 @@ func TestMakeDataMetaInfo(t *testing.T) {
 			FinalBlockID: utils.IdPtr(enc.NewSequenceNumComponent(2)),
 		},
 		nil,
-		signer.NewSha256Signer(),
+		sig.NewSha256Signer(),
 	)
 	require.NoError(t, err)
 	require.Equal(t, []byte(
@@ -333,7 +333,7 @@ func TestMakeIntLargeAppParam(t *testing.T) {
 			Lifetime: utils.IdPtr(4 * time.Second),
 		},
 		enc.Wire{appParam},
-		signer.NewHmacSigner([]byte("temp-hmac-key")),
+		sig.NewHmacSigner([]byte("temp-hmac-key")),
 	)
 	require.NoError(t, err)
 
@@ -375,7 +375,7 @@ func TestMakeIntSign(t *testing.T) {
 			Nonce:    utils.IdPtr[uint64](0x6c211166),
 		},
 		enc.Wire{[]byte{1, 2, 3, 4}},
-		signer.NewSha256Signer(),
+		sig.NewSha256Signer(),
 	)
 	require.NoError(t, err)
 	require.Equal(t,
@@ -399,7 +399,7 @@ func TestMakeIntSign(t *testing.T) {
 			Nonce:    utils.IdPtr[uint64](0x6c211166),
 		},
 		enc.Wire{},
-		signer.NewSha256Signer(),
+		sig.NewSha256Signer(),
 	)
 	require.NoError(t, err)
 	require.Equal(t,

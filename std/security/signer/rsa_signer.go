@@ -76,10 +76,10 @@ func ParseRsa(name enc.Name, key []byte) (ndn.Signer, error) {
 	return NewRsaSigner(name, sk), nil
 }
 
-// validateRsa verifies the signature with a known RSA public key.
+// ValidateRsa verifies the signature with a known RSA public key.
 // ndn-cxx's PIB uses RSA 2048 key stored in ASN.1 DER format.
 // Use x509.ParsePKIXPublicKey to parse.
-func validateRsa(sigCovered enc.Wire, sig ndn.Signature, pubKey *rsa.PublicKey) bool {
+func ValidateRsa(sigCovered enc.Wire, sig ndn.Signature, pubKey *rsa.PublicKey) bool {
 	if sig.SigType() != ndn.SignatureSha256WithRsa {
 		return false
 	}

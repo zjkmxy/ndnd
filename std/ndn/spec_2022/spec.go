@@ -281,9 +281,7 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 			SignatureValue_estLen: uint(estSigLen),
 		},
 	}
-	// if encoder.Data_encoder.SignatureValue_estLen >= 253 {
-	// 	return nil, nil, ndn.ErrNotSupported{Item: "Too long signature value is not supported"}
-	// }
+
 	encoder.Init(packet)
 	wire := encoder.Encode(packet)
 	if wire == nil {
@@ -293,24 +291,26 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 	if estSigLen > 0 {
 		// Compute signature
 		sigCovered = encoder.Data_encoder.sigCovered
+
 		// Since PacketEncoder only adds a TL, Data_encoder.SignatureValue_wireIdx is still valid
-		// if encoder.Data_encoder.SignatureValue_wireIdx >= 0 {
 		sigVal, err := signer.Sign(sigCovered)
 		if err != nil {
 			return nil, err
 		}
+
 		if len(sigVal) > estSigLen {
-			return nil, ndn.ErrNotSupported{Item: "Too long signature value is not supported"}
+			return nil, ndn.ErrNotSupported{Item: "Signature value cannot be longer than estimated length"}
 		}
 		wire[encoder.Data_encoder.SignatureValue_wireIdx] = sigVal
+
 		// Fix SignatureValue length
+		// This does not handle the case where the signature value is so much shorter than
+		// the estimated length that the length field needs to be shrunk.
+		// The signer needs to provide a reasonable estimate, hopefully exact.
 		buf := wire[encoder.Data_encoder.SignatureValue_wireIdx-1]
 		buf[len(buf)-1] = byte(len(sigVal))
-		// TODO: This needs to be fixed for estSigLen >= 253 (urgent)
-		// Fix packet length
 		shrink := estSigLen - len(sigVal)
 		wire[0] = enc.ShrinkLength(wire[0], shrink)
-		// }
 	}
 	return &ndn.EncodedData{
 		Wire:       wire,
@@ -375,9 +375,6 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 		}
 
 		estSigLen = int(signer.EstimateSize())
-		if estSigLen >= 253 {
-			return nil, ndn.ErrNotSupported{Item: "Too long signature value is not supported"}
-		}
 
 		interest.SignatureInfo = &SignatureInfo{
 			SignatureType:   uint64(signer.Type()),
@@ -409,21 +406,23 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 	sigCovered := enc.Wire(nil)
 	if estSigLen > 0 {
 		// Compute signature
-		// Since PacketEncoder only adds a TL, Interest_encoder.SignatureValue_wireIdx is still valid
 		sigCovered = ecdr.sigCovered
 		if ecdr.SignatureValue_wireIdx < 0 {
 			return nil, enc.ErrUnexpected{Err: errors.New("SignatureValue is not correctly set")}
 		}
 
+		// Since PacketEncoder only adds a TL, Interest_encoder.SignatureValue_wireIdx is still valid
 		sigVal, err = signer.Sign(sigCovered)
 		if err != nil {
 			return nil, err
 		}
+
 		if uint(len(sigVal)) > ecdr.SignatureValue_estLen {
-			return nil, ndn.ErrNotSupported{Item: "Too long signature value is not supported"}
+			return nil, ndn.ErrNotSupported{Item: "Signature value cannot be longer than estimated length"}
 		}
-		wire[ecdr.SignatureValue_wireIdx] = sigVal
+
 		// Fix SignatureValue length
+		wire[ecdr.SignatureValue_wireIdx] = sigVal
 		buf := wire[ecdr.SignatureValue_wireIdx-1]
 		buf[len(buf)-1] = byte(len(sigVal))
 
