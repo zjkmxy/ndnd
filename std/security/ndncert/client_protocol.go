@@ -238,8 +238,8 @@ func (c *Client) Challenge(
 		return nil, fmt.Errorf("failed to encrypt CHALLENGE: %w", err)
 	}
 
-	// ExpressR will resign on failure, we don't want this to happen
-	// TODO: add an option to ExpressR to not resign
+	// TODO: implement retrying on failure
+	// ExpressR will sign the packet again failure, this breaks the protocol
 	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
 		Name: c.caPrefix.Append(
@@ -253,7 +253,7 @@ func (c *Client) Challenge(
 		},
 		AppParam: chParamsC.TLV().Encode(),
 		Signer:   c.signer,
-		Retries:  3,
+		Retries:  0,
 		Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
 	})
 	args := <-ch
