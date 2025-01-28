@@ -54,7 +54,6 @@ func NewClient(engine ndn.Engine, caCert []byte) (*Client, error) {
 	// No need to start the client because it is only used for consume.
 	// TODO: find a better way to express this and prevent the error
 	// returned by start due to multiple clients.
-	// TODO: validate packets received by the client using the key.
 	client := object.NewClient(engine, object.NewMemoryStore(), nil)
 
 	// Generate ECDH Key used for encryption
@@ -88,6 +87,7 @@ func (c *Client) SetSigner(signer ndn.Signer) {
 
 // FetchProfile fetches the profile from the CA (blocking).
 func (c *Client) FetchProfile() (*tlv.CaProfile, error) {
+	// TODO: validate packets received by the client using the cert.
 	ch := make(chan ndn.ConsumeState)
 	c.client.Consume(c.caPrefix.Append(
 		enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
@@ -134,6 +134,10 @@ func (c *Client) FetchProbe(challenge Challenge) (*tlv.ProbeRes, error) {
 		return nil, fmt.Errorf("failed to fetch probe response: %s (%+v)", args.Result, args.Error)
 	}
 
+	if err := c.validate(args); err != nil {
+		return nil, err
+	}
+
 	content := args.Data.Content()
 	if err := IsError(content); err != nil {
 		return nil, err
@@ -163,11 +167,24 @@ func (c *Client) FetchProbeRedirect(challenge Challenge) (probe *tlv.ProbeRes, e
 		caCert := probe.RedirectPrefix.Name
 		caPrefix, err := sec.GetIdentityFromCertName(caCert)
 		if err != nil {
-			return nil, fmt.Errorf("invalid redirect %s: %w", caCert, err)
+			return nil, fmt.Errorf("invalid redirect %s: %+v", caCert, err)
+		}
+
+		// Check if the name has implicit digest
+		if caCert[len(caCert)-1].Typ != enc.TypeImplicitSha256DigestComponent {
+			return nil, fmt.Errorf("redirect name must have implicit digest: %s", caCert)
+		}
+
+		// Fetch the CA certificate.
+		// The certificate name received here includes the implicit digest,
+		// so we don't need to validate the received redirect certificate.
+		caCertData, _, err := c.fetchCert(caCert, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch CA certificate: %+v", err)
 		}
 
 		// Update the client to use the new CA
-		// TODO: fetch the CA certificate and update caCert
+		c.caCert = caCertData
 		c.caPrefix = caPrefix
 	}
 
@@ -182,7 +199,6 @@ func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error)
 	}
 
 	// Generate self-signed cert as CSR
-	// TODO: validity period is a parameter
 	csr, err := sec.SelfSign(sec.SignCertArgs{
 		Signer:    c.signer,
 		NotBefore: time.Now(),
@@ -216,6 +232,10 @@ func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error)
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
 		return nil, fmt.Errorf("failed NEW fetch: %s (%+v)", args.Result, args.Error)
+	}
+
+	if err := c.validate(args); err != nil {
+		return nil, err
 	}
 
 	content := args.Data.Content()
@@ -316,6 +336,10 @@ func (c *Client) Challenge(
 		return nil, fmt.Errorf("failed CHALLENGE fetch: %s (%+v)", args.Result, args.Error)
 	}
 
+	if err := c.validate(args); err != nil {
+		return nil, err
+	}
+
 	content := args.Data.Content()
 	if err := IsError(content); err != nil {
 		return nil, fmt.Errorf("failed CHALLENGE: %+v", err)
@@ -356,7 +380,8 @@ func (c *Client) Challenge(
 	}
 }
 
-func (c *Client) FetchCert(chRes *tlv.ChallengeRes) (ndn.Data, enc.Wire, error) {
+// FetchIssuedCert fetches the issued certificate from the CA (blocking).
+func (c *Client) FetchIssuedCert(chRes *tlv.ChallengeRes) (ndn.Data, enc.Wire, error) {
 	if chRes.Status != uint64(ChallengeStatusSuccess) {
 		return nil, nil, fmt.Errorf("invalid challenge status: %d", chRes.Status)
 	}
@@ -372,9 +397,14 @@ func (c *Client) FetchCert(chRes *tlv.ChallengeRes) (ndn.Data, enc.Wire, error) 
 	}
 
 	// Fetch issued certificate
+	return c.fetchCert(chRes.CertName.Name, fwHint)
+}
+
+// fetchCert fetches a certificate from the network.
+func (c *Client) fetchCert(name enc.Name, fwHint []enc.Name) (ndn.Data, enc.Wire, error) {
 	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
-		Name: chRes.CertName.Name,
+		Name: name,
 		Config: &ndn.InterestConfig{
 			CanBePrefix:    false,
 			ForwardingHint: fwHint,
@@ -384,8 +414,16 @@ func (c *Client) FetchCert(chRes *tlv.ChallengeRes) (ndn.Data, enc.Wire, error) 
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, nil, fmt.Errorf("failed to fetch certificate: %s (%+v)", args.Result, args.Error)
+		return nil, nil, fmt.Errorf("failed to fetch cert: %s (%+v)", args.Result, args.Error)
 	}
-
 	return args.Data, args.RawData, nil
+}
+
+// validate checks the signature of the data.
+func (c *Client) validate(args ndn.ExpressCallbackArgs) error {
+	valid, err := sig.ValidateData(args.Data, args.SigCovered, c.caCert)
+	if err != nil || !valid {
+		return fmt.Errorf("validation failure for %s: %+v", args.Data.Name(), err)
+	}
+	return nil
 }

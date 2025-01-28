@@ -268,7 +268,7 @@ func (c *CertClient) client() {
 	fmt.Fprintln(os.Stderr)
 
 	// Get the certificate
-	_, certWire, err := certClient.FetchCert(chRes)
+	_, certWire, err := certClient.FetchIssuedCert(chRes)
 	if err != nil {
 		log.Fatal(c, "Unable to fetch certificate", "err", err)
 		return
