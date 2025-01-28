@@ -15,15 +15,15 @@ func (*ChallengeEmail) Name() string {
 	return "email"
 }
 
-func (c *ChallengeEmail) Request(input map[string][]byte, status *string) (map[string][]byte, error) {
+func (c *ChallengeEmail) Request(input ParamMap, status *string) (ParamMap, error) {
 	// Validate challenge configuration
-	if c.Email == "" || c.CodeCallback == nil {
+	if len(c.Email) == 0 || c.CodeCallback == nil {
 		return nil, errors.New("email challenge not configured")
 	}
 
 	// Initial request parameters
 	if input == nil {
-		return map[string][]byte{
+		return ParamMap{
 			"email": []byte(c.Email),
 		}, nil
 	}
@@ -35,7 +35,7 @@ func (c *ChallengeEmail) Request(input map[string][]byte, status *string) (map[s
 			return nil, errors.New("no code provided")
 		}
 
-		return map[string][]byte{
+		return ParamMap{
 			"code": []byte(code),
 		}, nil
 	}

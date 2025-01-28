@@ -43,8 +43,20 @@ func GetKeyNameFromCertName(name enc.Name) (enc.Name, error) {
 	if len(name) < 5 {
 		return nil, ndn.ErrInvalidValue{Item: "certificate name"}
 	}
+	if name[len(name)-1].Typ == enc.TypeImplicitSha256DigestComponent {
+		name = name[:len(name)-1]
+	}
 	if name[len(name)-4].String() != "KEY" {
 		return nil, ndn.ErrInvalidValue{Item: "KEY component"}
 	}
 	return name[:len(name)-2], nil
+}
+
+// GetIdentityFromCertName extracts the identity name from a certificate name.
+func GetIdentityFromCertName(name enc.Name) (enc.Name, error) {
+	keyName, err := GetKeyNameFromCertName(name)
+	if err != nil {
+		return nil, err
+	}
+	return GetIdentityFromKeyName(keyName)
 }

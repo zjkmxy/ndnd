@@ -17,12 +17,17 @@ var ErrChallengePending = errors.New("challenge pending")
 var ErrChallengeFailed = errors.New("challenge failed")
 var ErrChallengeStatusUnknown = errors.New("unknown challenge status")
 
+// ParamMap is a map of challenge parameters.
+type ParamMap map[string][]byte
+
+// Challenge is the interface for an NDNCERT challenge.
 type Challenge interface {
 	// Name returns the name of the challenge.
 	Name() string
+
 	// Request gets the params of the challenge request.
 	// The input provides the params of the previous challenge response.
 	// Input is nil for the initial request.
 	// Status is for the previous challenge response.
-	Request(input map[string][]byte, status *string) (map[string][]byte, error)
+	Request(input ParamMap, status *string) (ParamMap, error)
 }

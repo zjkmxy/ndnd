@@ -26,30 +26,29 @@ type ChallengeResult struct {
 }
 
 type Client struct {
-	engine   ndn.Engine
+	engine ndn.Engine
+	signer ndn.Signer
+
+	caCert   ndn.Data
 	caPrefix enc.Name
-	signer   ndn.Signer
 
 	client  ndn.Client
 	ecdhKey *ecdh.PrivateKey
 	aeadCtr *AeadCounter
-
-	// caPrefix            string
-	// caPublicIdentityKey *ecdsa.PublicKey
-	// certKey             *ecdsa.PrivateKey
-	// certRequestBytes    []byte
-	// challengeStatus     ChallengeStatus
-	// ecdhState           *ECDHState
-	// interestSigner      ndn.Signer
-	// ndnEngine           ndn.Engine
-
-	// requestId                   RequestId
-	// counterInitializationVector *CounterInitializationVector
-	// serverBlockCounter          *uint32
-	// symmetricKey                [16]byte
 }
 
-func NewClient(engine ndn.Engine, caPrefix enc.Name, signer ndn.Signer) (*Client, error) {
+// NewClient creates a new NDNCERT client.
+//
+//	engine: NDN engine
+//	caCert: CA certificate raw wire
+//	signer: signer for the client
+func NewClient(engine ndn.Engine, caCert []byte) (*Client, error) {
+	// Decode CA certificate
+	cert, _, err := engine.Spec().ReadData(enc.NewBufferReader(caCert))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CA certificate: %w", err)
+	}
+
 	// Object API client for network requests. We use our own client here
 	// because this needs a custom trust model that is not the same as app.
 	// No need to start the client because it is only used for consume.
@@ -64,15 +63,27 @@ func NewClient(engine ndn.Engine, caPrefix enc.Name, signer ndn.Signer) (*Client
 		return nil, err
 	}
 
+	// Get CA prefix from CA certificate
+	caPrefix, err := sec.GetIdentityFromCertName(cert.Name())
+	if err != nil {
+		return nil, fmt.Errorf("invalid CA certificate name: %w", err)
+	}
+
 	return &Client{
-		engine:   engine,
+		engine: engine,
+
+		caCert:   cert,
 		caPrefix: caPrefix,
-		signer:   signer,
 
 		client:  client,
 		ecdhKey: ecdhKey,
 		aeadCtr: NewAeadCounter(),
 	}, nil
+}
+
+// SetSigner sets the signer for the client.
+func (c *Client) SetSigner(signer ndn.Signer) {
+	c.signer = signer
 }
 
 // FetchProfile fetches the profile from the CA (blocking).
@@ -131,7 +142,45 @@ func (c *Client) FetchProbe(challenge Challenge) (*tlv.ProbeRes, error) {
 	return tlv.ParseProbeRes(enc.NewWireReader(content), false)
 }
 
+// FetchProbeRedirect sends a PROBE request to the CA (blocking).
+// If a redirect is received, the request is sent to the new location.
+func (c *Client) FetchProbeRedirect(challenge Challenge) (probe *tlv.ProbeRes, err error) {
+	for i := 0; i < 4; i++ {
+		probe, err = c.FetchProbe(challenge)
+		if err != nil {
+			return nil, err
+		}
+
+		// Check if the probe response is a redirect
+		if probe.RedirectPrefix == nil ||
+			len(probe.RedirectPrefix.Name) == 0 ||
+			probe.RedirectPrefix.Name.Equal(c.caPrefix) {
+			// Found last CA in the chain
+			return probe, nil
+		}
+
+		// Redirect to a different CA
+		caCert := probe.RedirectPrefix.Name
+		caPrefix, err := sec.GetIdentityFromCertName(caCert)
+		if err != nil {
+			return nil, fmt.Errorf("invalid redirect %s: %w", caCert, err)
+		}
+
+		// Update the client to use the new CA
+		// TODO: fetch the CA certificate and update caCert
+		c.caPrefix = caPrefix
+	}
+
+	return nil, fmt.Errorf("too many redirects")
+}
+
+// New sends a NEW request to the CA (blocking).
 func (c *Client) New(challenge Challenge) (*tlv.NewRes, error) {
+	// Signer must be set before this step
+	if c.signer == nil {
+		return nil, fmt.Errorf("signer not set")
+	}
+
 	// Generate self-signed cert as CSR
 	// TODO: validity period is a parameter
 	csr, err := sec.SelfSign(sec.SignCertArgs{
@@ -200,7 +249,7 @@ func (c *Client) Challenge(
 	newRes *tlv.NewRes,
 	prevRes *tlv.ChallengeRes,
 ) (*tlv.ChallengeRes, error) {
-	var prevParams map[string][]byte = nil
+	var prevParams ParamMap = nil
 	var prevStatus *string = nil
 
 	if prevRes != nil {
@@ -211,7 +260,7 @@ func (c *Client) Challenge(
 			// Always provide params (even if they are empty) to the challenge
 			prevParams = prevRes.Params
 			if prevParams == nil {
-				prevParams = make(map[string][]byte)
+				prevParams = make(ParamMap)
 			}
 		default:
 			return nil, fmt.Errorf("invalid challenge status: %d", prevRes.Status)
@@ -305,4 +354,38 @@ func (c *Client) Challenge(
 	default:
 		return chRes, ErrChallengeStatusUnknown
 	}
+}
+
+func (c *Client) FetchCert(chRes *tlv.ChallengeRes) (ndn.Data, enc.Wire, error) {
+	if chRes.Status != uint64(ChallengeStatusSuccess) {
+		return nil, nil, fmt.Errorf("invalid challenge status: %d", chRes.Status)
+	}
+
+	if chRes.CertName == nil {
+		return nil, nil, fmt.Errorf("missing certificate name")
+	}
+
+	// Challenge response may contain a forwarding hint
+	var fwHint []enc.Name
+	if chRes.ForwardingHint != nil {
+		fwHint = []enc.Name{chRes.ForwardingHint.Name}
+	}
+
+	// Fetch issued certificate
+	ch := make(chan ndn.ExpressCallbackArgs)
+	c.client.ExpressR(ndn.ExpressRArgs{
+		Name: chRes.CertName.Name,
+		Config: &ndn.InterestConfig{
+			CanBePrefix:    false,
+			ForwardingHint: fwHint,
+		},
+		Retries:  3,
+		Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
+	})
+	args := <-ch
+	if args.Result != ndn.InterestResultData {
+		return nil, nil, fmt.Errorf("failed to fetch certificate: %s", args.Result)
+	}
+
+	return args.Data, args.RawData, nil
 }
