@@ -25,6 +25,7 @@ type CertClient struct {
 		outFile   string
 		challenge string
 		email     string
+		noprobe   bool
 	}
 
 	caCert    []byte
@@ -56,6 +57,7 @@ func (c *CertClient) run() {
 	flagset.StringVar(&c.opts.keyFile, "k", "", "File with NDN key to certify (default: generate new key)")
 	flagset.StringVar(&c.opts.challenge, "c", "", "Challenge type (default: ask)")
 	flagset.StringVar(&c.opts.email, "email", "", "Email address for probe and email challenge")
+	flagset.BoolVar(&c.opts.noprobe, "no-probe", false, "Skip probe and use the provided key directly")
 	flagset.Parse(c.args[1:])
 
 	argCaCert := flagset.Arg(0)
@@ -172,40 +174,46 @@ func (c *CertClient) client() {
 	}
 	c.printCaProfile(profile)
 
-	// We expect all CAs to support the same param keys for now.
-	// This is a reasonable assumption (for now) at least on testbed.
-	probeParams := ndncert.ParamMap{}
-	for _, paramKey := range profile.ParamKey {
-		switch paramKey {
-		case ndncert.KwEmail:
-			if c.opts.email == "" {
-				c.scanln("Enter email address for PROBE", &c.opts.email)
+	// Probe is optional, if disabled use the provided key directly
+	probe := &spec_ndncert.ProbeRes{}
+
+	// Probe the CA and get key suggestions
+	if !c.opts.noprobe {
+		// We expect all CAs to support the same param keys for now.
+		// This is a reasonable assumption (for now) at least on testbed.
+		probeParams := ndncert.ParamMap{}
+		for _, paramKey := range profile.ParamKey {
+			switch paramKey {
+			case ndncert.KwEmail:
+				if c.opts.email == "" {
+					c.scanln("Enter email address for PROBE", &c.opts.email)
+				}
+				probeParams[paramKey] = []byte(c.opts.email)
+
+			default:
+				var paramVal string
+				c.scanln(fmt.Sprintf("Enter PROBE param '%s'", paramKey), &paramVal)
+				probeParams[paramKey] = []byte(paramVal)
 			}
-			probeParams[paramKey] = []byte(c.opts.email)
-
-		default:
-			var paramVal string
-			c.scanln(fmt.Sprintf("Enter PROBE param '%s'", paramKey), &paramVal)
-			probeParams[paramKey] = []byte(paramVal)
 		}
-	}
 
-	// Probe the CA and redirect to the correct CA
-	probe, err := certClient.FetchProbeRedirect(probeParams)
-	if err != nil {
-		log.Fatal(c, "Unable to probe the CA", "err", err)
-		return
-	}
-
-	// Fetch redirected CA profile if changed
-	if !certClient.CaPrefix().Equal(caprefix) {
-		fmt.Fprintf(os.Stderr, "Redirected to CA: %s\n\n", certClient.CaPrefix())
-		profile, err = certClient.FetchProfile()
+		// Probe the CA and redirect to the correct CA
+		probe, err = certClient.FetchProbeRedirect(probeParams)
 		if err != nil {
-			log.Fatal(c, "Unable to fetch CA profile", "err", err)
+			log.Fatal(c, "Unable to probe the CA", "err", err)
 			return
 		}
-		c.printCaProfile(profile)
+
+		// Fetch redirected CA profile if changed
+		if !certClient.CaPrefix().Equal(caprefix) {
+			fmt.Fprintf(os.Stderr, "Redirected to CA: %s\n\n", certClient.CaPrefix())
+			profile, err = certClient.FetchProfile()
+			if err != nil {
+				log.Fatal(c, "Unable to fetch CA profile", "err", err)
+				return
+			}
+			c.printCaProfile(profile)
+		}
 	}
 
 	// If a key is provided, check if the name matches
@@ -317,8 +325,10 @@ func (c *CertClient) client() {
 
 	if c.opts.outFile == "" {
 		// Write the key and certificate to stdout
-		os.Stdout.Write(keyBytes)
-		os.Stdout.Write([]byte("\n"))
+		if len(keyBytes) > 0 {
+			os.Stdout.Write(keyBytes)
+			os.Stdout.Write([]byte("\n"))
+		}
 		os.Stdout.Write(certBytes)
 	} else {
 		// Write the key to a file

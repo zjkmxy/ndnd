@@ -6,7 +6,8 @@ This example illustrates how to get a certificate from the NDN Testbed CA.
 
 ## Getting the CA Certificate
 
-To begin, you need to get the root CA certificate out of band. The most recent certificates for the NDN Testbed can be obtained [here](https://named-data.net/ndn-testbed/).
+To begin, you need to get the root CA certificate out of band.
+The most recent certificates for the NDN Testbed can be obtained [here](https://named-data.net/ndn-testbed/).
 
 If the certificate is in base64, you will need to convert it to TLV or PEM format.
 
@@ -56,5 +57,22 @@ Enter the code sent to your email address:
 ```
 
 You will receive an email with a code to enter.
-On successful verification, the certificate will be issued,
-and the CLI will write the certificate to the specified output file.
+On successful verification, the certificate will be issued, and the CLI
+will write the key and certificate to the specified output files.
+
+## Using an existing key
+
+You can also use the CLI to certify an existing key.
+
+```sh
+# Create a new signing key
+# We use a key name corresponding to alice@gmail.com
+ndnd sec keygen /ndn/com/gmail/alice ecc secp256r1 > alice.key
+
+# Request a certificate using the existing key
+# We specify the challenge type as email with the -c option,
+# and the key with the -k option.
+ndnd certcli -o alice -k alice.key -c email testbed.root.pem
+
+# Enter the email address and code as before
+```
