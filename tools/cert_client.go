@@ -81,12 +81,12 @@ func (c *CertClient) run() {
 
 	// Read private key if specified
 	if keyFile := c.opts.keyFile; keyFile != "" {
-		keyFile, err := os.ReadFile(keyFile)
+		keyBytes, err := os.ReadFile(keyFile)
 		if err != nil {
 			log.Fatal(c, "Unable to read private key file", "file", keyFile)
 			return
 		}
-		keys, _, _ := sec.DecodeFile(keyFile)
+		keys, _, _ := sec.DecodeFile(keyBytes)
 		if len(keys) != 1 {
 			log.Fatal(c, "Private key file must contain exactly one key", "file", keyFile)
 			return
