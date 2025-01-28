@@ -101,7 +101,7 @@ The `ndnd/tools` package provides basic utilities for NDN networks.
 These can be used directly using the `ndnd` CLI.
 
 - `sec`: security utilities for generating keys and certificates ([docs](docs/security-util.md))
-- `certcli`: interactive NDNCERT client ([docs](docs/certcli.md))
+- `certcli`: interactive [NDNCERT](https://github.com/named-data/ndncert) client ([docs](docs/certcli.md))
 - `ping`/`pingserver`: test reachability between two NDN nodes
 - `cat`/`put`: segmented file transfer between a consumer and a producer
 

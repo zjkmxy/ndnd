@@ -1,6 +1,7 @@
 # NDNCERT CLI Reference
 
-The NDNCERT CLI tool can be used to interact with an NDNCERT CA running in an NDN network.
+The NDNCERT CLI tool can be used to interact with an [NDNCERT](https://github.com/named-data/ndncert) CA.
+It allows entities to securely provision certificates after authenticating their identity with the CA.
 
 This example illustrates how to get a certificate from the NDN Testbed CA.
 
