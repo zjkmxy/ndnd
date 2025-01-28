@@ -246,7 +246,8 @@ func (c *CertClient) client() {
 	fmt.Fprintf(os.Stderr, "Certifying key: %s\n", c.signer.KeyName())
 
 	// Start a new certification request
-	newRes, err := certClient.New(c.challenge)
+	// Use the longest possible validity period
+	newRes, err := certClient.New(c.challenge, time.Now().Add(time.Second*time.Duration(profile.MaxValidPeriod)))
 	if err != nil {
 		log.Fatal(c, "Unable to start new certification request", "err", err)
 		return

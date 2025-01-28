@@ -175,7 +175,7 @@ func (c *Client) FetchProbeRedirect(challenge Challenge) (probe *tlv.ProbeRes, e
 }
 
 // New sends a NEW request to the CA (blocking).
-func (c *Client) New(challenge Challenge) (*tlv.NewRes, error) {
+func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error) {
 	// Signer must be set before this step
 	if c.signer == nil {
 		return nil, fmt.Errorf("signer not set")
@@ -186,7 +186,7 @@ func (c *Client) New(challenge Challenge) (*tlv.NewRes, error) {
 	csr, err := sec.SelfSign(sec.SignCertArgs{
 		Signer:    c.signer,
 		NotBefore: time.Now(),
-		NotAfter:  time.Now().AddDate(0, 0, 3),
+		NotAfter:  expiry,
 	})
 	if err != nil {
 		return nil, err
