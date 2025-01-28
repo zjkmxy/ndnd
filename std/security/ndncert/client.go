@@ -114,7 +114,7 @@ func (c *Client) FetchProbe(challenge Challenge) (*tlv.ProbeRes, error) {
 
 	probeParams := tlv.ProbeReq{Params: params}
 
-	ch := make(chan ndn.ExpressCallbackArgs)
+	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
 		Name: c.caPrefix.Append(
 			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
@@ -131,7 +131,7 @@ func (c *Client) FetchProbe(challenge Challenge) (*tlv.ProbeRes, error) {
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed to fetch probe response: %s", args.Result)
+		return nil, fmt.Errorf("failed to fetch probe response: %s (%+v)", args.Result, args.Error)
 	}
 
 	content := args.Data.Content()
@@ -198,7 +198,7 @@ func (c *Client) New(challenge Challenge) (*tlv.NewRes, error) {
 		CertReq: csr,
 	}
 
-	ch := make(chan ndn.ExpressCallbackArgs)
+	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
 		Name: c.caPrefix.Append(
 			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
@@ -215,7 +215,7 @@ func (c *Client) New(challenge Challenge) (*tlv.NewRes, error) {
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed NEW fetch: %s", args.Result)
+		return nil, fmt.Errorf("failed NEW fetch: %s (%+v)", args.Result, args.Error)
 	}
 
 	content := args.Data.Content()
@@ -295,7 +295,7 @@ func (c *Client) Challenge(
 
 	// ExpressR will resign on failure, we don't want this to happen
 	// TODO: add an option to ExpressR to not resign
-	ch := make(chan ndn.ExpressCallbackArgs)
+	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
 		Name: c.caPrefix.Append(
 			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
@@ -313,7 +313,7 @@ func (c *Client) Challenge(
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed CHALLENGE fetch: %s", args.Result)
+		return nil, fmt.Errorf("failed CHALLENGE fetch: %s (%+v)", args.Result, args.Error)
 	}
 
 	content := args.Data.Content()
@@ -372,7 +372,7 @@ func (c *Client) FetchCert(chRes *tlv.ChallengeRes) (ndn.Data, enc.Wire, error) 
 	}
 
 	// Fetch issued certificate
-	ch := make(chan ndn.ExpressCallbackArgs)
+	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
 		Name: chRes.CertName.Name,
 		Config: &ndn.InterestConfig{
@@ -384,7 +384,7 @@ func (c *Client) FetchCert(chRes *tlv.ChallengeRes) (ndn.Data, enc.Wire, error) 
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, nil, fmt.Errorf("failed to fetch certificate: %s", args.Result)
+		return nil, nil, fmt.Errorf("failed to fetch certificate: %s (%+v)", args.Result, args.Error)
 	}
 
 	return args.Data, args.RawData, nil
