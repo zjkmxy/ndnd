@@ -2,6 +2,7 @@ package ndncert
 
 import (
 	"crypto/ecdh"
+	"crypto/elliptic"
 	"fmt"
 	"time"
 
@@ -12,18 +13,6 @@ import (
 	"github.com/named-data/ndnd/std/security/ndncert/tlv"
 	sig "github.com/named-data/ndnd/std/security/signer"
 )
-
-const RequestIdLength = 8
-
-type ChallengeResult struct {
-	ChallengeStatus       *ChallengeStatus
-	RemainingTime         *uint64
-	RemainingTries        *uint64
-	IssuedCertificateName enc.Name
-	ForwardingHint        enc.Name
-	IssuedCertificateBits *[]byte
-	ErrorMessage          *tlv.ErrorRes
-}
 
 type Client struct {
 	engine ndn.Engine
@@ -90,340 +79,203 @@ func (c *Client) CaPrefix() enc.Name {
 	return c.caPrefix
 }
 
-// FetchProfile fetches the profile from the CA (blocking).
-func (c *Client) FetchProfile() (*tlv.CaProfile, error) {
-	// TODO: validate packets received by the client using the cert.
-	ch := make(chan ndn.ConsumeState)
-	c.client.Consume(c.caPrefix.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "INFO"),
-	), func(status ndn.ConsumeState) {
-		if status.IsComplete() {
-			ch <- status
+// RequestCertArgs is the arguments for the Issue function.
+type RequestCertArgs struct {
+	// Challenge is the challenge to be used for the certificate request.
+	Challenge Challenge
+	// OnProfile is called when a CA profile is fetched.
+	// Returning an error will abort the request.
+	OnProfile func(profile *tlv.CaProfile) error
+	// DisableProbe is a flag to disable the probe step.
+	// If true, the key will be used directly.
+	DisableProbe bool
+	// OnProbeParam is the callback to get the probe parameter.
+	// Returning an error will abort the request.
+	OnProbeParam func(key string) ([]byte, error)
+	// OnChooseKey is the callback to choose a key suggestion.
+	// Returning an invalid index will abort the request.
+	// If nil, the first suggestion is used.
+	OnChooseKey func(suggestions []enc.Name) int
+	// OnKeyChosen is called when a key is chosen.
+	// Returning an error will abort the request.
+	OnKeyChosen func(keyName enc.Name) error
+}
+
+// RequestCertResult is the result of the Issue function.
+type RequestCertResult struct {
+	// CertData is the issued certificate data.
+	CertData ndn.Data
+	// CertWire is the raw certificate data.
+	CertWire enc.Wire
+	// Signer is the signer used for the certificate.
+	Signer ndn.Signer
+}
+
+// RequestCert is the high level function to issue a certificate.
+// This API is recommended to be used for most cases.
+// This is a blocking function and should be called in a separate goroutine.
+func (c *Client) RequestCert(args RequestCertArgs) (*RequestCertResult, error) {
+	// ======  Step 0: Validate arguments ==============
+	if args.Challenge == nil {
+		return nil, ndn.ErrInvalidValue{Item: "Challenge", Value: nil}
+	}
+	if !args.DisableProbe && args.OnProbeParam == nil {
+		return nil, ndn.ErrInvalidValue{Item: "ProbeParam", Value: nil}
+	}
+
+	// ======  Step 1: INFO CA profile ==============
+
+	// Profile of the CA we will use
+	var profile *tlv.CaProfile = nil
+	var err error = nil
+
+	// Helper to fetch profile and callback to app
+	fetchProfile := func() error {
+		profile, err = c.FetchProfile()
+		if err != nil {
+			return err
 		}
-	})
-	state := <-ch
-	if err := state.Error(); err != nil {
+
+		// Call the OnProfile callback
+		if args.OnProfile != nil {
+			if err := args.OnProfile(profile); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// Fetch root CA profile
+	if err := fetchProfile(); err != nil {
 		return nil, err
 	}
 
-	return tlv.ParseCaProfile(enc.NewWireReader(state.Content()), false)
-}
+	// ======  Step 2: PROBE CA (optional) ==============
 
-// FetchProbe sends a PROBE request to the CA (blocking).
-func (c *Client) FetchProbe(params ParamMap) (*tlv.ProbeRes, error) {
-	probeParams := tlv.ProbeReq{Params: params}
+	// Probe is optional, if disabled use the provided key directly
+	probe := &tlv.ProbeRes{}
 
-	ch := make(chan ndn.ExpressCallbackArgs, 1)
-	c.client.ExpressR(ndn.ExpressRArgs{
-		Name: c.caPrefix.Append(
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "PROBE"),
-		),
-		Config: &ndn.InterestConfig{
-			CanBePrefix: false,
-			MustBeFresh: true,
-		},
-		AppParam: probeParams.Encode(),
-		Signer:   sig.NewSha256Signer(),
-		Retries:  3,
-		Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
-	})
-	args := <-ch
-	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed to fetch probe response: %s (%+v)", args.Result, args.Error)
+	// Probe the CA and get key suggestions
+	if !args.DisableProbe {
+		// We expect all CAs to support the same param keys for now.
+		// This is a reasonable assumption (for now) at least on testbed.
+		probeParams := ParamMap{}
+		for _, key := range profile.ParamKey {
+			val, err := args.OnProbeParam(key)
+			if err != nil {
+				return nil, err
+			}
+			probeParams[key] = val
+		}
+
+		// Probe the CA and redirect to the correct CA
+		prevCaPrefix := c.CaPrefix()
+		probe, err = c.FetchProbeRedirect(probeParams)
+		if err != nil {
+			return nil, fmt.Errorf("unable to probe the CA: %w", err)
+		}
+
+		// Fetch redirected CA profile if changed
+		if !c.CaPrefix().Equal(prevCaPrefix) {
+			if err := fetchProfile(); err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	if err := c.validate(args); err != nil {
-		return nil, err
+	// Get all probeSgst identity values
+	probeSgst := make([]enc.Name, 0, len(probe.Vals))
+	for _, sgst := range probe.Vals {
+		probeSgst = append(probeSgst, sgst.Response)
 	}
 
-	content := args.Data.Content()
-	if err := IsError(content); err != nil {
-		return nil, err
-	}
+	// If a key is provided, check if the name matches
+	if c.signer != nil {
+		// if no suggestions, assume it's correct
+		found := len(probeSgst) == 0
 
-	return tlv.ParseProbeRes(enc.NewWireReader(content), false)
-}
+		// find the key name in the suggestions
+		keyName := c.signer.KeyName()
+		for _, sgst := range probeSgst {
+			if sgst.IsPrefix(keyName) {
+				found = true
+				break
+			}
+		}
 
-// FetchProbeRedirect sends a PROBE request to the CA (blocking).
-// If a redirect is received, the request is sent to the new location.
-func (c *Client) FetchProbeRedirect(params ParamMap) (probe *tlv.ProbeRes, err error) {
-	for i := 0; i < 4; i++ {
-		probe, err = c.FetchProbe(params)
+		// if not found, print suggestions and exit
+		if !found {
+			return nil, ErrSignerProbeMismatch{
+				KeyName:   keyName,
+				Suggested: probeSgst,
+			}
+		}
+	} else {
+		// If no key is provided, generate one from the suggestions
+		var identity enc.Name
+
+		if len(probe.Vals) == 0 {
+			// No key suggestions, ask the user to provide one
+			return nil, ErrNoKeySuggestions
+		} else if len(probe.Vals) == 1 {
+			// If only one suggestion, use it
+			identity = probe.Vals[0].Response
+		} else {
+			// Multiple available suggestions
+			if args.OnChooseKey == nil {
+				// Use the first suggestion by default
+				identity = probeSgst[0]
+			} else {
+				// Ask the user to choose a suggestion
+				idx := args.OnChooseKey(probeSgst)
+				if idx < 0 || idx >= len(probe.Vals) {
+					return nil, err
+				}
+				identity = probeSgst[idx]
+			}
+		}
+
+		// Generate key
+		keyName := sec.MakeKeyName(identity)
+		c.signer, err = sig.KeygenEcc(keyName, elliptic.P256())
 		if err != nil {
 			return nil, err
 		}
-
-		// Check if the probe response is a redirect
-		if probe.RedirectPrefix == nil ||
-			len(probe.RedirectPrefix.Name) == 0 ||
-			probe.RedirectPrefix.Name.Equal(c.caPrefix) {
-			// Found last CA in the chain
-			return probe, nil
-		}
-
-		// Redirect to a different CA
-		caCert := probe.RedirectPrefix.Name
-		caPrefix, err := sec.GetIdentityFromCertName(caCert)
-		if err != nil {
-			return nil, fmt.Errorf("invalid redirect %s: %+v", caCert, err)
-		}
-
-		// Check if the name has implicit digest
-		if caCert[len(caCert)-1].Typ != enc.TypeImplicitSha256DigestComponent {
-			return nil, fmt.Errorf("redirect name must have implicit digest: %s", caCert)
-		}
-
-		// Fetch the CA certificate.
-		// The certificate name received here includes the implicit digest,
-		// so we don't need to validate the received redirect certificate.
-		caCertData, _, err := c.fetchCert(caCert, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch CA certificate: %+v", err)
-		}
-
-		// Update the client to use the new CA
-		c.caCert = caCertData
-		c.caPrefix = caPrefix
 	}
 
-	return nil, fmt.Errorf("too many redirects")
-}
-
-// New sends a NEW request to the CA (blocking).
-func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error) {
-	// Signer must be set before this step
-	if c.signer == nil {
-		return nil, fmt.Errorf("signer not set")
+	// Alert the app that a key has been chosen
+	if args.OnKeyChosen != nil {
+		if err := args.OnKeyChosen(c.signer.KeyName()); err != nil {
+			return nil, err
+		}
 	}
 
-	// Generate self-signed cert as CSR
-	csr, err := sec.SelfSign(sec.SignCertArgs{
-		Signer:    c.signer,
-		NotBefore: time.Now(),
-		NotAfter:  expiry,
-	})
+	// ======  Step 3: NEW ==============
+	// Use the longest possible validity period
+	expiry := time.Now().Add(time.Second * time.Duration(profile.MaxValidPeriod))
+	newRes, err := c.New(args.Challenge, expiry)
 	if err != nil {
 		return nil, err
 	}
 
-	// Send NEW request to CA
-	newParams := tlv.NewReq{
-		EcdhPub: c.ecdhKey.Public().(*ecdh.PublicKey).Bytes(),
-		CertReq: csr,
+	// ======  Step 4: CHALLENGE ==============
+	chRes, err := c.Challenge(args.Challenge, newRes, nil)
+	if err != nil {
+		return nil, err
+	}
+	if chRes.CertName.Name == nil {
+		return nil, fmt.Errorf("no issued certificate name after challenge")
 	}
 
-	ch := make(chan ndn.ExpressCallbackArgs, 1)
-	c.client.ExpressR(ndn.ExpressRArgs{
-		Name: c.caPrefix.Append(
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "NEW"),
-		),
-		Config: &ndn.InterestConfig{
-			CanBePrefix: false,
-			MustBeFresh: true,
-		},
-		AppParam: newParams.Encode(),
+	// ======  Step 5: Fetch issued cert ==============
+	certData, certWire, err := c.FetchIssuedCert(chRes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RequestCertResult{
+		CertData: certData,
+		CertWire: certWire,
 		Signer:   c.signer,
-		Retries:  3,
-		Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
-	})
-	args := <-ch
-	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed NEW fetch: %s (%+v)", args.Result, args.Error)
-	}
-
-	if err := c.validate(args); err != nil {
-		return nil, err
-	}
-
-	content := args.Data.Content()
-	if err := IsError(content); err != nil {
-		return nil, fmt.Errorf("failed NEW: %+v", err)
-	}
-
-	newRes, err := tlv.ParseNewRes(enc.NewWireReader(content), false)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if challenge is supported
-	hasChallenge := false
-	for _, chName := range newRes.Challenge {
-		if chName == challenge.Name() {
-			hasChallenge = true
-			break
-		}
-	}
-	if !hasChallenge && challenge.Name() != KwPin { // pin is always supported
-		return nil, fmt.Errorf("challenge not supported by CA: %s", challenge.Name())
-	}
-
-	return newRes, nil
-}
-
-// Challenge sends a CHALLENGE request to the CA (blocking).
-func (c *Client) Challenge(
-	challenge Challenge,
-	newRes *tlv.NewRes,
-	prevRes *tlv.ChallengeRes,
-) (*tlv.ChallengeRes, error) {
-	var prevParams ParamMap = nil
-	var prevStatus *string = nil
-
-	if prevRes != nil {
-		prevStatus = prevRes.ChalStatus
-
-		switch ChallengeStatus(prevRes.Status) {
-		case ChallengeStatusChallenge:
-			// Always provide params (even if they are empty) to the challenge
-			prevParams = prevRes.Params
-			if prevParams == nil {
-				prevParams = make(ParamMap)
-			}
-		default:
-			return nil, fmt.Errorf("invalid challenge status: %d", prevRes.Status)
-		}
-	}
-
-	// Get challenge params
-	params, err := challenge.Request(prevParams, prevStatus)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get challenge params: %w", err)
-	}
-
-	// Create CHALLENGE request for CA
-	chParams := tlv.ChallengeReq{
-		Challenge: challenge.Name(),
-		Params:    params,
-	}
-
-	// Derive symmetric key using ECDH-HKDF
-	symkey, err := EcdhHkdf(c.ecdhKey, newRes.EcdhPub, newRes.Salt, newRes.ReqId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to derive symmetric key: %w", err)
-	}
-
-	// Encrypt and send CHALLENGE request
-	chParamsC, err := AeadEncrypt(
-		[16]byte(symkey), chParams.Encode().Join(),
-		newRes.ReqId, c.aeadCtr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt CHALLENGE: %w", err)
-	}
-
-	// ExpressR will resign on failure, we don't want this to happen
-	// TODO: add an option to ExpressR to not resign
-	ch := make(chan ndn.ExpressCallbackArgs, 1)
-	c.client.ExpressR(ndn.ExpressRArgs{
-		Name: c.caPrefix.Append(
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "CHALLENGE"),
-			enc.NewBytesComponent(enc.TypeGenericNameComponent, newRes.ReqId),
-		),
-		Config: &ndn.InterestConfig{
-			CanBePrefix: false,
-			MustBeFresh: true,
-		},
-		AppParam: chParamsC.TLV().Encode(),
-		Signer:   c.signer,
-		Retries:  3,
-		Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
-	})
-	args := <-ch
-	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed CHALLENGE fetch: %s (%+v)", args.Result, args.Error)
-	}
-
-	if err := c.validate(args); err != nil {
-		return nil, err
-	}
-
-	content := args.Data.Content()
-	if err := IsError(content); err != nil {
-		return nil, fmt.Errorf("failed CHALLENGE: %+v", err)
-	}
-
-	chResEnc, err := tlv.ParseCipherMsg(enc.NewWireReader(content), false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse CHALLENGE cipher response: %w", err)
-	}
-
-	chResAeadMsg := AeadMessage{}
-	chResAeadMsg.FromTLV(chResEnc)
-	chResBytes, err := AeadDecrypt([16]byte(symkey), chResAeadMsg, newRes.ReqId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt CHALLENGE response: %w", err)
-	}
-
-	chRes, err := tlv.ParseChallengeRes(enc.NewBufferReader(chResBytes), false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse CHALLENGE response: %w", err)
-	}
-
-	switch ChallengeStatus(chRes.Status) {
-	case ChallengeStatusBefore:
-		return chRes, ErrChallengeBefore
-	case ChallengeStatusChallenge:
-		// Continue with the challenge
-		return c.Challenge(challenge, newRes, chRes)
-	case ChallengeStatusPending:
-		// TODO: likely need to wait and retry
-		return chRes, ErrChallengePending
-	case ChallengeStatusSuccess:
-		return chRes, nil
-	case ChallengeStatusFailure:
-		return chRes, ErrChallengeFailed
-	default:
-		return chRes, ErrChallengeStatusUnknown
-	}
-}
-
-// FetchIssuedCert fetches the issued certificate from the CA (blocking).
-func (c *Client) FetchIssuedCert(chRes *tlv.ChallengeRes) (ndn.Data, enc.Wire, error) {
-	if chRes.Status != uint64(ChallengeStatusSuccess) {
-		return nil, nil, fmt.Errorf("invalid challenge status: %d", chRes.Status)
-	}
-
-	if chRes.CertName == nil {
-		return nil, nil, fmt.Errorf("missing certificate name")
-	}
-
-	// Challenge response may contain a forwarding hint
-	var fwHint []enc.Name
-	if chRes.ForwardingHint != nil {
-		fwHint = []enc.Name{chRes.ForwardingHint.Name}
-	}
-
-	// Fetch issued certificate
-	return c.fetchCert(chRes.CertName.Name, fwHint)
-}
-
-// fetchCert fetches a certificate from the network.
-func (c *Client) fetchCert(name enc.Name, fwHint []enc.Name) (ndn.Data, enc.Wire, error) {
-	ch := make(chan ndn.ExpressCallbackArgs, 1)
-	c.client.ExpressR(ndn.ExpressRArgs{
-		Name: name,
-		Config: &ndn.InterestConfig{
-			CanBePrefix:    false,
-			ForwardingHint: fwHint,
-		},
-		Retries:  3,
-		Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
-	})
-	args := <-ch
-	if args.Result != ndn.InterestResultData {
-		return nil, nil, fmt.Errorf("failed to fetch cert: %s (%+v)", args.Result, args.Error)
-	}
-	return args.Data, args.RawData, nil
-}
-
-// validate checks the signature of the data.
-func (c *Client) validate(args ndn.ExpressCallbackArgs) error {
-	valid, err := sig.ValidateData(args.Data, args.SigCovered, c.caCert)
-	if err != nil || !valid {
-		return fmt.Errorf("validation failure for %s: %+v", args.Data.Name(), err)
-	}
-	return nil
+	}, nil
 }

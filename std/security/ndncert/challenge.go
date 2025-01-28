@@ -1,7 +1,5 @@
 package ndncert
 
-import "errors"
-
 type ChallengeStatus uint64
 
 const (
@@ -11,15 +9,6 @@ const (
 	ChallengeStatusSuccess   ChallengeStatus = 3
 	ChallengeStatusFailure   ChallengeStatus = 4
 )
-
-const KwEmail = "email"
-const KwPin = "pin"
-const KwCode = "code"
-
-var ErrChallengeBefore = errors.New("challenge before request")
-var ErrChallengePending = errors.New("challenge pending")
-var ErrChallengeFailed = errors.New("challenge failed")
-var ErrChallengeStatusUnknown = errors.New("unknown challenge status")
 
 // ParamMap is a map of challenge parameters.
 type ParamMap map[string][]byte

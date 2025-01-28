@@ -1,7 +1,7 @@
 package tools
 
 import (
-	"crypto/elliptic"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -165,144 +165,74 @@ func (c *CertClient) client() {
 		return
 	}
 
-	// Fetch root CA profile
-	caprefix := certClient.CaPrefix()
-	profile, err := certClient.FetchProfile()
-	if err != nil {
-		log.Fatal(c, "Unable to fetch CA profile", "err", err)
-		return
+	// Set signer if provided
+	if c.signer != nil {
+		certClient.SetSigner(c.signer)
 	}
-	c.printCaProfile(profile)
 
-	// Probe is optional, if disabled use the provided key directly
-	probe := &spec_ndncert.ProbeRes{}
-
-	// Probe the CA and get key suggestions
-	if !c.opts.noprobe {
-		// We expect all CAs to support the same param keys for now.
-		// This is a reasonable assumption (for now) at least on testbed.
-		probeParams := ndncert.ParamMap{}
-		for _, paramKey := range profile.ParamKey {
-			switch paramKey {
+	// Start the certificate request
+	certRes, err := certClient.RequestCert(ndncert.RequestCertArgs{
+		Challenge: c.challenge,
+		OnProfile: func(profile *spec_ndncert.CaProfile) error {
+			c.printCaProfile(profile)
+			return nil
+		},
+		DisableProbe: c.opts.noprobe,
+		OnProbeParam: func(key string) ([]byte, error) {
+			switch key {
 			case ndncert.KwEmail:
 				if c.opts.email == "" {
-					c.scanln("Enter email address for PROBE", &c.opts.email)
+					c.scanln("Enter your email address", &c.opts.email)
 				}
-				probeParams[paramKey] = []byte(c.opts.email)
+				return []byte(c.opts.email), nil
 
 			default:
-				var paramVal string
-				c.scanln(fmt.Sprintf("Enter PROBE param '%s'", paramKey), &paramVal)
-				probeParams[paramKey] = []byte(paramVal)
+				var val string
+				c.scanln(fmt.Sprintf("Enter probing parameter '%s'", key), &val)
+				return []byte(val), nil
 			}
-		}
-
-		// Probe the CA and redirect to the correct CA
-		probe, err = certClient.FetchProbeRedirect(probeParams)
-		if err != nil {
-			log.Fatal(c, "Unable to probe the CA", "err", err)
+		},
+		OnChooseKey: func(suggestions []enc.Name) int {
+			suggestionsStr := make([]string, 0, len(suggestions))
+			for _, sgst := range suggestions {
+				suggestionsStr = append(suggestionsStr, sgst.String())
+			}
+			return c.chooseOpts("Please choose a key name:", suggestionsStr)
+		},
+		OnKeyChosen: func(keyName enc.Name) error {
+			fmt.Fprintf(os.Stderr, "Certifying key: %s\n", keyName)
+			return nil
+		},
+	})
+	if err != nil {
+		// Handle mismatched key name
+		var pmErr ndncert.ErrSignerProbeMismatch
+		if errors.As(err, &pmErr) {
+			fmt.Fprintf(os.Stderr, "Key name does not match CA probe response:\n")
+			fmt.Fprintf(os.Stderr, "  %s\n", pmErr.KeyName)
+			fmt.Fprintf(os.Stderr, "CA suggestions:\n")
+			for _, sgst := range pmErr.Suggested {
+				fmt.Fprintf(os.Stderr, "  %s\n", sgst)
+			}
+			os.Exit(1)
 			return
 		}
 
-		// Fetch redirected CA profile if changed
-		if !certClient.CaPrefix().Equal(caprefix) {
-			fmt.Fprintf(os.Stderr, "Redirected to CA: %s\n\n", certClient.CaPrefix())
-			profile, err = certClient.FetchProfile()
-			if err != nil {
-				log.Fatal(c, "Unable to fetch CA profile", "err", err)
-				return
-			}
-			c.printCaProfile(profile)
-		}
-	}
-
-	// If a key is provided, check if the name matches
-	if c.signer != nil {
-		// if no suggestions, assume it's correct
-		found := len(probe.Vals) == 0
-
-		// find the key name in the suggestions
-		keyName := c.signer.KeyName()
-		for _, sgst := range probe.Vals {
-			if sgst.Response.IsPrefix(keyName) {
-				found = true
-				break
-			}
-		}
-
-		// if not found, print suggestions and exit
-		if !found {
-			fmt.Fprintf(os.Stderr, "Key name does not match CA probe response:\n")
-			fmt.Fprintf(os.Stderr, "  %s\n", keyName)
-			fmt.Fprintf(os.Stderr, "CA suggestions:\n")
-			for _, sgst := range probe.Vals {
-				fmt.Fprintf(os.Stderr, "  %s\n", sgst.Response)
-			}
-			os.Exit(1)
-		}
-	} else {
-		// If no key is provided, generate one from the suggestions
-		var identity enc.Name
-
-		if len(probe.Vals) == 0 {
-			// If no suggestions, print error and exit
+		// Handle no key suggestions from PROBE step
+		if errors.Is(err, ndncert.ErrNoKeySuggestions) {
 			fmt.Fprintf(os.Stderr, "No key suggestions from the CA\n")
 			fmt.Fprintf(os.Stderr, "Please provide a key file with -k\n")
 			os.Exit(1)
-		} else if len(probe.Vals) == 1 {
-			// If only one suggestion, use it
-			identity = probe.Vals[0].Response
-		} else {
-			// If multiple suggestions, ask the user to choose
-			idNames := make([]string, 0, len(probe.Vals))
-			for _, sgst := range probe.Vals {
-				idNames = append(idNames, sgst.Response.String())
-			}
-			idx := c.chooseOpts("Please choose a key name:", idNames)
-			identity = probe.Vals[idx].Response
+			return
 		}
 
-		// Generate key
-		keyName := sec.MakeKeyName(identity)
-		c.signer, err = sig.KeygenEcc(keyName, elliptic.P256())
-		if err != nil {
-			log.Fatal(c, "Unable to generate key", "err", err)
-		}
-	}
-
-	// Print name of key we are finalizing
-	certClient.SetSigner(c.signer)
-	fmt.Fprintf(os.Stderr, "Certifying key: %s\n", c.signer.KeyName())
-
-	// Start a new certification request
-	// Use the longest possible validity period
-	newRes, err := certClient.New(c.challenge, time.Now().Add(time.Second*time.Duration(profile.MaxValidPeriod)))
-	if err != nil {
-		log.Fatal(c, "Unable to start new certification request", "err", err)
+		// Handle other errors
+		log.Fatal(c, err.Error())
 		return
 	}
 
-	// Complete the challenge
-	chRes, err := certClient.Challenge(c.challenge, newRes, nil)
-	if err != nil {
-		log.Fatal(c, "Unable to complete challenge", "err", err)
-		return
-	}
-	if chRes.CertName.Name == nil {
-		log.Fatal(c, "No certificate issued", "err", err)
-		return
-	}
-
-	fmt.Fprintf(os.Stderr, "Issued certificate: %s\n", chRes.CertName.Name)
-	fmt.Fprintln(os.Stderr)
-
-	// Get the certificate
-	_, certWire, err := certClient.FetchIssuedCert(chRes)
-	if err != nil {
-		log.Fatal(c, "Unable to fetch certificate", "err", err)
-		return
-	}
-	certBytes, err := sec.PemEncode(certWire.Join())
+	// PEM encode the certificate
+	certBytes, err := sec.PemEncode(certRes.CertWire.Join())
 	if err != nil {
 		log.Fatal(c, "Unable to PEM encode certificate", "err", err)
 		return
@@ -311,7 +241,7 @@ func (c *CertClient) client() {
 	// Marshal the key if not specified as file
 	var keyBytes []byte = nil
 	if c.opts.keyFile == "" {
-		keyWire, err := sig.MarshalSecret(c.signer)
+		keyWire, err := sig.MarshalSecret(certRes.Signer)
 		if err != nil {
 			log.Fatal(c, "Unable to marshal key", "err", err)
 			return
