@@ -70,6 +70,30 @@ func SignCert(args SignCertArgs) (enc.Wire, error) {
 	return cert.Wire, nil
 }
 
+// SelfSign generates a self-signed certificate.
+func SelfSign(args SignCertArgs) (enc.Wire, error) {
+	if args.Data != nil {
+		return nil, ndn.ErrInvalidValue{Item: "SelfSign.args.Data", Value: args.Data}
+	}
+	if args.Signer == nil {
+		return nil, ndn.ErrInvalidValue{Item: "SelfSign.args.Signer", Value: args.Signer}
+	}
+	if args.IssuerId.Typ == 0 {
+		args.IssuerId = enc.NewStringComponent(enc.TypeGenericNameComponent, "SELF")
+	}
+
+	keyWire, err := sig.MarshalSecret(args.Signer)
+	if err != nil {
+		return nil, err
+	}
+	args.Data, _, err = spec.Spec{}.ReadData(enc.NewWireReader(keyWire))
+	if err != nil {
+		return nil, err
+	}
+
+	return SignCert(args)
+}
+
 func CertIsExpired(cert ndn.Data) bool {
 	if cert.Signature() == nil {
 		return true
