@@ -14,7 +14,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/ndncert"
-	"github.com/named-data/ndnd/std/security/signer"
+	spec_ndncert "github.com/named-data/ndnd/std/security/ndncert/tlv"
 	sig "github.com/named-data/ndnd/std/security/signer"
 )
 
@@ -24,6 +24,7 @@ type CertClient struct {
 		keyFile   string
 		outFile   string
 		challenge string
+		email     string
 	}
 
 	caCert    []byte
@@ -54,6 +55,7 @@ func (c *CertClient) run() {
 	flagset.StringVar(&c.opts.outFile, "o", "", "Output filename without extension (default: stdout)")
 	flagset.StringVar(&c.opts.keyFile, "k", "", "File with NDN key to certify (default: generate new key)")
 	flagset.StringVar(&c.opts.challenge, "c", "", "Challenge type (default: ask)")
+	flagset.StringVar(&c.opts.email, "email", "", "Email address for probe and email challenge")
 	flagset.Parse(c.args[1:])
 
 	argCaCert := flagset.Arg(0)
@@ -102,7 +104,7 @@ func (c *CertClient) run() {
 func (c *CertClient) chooseChallenge() ndncert.Challenge {
 	defer fmt.Fprintln(os.Stderr)
 
-	challenges := []string{"email", "pin"}
+	challenges := []string{ndncert.KwEmail, ndncert.KwPin}
 
 	if c.opts.challenge == "" {
 		i := c.chooseOpts("Please choose a challenge type:", challenges)
@@ -110,8 +112,12 @@ func (c *CertClient) chooseChallenge() ndncert.Challenge {
 	}
 
 	switch c.opts.challenge {
-	case "email":
-		email := &ndncert.ChallengeEmail{
+	case ndncert.KwEmail:
+		if c.opts.email == "" {
+			c.scanln("Enter your email address", &c.opts.email)
+		}
+		return &ndncert.ChallengeEmail{
+			Email: c.opts.email,
 			CodeCallback: func(status string) (code string) {
 				fmt.Fprintf(os.Stderr, "\n")
 				fmt.Fprintf(os.Stderr, "Challenge Status: %s\n", status)
@@ -120,12 +126,17 @@ func (c *CertClient) chooseChallenge() ndncert.Challenge {
 				return code
 			},
 		}
-		fmt.Fprintf(os.Stderr, "Enter your email address: ")
-		fmt.Scanln(&email.Email)
-		return email
 
-	case "pin":
-		panic("PIN challenge not implemented")
+	case ndncert.KwPin:
+		return &ndncert.ChallengePin{
+			CodeCallback: func(status string) (code string) {
+				fmt.Fprintf(os.Stderr, "\n")
+				fmt.Fprintf(os.Stderr, "Challenge Status: %s\n", status)
+				fmt.Fprintf(os.Stderr, "Enter the secret PIN: ")
+				fmt.Scanln(&code)
+				return code
+			},
+		}
 
 	default:
 		fmt.Fprintf(os.Stderr, "Invalid challenge selected: %s\n", c.opts.challenge)
@@ -152,39 +163,49 @@ func (c *CertClient) client() {
 		return
 	}
 
-	// Probe the CA and redirect to the correct CA
-	probe, err := certClient.FetchProbeRedirect(c.challenge)
-	if err != nil {
-		log.Fatal(c, "Unable to probe the CA", "err", err)
-		return
-	}
-
-	// Fetch CA profile
+	// Fetch root CA profile
+	caprefix := certClient.CaPrefix()
 	profile, err := certClient.FetchProfile()
 	if err != nil {
 		log.Fatal(c, "Unable to fetch CA profile", "err", err)
 		return
 	}
+	c.printCaProfile(profile)
 
-	fmt.Fprintln(os.Stderr, "================ CA Profile ===============")
-	fmt.Fprintln(os.Stderr, profile.CaInfo)
-	fmt.Fprintln(os.Stderr, "Name:", profile.CaPrefix.Name)
-	fmt.Fprintln(os.Stderr, "Max Validity:", time.Duration(profile.MaxValidPeriod)*time.Second)
-	fmt.Fprintln(os.Stderr, "Challenges:", profile.ParamKey)
-	fmt.Fprintln(os.Stderr, "===========================================")
-	fmt.Fprintln(os.Stderr)
+	// We expect all CAs to support the same param keys for now.
+	// This is a reasonable assumption (for now) at least on testbed.
+	probeParams := ndncert.ParamMap{}
+	for _, paramKey := range profile.ParamKey {
+		switch paramKey {
+		case ndncert.KwEmail:
+			if c.opts.email == "" {
+				c.scanln("Enter email address for PROBE", &c.opts.email)
+			}
+			probeParams[paramKey] = []byte(c.opts.email)
 
-	// Check if the challenge we selected is supported
-	found := false
-	for _, ch := range profile.ParamKey {
-		if ch == c.challenge.Name() {
-			found = true
-			break
+		default:
+			var paramVal string
+			c.scanln(fmt.Sprintf("Enter PROBE param '%s'", paramKey), &paramVal)
+			probeParams[paramKey] = []byte(paramVal)
 		}
 	}
-	if !found {
-		fmt.Fprintf(os.Stderr, "Selected challenge is not supported by the CA\n")
-		os.Exit(1)
+
+	// Probe the CA and redirect to the correct CA
+	probe, err := certClient.FetchProbeRedirect(probeParams)
+	if err != nil {
+		log.Fatal(c, "Unable to probe the CA", "err", err)
+		return
+	}
+
+	// Fetch redirected CA profile if changed
+	if !certClient.CaPrefix().Equal(caprefix) {
+		fmt.Fprintf(os.Stderr, "Redirected to CA: %s\n\n", certClient.CaPrefix())
+		profile, err = certClient.FetchProfile()
+		if err != nil {
+			log.Fatal(c, "Unable to fetch CA profile", "err", err)
+			return
+		}
+		c.printCaProfile(profile)
 	}
 
 	// If a key is provided, check if the name matches
@@ -282,7 +303,7 @@ func (c *CertClient) client() {
 	// Marshal the key if not specified as file
 	var keyBytes []byte = nil
 	if c.opts.keyFile == "" {
-		keyWire, err := signer.MarshalSecret(c.signer)
+		keyWire, err := sig.MarshalSecret(c.signer)
 		if err != nil {
 			log.Fatal(c, "Unable to marshal key", "err", err)
 			return
@@ -346,4 +367,23 @@ func (c *CertClient) chooseOpts(msg string, opts []string) int {
 	fmt.Fprintf(os.Stderr, "Invalid choice: %s\n\n", choice)
 
 	return c.chooseOpts(msg, opts)
+}
+
+func (c *CertClient) printCaProfile(profile *spec_ndncert.CaProfile) {
+	fmt.Fprintln(os.Stderr, "=============== CA Profile ================")
+	fmt.Fprintln(os.Stderr, profile.CaInfo)
+	fmt.Fprintln(os.Stderr, "Name:", profile.CaPrefix.Name)
+	fmt.Fprintln(os.Stderr, "Max Validity:", time.Duration(profile.MaxValidPeriod)*time.Second)
+	fmt.Fprintln(os.Stderr, "Probe Keys:", profile.ParamKey)
+	fmt.Fprintln(os.Stderr, "===========================================")
+	fmt.Fprintln(os.Stderr)
+}
+
+func (c *CertClient) scanln(msg string, val *string) {
+	fmt.Fprintf(os.Stderr, "%s: ", msg)
+	fmt.Scanln(val)
+	if *val == "" {
+		fmt.Fprintf(os.Stderr, "Invalid value entered\n")
+		os.Exit(3)
+	}
 }

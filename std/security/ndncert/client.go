@@ -85,6 +85,11 @@ func (c *Client) SetSigner(signer ndn.Signer) {
 	c.signer = signer
 }
 
+// CaPrefix returns the CA prefix.
+func (c *Client) CaPrefix() enc.Name {
+	return c.caPrefix
+}
+
 // FetchProfile fetches the profile from the CA (blocking).
 func (c *Client) FetchProfile() (*tlv.CaProfile, error) {
 	// TODO: validate packets received by the client using the cert.
@@ -106,12 +111,7 @@ func (c *Client) FetchProfile() (*tlv.CaProfile, error) {
 }
 
 // FetchProbe sends a PROBE request to the CA (blocking).
-func (c *Client) FetchProbe(challenge Challenge) (*tlv.ProbeRes, error) {
-	params, err := challenge.Request(nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get challenge params: %w", err)
-	}
-
+func (c *Client) FetchProbe(params ParamMap) (*tlv.ProbeRes, error) {
 	probeParams := tlv.ProbeReq{Params: params}
 
 	ch := make(chan ndn.ExpressCallbackArgs, 1)
@@ -148,9 +148,9 @@ func (c *Client) FetchProbe(challenge Challenge) (*tlv.ProbeRes, error) {
 
 // FetchProbeRedirect sends a PROBE request to the CA (blocking).
 // If a redirect is received, the request is sent to the new location.
-func (c *Client) FetchProbeRedirect(challenge Challenge) (probe *tlv.ProbeRes, err error) {
+func (c *Client) FetchProbeRedirect(params ParamMap) (probe *tlv.ProbeRes, err error) {
 	for i := 0; i < 4; i++ {
-		probe, err = c.FetchProbe(challenge)
+		probe, err = c.FetchProbe(params)
 		if err != nil {
 			return nil, err
 		}
@@ -256,7 +256,7 @@ func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error)
 			break
 		}
 	}
-	if !hasChallenge {
+	if !hasChallenge && challenge.Name() != KwPin { // pin is always supported
 		return nil, fmt.Errorf("challenge not supported by CA: %s", challenge.Name())
 	}
 

@@ -12,6 +12,10 @@ const (
 	ChallengeStatusFailure   ChallengeStatus = 4
 )
 
+const KwEmail = "email"
+const KwPin = "pin"
+const KwCode = "code"
+
 var ErrChallengeBefore = errors.New("challenge before request")
 var ErrChallengePending = errors.New("challenge pending")
 var ErrChallengeFailed = errors.New("challenge failed")
