@@ -9,6 +9,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/stretchr/testify v1.10.0
 	go.etcd.io/bbolt v1.3.11
+	golang.org/x/crypto v0.32.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	golang.org/x/sys v0.29.0
 	golang.org/x/tools v0.29.0
