@@ -6,29 +6,28 @@ import (
 
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/utils/toolutils"
+	"github.com/spf13/cobra"
 )
 
-func Tree() *toolutils.CmdTree {
+func Cmds() []*cobra.Command {
 	t := Tool{}
 
-	return &toolutils.CmdTree{
-		Name: "dvc",
-		Help: "NDN Distance Vector Control",
-		Sub: []*toolutils.CmdTree{{
-			Name: "status",
-			Help: "Get general status of the router",
-			Fun:  t.RunDvStatus,
-		}, {
-			Name: "link create",
-			Help: "Create a new active neighbor link",
-			Fun:  t.RunDvLinkCreate,
-		}, {
-			Name: "link destroy",
-			Help: "Destroy an active neighbor link",
-			Fun:  t.RunDvLinkDestroy,
-		}},
-	}
+	return []*cobra.Command{{
+		Use:   "status",
+		Short: "Print general status of the router",
+		Args:  cobra.NoArgs,
+		Run:   t.RunDvStatus,
+	}, {
+		Use:   "link-create neighbor-uri",
+		Short: "Create a new active neighbor link",
+		Args:  cobra.ExactArgs(1),
+		Run:   t.RunDvLinkCreate,
+	}, {
+		Use:   "link-destroy neighbor-uri",
+		Short: "Destroy an active neighbor link",
+		Args:  cobra.ExactArgs(1),
+		Run:   t.RunDvLinkDestroy,
+	}}
 }
 
 type Tool struct {

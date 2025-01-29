@@ -2,7 +2,6 @@ package sec
 
 import (
 	"crypto/elliptic"
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,39 +10,19 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/security"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/spf13/cobra"
 )
 
-func keygen(args []string) {
-	flagset := flag.NewFlagSet("keychain-import", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <identity> <key-type> [params]\n", args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Generates a new key pair and outputs the secret key in PEM.\n")
-		fmt.Fprintf(os.Stderr, "The key pair is associated with the specified identity.\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   identity string\n")
-		fmt.Fprintf(os.Stderr, "        Name prefix for new key\n")
-		fmt.Fprintf(os.Stderr, "   key-type string\n")
-		fmt.Fprintf(os.Stderr, "        rsa | ecc | ed25519\n")
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
-
-	argIdentity, argKeyType := flagset.Arg(0), flagset.Arg(1)
-	if argIdentity == "" || argKeyType == "" {
-		flagset.Usage()
-		os.Exit(2)
-	}
-
-	name, err := enc.NameFromStr(argIdentity)
+func keygen(_ *cobra.Command, args []string) {
+	name, err := enc.NameFromStr(args[0])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid identity: %s\n", argIdentity)
+		fmt.Fprintf(os.Stderr, "Invalid identity: %s\n", args[0])
 		os.Exit(1)
 		return
 	}
 
 	name = security.MakeKeyName(name)
-	signer := keygenType(args[3:], name, argKeyType)
+	signer := keygenType(args[2:], name, args[1])
 
 	data, err := sig.MarshalSecret(signer)
 	if err != nil {
@@ -79,7 +58,7 @@ func keygenType(args []string, name enc.Name, keyType string) ndn.Signer {
 
 func keygenRsa(args []string, name enc.Name) ndn.Signer {
 	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "Usage: keygen rsa <key-size>\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n  keygen rsa <key-size>\n")
 		os.Exit(2)
 		return nil
 	}
@@ -113,8 +92,8 @@ func keygenEd25519(_ []string, name enc.Name) ndn.Signer {
 
 func keygecEcc(args []string, name enc.Name) ndn.Signer {
 	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "Usage: keygen ecc <curve>\n")
-		fmt.Fprintf(os.Stderr, "Supported curves: secp256r1, secp384r1, secp521r1\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n  keygen ecc <curve>\n")
+		fmt.Fprintf(os.Stderr, "Supported curves:\n  secp256r1, secp384r1, secp521r1\n")
 		os.Exit(2)
 		return nil
 	}

@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"flag"
 	"fmt"
 	"math/rand/v2"
 	"os"
@@ -14,10 +13,10 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/utils"
+	"github.com/spf13/cobra"
 )
 
 type PingClient struct {
-	args   []string
 	prefix enc.Name
 	name   enc.Name
 	app    ndn.Engine
@@ -41,10 +40,6 @@ type PingClient struct {
 	rttMin time.Duration
 	rttMax time.Duration
 	rttAvg time.Duration
-}
-
-func RunPingClient(args []string) {
-	(&PingClient{args: args}).run()
 }
 
 func (pc *PingClient) String() string {
@@ -118,31 +113,10 @@ func (pc *PingClient) stats() {
 		float64(pc.rttMax.Microseconds())/1000.0)
 }
 
-func (pc *PingClient) run() {
-	flagset := flag.NewFlagSet("ping", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <prefix>\n", pc.args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Ping a NDN name prefix using Interests with name ndn:/name/prefix/ping/number\n")
-		fmt.Fprintf(os.Stderr, "The numbers in the Interests are randomly generated\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		flagset.PrintDefaults()
-	}
-	flagset.IntVar(&pc.interval, "i", 1000, "ping interval, in milliseconds")
-	flagset.IntVar(&pc.timeout, "t", 4000, "timeout for each ping, in milliseconds")
-	flagset.IntVar(&pc.count, "c", 0, "number of pings to send")
-	flagset.Uint64Var(&pc.seq, "s", 0, "start sequence number")
-	flagset.Parse(pc.args[1:])
-
-	argPrefix := flagset.Arg(0)
-	if argPrefix == "" {
-		flagset.Usage()
-		os.Exit(3)
-	}
-
-	prefix, err := enc.NameFromStr(argPrefix)
+func (pc *PingClient) run(_ *cobra.Command, args []string) {
+	prefix, err := enc.NameFromStr(args[0])
 	if err != nil {
-		log.Fatal(pc, "Invalid prefix", "name", pc.args[1])
+		log.Fatal(pc, "Invalid prefix", "name", args[0])
 		return
 	}
 	pc.prefix = prefix

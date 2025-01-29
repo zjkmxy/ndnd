@@ -1,7 +1,6 @@
 package dvc
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/named-data/ndnd/std/utils/toolutils"
+	"github.com/spf13/cobra"
 )
 
 func (t *Tool) DvStatus() (*spec_dv.Status, error) {
@@ -49,14 +49,7 @@ func (t *Tool) DvStatus() (*spec_dv.Status, error) {
 	return status, nil
 }
 
-func (t *Tool) RunDvStatus(args []string) {
-	flagset := flag.NewFlagSet("dv-status", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
-
+func (t *Tool) RunDvStatus(_ *cobra.Command, args []string) {
 	t.Start()
 	defer t.Stop()
 

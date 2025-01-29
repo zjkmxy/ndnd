@@ -1,11 +1,4 @@
-/* YaNFD - Yet another NDN Forwarding Daemon
- *
- * Copyright (C) 2020-2021 Eric Newberry.
- *
- * This file is licensed under the terms of the MIT License, as found in LICENSE.md.
- */
-
-package executor
+package cmd
 
 import (
 	"fmt"
@@ -40,11 +33,6 @@ func NewYaNFD(config *core.Config) *YaNFD {
 	// Provide global configuration.
 	core.C = config
 	core.StartTimestamp = time.Now()
-
-	// Allocate memory ballast (if enabled)
-	if config.Core.MemoryBallastSize > 0 {
-		_ = make([]byte, config.Core.MemoryBallastSize<<30)
-	}
 
 	// Initialize all modules here
 	core.OpenLogger()

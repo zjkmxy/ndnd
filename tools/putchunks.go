@@ -1,8 +1,6 @@
 package tools
 
 import (
-	"flag"
-	"fmt"
 	"io"
 	"os"
 	"os/signal"
@@ -15,43 +13,21 @@ import (
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/utils"
+	"github.com/spf13/cobra"
 )
 
 type PutChunks struct {
-	args   []string
 	expose bool
-}
-
-func RunPutChunks(args []string) {
-	(&PutChunks{args: args}).run()
 }
 
 func (pc *PutChunks) String() string {
 	return "put"
 }
 
-func (pc *PutChunks) run() {
-	flagset := flag.NewFlagSet("put", flag.ExitOnError)
-	flagset.BoolVar(&pc.expose, "expose", false, "Use client origin for prefix registration")
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <name>\n", pc.args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Publish data under the specified prefix.\n")
-		fmt.Fprintf(os.Stderr, "This tool expects data from the standard input.\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(pc.args[1:])
-
-	argName := flagset.Arg(0)
-	if argName == "" {
-		flagset.Usage()
-		os.Exit(2)
-	}
-
-	name, err := enc.NameFromStr(argName)
+func (pc *PutChunks) run(_ *cobra.Command, args []string) {
+	name, err := enc.NameFromStr(args[0])
 	if err != nil {
-		log.Fatal(pc, "Invalid object name", "name", argName)
+		log.Fatal(pc, "Invalid object name", "name", args[0])
 		return
 	}
 

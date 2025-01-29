@@ -1,4 +1,4 @@
-package executor
+package cmd
 
 import (
 	"os"

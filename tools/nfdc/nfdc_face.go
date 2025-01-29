@@ -8,9 +8,10 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/spf13/cobra"
 )
 
-func (t *Tool) ExecFaceList(args []string) {
+func (t *Tool) ExecFaceList(_ *cobra.Command, args []string) {
 	t.Start()
 	defer t.Stop()
 

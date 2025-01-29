@@ -1,7 +1,6 @@
 package sec
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -10,49 +9,23 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security"
+	"github.com/spf13/cobra"
 )
 
 // YYYYMMDDhhmmss
 const TIME_LAYOUT = "20060102150405"
 
-func signCert(args []string) {
-	flags := struct {
-		Start  string
-		End    string
-		Info   string
-		Issuer string
-	}{}
+var signCertFlags = struct {
+	Start  string
+	End    string
+	Info   string
+	Issuer string
+}{}
 
-	const start_default = "now"
-	const end_default = "now + 1 year"
-	const issuer_default = "NA"
+func signCert(_ *cobra.Command, args []string) {
+	flags := signCertFlags
 
-	flagset := flag.NewFlagSet("sign-cert", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <key-file>\n", args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Expects CSR input on stdin.\n")
-		fmt.Fprintf(os.Stderr, "Signer key and CSR can be TLV or PEM encoded.\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "CSR can be either a self-signed certificate or a secret key.\n")
-		fmt.Fprintf(os.Stderr, "To generate a self-signed certificate, provide the same key\n")
-		fmt.Fprintf(os.Stderr, "file as both the signer key and the CSR.\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		flagset.PrintDefaults()
-	}
-	flagset.StringVar(&flags.Start, "start", start_default, "Validity start time in YYYYMMDDhhmmss format")
-	flagset.StringVar(&flags.End, "end", end_default, "Validity end time in YYYYMMDDhhmmss format")
-	flagset.StringVar(&flags.Info, "info", "", "Additional info to be included in the certificate")
-	flagset.StringVar(&flags.Issuer, "issuer", issuer_default, "Issuer ID to be included in the certificate name")
-	flagset.Parse(args[1:])
-
-	argSigner := flagset.Arg(0)
-	if argSigner == "" {
-		flagset.Usage()
-		os.Exit(2)
-	}
-
-	keysFile, err := os.Open(argSigner)
+	keysFile, err := os.Open(args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open key file: %s\n", err)
 		os.Exit(1)
@@ -94,14 +67,14 @@ func signCert(args []string) {
 	notBefore := time.Now()
 	notAfter := time.Now().AddDate(1, 0, 0)
 
-	if flags.Start != start_default {
+	if flags.Start != "now" {
 		notBefore, err = time.Parse(TIME_LAYOUT, flags.Start)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to parse start time: %s\n", err)
 			os.Exit(1)
 		}
 	}
-	if flags.End != end_default {
+	if flags.End != "now + 1 year" {
 		notAfter, err = time.Parse(TIME_LAYOUT, flags.End)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to parse end time: %s\n", err)

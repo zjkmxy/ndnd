@@ -31,8 +31,6 @@ type Config struct {
 		MemProfile string `json:"-"`
 		// Enable block profiling
 		BlockProfile string `json:"-"`
-		// Memory ballast size (in GB)
-		MemoryBallastSize int `json:"-"`
 	} `json:"core"`
 
 	Faces struct {
@@ -162,7 +160,6 @@ func DefaultConfig() *Config {
 	c.Core.CpuProfile = ""
 	c.Core.MemProfile = ""
 	c.Core.BlockProfile = ""
-	c.Core.MemoryBallastSize = 0
 
 	c.Faces.QueueSize = 1024
 	c.Faces.CongestionMarking = true

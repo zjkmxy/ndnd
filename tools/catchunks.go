@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -11,40 +10,19 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/spf13/cobra"
 )
 
-type CatChunks struct {
-	args []string
-}
-
-func RunCatChunks(args []string) {
-	(&CatChunks{args: args}).run()
-}
+type CatChunks struct{}
 
 func (cc *CatChunks) String() string {
 	return "cat"
 }
 
-func (cc *CatChunks) run() {
-	flagset := flag.NewFlagSet("cat", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <name>\n", cc.args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Retrieves an object with the specified name.\n")
-		fmt.Fprintf(os.Stderr, "The object contents are written to stdout on success.\n")
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(cc.args[1:])
-
-	argName := flagset.Arg(0)
-	if argName == "" {
-		flagset.Usage()
-		os.Exit(2)
-	}
-
-	name, err := enc.NameFromStr(argName)
+func (cc *CatChunks) run(_ *cobra.Command, args []string) {
+	name, err := enc.NameFromStr(args[0])
 	if err != nil {
-		log.Fatal(cc, "Invalid name", "name", argName)
+		log.Fatal(cc, "Invalid name", "name", args[0])
 		return
 	}
 

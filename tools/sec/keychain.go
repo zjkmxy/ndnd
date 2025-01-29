@@ -1,7 +1,6 @@
 package sec
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -12,28 +11,11 @@ import (
 	"github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/spf13/cobra"
 )
 
-func keychainList(args []string) {
-	flagset := flag.NewFlagSet("keychain-list", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <keychain>\n", args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Lists all keys in the specified keychain.\n")
-		fmt.Fprintf(os.Stderr, "Target <keychain> is specified as a URI.\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Example: %s dir:///safe/keys\n", args[0])
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
-
-	argKeychain := flagset.Arg(0)
-	if argKeychain == "" {
-		flagset.Usage()
-		os.Exit(2)
-	}
-
-	kc, err := keychain.NewKeyChain(argKeychain, object.NewMemoryStore())
+func keychainList(_ *cobra.Command, args []string) {
+	kc, err := keychain.NewKeyChain(args[0], object.NewMemoryStore())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open keychain: %s\n", err)
 		os.Exit(1)
@@ -48,25 +30,8 @@ func keychainList(args []string) {
 	}
 }
 
-func keychainImport(args []string) {
-	flagset := flag.NewFlagSet("keychain-import", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <keychain>\n", args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Expects one (TLV) or more (PEM) keys or certificates on stdin\n")
-		fmt.Fprintf(os.Stderr, "and inserts them into the specified keychain.\n")
-		fmt.Fprintf(os.Stderr, "Target <keychain> is specified as a URI.\n")
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
-
-	argKeychain := flagset.Arg(0)
-	if argKeychain == "" {
-		flagset.Usage()
-		os.Exit(2)
-	}
-
-	kc, err := keychain.NewKeyChain(argKeychain, object.NewMemoryStore())
+func keychainImport(_ *cobra.Command, args []string) {
+	kc, err := keychain.NewKeyChain(args[0], object.NewMemoryStore())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open keychain: %s\n", err)
 		os.Exit(1)
@@ -88,33 +53,15 @@ func keychainImport(args []string) {
 	}
 }
 
-func keychainGetKey(args []string) {
-	flagset := flag.NewFlagSet("keychain-get-key", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <keychain> <name>\n", args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Exports the specified key from the specified keychain.\n")
-		fmt.Fprintf(os.Stderr, "If no KEY is specified, name will be treated as an identity\n")
-		fmt.Fprintf(os.Stderr, "and the default key of the identity will be exported.\n")
-		fmt.Fprintf(os.Stderr, "Target <keychain> is specified as a URI.\n")
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
-
-	argKeychain, argName := flagset.Arg(0), flagset.Arg(1)
-	if argKeychain == "" || argName == "" {
-		flagset.Usage()
-		os.Exit(2)
-	}
-
-	name, err := enc.NameFromStr(argName)
+func keychainExport(_ *cobra.Command, args []string) {
+	name, err := enc.NameFromStr(args[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid key name: %s\n", argName)
+		fmt.Fprintf(os.Stderr, "Invalid key name: %s\n", args[1])
 		os.Exit(1)
 		return
 	}
 
-	kc, err := keychain.NewKeyChain(argKeychain, object.NewMemoryStore())
+	kc, err := keychain.NewKeyChain(args[0], object.NewMemoryStore())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open keychain: %s\n", err)
 		os.Exit(1)
@@ -169,8 +116,4 @@ func keychainGetKey(args []string) {
 	}
 
 	os.Stdout.Write(out)
-}
-
-func keychainGetCert(args []string) {
-	panic("not implemented")
 }

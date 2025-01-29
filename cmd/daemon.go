@@ -9,10 +9,10 @@ import (
 	"runtime"
 	"syscall"
 
+	dv_cmd "github.com/named-data/ndnd/dv/cmd"
 	dv_config "github.com/named-data/ndnd/dv/config"
-	dv_executor "github.com/named-data/ndnd/dv/executor"
+	fw_cmd "github.com/named-data/ndnd/fw/cmd"
 	fw_core "github.com/named-data/ndnd/fw/core"
-	fw_executor "github.com/named-data/ndnd/fw/executor"
 	"github.com/named-data/ndnd/std/utils/toolutils"
 )
 
@@ -58,11 +58,11 @@ func Daemon(args []string) {
 	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
 
 	// yanfd does not block on start
-	yanfd := fw_executor.NewYaNFD(config.Fw)
+	yanfd := fw_cmd.NewYaNFD(config.Fw)
 	yanfd.Start()
 
 	// dve blocks on start, so run it in a goroutine
-	dve, err := dv_executor.NewDvExecutor(config.Dv)
+	dve, err := dv_cmd.NewDvExecutor(config.Dv)
 	if err != nil {
 		panic(err)
 	}

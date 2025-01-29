@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -13,51 +12,29 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/utils"
+	"github.com/spf13/cobra"
 )
 
 type PingServer struct {
-	args   []string
 	app    ndn.Engine
 	signer ndn.Signer
-
-	name  enc.Name
-	nRecv int
-}
-
-func RunPingServer(args []string) {
-	(&PingServer{
-		args:   args,
-		signer: signer.NewSha256Signer(),
-	}).run()
+	name   enc.Name
+	nRecv  int
 }
 
 func (ps *PingServer) String() string {
 	return "ping-server"
 }
 
-func (ps *PingServer) run() {
-	flagset := flag.NewFlagSet("pingserver", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <prefix>\n", ps.args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Starts a NDN ping server that responds to Interests under a prefix.\n")
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(ps.args[1:])
-
-	argName := flagset.Arg(0)
-	if argName == "" {
-		flagset.Usage()
-		os.Exit(2)
-	}
-
-	name, err := enc.NameFromStr(argName)
+func (ps *PingServer) run(_ *cobra.Command, args []string) {
+	name, err := enc.NameFromStr(args[0])
 	if err != nil {
-		log.Fatal(ps, "Invalid prefix", "name", argName)
+		log.Fatal(ps, "Invalid prefix", "name", args[0])
 		return
 	}
 	ps.name = name.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
 
+	ps.signer = signer.NewSha256Signer()
 	ps.app = engine.NewBasicEngine(engine.NewDefaultFace())
 	err = ps.app.Start()
 	if err != nil {

@@ -7,9 +7,10 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/utils/toolutils"
+	"github.com/spf13/cobra"
 )
 
-func (t *Tool) ExecCsInfo(args []string) {
+func (t *Tool) ExecCsInfo(_ *cobra.Command, args []string) {
 	t.Start()
 	defer t.Stop()
 

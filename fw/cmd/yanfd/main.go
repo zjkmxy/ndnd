@@ -8,13 +8,9 @@
 package main
 
 import (
-	"os"
-
-	"github.com/named-data/ndnd/fw/executor"
+	"github.com/named-data/ndnd/fw/cmd"
 )
 
 func main() {
-	args := os.Args
-	args[0] = "yanfd"
-	executor.Main(args)
+	cmd.CmdYaNFD.Execute()
 }

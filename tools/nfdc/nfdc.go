@@ -7,77 +7,84 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/utils/toolutils"
+	"github.com/spf13/cobra"
 )
 
-func Tree() *toolutils.CmdTree {
+func Cmds() []*cobra.Command {
 	t := Tool{}
-
-	cmd := func(mod string, cmd string, defaults []string) func([]string) {
-		return func(args []string) {
-			t.ExecCmd(mod, cmd, args, defaults)
+	cmd := func(mod string, cmd string, defaults []string) func(*cobra.Command, []string) {
+		return func(c *cobra.Command, args []string) {
+			t.ExecCmd(c, mod, cmd, args, defaults)
 		}
 	}
 
-	return &toolutils.CmdTree{
-		Name: "nfdc",
-		Help: "NDNd Forwarder Control",
-		Sub: []*toolutils.CmdTree{{
-			Name: "status",
-			Help: "Print general status",
-			Fun:  t.ExecStatusGeneral,
-		}, {
-			Name: "face list",
-			Help: "Print face table",
-			Fun:  t.ExecFaceList,
-		}, {
-			Name: "face create",
-			Help: "Create a face",
-			Fun: cmd("faces", "create", []string{
-				"persistency=persistent",
-			}),
-		}, {
-			Name: "face destroy",
-			Help: "Destroy a face",
-			Fun:  cmd("faces", "destroy", []string{}),
-		}, {
-			Name: "route list",
-			Help: "Print RIB routes",
-			Fun:  t.ExecRouteList,
-		}, {
-			Name: "route add",
-			Help: "Add a route to the RIB",
-			Fun: cmd("rib", "register", []string{
-				"cost=0", "origin=255",
-			}),
-		}, {
-			Name: "route remove",
-			Help: "Remove a route from the RIB",
-			Fun: cmd("rib", "unregister", []string{
-				"origin=255",
-			}),
-		}, {
-			Name: "fib list",
-			Help: "Print FIB entries",
-			Fun:  t.ExecFibList,
-		}, {
-			Name: "cs info",
-			Help: "Print content store info",
-			Fun:  t.ExecCsInfo,
-		}, {
-			Name: "strategy list",
-			Help: "Print strategy choices",
-			Fun:  t.ExecStrategyList,
-		}, {
-			Name: "strategy set",
-			Help: "Set strategy choice",
-			Fun:  cmd("strategy-choice", "set", []string{}),
-		}, {
-			Name: "strategy unset",
-			Help: "Unset strategy choice",
-			Fun:  cmd("strategy-choice", "unset", []string{}),
-		}},
-	}
+	return []*cobra.Command{{
+		Use:   "status",
+		Short: "Print general status",
+		Args:  cobra.NoArgs,
+		Run:   t.ExecStatusGeneral,
+	}, {
+		Use:   "face-list",
+		Short: "Print face table",
+		Args:  cobra.NoArgs,
+		Run:   t.ExecFaceList,
+	}, {
+		Use:   "face-create [options]",
+		Short: "Create a face",
+		Args:  cobra.ArbitraryArgs,
+		Run: cmd("faces", "create", []string{
+			"persistency=persistent",
+		}),
+	}, {
+		Use:   "face-destroy [options]",
+		Short: "Destroy a face",
+		Args:  cobra.ArbitraryArgs,
+		Run:   cmd("faces", "destroy", []string{}),
+	}, {
+		Use:   "route-list",
+		Short: "Print RIB routes",
+		Args:  cobra.NoArgs,
+		Run:   t.ExecRouteList,
+	}, {
+		Use:   "route-add [options]",
+		Short: "Add a route to the RIB",
+		Args:  cobra.ArbitraryArgs,
+		Run: cmd("rib", "register", []string{
+			"cost=0", "origin=255",
+		}),
+	}, {
+		Use:   "route-remove [options]",
+		Short: "Remove a route from the RIB",
+		Args:  cobra.ArbitraryArgs,
+		Run: cmd("rib", "unregister", []string{
+			"origin=255",
+		}),
+	}, {
+		Use:   "fib-list",
+		Short: "Print FIB entries",
+		Args:  cobra.NoArgs,
+		Run:   t.ExecFibList,
+	}, {
+		Use:   "cs-info",
+		Short: "Print content store info",
+		Args:  cobra.NoArgs,
+		Run:   t.ExecCsInfo,
+	}, {
+		Use:   "strategy-list",
+		Short: "Print strategy choices",
+		Args:  cobra.NoArgs,
+		Run:   t.ExecStrategyList,
+	}, {
+		Use:   "strategy-set [options]",
+		Short: "Set strategy choice",
+		Args:  cobra.ArbitraryArgs,
+		Run:   cmd("strategy-choice", "set", []string{}),
+	}, {
+		Use:   "strategy-unset [options]",
+		Short: "Unset strategy choice",
+		Args:  cobra.ArbitraryArgs,
+		Run:   cmd("strategy-choice", "unset", []string{}),
+	}}
 }
 
 type Tool struct {

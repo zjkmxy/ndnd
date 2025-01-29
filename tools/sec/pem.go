@@ -1,25 +1,15 @@
 package sec
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/named-data/ndnd/std/security"
+	"github.com/spf13/cobra"
 )
 
-func pemEncode(args []string) {
-	flagset := flag.NewFlagSet("pem-encode", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Encodes a TLV NDN Key or Certificate to PEM.\n")
-		fmt.Fprintf(os.Stderr, "Provide TLV data as input to stdin.\n")
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
-
+func pemEncode(_ *cobra.Command, args []string) {
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to read input: %+v\n", err)
@@ -37,17 +27,7 @@ func pemEncode(args []string) {
 	os.Stdout.Write(out)
 }
 
-func pemDecode(args []string) {
-	flagset := flag.NewFlagSet("pem-encode", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s\n", args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Decodes a PEM file with a single NDN TLV.\n")
-		fmt.Fprintf(os.Stderr, "Provide PEM data as input to stdin.\n")
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
-
+func pemDecode(_ *cobra.Command, args []string) {
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to read input from stdin: %+v\n", err)

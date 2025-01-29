@@ -8,9 +8,10 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/spf13/cobra"
 )
 
-func (t *Tool) ExecRouteList(args []string) {
+func (t *Tool) ExecRouteList(_ *cobra.Command, args []string) {
 	t.Start()
 	defer t.Stop()
 
@@ -54,7 +55,7 @@ func (t *Tool) ExecRouteList(args []string) {
 	}
 }
 
-func (t *Tool) ExecFibList(args []string) {
+func (t *Tool) ExecFibList(_ *cobra.Command, args []string) {
 	t.Start()
 	defer t.Stop()
 

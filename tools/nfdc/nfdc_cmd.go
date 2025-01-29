@@ -10,9 +10,10 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/utils"
+	"github.com/spf13/cobra"
 )
 
-func (t *Tool) ExecCmd(mod string, cmd string, args []string, defaults []string) {
+func (t *Tool) ExecCmd(_ *cobra.Command, mod string, cmd string, args []string, defaults []string) {
 	t.Start()
 	defer t.Stop()
 
@@ -20,7 +21,7 @@ func (t *Tool) ExecCmd(mod string, cmd string, args []string, defaults []string)
 	ctrlArgs := mgmt.ControlArgs{}
 
 	// set default values first, then user-provided values
-	for _, arg := range append(defaults, args[1:]...) {
+	for _, arg := range append(defaults, args...) {
 		kv := strings.SplitN(arg, "=", 2)
 		if len(kv) != 2 {
 			fmt.Fprintf(os.Stderr, "Invalid argument: %s (should be key=value)\n", arg)

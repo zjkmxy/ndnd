@@ -1,29 +1,27 @@
-package executor
+package cmd
 
 import (
-	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/named-data/ndnd/dv/config"
+	"github.com/named-data/ndnd/std/utils"
 	"github.com/named-data/ndnd/std/utils/toolutils"
+	"github.com/spf13/cobra"
 )
 
-func Main(args []string) {
-	flagset := flag.NewFlagSet("ndn-dv", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <config-file>\n", args[0])
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
+var CmdDv = &cobra.Command{
+	Use:     "ndn-dv config-file",
+	Short:   "NDN Distance Vector Routing Daemon",
+	GroupID: "run",
+	Version: utils.NDNdVersion,
+	Args:    cobra.ExactArgs(1),
+	Run:     run,
+}
 
-	configfile := flagset.Arg(0)
-	if flagset.NArg() != 1 || configfile == "" {
-		flagset.Usage()
-		os.Exit(3)
-	}
+func run(cmd *cobra.Command, args []string) {
+	configfile := args[0]
 
 	config := struct {
 		Config *config.Config `json:"dv"`
