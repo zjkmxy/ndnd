@@ -25,7 +25,7 @@ type ToolSignCert struct {
 func (t *ToolSignCert) configure(root *cobra.Command) {
 	cmd := &cobra.Command{
 		GroupID: "key",
-		Use:     "sign-cert key-file",
+		Use:     "sign-cert KEY-FILE",
 		Short:   "Sign a new NDN certificate",
 		Long: `Sign a new NDN certificate
 

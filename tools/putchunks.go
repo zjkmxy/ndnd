@@ -25,7 +25,7 @@ func CmdPutChunks() *cobra.Command {
 
 	cmd := &cobra.Command{
 		GroupID: "tools",
-		Use:     "put name",
+		Use:     "put PREFIX",
 		Short:   "Publish data under a name prefix",
 		Long: `Publish data under a name prefix.
 This tool expects data from the standard input.`,

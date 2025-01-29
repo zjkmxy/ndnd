@@ -12,7 +12,7 @@ import (
 )
 
 var CmdDv = &cobra.Command{
-	Use:     "ndn-dv config-file",
+	Use:     "ndn-dv CONFIG-FILE",
 	Short:   "NDN Distance Vector Routing Daemon",
 	GroupID: "run",
 	Version: utils.NDNdVersion,

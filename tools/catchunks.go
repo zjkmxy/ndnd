@@ -20,7 +20,7 @@ func CmdCatChunks() *cobra.Command {
 
 	return &cobra.Command{
 		GroupID: "tools",
-		Use:     "cat name",
+		Use:     "cat PREFIX",
 		Short:   "Retrieve object under a name prefix",
 		Long: `Retrieve an object with the specified name.
 The object contents are written to stdout on success.`,

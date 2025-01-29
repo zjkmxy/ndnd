@@ -24,7 +24,7 @@ func (t *ToolKeychain) configure(cmd *cobra.Command) {
 
 	cmd.AddCommand(&cobra.Command{
 		GroupID: "keychain",
-		Use:     "key-list keychain-uri",
+		Use:     "key-list KEYCHAIN-URI",
 		Short:   "List keys in a keychain",
 		Run:     t.List,
 		Args:    cobra.ExactArgs(1),
@@ -33,7 +33,7 @@ func (t *ToolKeychain) configure(cmd *cobra.Command) {
 
 	cmd.AddCommand(&cobra.Command{
 		GroupID: "keychain",
-		Use:     "key-import keychain-uri",
+		Use:     "key-import KEYCHAIN-URI",
 		Short:   "Import keys or certs to a keychain",
 		Long: `Import keys or certs to a keychain.
 
@@ -46,7 +46,7 @@ and inserts them into the specified keychain.`,
 
 	cmd.AddCommand(&cobra.Command{
 		GroupID: "keychain",
-		Use:     "key-export keychain-uri key-name",
+		Use:     "key-export KEYCHAIN-URI KEY-NAME",
 		Short:   "Export a key from a keychain",
 		Long: `Export the specified key from a keychain.
 If no KEY is specified, name will be treated as an identity

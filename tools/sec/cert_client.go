@@ -37,7 +37,7 @@ func CmdCertCli() *cobra.Command {
 
 	cmd := &cobra.Command{
 		GroupID: "sec",
-		Use:     "certcli ca-file",
+		Use:     "certcli CA-CERT-FILE",
 		Short:   "NDNCERT Certificate Client",
 		Long: `Interactive client for the NDNCERT CA.
 

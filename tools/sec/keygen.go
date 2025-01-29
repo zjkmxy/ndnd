@@ -23,7 +23,7 @@ func (t *ToolKeygen) configure(cmd *cobra.Command) {
 
 	cmd.AddCommand(&cobra.Command{
 		GroupID: "key",
-		Use:     "keygen name key-type [params]",
+		Use:     "keygen IDENTITY KEY-TYPE [params]",
 		Short:   "Generate a new NDN key pair",
 		Args:    cobra.MinimumNArgs(2),
 		Example: `  ndnd sec keygen /alice ed25519

@@ -27,7 +27,7 @@ func CmdPingServer() *cobra.Command {
 
 	return &cobra.Command{
 		GroupID: "tools",
-		Use:     "pingserver name",
+		Use:     "pingserver PREFIX",
 		Short:   "Start a ping server under a name prefix",
 		Args:    cobra.ExactArgs(1),
 		Example: `  ndnd pingserver /my/prefix`,

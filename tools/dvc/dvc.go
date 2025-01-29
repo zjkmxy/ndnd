@@ -18,12 +18,12 @@ func Cmds() []*cobra.Command {
 		Args:  cobra.NoArgs,
 		Run:   t.RunDvStatus,
 	}, {
-		Use:   "link-create neighbor-uri",
+		Use:   "link-create NEIGHBOR-URI",
 		Short: "Create a new active neighbor link",
 		Args:  cobra.ExactArgs(1),
 		Run:   t.RunDvLinkCreate,
 	}, {
-		Use:   "link-destroy neighbor-uri",
+		Use:   "link-destroy NEIGHBOR-URI",
 		Short: "Destroy an active neighbor link",
 		Args:  cobra.ExactArgs(1),
 		Run:   t.RunDvLinkDestroy,

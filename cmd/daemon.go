@@ -18,7 +18,7 @@ import (
 )
 
 var cmdDaemon = &cobra.Command{
-	Use:     "daemon config-file",
+	Use:     "daemon CONFIG-FILE",
 	Short:   "NDN Combined Daemon",
 	Long:    "NDN Forwarder-Router combined daemon",
 	Example: `  https://github.com/named-data/ndnd/blob/main/docs/daemon-example.md`,

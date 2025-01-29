@@ -74,7 +74,7 @@ Reference:
 		ID:    "run",
 		Title: "Forwarder Daemon",
 	})
-	fw.CmdYaNFD.Use = "run config-file"
+	fw.CmdYaNFD.Use = "run CONFIG-FILE"
 	fw.CmdYaNFD.Short = "Start the NDN Forwarding Daemon"
 	cmdFw.AddCommand(fw.CmdYaNFD)
 
@@ -105,7 +105,7 @@ Reference:
 		ID:    "run",
 		Title: "Router Daemon",
 	})
-	dv.CmdDv.Use = "run config-file"
+	dv.CmdDv.Use = "run CONFIG-FILE"
 	dv.CmdDv.Short = "Start the NDN Distance Vector Daemon"
 	cmdDv.AddCommand(dv.CmdDv)
 

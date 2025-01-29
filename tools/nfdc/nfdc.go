@@ -29,14 +29,14 @@ func Cmds() []*cobra.Command {
 		Args:  cobra.NoArgs,
 		Run:   t.ExecFaceList,
 	}, {
-		Use:   "face-create [options]",
+		Use:   "face-create [params]",
 		Short: "Create a face",
 		Args:  cobra.ArbitraryArgs,
 		Run: cmd("faces", "create", []string{
 			"persistency=persistent",
 		}),
 	}, {
-		Use:   "face-destroy [options]",
+		Use:   "face-destroy [params]",
 		Short: "Destroy a face",
 		Args:  cobra.ArbitraryArgs,
 		Run:   cmd("faces", "destroy", []string{}),
@@ -46,14 +46,14 @@ func Cmds() []*cobra.Command {
 		Args:  cobra.NoArgs,
 		Run:   t.ExecRouteList,
 	}, {
-		Use:   "route-add [options]",
+		Use:   "route-add [params]",
 		Short: "Add a route to the RIB",
 		Args:  cobra.ArbitraryArgs,
 		Run: cmd("rib", "register", []string{
 			"cost=0", "origin=255",
 		}),
 	}, {
-		Use:   "route-remove [options]",
+		Use:   "route-remove [params]",
 		Short: "Remove a route from the RIB",
 		Args:  cobra.ArbitraryArgs,
 		Run: cmd("rib", "unregister", []string{
@@ -75,12 +75,12 @@ func Cmds() []*cobra.Command {
 		Args:  cobra.NoArgs,
 		Run:   t.ExecStrategyList,
 	}, {
-		Use:   "strategy-set [options]",
+		Use:   "strategy-set [params]",
 		Short: "Set strategy choice",
 		Args:  cobra.ArbitraryArgs,
 		Run:   cmd("strategy-choice", "set", []string{}),
 	}, {
-		Use:   "strategy-unset [options]",
+		Use:   "strategy-unset [params]",
 		Short: "Unset strategy choice",
 		Args:  cobra.ArbitraryArgs,
 		Run:   cmd("strategy-choice", "unset", []string{}),

@@ -15,7 +15,7 @@ import (
 var config = core.DefaultConfig()
 
 var CmdYaNFD = &cobra.Command{
-	Use:     "yanfd config-file",
+	Use:     "yanfd CONFIG-FILE",
 	Short:   "Yet another NDN Forwarding Daemon",
 	GroupID: "run",
 	Version: utils.NDNdVersion,

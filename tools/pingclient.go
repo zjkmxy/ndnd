@@ -47,7 +47,7 @@ func CmdPingClient() *cobra.Command {
 
 	cmd := &cobra.Command{
 		GroupID: "tools",
-		Use:     "ping name",
+		Use:     "ping PREFIX",
 		Short:   "Send Interests to a ping server",
 		Long: `Ping a name prefix using Interests like /prefix/ping/number
 The numbers in the Interests are randomly generated`,
