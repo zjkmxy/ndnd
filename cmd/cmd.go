@@ -61,8 +61,12 @@ func init() {
 
 func cmdFw() *cobra.Command {
 	cmdFw := &cobra.Command{
-		Use:     "fw",
-		Short:   "NDN Forwarding Daemon",
+		Use:   "fw",
+		Short: "NDN Forwarding Daemon",
+		Long: `NDN Forwarding Daemon
+
+Reference:
+  https://github.com/named-data/ndnd/blob/main/docs/fw-control.md`,
 		GroupID: "daemons",
 	}
 
@@ -88,8 +92,12 @@ func cmdFw() *cobra.Command {
 
 func cmdDv() *cobra.Command {
 	cmdDv := &cobra.Command{
-		Use:     "dv",
-		Short:   "NDN Distance Vector Daemon",
+		Use:   "dv",
+		Short: "NDN Distance Vector Daemon",
+		Long: `NDN Distance Vector Daemon
+
+Reference:
+  https://github.com/named-data/ndnd/blob/main/docs/dv-control.md`,
 		GroupID: "daemons",
 	}
 

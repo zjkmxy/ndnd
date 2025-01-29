@@ -21,6 +21,7 @@ var cmdDaemon = &cobra.Command{
 	Use:     "daemon config-file",
 	Short:   "NDN Combined Daemon",
 	Long:    "NDN Forwarder-Router combined daemon",
+	Example: `  https://github.com/named-data/ndnd/blob/main/docs/daemon-example.md`,
 	GroupID: "daemons",
 	Version: utils.NDNdVersion,
 	Args:    cobra.ExactArgs(1),

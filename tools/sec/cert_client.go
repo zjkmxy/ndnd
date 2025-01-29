@@ -44,8 +44,9 @@ func CmdCertCli() *cobra.Command {
 This client can be used to request a new certificate from the NDNCERT CA.
 It reads the CA root certificate from the specified file and interacts with
 the CA to obtain a new certificate.`,
-		Args: cobra.ExactArgs(1),
-		Run:  client.run,
+		Example: `  https://github.com/named-data/ndnd/blob/main/docs/certcli.md`,
+		Args:    cobra.ExactArgs(1),
+		Run:     client.run,
 	}
 
 	cmd.Flags().StringVarP(&client.flags.outFile, "output", "o", "", `Output filename without extension (default "stdout")`)

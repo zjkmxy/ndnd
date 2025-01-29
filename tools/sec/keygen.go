@@ -27,7 +27,7 @@ func (t *ToolKeygen) configure(cmd *cobra.Command) {
 		Short:   "Generate a new NDN key pair",
 		Args:    cobra.MinimumNArgs(2),
 		Example: `  ndnd sec keygen /alice ed25519
-  ndnd sec keygen /bob/prefix rsa 2048
+  ndnd sec keygen /ndn/bob rsa 2048
   ndnd sec keygen /carol ecc secp256r1`,
 		Run: t.keygen,
 	})

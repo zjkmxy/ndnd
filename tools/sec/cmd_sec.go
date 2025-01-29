@@ -9,6 +9,10 @@ func CmdSec() *cobra.Command {
 		GroupID: "sec",
 		Use:     "sec",
 		Short:   "NDN Security Utilities",
+		Long: `NDN Security Utilities
+
+Reference:
+  https://github.com/named-data/ndnd/blob/main/docs/security-util.md`,
 	}
 	new(ToolKeygen).configure(cmd)
 	new(ToolSignCert).configure(cmd)
