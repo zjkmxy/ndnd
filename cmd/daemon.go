@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -13,24 +12,23 @@ import (
 	dv_config "github.com/named-data/ndnd/dv/config"
 	fw_cmd "github.com/named-data/ndnd/fw/cmd"
 	fw_core "github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/std/utils"
 	"github.com/named-data/ndnd/std/utils/toolutils"
+	"github.com/spf13/cobra"
 )
 
-// Daemon runs the combined forwarder-router daemon.
-func Daemon(args []string) {
-	flagset := flag.NewFlagSet("ndnd-daemon", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <config-file>\n", args[0])
-		flagset.PrintDefaults()
-	}
-	flagset.Parse(args[1:])
+var cmdDaemon = &cobra.Command{
+	Use:     "daemon config-file",
+	Short:   "NDN Combined Daemon",
+	Long:    "NDN Forwarder-Router combined daemon",
+	GroupID: "daemons",
+	Version: utils.NDNdVersion,
+	Args:    cobra.ExactArgs(1),
+	Run:     daemon,
+}
 
-	configfile := flagset.Arg(0)
-	if flagset.NArg() != 1 || configfile == "" {
-		flagset.Usage()
-		os.Exit(3)
-	}
-
+// daemon runs the combined forwarder-router daemon.
+func daemon(_ *cobra.Command, args []string) {
 	config := struct {
 		Fw *fw_core.Config   `json:"fw"`
 		Dv *dv_config.Config `json:"dv"`
@@ -38,8 +36,8 @@ func Daemon(args []string) {
 		Fw: fw_core.DefaultConfig(),
 		Dv: dv_config.DefaultConfig(),
 	}
-	toolutils.ReadYaml(&config, configfile)
-	config.Fw.Core.BaseDir = filepath.Dir(configfile)
+	toolutils.ReadYaml(&config, args[0])
+	config.Fw.Core.BaseDir = filepath.Dir(args[0])
 
 	// validate unix socket is enabled
 	if !config.Fw.Faces.Unix.Enabled {

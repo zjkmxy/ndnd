@@ -29,6 +29,8 @@ var CmdNDNd = &cobra.Command{
 }
 
 func init() {
+	cobra.EnableCommandSorting = false
+	CmdNDNd.Root().CompletionOptions.DisableDefaultCmd = true
 	CmdNDNd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	CmdNDNd.PersistentFlags().Lookup("help").Hidden = true
 
@@ -38,6 +40,7 @@ func init() {
 	})
 	CmdNDNd.AddCommand(cmdFw())
 	CmdNDNd.AddCommand(cmdDv())
+	CmdNDNd.AddCommand(cmdDaemon)
 
 	CmdNDNd.AddGroup(&cobra.Group{
 		ID:    "sec",
@@ -50,10 +53,10 @@ func init() {
 		ID:    "tools",
 		Title: "Debug Tools",
 	})
-	CmdNDNd.AddCommand(tools.CmdCatChunks())
-	CmdNDNd.AddCommand(tools.CmdPutChunks())
 	CmdNDNd.AddCommand(tools.CmdPingClient())
 	CmdNDNd.AddCommand(tools.CmdPingServer())
+	CmdNDNd.AddCommand(tools.CmdCatChunks())
+	CmdNDNd.AddCommand(tools.CmdPutChunks())
 }
 
 func cmdFw() *cobra.Command {

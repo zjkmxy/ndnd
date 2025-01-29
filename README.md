@@ -39,20 +39,31 @@ root@0037b98ec2ac:~# ndnd
  | |\  | |_| | |\  | (_| |
  |_| \_|____/|_| \_|\____|
 
-Named Data Networking Daemon (ndnd)
+Named Data Networking Daemon
 
-Usage: ndnd [command]
-  fw              NDN Forwarding Daemon
-  dv              NDN Distance Vector Routing Daemon
-  daemon          NDN Combined Daemon
+Usage:
+  ndnd [command]
 
-  sec             NDN Security Utilities
-  certcli         NDNCERT Certificate Client
+NDN Daemons
+  fw          NDN Forwarding Daemon
+  dv          NDN Distance Vector Daemon
+  daemon      NDN Combined Daemon
 
-  ping            Send Interests to an NDN ping server
-  pingserver      Start an NDN ping server under a prefix
-  cat             Retrieve data under a prefix
-  put             Publish data under a prefix
+Security Tools
+  sec         NDN Security Utilities
+  certcli     NDNCERT Certificate Client
+
+Debug Tools
+  ping        Send Interests to a ping server
+  pingserver  Start a ping server under a name prefix
+  cat         Retrieve object under a name prefix
+  put         Publish data under a name prefix
+
+Additional Commands:
+  help        Help about any command
+
+Flags:
+  -v, --version   version for ndnd
 ```
 
 ## 🔀 Network Forwarder
