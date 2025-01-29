@@ -51,7 +51,7 @@ Once the daemons are running, we create a routing neighbor relationship between 
 
 ```sh
 # if udp is blocked, use tcp instead
-ndnd dv link create "udp://<bob-ip>:6363"
+ndnd dv link-create "udp://<bob-ip>:6363"
 ```
 
 After a few seconds, logs should show up on both nodes indicating that the neighbor relationship has been established.

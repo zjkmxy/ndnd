@@ -39,37 +39,37 @@ ndnd sec keygen /ndn/carol ed25519 > carol.key
 ndnd sec sign-cert -issuer CAROL carol.key < bob1.cert > bob3.cert
 ```
 
-## `ndnd sec keychain list`
+## `ndnd sec key-list`
 
 List all keys in the keychain.
 
 ```bash
 # List all keys in the keychain directory /etc/app/keys
 mkdir -p /etc/app/keys
-ndnd sec keychain list dir:///etc/app/keys
+ndnd sec key-list dir:///etc/app/keys
 ```
 
-## `ndnd sec keychain import`
+## `ndnd sec key-import`
 
 Import keys or certificates to the keychain.
 
 ```bash
 # Import a key to a directory keychain
-ndnd sec keychain import dir:///etc/app/keys < alice.key
+ndnd sec key-import dir:///etc/app/keys < alice.key
 
 # Import multiple keys and certificates to a keychain
 # Note that this requires ALL files to be PEM encoded
-cat bob.key bob1.cert | ndnd sec keychain import dir:///etc/app/keys
+cat bob.key bob1.cert | ndnd sec key-import dir:///etc/app/keys
 ```
 
-## `ndnd sec keychain get-key`
+## `ndnd sec key-export`
 
 Export a key from the keychain.
 
 ```bash
 # Export default key for /ndn/bob from a keychain
-ndnd sec keychain get-key dir:///etc/app/keys /ndn/bob
+ndnd sec key-export dir:///etc/app/keys /ndn/bob
 
 # Export a specific key from a keychain
-ndnd sec keychain get-key dir:///etc/app/keys /ndn/bob/KEY/%A6%0Ei%1F%A8J%D4%8E
+ndnd sec key-export dir:///etc/app/keys /ndn/bob/KEY/%A6%0Ei%1F%A8J%D4%8E
 ```
