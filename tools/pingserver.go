@@ -22,6 +22,19 @@ type PingServer struct {
 	nRecv  int
 }
 
+func CmdPingServer() *cobra.Command {
+	ps := PingServer{}
+
+	return &cobra.Command{
+		GroupID: "tools",
+		Use:     "pingserver name",
+		Short:   "Start a ping server under a name prefix",
+		Args:    cobra.ExactArgs(1),
+		Example: `  ndnd pingserver /my/prefix`,
+		Run:     ps.run,
+	}
+}
+
 func (ps *PingServer) String() string {
 	return "ping-server"
 }

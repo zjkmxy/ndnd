@@ -15,6 +15,21 @@ import (
 
 type CatChunks struct{}
 
+func CmdCatChunks() *cobra.Command {
+	cc := CatChunks{}
+
+	return &cobra.Command{
+		GroupID: "tools",
+		Use:     "cat name",
+		Short:   "Retrieve object under a name prefix",
+		Long: `Retrieve an object with the specified name.
+The object contents are written to stdout on success.`,
+		Args:    cobra.ExactArgs(1),
+		Example: `  ndnd cat /my/example/data > data.bin`,
+		Run:     cc.run,
+	}
+}
+
 func (cc *CatChunks) String() string {
 	return "cat"
 }

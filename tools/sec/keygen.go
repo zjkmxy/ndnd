@@ -13,7 +13,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func keygen(_ *cobra.Command, args []string) {
+type ToolKeygen struct{}
+
+func (t *ToolKeygen) configure(cmd *cobra.Command) {
+	cmd.AddGroup(&cobra.Group{
+		ID:    "key",
+		Title: "Key Management",
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		GroupID: "key",
+		Use:     "keygen name key-type [params]",
+		Short:   "Generate a new NDN key pair",
+		Args:    cobra.MinimumNArgs(2),
+		Example: `  ndnd sec keygen /alice ed25519
+  ndnd sec keygen /bob/prefix rsa 2048
+  ndnd sec keygen /carol ecc secp256r1`,
+		Run: t.keygen,
+	})
+}
+
+func (t *ToolKeygen) keygen(_ *cobra.Command, args []string) {
 	name, err := enc.NameFromStr(args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid identity: %s\n", args[0])
@@ -22,7 +42,7 @@ func keygen(_ *cobra.Command, args []string) {
 	}
 
 	name = security.MakeKeyName(name)
-	signer := keygenType(args[2:], name, args[1])
+	signer := t.keygenType(args[2:], name, args[1])
 
 	data, err := sig.MarshalSecret(signer)
 	if err != nil {
@@ -41,14 +61,14 @@ func keygen(_ *cobra.Command, args []string) {
 	os.Stdout.Write(out)
 }
 
-func keygenType(args []string, name enc.Name, keyType string) ndn.Signer {
+func (t *ToolKeygen) keygenType(args []string, name enc.Name, keyType string) ndn.Signer {
 	switch keyType {
 	case "rsa":
-		return keygenRsa(args, name)
+		return t.keygenRsa(args, name)
 	case "ed25519":
-		return keygenEd25519(args, name)
+		return t.keygenEd25519(args, name)
 	case "ecc":
-		return keygecEcc(args, name)
+		return t.keygecEcc(args, name)
 	default:
 		fmt.Fprintf(os.Stderr, "Unsupported key type: %s\n", keyType)
 		os.Exit(2)
@@ -56,7 +76,7 @@ func keygenType(args []string, name enc.Name, keyType string) ndn.Signer {
 	}
 }
 
-func keygenRsa(args []string, name enc.Name) ndn.Signer {
+func (t *ToolKeygen) keygenRsa(args []string, name enc.Name) ndn.Signer {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "Usage:\n  keygen rsa <key-size>\n")
 		os.Exit(2)
@@ -80,7 +100,7 @@ func keygenRsa(args []string, name enc.Name) ndn.Signer {
 	return signer
 }
 
-func keygenEd25519(_ []string, name enc.Name) ndn.Signer {
+func (t *ToolKeygen) keygenEd25519(_ []string, name enc.Name) ndn.Signer {
 	signer, err := sig.KeygenEd25519(name)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate Ed25519 key: %s\n", err)
@@ -90,7 +110,7 @@ func keygenEd25519(_ []string, name enc.Name) ndn.Signer {
 	return signer
 }
 
-func keygecEcc(args []string, name enc.Name) ndn.Signer {
+func (t *ToolKeygen) keygecEcc(args []string, name enc.Name) ndn.Signer {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "Usage:\n  keygen ecc <curve>\n")
 		fmt.Fprintf(os.Stderr, "Supported curves:\n  secp256r1, secp384r1, secp521r1\n")

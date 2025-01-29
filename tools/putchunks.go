@@ -20,6 +20,24 @@ type PutChunks struct {
 	expose bool
 }
 
+func CmdPutChunks() *cobra.Command {
+	pc := PutChunks{}
+
+	cmd := &cobra.Command{
+		GroupID: "tools",
+		Use:     "put name",
+		Short:   "Publish data under a name prefix",
+		Long: `Publish data under a name prefix.
+This tool expects data from the standard input.`,
+		Args:    cobra.ExactArgs(1),
+		Example: `  ndnd put /my/example/data < data.bin`,
+		Run:     pc.run,
+	}
+
+	cmd.Flags().BoolVar(&pc.expose, "expose", false, "Use client origin for prefix registration")
+	return cmd
+}
+
 func (pc *PutChunks) String() string {
 	return "put"
 }

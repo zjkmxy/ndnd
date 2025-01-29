@@ -1,8 +1,7 @@
-package tools
+package sec
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -16,11 +15,11 @@ import (
 	"github.com/named-data/ndnd/std/security/ndncert"
 	spec_ndncert "github.com/named-data/ndnd/std/security/ndncert/tlv"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/spf13/cobra"
 )
 
 type CertClient struct {
-	args []string
-	opts struct {
+	flags struct {
 		keyFile   string
 		outFile   string
 		challenge string
@@ -33,54 +32,51 @@ type CertClient struct {
 	challenge ndncert.Challenge
 }
 
-func RunCertClient(args []string) {
-	(&CertClient{args: args}).run()
+func CmdCertCli() *cobra.Command {
+	client := CertClient{}
+
+	cmd := &cobra.Command{
+		GroupID: "sec",
+		Use:     "certcli ca-file",
+		Short:   "NDNCERT Certificate Client",
+		Long: `Interactive client for the NDNCERT CA.
+
+This client can be used to request a new certificate from the NDNCERT CA.
+It reads the CA root certificate from the specified file and interacts with
+the CA to obtain a new certificate.`,
+		Args: cobra.ExactArgs(1),
+		Run:  client.run,
+	}
+
+	cmd.Flags().StringVarP(&client.flags.outFile, "output", "o", "", `Output filename without extension (default "stdout")`)
+	cmd.Flags().StringVarP(&client.flags.keyFile, "key", "k", "", `File with NDN key to certify (default "keygen")`)
+	cmd.Flags().StringVarP(&client.flags.challenge, "challenge", "c", "", `Challenge type (default "ask")`)
+	cmd.Flags().StringVar(&client.flags.email, "email", "", `Email address for probe and email challenge`)
+	cmd.Flags().BoolVar(&client.flags.noprobe, "no-probe", false, `Skip probe and use the provided key directly`)
+
+	return cmd
 }
 
 func (c *CertClient) String() string {
 	return "ndncert-cli"
 }
 
-func (c *CertClient) run() {
-	flagset := flag.NewFlagSet("ndncert-client", flag.ExitOnError)
-	flagset.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] <ca-file>\n", c.args[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Interactive client for the NDNCERT CA.\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   ca-file string\n")
-		fmt.Fprintf(os.Stderr, "        File with CA root certificate\n")
-		flagset.PrintDefaults()
-	}
-
-	flagset.StringVar(&c.opts.outFile, "o", "", "Output filename without extension (default: stdout)")
-	flagset.StringVar(&c.opts.keyFile, "k", "", "File with NDN key to certify (default: generate new key)")
-	flagset.StringVar(&c.opts.challenge, "c", "", "Challenge type (default: ask)")
-	flagset.StringVar(&c.opts.email, "email", "", "Email address for probe and email challenge")
-	flagset.BoolVar(&c.opts.noprobe, "no-probe", false, "Skip probe and use the provided key directly")
-	flagset.Parse(c.args[1:])
-
-	argCaCert := flagset.Arg(0)
-	if flagset.NArg() != 1 || argCaCert == "" {
-		flagset.Usage()
-		os.Exit(3)
-	}
-
+func (c *CertClient) run(_ *cobra.Command, args []string) {
 	// Read CA certificate
-	caCertFile, err := os.ReadFile(argCaCert)
+	caCertFile, err := os.ReadFile(args[0])
 	if err != nil {
-		log.Fatal(c, "Unable to read CA certificate file", "file", argCaCert)
+		log.Fatal(c, "Unable to read CA certificate file", "file", args[0])
 		return
 	}
 	_, caCerts, _ := sec.DecodeFile(caCertFile)
 	if len(caCerts) != 1 {
-		log.Fatal(c, "CA certificate file must contain exactly one certificate", "file", argCaCert)
+		log.Fatal(c, "CA certificate file must contain exactly one certificate", "file", args[0])
 		return
 	}
 	c.caCert = caCerts[0]
 
 	// Read private key if specified
-	if keyFile := c.opts.keyFile; keyFile != "" {
+	if keyFile := c.flags.keyFile; keyFile != "" {
 		keyBytes, err := os.ReadFile(keyFile)
 		if err != nil {
 			log.Fatal(c, "Unable to read private key file", "file", keyFile)
@@ -108,18 +104,18 @@ func (c *CertClient) chooseChallenge() ndncert.Challenge {
 
 	challenges := []string{ndncert.KwEmail, ndncert.KwPin}
 
-	if c.opts.challenge == "" {
+	if c.flags.challenge == "" {
 		i := c.chooseOpts("Please choose a challenge type:", challenges)
-		c.opts.challenge = challenges[i]
+		c.flags.challenge = challenges[i]
 	}
 
-	switch c.opts.challenge {
+	switch c.flags.challenge {
 	case ndncert.KwEmail:
-		if c.opts.email == "" {
-			c.scanln("Enter your email address", &c.opts.email)
+		if c.flags.email == "" {
+			c.scanln("Enter your email address", &c.flags.email)
 		}
 		return &ndncert.ChallengeEmail{
-			Email: c.opts.email,
+			Email: c.flags.email,
 			CodeCallback: func(status string) (code string) {
 				fmt.Fprintf(os.Stderr, "\n")
 				fmt.Fprintf(os.Stderr, "Challenge Status: %s\n", status)
@@ -141,7 +137,7 @@ func (c *CertClient) chooseChallenge() ndncert.Challenge {
 		}
 
 	default:
-		fmt.Fprintf(os.Stderr, "Invalid challenge selected: %s\n", c.opts.challenge)
+		fmt.Fprintf(os.Stderr, "Invalid challenge selected: %s\n", c.flags.challenge)
 		os.Exit(3)
 	}
 
@@ -177,14 +173,14 @@ func (c *CertClient) client() {
 			c.printCaProfile(profile)
 			return nil
 		},
-		DisableProbe: c.opts.noprobe,
+		DisableProbe: c.flags.noprobe,
 		OnProbeParam: func(key string) ([]byte, error) {
 			switch key {
 			case ndncert.KwEmail:
-				if c.opts.email == "" {
-					c.scanln("Enter your email address", &c.opts.email)
+				if c.flags.email == "" {
+					c.scanln("Enter your email address", &c.flags.email)
 				}
-				return []byte(c.opts.email), nil
+				return []byte(c.flags.email), nil
 
 			default:
 				var val string
@@ -240,7 +236,7 @@ func (c *CertClient) client() {
 
 	// Marshal the key if not specified as file
 	var keyBytes []byte = nil
-	if c.opts.keyFile == "" {
+	if c.flags.keyFile == "" {
 		keyWire, err := sig.MarshalSecret(certRes.Signer)
 		if err != nil {
 			log.Fatal(c, "Unable to marshal key", "err", err)
@@ -253,7 +249,7 @@ func (c *CertClient) client() {
 		}
 	}
 
-	if c.opts.outFile == "" {
+	if c.flags.outFile == "" {
 		// Write the key and certificate to stdout
 		if len(keyBytes) > 0 {
 			os.Stdout.Write(keyBytes)
@@ -263,7 +259,7 @@ func (c *CertClient) client() {
 	} else {
 		// Write the key to a file
 		if len(keyBytes) > 0 {
-			err := os.WriteFile(c.opts.outFile+".key", keyBytes, 0600)
+			err := os.WriteFile(c.flags.outFile+".key", keyBytes, 0600)
 			if err != nil {
 				log.Fatal(c, "Unable to write key file", "err", err)
 				return
@@ -271,7 +267,7 @@ func (c *CertClient) client() {
 		}
 
 		// Write the certificate to a file
-		err := os.WriteFile(c.opts.outFile+".cert", certBytes, 0644)
+		err := os.WriteFile(c.flags.outFile+".cert", certBytes, 0644)
 		if err != nil {
 			log.Fatal(c, "Unable to write certificate file", "err", err)
 			return

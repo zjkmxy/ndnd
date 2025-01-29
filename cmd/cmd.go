@@ -40,19 +40,20 @@ func init() {
 	CmdNDNd.AddCommand(cmdDv())
 
 	CmdNDNd.AddGroup(&cobra.Group{
-		ID:    "tools",
-		Title: "Security Utilities",
+		ID:    "sec",
+		Title: "Security Tools",
 	})
-	CmdNDNd.AddCommand(sec.CmdSec)
+	CmdNDNd.AddCommand(sec.CmdSec())
+	CmdNDNd.AddCommand(sec.CmdCertCli())
 
 	CmdNDNd.AddGroup(&cobra.Group{
 		ID:    "tools",
-		Title: "Debug Utilities",
+		Title: "Debug Tools",
 	})
-	CmdNDNd.AddCommand(tools.CmdCatChunks)
-	CmdNDNd.AddCommand(tools.CmdPutChunks)
-	CmdNDNd.AddCommand(tools.CmdPingClient)
-	CmdNDNd.AddCommand(tools.CmdPingServer)
+	CmdNDNd.AddCommand(tools.CmdCatChunks())
+	CmdNDNd.AddCommand(tools.CmdPutChunks())
+	CmdNDNd.AddCommand(tools.CmdPingClient())
+	CmdNDNd.AddCommand(tools.CmdPingServer())
 }
 
 func cmdFw() *cobra.Command {

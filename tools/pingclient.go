@@ -42,6 +42,27 @@ type PingClient struct {
 	rttAvg time.Duration
 }
 
+func CmdPingClient() *cobra.Command {
+	pc := PingClient{}
+
+	cmd := &cobra.Command{
+		GroupID: "tools",
+		Use:     "ping name",
+		Short:   "Send Interests to a ping server",
+		Long: `Ping a name prefix using Interests like /prefix/ping/number
+The numbers in the Interests are randomly generated`,
+		Args:    cobra.ExactArgs(1),
+		Example: `  ndnd ping /my/prefix -c 5`,
+		Run:     pc.run,
+	}
+
+	cmd.Flags().IntVarP(&pc.interval, "interval", "i", 1000, "ping interval, in milliseconds")
+	cmd.Flags().IntVarP(&pc.timeout, "timeout", "t", 4000, "timeout for each ping, in milliseconds")
+	cmd.Flags().IntVarP(&pc.count, "count", "c", 0, "number of pings to send")
+	cmd.Flags().Uint64Var(&pc.seq, "seq", 0, "start sequence number")
+	return cmd
+}
+
 func (pc *PingClient) String() string {
 	return "ping"
 }

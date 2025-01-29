@@ -15,16 +15,39 @@ import (
 // YYYYMMDDhhmmss
 const TIME_LAYOUT = "20060102150405"
 
-var signCertFlags = struct {
+type ToolSignCert struct {
 	Start  string
 	End    string
 	Info   string
 	Issuer string
-}{}
+}
 
-func signCert(_ *cobra.Command, args []string) {
-	flags := signCertFlags
+func (t *ToolSignCert) configure(root *cobra.Command) {
+	cmd := &cobra.Command{
+		GroupID: "key",
+		Use:     "sign-cert key-file",
+		Short:   "Sign a new NDN certificate",
+		Long: `Sign a new NDN certificate
 
+Expects CSR input on stdin.
+Signer key and CSR can be TLV or PEM encoded.
+
+CSR can be either a self-signed certificate or a secret key.
+To generate a self-signed certificate, provide the same key
+file as both the signer key and the CSR.`,
+		Args: cobra.ExactArgs(1),
+		Example: `  ndnd sec sign-cert alice.key < alice.key > alice.cert
+  ndnd sec sign-cert alice.key --issuer ALICE < bob.csr > bob.cert`,
+		Run: t.signCert,
+	}
+	cmd.Flags().StringVar(&t.Start, "start", "now", "Validity start time in YYYYMMDDhhmmss format")
+	cmd.Flags().StringVar(&t.End, "end", "now + 1 year", "Validity end time in YYYYMMDDhhmmss format")
+	cmd.Flags().StringVar(&t.Info, "info", "", "Additional info to be included in the certificate")
+	cmd.Flags().StringVar(&t.Issuer, "issuer", "NA", "Issuer ID to be included in the certificate name")
+	root.AddCommand(cmd)
+}
+
+func (t *ToolSignCert) signCert(_ *cobra.Command, args []string) {
 	keysFile, err := os.Open(args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open key file: %s\n", err)
@@ -67,15 +90,15 @@ func signCert(_ *cobra.Command, args []string) {
 	notBefore := time.Now()
 	notAfter := time.Now().AddDate(1, 0, 0)
 
-	if flags.Start != "now" {
-		notBefore, err = time.Parse(TIME_LAYOUT, flags.Start)
+	if t.Start != "now" {
+		notBefore, err = time.Parse(TIME_LAYOUT, t.Start)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to parse start time: %s\n", err)
 			os.Exit(1)
 		}
 	}
-	if flags.End != "now + 1 year" {
-		notAfter, err = time.Parse(TIME_LAYOUT, flags.End)
+	if t.End != "now + 1 year" {
+		notAfter, err = time.Parse(TIME_LAYOUT, t.End)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to parse end time: %s\n", err)
 			os.Exit(1)
@@ -86,7 +109,7 @@ func signCert(_ *cobra.Command, args []string) {
 	certWire, err := security.SignCert(security.SignCertArgs{
 		Signer:    signer,
 		Data:      csr,
-		IssuerId:  enc.NewStringComponent(enc.TypeGenericNameComponent, flags.Issuer),
+		IssuerId:  enc.NewStringComponent(enc.TypeGenericNameComponent, t.Issuer),
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
 	})

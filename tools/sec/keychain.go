@@ -14,7 +14,50 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func keychainList(_ *cobra.Command, args []string) {
+type ToolKeychain struct{}
+
+func (t *ToolKeychain) configure(cmd *cobra.Command) {
+	cmd.AddGroup(&cobra.Group{
+		ID:    "keychain",
+		Title: "Keychain Management",
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		GroupID: "keychain",
+		Use:     "key-list keychain-uri",
+		Short:   "List keys in a keychain",
+		Run:     t.List,
+		Args:    cobra.ExactArgs(1),
+		Example: `  ndnd sec key-list dir:///safe/keys`,
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		GroupID: "keychain",
+		Use:     "key-import keychain-uri",
+		Short:   "Import keys or certs to a keychain",
+		Long: `Import keys or certs to a keychain.
+
+Expects one (TLV) or more (PEM) keys or certificates on stdin
+and inserts them into the specified keychain.`,
+		Args:    cobra.ExactArgs(1),
+		Example: `  ndnd sec key-import dir:///safe/keys < alice.key`,
+		Run:     t.Import,
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		GroupID: "keychain",
+		Use:     "key-export keychain-uri key-name",
+		Short:   "Export a key from a keychain",
+		Long: `Export the specified key from a keychain.
+If no KEY is specified, name will be treated as an identity
+and the default key of the identity will be exported.`,
+		Args:    cobra.ExactArgs(2),
+		Example: `  ndnd sec key-export dir:///safe/keys /alice`,
+		Run:     t.Export,
+	})
+}
+
+func (*ToolKeychain) List(_ *cobra.Command, args []string) {
 	kc, err := keychain.NewKeyChain(args[0], object.NewMemoryStore())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open keychain: %s\n", err)
@@ -30,7 +73,7 @@ func keychainList(_ *cobra.Command, args []string) {
 	}
 }
 
-func keychainImport(_ *cobra.Command, args []string) {
+func (*ToolKeychain) Import(_ *cobra.Command, args []string) {
 	kc, err := keychain.NewKeyChain(args[0], object.NewMemoryStore())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open keychain: %s\n", err)
@@ -53,7 +96,7 @@ func keychainImport(_ *cobra.Command, args []string) {
 	}
 }
 
-func keychainExport(_ *cobra.Command, args []string) {
+func (*ToolKeychain) Export(_ *cobra.Command, args []string) {
 	name, err := enc.NameFromStr(args[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid key name: %s\n", args[1])
