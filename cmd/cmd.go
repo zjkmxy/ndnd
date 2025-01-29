@@ -34,25 +34,16 @@ func init() {
 	CmdNDNd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	CmdNDNd.PersistentFlags().Lookup("help").Hidden = true
 
-	CmdNDNd.AddGroup(&cobra.Group{
-		ID:    "daemons",
-		Title: "NDN Daemons",
-	})
+	CmdNDNd.AddGroup(&cobra.Group{ID: "daemons", Title: "NDN Daemons"})
 	CmdNDNd.AddCommand(cmdFw())
 	CmdNDNd.AddCommand(cmdDv())
 	CmdNDNd.AddCommand(cmdDaemon)
 
-	CmdNDNd.AddGroup(&cobra.Group{
-		ID:    "sec",
-		Title: "Security Tools",
-	})
+	CmdNDNd.AddGroup(&cobra.Group{ID: "sec", Title: "Security Tools"})
 	CmdNDNd.AddCommand(sec.CmdSec())
 	CmdNDNd.AddCommand(sec.CmdCertCli())
 
-	CmdNDNd.AddGroup(&cobra.Group{
-		ID:    "tools",
-		Title: "Debug Tools",
-	})
+	CmdNDNd.AddGroup(&cobra.Group{ID: "tools", Title: "Debug Tools"})
 	CmdNDNd.AddCommand(tools.CmdPingClient())
 	CmdNDNd.AddCommand(tools.CmdPingServer())
 	CmdNDNd.AddCommand(tools.CmdCatChunks())
@@ -70,18 +61,12 @@ Reference:
 		GroupID: "daemons",
 	}
 
-	cmdFw.AddGroup(&cobra.Group{
-		ID:    "run",
-		Title: "Forwarder Daemon",
-	})
+	cmdFw.AddGroup(&cobra.Group{ID: "run", Title: "Forwarder Daemon"})
 	fw.CmdYaNFD.Use = "run CONFIG-FILE"
 	fw.CmdYaNFD.Short = "Start the NDN Forwarding Daemon"
 	cmdFw.AddCommand(fw.CmdYaNFD)
 
-	cmdFw.AddGroup(&cobra.Group{
-		ID:    "nfdc",
-		Title: "Forwarder Control",
-	})
+	cmdFw.AddGroup(&cobra.Group{ID: "nfdc", Title: "Forwarder Control"})
 	for _, sub := range nfdc.Cmds() {
 		sub.GroupID = "nfdc"
 		cmdFw.AddCommand(sub)
@@ -101,18 +86,12 @@ Reference:
 		GroupID: "daemons",
 	}
 
-	cmdDv.AddGroup(&cobra.Group{
-		ID:    "run",
-		Title: "Router Daemon",
-	})
+	cmdDv.AddGroup(&cobra.Group{ID: "run", Title: "Router Daemon"})
 	dv.CmdDv.Use = "run CONFIG-FILE"
 	dv.CmdDv.Short = "Start the NDN Distance Vector Daemon"
 	cmdDv.AddCommand(dv.CmdDv)
 
-	cmdDv.AddGroup(&cobra.Group{
-		ID:    "dvc",
-		Title: "Router Control",
-	})
+	cmdDv.AddGroup(&cobra.Group{ID: "dvc", Title: "Router Control"})
 	for _, sub := range dvc.Cmds() {
 		sub.GroupID = "dvc"
 		cmdDv.AddCommand(sub)
