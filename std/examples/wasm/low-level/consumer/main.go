@@ -38,7 +38,7 @@ func main() {
 	}
 
 	fmt.Printf("Sending Interest %s\n", interest.FinalName.String())
-	ch := make(chan ndn.ExpressCallbackArgs)
+	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	err = app.Express(interest, func(args ndn.ExpressCallbackArgs) { ch <- args })
 	if err != nil {
 		log.Error(nil, "Unable to send Interest", "err", err)

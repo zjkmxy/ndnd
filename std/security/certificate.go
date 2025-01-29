@@ -79,7 +79,7 @@ func SelfSign(args SignCertArgs) (enc.Wire, error) {
 		return nil, ndn.ErrInvalidValue{Item: "SelfSign.args.Signer", Value: args.Signer}
 	}
 	if args.IssuerId.Typ == 0 {
-		args.IssuerId = enc.NewStringComponent(enc.TypeGenericNameComponent, "SELF")
+		args.IssuerId = enc.NewStringComponent(enc.TypeGenericNameComponent, "self")
 	}
 
 	keyWire, err := sig.MarshalSecret(args.Signer)

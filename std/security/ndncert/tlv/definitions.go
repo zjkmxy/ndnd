@@ -1,13 +1,13 @@
 //go:generate gondn_tlv_gen
-package ndncert
+package tlv
 
 import (
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
 type CaProfile struct {
-	//+field:name
-	CaPrefix enc.Name `tlv:"0x81"`
+	//+field:struct:NameContainer
+	CaPrefix *NameContainer `tlv:"0x81"`
 	//+field:string
 	CaInfo string `tlv:"0x83"`
 	//+field:sequence:string:string
@@ -18,31 +18,33 @@ type CaProfile struct {
 	CaCert enc.Wire `tlv:"0x89"`
 }
 
-type ProbeIntAppParam struct {
+type ProbeReq struct {
 	//+field:map:string:string:0x87:[]byte:binary
 	Params map[string][]byte `tlv:"0x85"`
 }
 
-type ProbeRes struct {
+type ProbeResVals struct {
 	//+field:name
 	Response enc.Name `tlv:"0x07"`
 	//+field:natural:optional
-	MaxSuffixLength *uint64
+	MaxSuffixLength *uint64 `tlv:"0x8F"`
 }
 
-type ProbeResContent struct {
-	//+field:sequence:*ProbeRes:struct:ProbeRes
-	Vals []*ProbeRes `tlv:"0x8D"`
+type ProbeRes struct {
+	//+field:sequence:*ProbeResVals:struct:ProbeResVals
+	Vals []*ProbeResVals `tlv:"0x8D"`
+	//+field:struct:NameContainer
+	RedirectPrefix *NameContainer `tlv:"0xB3"`
 }
 
-type CmdNewInt struct {
+type NewReq struct {
 	//+field:binary
 	EcdhPub []byte `tlv:"0x91"`
-	//+field:binary
-	CertReq []byte `tlv:"0x93"`
+	//+field:wire
+	CertReq enc.Wire `tlv:"0x93"`
 }
 
-type CmdNewData struct {
+type NewRes struct {
 	//+field:binary
 	EcdhPub []byte `tlv:"0x91"`
 	//+field:binary
@@ -62,14 +64,14 @@ type CipherMsg struct {
 	Payload []byte `tlv:"0x9F"`
 }
 
-type ChallengeIntPlain struct {
+type ChallengeReq struct {
 	//+field:string
-	SelectedChal string `tlv:"0xA1"`
+	Challenge string `tlv:"0xA1"`
 	//+field:map:string:string:0x87:[]byte:binary
 	Params map[string][]byte `tlv:"0x85"`
 }
 
-type ChallengeDataPlain struct {
+type ChallengeRes struct {
 	//+field:natural
 	Status uint64 `tlv:"0x9B"`
 	//+field:string:optional
@@ -78,17 +80,22 @@ type ChallengeDataPlain struct {
 	RemainTries *uint64 `tlv:"0xA5"`
 	//+field:natural:optional
 	RemainTime *uint64 `tlv:"0xA7"`
-	//+field:name
-	CertName enc.Name `tlv:"0xA9"`
-	//+field:name
-	ForwardingHint enc.Name `tlv:"0x1e"`
+	//+field:struct:NameContainer
+	CertName *NameContainer `tlv:"0xA9"`
+	//+field:struct:NameContainer
+	ForwardingHint *NameContainer `tlv:"0x1e"`
 	//+field:map:string:string:0x87:[]byte:binary
 	Params map[string][]byte `tlv:"0x85"`
 }
 
-type ErrorMsgData struct {
+type ErrorRes struct {
 	//+field:natural
 	ErrCode uint64 `tlv:"0xAB"`
 	//+field:string
 	ErrInfo string `tlv:"0xAD"`
+}
+
+type NameContainer struct {
+	//+field:name
+	Name enc.Name `tlv:"0x07"`
 }

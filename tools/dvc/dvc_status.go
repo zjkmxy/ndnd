@@ -30,7 +30,7 @@ func (t *Tool) DvStatus() (*spec_dv.Status, error) {
 		panic(err)
 	}
 
-	ch := make(chan ndn.ExpressCallbackArgs)
+	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	err = t.engine.Express(interest, func(args ndn.ExpressCallbackArgs) { ch <- args })
 	if err != nil {
 		panic(err)

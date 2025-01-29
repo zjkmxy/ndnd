@@ -42,11 +42,17 @@ func main() {
 			Help: "NDN Combined Daemon",
 			Fun:  cmd.Daemon,
 		}, {
-			// tools separator
+			// sec separator
 		}, {
 			Name: "sec",
 			Help: "NDN Security Utilities",
 			Sub:  sec.Tree().Sub,
+		}, {
+			Name: "certcli",
+			Help: "NDNCERT Certificate Client",
+			Fun:  tools.RunCertClient,
+		}, {
+			// tools separator
 		}, {
 			Name: "ping",
 			Help: "Send Interests to an NDN ping server",

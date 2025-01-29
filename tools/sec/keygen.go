@@ -17,12 +17,14 @@ func keygen(args []string) {
 	flagset := flag.NewFlagSet("keychain-import", flag.ExitOnError)
 	flagset.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s <identity> <key-type> [params]\n", args[0])
-		fmt.Fprintf(os.Stderr, "    key-type: rsa|ecc|ed25519\n")
 		fmt.Fprintf(os.Stderr, "\n")
 		fmt.Fprintf(os.Stderr, "Generates a new key pair and outputs the secret key in PEM.\n")
 		fmt.Fprintf(os.Stderr, "The key pair is associated with the specified identity.\n")
 		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Example: %s /ndn/alice ed25519\n", args[0])
+		fmt.Fprintf(os.Stderr, "   identity string\n")
+		fmt.Fprintf(os.Stderr, "        Name prefix for new key\n")
+		fmt.Fprintf(os.Stderr, "   key-type string\n")
+		fmt.Fprintf(os.Stderr, "        rsa | ecc | ed25519\n")
 		flagset.PrintDefaults()
 	}
 	flagset.Parse(args[1:])
