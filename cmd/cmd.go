@@ -30,7 +30,7 @@ var CmdNDNd = &cobra.Command{
 
 func init() {
 	cobra.EnableCommandSorting = false
-	CmdNDNd.Root().CompletionOptions.DisableDefaultCmd = true
+	CmdNDNd.Root().CompletionOptions.HiddenDefaultCmd = true
 	CmdNDNd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	CmdNDNd.PersistentFlags().Lookup("help").Hidden = true
 
