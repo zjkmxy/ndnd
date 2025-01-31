@@ -73,6 +73,19 @@ func (n Name) Clone() Name {
 	return ret
 }
 
+// Get the nth component of a Name.
+// If n is out of range, a zero component is returned.
+// Negative values start from the end.
+func (n Name) At(i int) Component {
+	if i < -len(n) || i >= len(n) {
+		return Component{}
+	} else if i < 0 {
+		return n[len(n)+i]
+	} else {
+		return n[i]
+	}
+}
+
 // ReadName reads a Name from a Wire **excluding** the TL prefix.
 func ReadName(r ParseReader) (Name, error) {
 	var err error

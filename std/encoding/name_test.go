@@ -351,3 +351,19 @@ func TestNameAppend(t *testing.T) {
 	require.Equal(t, "/a/b/c/d3/e3/f3", name3.String())
 	require.Equal(t, "/a/b/c/d4/e4/f4", name4.String())
 }
+
+func TestNameAt(t *testing.T) {
+	tu.SetT(t)
+
+	n := tu.NoErr(enc.NameFromStr("/a/b/c/d"))
+	require.Equal(t, "a", n.At(0).String())
+	require.Equal(t, "b", n.At(1).String())
+	require.Equal(t, "c", n.At(2).String())
+	require.Equal(t, "d", n.At(3).String())
+	require.Equal(t, enc.Component{}, n.At(4))
+	require.Equal(t, "d", n.At(-1).String())
+	require.Equal(t, "c", n.At(-2).String())
+	require.Equal(t, "b", n.At(-3).String())
+	require.Equal(t, "a", n.At(-4).String())
+	require.Equal(t, enc.Component{}, n.At(-5))
+}
