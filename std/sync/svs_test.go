@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func makeSvMap() ndn_sync.SvMap {
-	m := ndn_sync.NewSvMap(0)
+func makeSvMap() ndn_sync.SvMap[uint64] {
+	m := ndn_sync.NewSvMap[uint64](0)
 	m.Set("/ndn/alice", 100, 1)
 	m.Set("/ndn/alice", 200, 4)
 	m.Set("/ndn/bob", 150, 3)
@@ -22,17 +22,17 @@ func TestSvMapBasic(t *testing.T) {
 	m := makeSvMap()
 
 	// Basic entries
-	require.Equal(t, uint64(1), m.Get("/ndn/alice", 100).SeqNo)
-	require.Equal(t, uint64(4), m.Get("/ndn/alice", 200).SeqNo)
-	require.Equal(t, uint64(3), m.Get("/ndn/bob", 150).SeqNo)
+	require.Equal(t, uint64(1), m.Get("/ndn/alice", 100))
+	require.Equal(t, uint64(4), m.Get("/ndn/alice", 200))
+	require.Equal(t, uint64(3), m.Get("/ndn/bob", 150))
 
 	// Empty entries
-	require.Equal(t, uint64(0), m.Get("/ndn/bob", 100).SeqNo)
-	require.Equal(t, uint64(0), m.Get("/ndn/cathy", 100).SeqNo)
+	require.Equal(t, uint64(0), m.Get("/ndn/bob", 100))
+	require.Equal(t, uint64(0), m.Get("/ndn/cathy", 100))
 
 	// Update entries
 	m.Set("/ndn/bob", 150, 5)
-	require.Equal(t, uint64(5), m.Get("/ndn/bob", 150).SeqNo)
+	require.Equal(t, uint64(5), m.Get("/ndn/bob", 150))
 }
 
 func TestSvMapNewer(t *testing.T) {
@@ -41,43 +41,46 @@ func TestSvMapNewer(t *testing.T) {
 	m1 := makeSvMap()
 	m2 := makeSvMap()
 
+	exist := func(_, _ uint64) bool { return false }
+	order := func(a, b uint64) bool { return a > b }
+
 	// Equal
-	require.False(t, m1.IsNewerThan(m2, false))
-	require.False(t, m1.IsNewerThan(m2, true))
+	require.False(t, m1.IsNewerThan(m2, order))
+	require.False(t, m1.IsNewerThan(m2, exist))
 
 	// Different sequence number
 	m2.Set("/ndn/alice", 200, 99)
-	require.True(t, m2.IsNewerThan(m1, false))
-	require.False(t, m2.IsNewerThan(m1, true))
-	require.False(t, m1.IsNewerThan(m2, false))
-	require.False(t, m1.IsNewerThan(m2, true))
+	require.True(t, m2.IsNewerThan(m1, order))
+	require.False(t, m2.IsNewerThan(m1, exist))
+	require.False(t, m1.IsNewerThan(m2, order))
+	require.False(t, m1.IsNewerThan(m2, exist))
 
 	// Different entry exist
 	m2.Set("/ndn/cathy", 100, 99)
-	require.True(t, m2.IsNewerThan(m1, false))
-	require.True(t, m2.IsNewerThan(m1, true))
-	require.False(t, m1.IsNewerThan(m2, false))
-	require.False(t, m1.IsNewerThan(m2, true))
+	require.True(t, m2.IsNewerThan(m1, order))
+	require.True(t, m2.IsNewerThan(m1, exist))
+	require.False(t, m1.IsNewerThan(m2, order))
+	require.False(t, m1.IsNewerThan(m2, exist))
 
 	// Both are new (m1 seq only)
 	m1.Set("/ndn/bob", 150, 99)
-	require.True(t, m2.IsNewerThan(m1, false))
-	require.True(t, m2.IsNewerThan(m1, true))
-	require.True(t, m1.IsNewerThan(m2, false))
-	require.False(t, m1.IsNewerThan(m2, true))
+	require.True(t, m2.IsNewerThan(m1, order))
+	require.True(t, m2.IsNewerThan(m1, exist))
+	require.True(t, m1.IsNewerThan(m2, order))
+	require.False(t, m1.IsNewerThan(m2, exist))
 }
 
 func TestSvMapTLV(t *testing.T) {
 	tu.SetT(t)
 
 	// Add entries to test ordering
-	m := ndn_sync.NewSvMap(0)
+	m := ndn_sync.NewSvMap[uint64](0)
 	m.Set("/ndn/alice", 100, 1)
 	m.Set("/ndn/alice", 200, 4)
 	m.Set("/ndn/cathy", 150, 3)
 	m.Set("/ndn/bob", 150, 3)
 	m.Set("/ndn/bob", 50, 5)
-	sv := m.Encode()
+	sv := m.Encode(func(s uint64) uint64 { return s })
 
 	// Name Ordering should be in NDN canonical order.
 	// Bootstrap time is in ascending order.

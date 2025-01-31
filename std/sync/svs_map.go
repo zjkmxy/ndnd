@@ -9,53 +9,55 @@ import (
 )
 
 // Map representation of the state vector.
-type SvMap map[string][]spec_svs.SeqNoEntry
+type SvMap[V any] map[string][]svMapVal[V]
+
+// One entry in the state vector map.
+type svMapVal[V any] struct {
+	boot  uint64
+	value V
+}
 
 // Create a new state vector map.
-func NewSvMap(size int) SvMap {
-	return make(SvMap, size)
+func NewSvMap[V any](size int) SvMap[V] {
+	return make(SvMap[V], size)
 }
 
 // Get seq entry for a bootstrap time.
-func (m SvMap) Get(hash string, btime uint64) spec_svs.SeqNoEntry {
+func (m SvMap[V]) Get(hash string, boot uint64) (value V) {
+	// TODO: binary search - this is sorted
 	for _, entry := range m[hash] {
-		if entry.BootstrapTime == btime {
-			return entry
+		if entry.boot == boot {
+			return entry.value
 		}
 	}
-	return spec_svs.SeqNoEntry{
-		BootstrapTime: btime,
-		SeqNo:         0,
-	}
+	return value
 }
 
-// Set seq entry for a bootstrap time.
-func (m SvMap) Set(hash string, btime uint64, seq uint64) {
+func (m SvMap[V]) Set(hash string, boot uint64, value V) {
 	for i, entry := range m[hash] {
-		if entry.BootstrapTime == btime {
-			m[hash][i].SeqNo = seq
+		if entry.boot == boot {
+			m[hash][i].value = value
 			return
 		}
 	}
-	m[hash] = append(m[hash], spec_svs.SeqNoEntry{
-		BootstrapTime: btime,
-		SeqNo:         seq,
-	})
+
+	m[hash] = append(m[hash], svMapVal[V]{boot, value})
 	sort.Slice(m[hash], func(i, j int) bool {
-		return m[hash][i].BootstrapTime < m[hash][j].BootstrapTime
+		return m[hash][i].boot < m[hash][j].boot
 	})
 }
 
-// Check if a svHashMap is newer than another.
-// If existOnly is true, only check if the other has all entries.
-func (m SvMap) IsNewerThan(other SvMap, existOnly bool) bool {
+// Check if a SvMap is newer than another.
+// cmp(a, b) is the function to compare values (a > b).
+func (m SvMap[V]) IsNewerThan(other SvMap[V], cmp func(V, V) bool) bool {
+	// TODO: optimize with two pointers
 	for hash, entries := range m {
 		for _, entry := range entries {
 			foundOther := false
 			for _, otherEntry := range other[hash] {
-				if otherEntry.BootstrapTime == entry.BootstrapTime {
+				if otherEntry.boot == entry.boot {
 					foundOther = true
-					if !existOnly && otherEntry.SeqNo < entry.SeqNo {
+					if cmp(entry.value, otherEntry.value) {
 						return true
 					}
 				}
@@ -68,32 +70,40 @@ func (m SvMap) IsNewerThan(other SvMap, existOnly bool) bool {
 	return false
 }
 
-func (m SvMap) Encode() *spec_svs.StateVector {
-	entries := make([]*spec_svs.StateVectorEntry, 0, len(m))
-	for hash, seqEntrs := range m {
-		seqEntrPtrs := make([]*spec_svs.SeqNoEntry, 0, len(seqEntrs))
-		for _, e := range seqEntrs {
-			if e.SeqNo > 0 {
-				seqEntrPtrs = append(seqEntrPtrs, &e)
-			}
-		}
+// Encode the state vector map to a StateVector.
+// seq is the function to get the sequence number
+func (m SvMap[V]) Encode(seq func(V) uint64) *spec_svs.StateVector {
+	sv := &spec_svs.StateVector{
+		Entries: make([]*spec_svs.StateVectorEntry, 0, len(m)),
+	}
 
+	for hash, vals := range m {
 		name, err := enc.NameFromStr(hash)
 		if err != nil {
 			log.Error(nil, "Invalid name in SV map", "hash", hash)
 			continue
 		}
 
-		entries = append(entries, &spec_svs.StateVectorEntry{
+		entry := &spec_svs.StateVectorEntry{
 			Name:         name,
-			SeqNoEntries: seqEntrPtrs,
-		})
+			SeqNoEntries: make([]*spec_svs.SeqNoEntry, 0, len(vals)),
+		}
+		sv.Entries = append(sv.Entries, entry)
+
+		for _, val := range vals {
+			if seqNo := seq(val.value); seqNo > 0 {
+				entry.SeqNoEntries = append(entry.SeqNoEntries, &spec_svs.SeqNoEntry{
+					BootstrapTime: val.boot,
+					SeqNo:         seqNo,
+				})
+			}
+		}
 	}
 
 	// Sort entries by in the NDN canonical order
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Name.Compare(entries[j].Name) < 0
+	sort.Slice(sv.Entries, func(i, j int) bool {
+		return sv.Entries[i].Name.Compare(sv.Entries[j].Name) < 0
 	})
 
-	return &spec_svs.StateVector{Entries: entries}
+	return sv
 }

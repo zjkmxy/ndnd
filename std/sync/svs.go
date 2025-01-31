@@ -25,11 +25,11 @@ type SvSync struct {
 	ticker  *time.Ticker
 
 	mutex sync.Mutex
-	state SvMap
+	state SvMap[uint64]
 	mtime map[string]time.Time
 
 	suppress bool
-	merge    SvMap
+	merge    SvMap[uint64]
 
 	recvSv chan *spec_svs.StateVector
 }
@@ -86,11 +86,11 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 		ticker:  time.NewTicker(1 * time.Second),
 
 		mutex: sync.Mutex{},
-		state: NewSvMap(0),
+		state: NewSvMap[uint64](0),
 		mtime: make(map[string]time.Time),
 
 		suppress: false,
-		merge:    NewSvMap(0),
+		merge:    NewSvMap[uint64](0),
 
 		recvSv: make(chan *spec_svs.StateVector, 128),
 	}
@@ -151,7 +151,7 @@ func (s *SvSync) SetSeqNo(name enc.Name, seqNo uint64) error {
 	hash := name.String()
 
 	entry := s.state.Get(hash, s.o.BootTime)
-	if seqNo <= entry.SeqNo {
+	if seqNo <= entry {
 		return errors.New("SvSync: seqNo must be greater than previous")
 	}
 
@@ -172,13 +172,14 @@ func (s *SvSync) IncrSeqNo(name enc.Name) uint64 {
 	hash := name.String()
 
 	entry := s.state.Get(hash, s.o.BootTime)
-	s.state.Set(hash, s.o.BootTime, entry.SeqNo+1)
+	entry++
+	s.state.Set(hash, s.o.BootTime, entry)
 
 	// [Spec] When the node generates a new publication,
 	// immediately emit a Sync Interest
 	go s.sendSyncInterest()
 
-	return entry.SeqNo + 1
+	return entry
 }
 
 func (s *SvSync) GetBootTime() uint64 {
@@ -191,7 +192,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 
 	isOutdated := false
 	canDrop := true
-	recvSv := NewSvMap(len(sv.Entries))
+	recvSv := NewSvMap[uint64](len(sv.Entries))
 
 	for _, node := range sv.Entries {
 		hash := node.Name.String()
@@ -208,7 +209,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 
 			// Get existing state vector entry
 			known := s.state.Get(hash, entry.BootstrapTime)
-			if entry.SeqNo > known.SeqNo {
+			if entry.SeqNo > known {
 				// [Spec] If the incoming state vector is newer,
 				// update the local state vector.
 				s.state.Set(hash, entry.BootstrapTime, entry.SeqNo)
@@ -222,9 +223,9 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 					Name: node.Name,
 					Boot: entry.BootstrapTime,
 					High: entry.SeqNo,
-					Low:  known.SeqNo + 1,
+					Low:  known + 1,
 				})
-			} else if entry.SeqNo < known.SeqNo {
+			} else if entry.SeqNo < known {
 				isOutdated = true
 
 				// [Spec] If every node with an outdated sequence number
@@ -240,7 +241,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 				// [Spec] For every incoming Sync Interest, aggregate
 				// the state vector into a MergedStateVector.
 				known := s.merge.Get(hash, entry.BootstrapTime)
-				if entry.SeqNo > known.SeqNo {
+				if entry.SeqNo > known {
 					s.merge.Set(hash, entry.BootstrapTime, entry.SeqNo)
 				}
 			}
@@ -249,7 +250,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 
 	// The above checks each node in the incoming state vector, but
 	// does not check if a node is missing from the incoming state vector.
-	if !isOutdated && s.state.IsNewerThan(recvSv, true) {
+	if !isOutdated && s.state.IsNewerThan(recvSv, func(_, _ uint64) bool { return false }) {
 		isOutdated = true
 		canDrop = false
 	}
@@ -267,7 +268,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	// [Spec] Incoming Sync Interest is outdated.
 	// [Spec] Move to Suppression State.
 	s.suppress = true
-	s.merge = make(SvMap, len(s.state))
+	s.merge = make(SvMap[uint64], len(s.state))
 
 	// [Spec] When entering Suppression State, reset
 	// the Sync Interest timer to SuppressionTimeout
@@ -281,7 +282,7 @@ func (s *SvSync) timerExpired() {
 	// [Spec] Suppression State
 	if s.suppress {
 		// [Spec] If MergedStateVector is up-to-date; no inconsistency.
-		if !s.state.IsNewerThan(s.merge, false) {
+		if !s.state.IsNewerThan(s.merge, func(a, b uint64) bool { return a > b }) {
 			s.enterSteadyState()
 			return
 		}
@@ -307,7 +308,7 @@ func (s *SvSync) sendSyncInterest() {
 		// [Spec*] Sending always triggers Steady State
 		s.enterSteadyState()
 
-		return s.state.Encode()
+		return s.state.Encode(func(s uint64) uint64 { return s })
 	}()
 	svWire := (&spec_svs.SvsData{StateVector: sv}).Encode()
 
