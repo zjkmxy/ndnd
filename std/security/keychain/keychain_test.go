@@ -162,7 +162,7 @@ func TestKeyChainDir(t *testing.T) {
 	require.Equal(t, rootCert, data)
 
 	// Check Alice key
-	identity := kc.IdentityByName(KEY_ALICE_NAME[:2])
+	identity := kc.IdentityByName(KEY_ALICE_NAME.Prefix(-2))
 	require.NotNil(t, identity)
 	require.Len(t, identity.Keys(), 1)
 	require.Equal(t, identity.Keys()[0].KeyName(), KEY_ALICE_NAME)

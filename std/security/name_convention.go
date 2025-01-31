@@ -43,8 +43,8 @@ func GetKeyNameFromCertName(name enc.Name) (enc.Name, error) {
 	if len(name) < 5 {
 		return nil, ndn.ErrInvalidValue{Item: "certificate name"}
 	}
-	if name[len(name)-1].Typ == enc.TypeImplicitSha256DigestComponent {
-		name = name[:len(name)-1]
+	if name.At(-1).Typ == enc.TypeImplicitSha256DigestComponent {
+		name = name.Prefix(-1)
 	}
 	if name[len(name)-4].String() != "KEY" {
 		return nil, ndn.ErrInvalidValue{Item: "KEY component"}

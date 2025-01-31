@@ -330,7 +330,7 @@ func (n NamePattern) FromMatching(m Matching) (Name, error) {
 }
 
 func (n Name) ToFullName(rawData Wire) Name {
-	if n[len(n)-1].Typ == TypeImplicitSha256DigestComponent {
+	if n.At(-1).Typ == TypeImplicitSha256DigestComponent {
 		return n
 	}
 	h := sha256.New()

@@ -47,7 +47,7 @@ func testStoreBasic(t *testing.T, store ndn.Store) {
 	require.Equal(t, wire1, data)
 
 	// exact match with partial name
-	name1pfx := name1[:len(name1)-1]
+	name1pfx := name1.Prefix(-1)
 	data, err = store.Get(name1pfx, false)
 	require.NoError(t, err)
 	require.Equal(t, []byte(nil), data)
@@ -117,7 +117,7 @@ func testStoreBasic(t *testing.T, store ndn.Store) {
 	require.Equal(t, []byte(nil), data)
 
 	// check broad prefix returns data 5
-	data, err = store.Get(name1[:2], true)
+	data, err = store.Get(name1.Prefix(2), true)
 	require.NoError(t, err)
 	require.Equal(t, wire5, data)
 }

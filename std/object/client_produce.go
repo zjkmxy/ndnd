@@ -146,8 +146,8 @@ func (c *Client) Remove(name enc.Name) error {
 
 	// Remove RDR metadata if we have a version
 	// If there is no version, we removed this anyway in the previous step
-	if version := name[len(name)-1]; version.Typ == enc.TypeVersionNameComponent {
-		err = c.store.Remove(name[:len(name)-1].Append(rdr.METADATA, version), true)
+	if version := name.At(-1); version.Typ == enc.TypeVersionNameComponent {
+		err = c.store.Remove(name.Prefix(-1).Append(rdr.METADATA, version), true)
 		if err != nil {
 			return err
 		}

@@ -93,20 +93,13 @@ func (kc *KeyChainMem) InsertCert(wire []byte) error {
 
 	// /<IdentityName>/KEY/<KeyId>/<IssuerId>/<Version>
 	name := data.Name()
-	if len(name) < 5 {
-		return ndn.ErrInvalidValue{Item: "name length"}
-	}
-
-	keyComp := name[len(name)-4]
-	if keyComp.String() != "KEY" {
+	if name.At(-4).String() != "KEY" {
 		return ndn.ErrInvalidValue{Item: "KEY component"}
 	}
-
-	versionComp := name[len(name)-1]
-	if versionComp.Typ != enc.TypeVersionNameComponent {
+	if name.At(-1).Typ != enc.TypeVersionNameComponent {
 		return ndn.ErrInvalidValue{Item: "version component"}
 	}
-	version := versionComp.NumberVal()
+	version := name.At(-1).NumberVal()
 
 	// Check if certificate already exists
 	for _, existing := range kc.certNames {

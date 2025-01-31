@@ -47,9 +47,9 @@ func TestSignCertSelf(t *testing.T) {
 	name := cert.Name()
 	require.True(t, KEY_ALICE_NAME.IsPrefix(name))
 	require.Equal(t, len(KEY_ALICE_NAME)+2, len(name))
-	require.Equal(t, enc.TypeVersionNameComponent, name[len(name)-1].Typ)
-	require.Greater(t, name[len(name)-1].NumberVal(), uint64(0))
-	require.Equal(t, ISSUER, name[len(name)-2])
+	require.Equal(t, enc.TypeVersionNameComponent, name.At(-1).Typ)
+	require.Greater(t, name.At(-1).NumberVal(), uint64(0))
+	require.Equal(t, ISSUER, name.At(-2))
 
 	// check data content is public key
 	require.Equal(t, ndn.ContentTypeKey, *cert.ContentType())
@@ -110,9 +110,9 @@ func TestSignCertOther(t *testing.T) {
 	name := newCert.Name()
 	require.True(t, KEY_ROOT_NAME.IsPrefix(name))
 	require.Equal(t, len(KEY_ROOT_NAME)+2, len(name))
-	require.Equal(t, enc.TypeVersionNameComponent, name[len(name)-1].Typ)
-	require.Greater(t, name[len(name)-1].NumberVal(), uint64(0))
-	require.Equal(t, ISSUER, name[len(name)-2])
+	require.Equal(t, enc.TypeVersionNameComponent, name.At(-1).Typ)
+	require.Greater(t, name.At(-1).NumberVal(), uint64(0))
+	require.Equal(t, ISSUER, name.At(-2))
 
 	// check data content is public key
 	require.Equal(t, ndn.ContentTypeKey, *newCert.ContentType())

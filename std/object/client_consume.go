@@ -136,7 +136,7 @@ func (c *Client) consumeObject(state *ConsumeState) {
 	}
 
 	// fetch object metadata if the last name component is not a version
-	if name[len(name)-1].Typ != enc.TypeVersionNameComponent {
+	if name.At(-1).Typ != enc.TypeVersionNameComponent {
 		// when called with metadata, call with versioned name.
 		// state will always have the original object name.
 		if state.meta != nil {
@@ -279,20 +279,15 @@ func extractSegMetadata(data ndn.Data) (*rdr.MetaData, error) {
 	}
 
 	// get segment component
-	segComp := name[len(name)-1]
-	if segComp.Typ != enc.TypeSegmentNameComponent {
+	if name.At(-1).Typ != enc.TypeSegmentNameComponent {
 		return nil, fmt.Errorf("consume: data has no segment")
 	}
 
 	// get version component
-	verComp := name[len(name)-2]
-	if verComp.Typ != enc.TypeVersionNameComponent {
+	if name.At(-2).Typ != enc.TypeVersionNameComponent {
 		return nil, fmt.Errorf("consume: data has no version")
 	}
 
 	// construct metadata
-	return &rdr.MetaData{
-		Name:         name[:len(name)-1],
-		FinalBlockID: segComp.Bytes(),
-	}, nil
+	return &rdr.MetaData{Name: name.Prefix(-1)}, nil
 }

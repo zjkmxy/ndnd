@@ -481,7 +481,7 @@ func checkInterest(val *Interest, context *InterestParsingContext) error {
 	if val.ApplicationParameters != nil {
 		// Check digest
 		name := val.NameV
-		if len(name) == 0 || name[len(name)-1].Typ != enc.TypeParametersSha256DigestComponent {
+		if len(name) == 0 || name.At(-1).Typ != enc.TypeParametersSha256DigestComponent {
 			return enc.ErrIncorrectDigest
 		}
 		digestCovered := context.digestCovered
@@ -493,7 +493,7 @@ func checkInterest(val *Interest, context *InterestParsingContext) error {
 			}
 		}
 		digestBuf := h.Sum(nil)
-		if !bytes.Equal(name[len(name)-1].Val, digestBuf) {
+		if !bytes.Equal(name.At(-1).Val, digestBuf) {
 			return enc.ErrIncorrectDigest
 		}
 	}

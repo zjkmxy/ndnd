@@ -99,8 +99,8 @@ func (s *LvsSchema) match_(
 	}
 
 	// Remove the implicit SHA-256 digest component
-	if name[len(name)-1].Typ == enc.TypeImplicitSha256DigestComponent {
-		name = name[:len(name)-1]
+	if name.At(-1).Typ == enc.TypeImplicitSha256DigestComponent {
+		name = name.Prefix(-1)
 	}
 
 	// Current node in the depth-first search

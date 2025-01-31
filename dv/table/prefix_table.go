@@ -195,13 +195,15 @@ func (pt *PrefixTable) ApplyData(name enc.Name, data enc.Wire, router *PrefixTab
 	// Get sequence number from name
 	// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
 	// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
-	seqNo := name[len(name)-2]
-	if seqNo.Equal(PREFIX_SNAP_COMP) && name[len(name)-1].Typ == enc.TypeVersionNameComponent {
+	var seqNo uint64
+	if name.At(-2).Equal(PREFIX_SNAP_COMP) {
 		// version is sequence number for snapshot
-		seqNo = name[len(name)-1]
-	} else if seqNo.Typ != enc.TypeSequenceNumNameComponent {
+		seqNo = name.At(-1).NumberVal()
+	} else if name.At(-2).Typ == enc.TypeSequenceNumNameComponent {
 		// version is immutable, sequence number is in name
-		log.Warn(pt, "Unexpected sequence number type", "type", seqNo.Typ)
+		seqNo = name.At(-2).NumberVal()
+	} else {
+		log.Warn(pt, "Unexpected prefix data name", "name", name)
 		return false
 	}
 
@@ -213,7 +215,7 @@ func (pt *PrefixTable) ApplyData(name enc.Name, data enc.Wire, router *PrefixTab
 	}
 
 	// Update the prefix table
-	router.Known = seqNo.NumberVal()
+	router.Known = seqNo
 	return pt.Apply(ops)
 }
 

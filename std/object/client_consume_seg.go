@@ -211,7 +211,7 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 	name := args.Data.Name()
 
 	// get segment number from name
-	segComp := name[len(name)-1]
+	segComp := name.At(-1)
 	if segComp.Typ != enc.TypeSegmentNameComponent {
 		state.finalizeError(fmt.Errorf("consume: invalid segment number type=%d", segComp.Typ))
 		return

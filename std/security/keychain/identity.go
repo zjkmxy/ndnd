@@ -12,6 +12,7 @@ type keyChainKey struct {
 	// signer is the private key object.
 	signer ndn.Signer
 	// uniqueCerts is the list of unique certs in this key.
+	// Version number in the cert name is always set to zero to de-duplicate.
 	uniqueCerts []enc.Name
 	// latestCertVer is the latest certificate version.
 	latestCertVer uint64
@@ -31,12 +32,13 @@ func (k *keyChainKey) UniqueCerts() []enc.Name {
 
 // insertCert adds a certificate to the key container.
 func (k *keyChainKey) insertCert(certName enc.Name) {
-	version := certName[len(certName)-1].NumberVal()
+	version := certName.At(-1).NumberVal()
 	if version > k.latestCertVer {
 		k.latestCertVer = version
 	}
 
-	uniqueName := certName[:len(certName)-1].Append(enc.NewVersionComponent(0))
+	// De-duplicate by removing the version number.
+	uniqueName := certName.Prefix(-1).Append(enc.NewVersionComponent(0))
 	for _, n := range k.uniqueCerts {
 		if n.Equal(uniqueName) {
 			return
