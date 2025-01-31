@@ -367,3 +367,20 @@ func TestNameAt(t *testing.T) {
 	require.Equal(t, "a", n.At(-4).String())
 	require.Equal(t, enc.Component{}, n.At(-5))
 }
+
+func TestNamePrefix(t *testing.T) {
+	tu.SetT(t)
+
+	n := tu.NoErr(enc.NameFromStr("/a/b/c/d"))
+	require.Equal(t, "/", n.Prefix(0).String())
+	require.Equal(t, "/a", n.Prefix(1).String())
+	require.Equal(t, "/a/b", n.Prefix(2).String())
+	require.Equal(t, "/a/b/c", n.Prefix(3).String())
+	require.Equal(t, "/a/b/c/d", n.Prefix(4).String())
+	require.Equal(t, "/a/b/c/d", n.Prefix(5).String())
+	require.Equal(t, "/a/b/c", n.Prefix(-1).String())
+	require.Equal(t, "/a/b", n.Prefix(-2).String())
+	require.Equal(t, "/a", n.Prefix(-3).String())
+	require.Equal(t, "/", n.Prefix(-4).String())
+	require.Equal(t, "/", n.Prefix(-5).String())
+}

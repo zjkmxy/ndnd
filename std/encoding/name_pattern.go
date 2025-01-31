@@ -73,8 +73,8 @@ func (n Name) Clone() Name {
 	return ret
 }
 
-// Get the nth component of a Name.
-// If n is out of range, a zero component is returned.
+// Get the ith component of a Name.
+// If i is out of range, a zero component is returned.
 // Negative values start from the end.
 func (n Name) At(i int) Component {
 	if i < -len(n) || i >= len(n) {
@@ -84,6 +84,23 @@ func (n Name) At(i int) Component {
 	} else {
 		return n[i]
 	}
+}
+
+// Get a name prefix with the first i components.
+// If i is zero, an empty name is returned.
+// If i is negative, i components are removed from the end.
+// Note that the returned name is not a deep copy.
+func (n Name) Prefix(i int) Name {
+	if i < 0 {
+		i = len(n) + i
+	}
+	if i <= 0 {
+		return Name{}
+	}
+	if i >= len(n) {
+		return n
+	}
+	return n[:i]
 }
 
 // ReadName reads a Name from a Wire **excluding** the TL prefix.
