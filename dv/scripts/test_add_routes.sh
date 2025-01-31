@@ -12,7 +12,7 @@ while true; do
     RIB_SIZE=0
     while [ $RIB_SIZE -lt $MAX_RIB_SIZE ]; do
         RIB_SIZE=$((RIB_SIZE+1))
-        ndnd fw route add prefix=/my/route/$RIB_SIZE/$ITER origin=65 face=1
+        ndnd fw route-add prefix=/my/route/$RIB_SIZE/$ITER origin=65 face=1
         sleep 0.05
     done
 
@@ -21,7 +21,7 @@ while true; do
     RIB_SIZE=0
     while [ $RIB_SIZE -lt $MAX_RIB_SIZE ]; do
         RIB_SIZE=$((RIB_SIZE+1))
-        ndnd fw route remove prefix=/my/route/$RIB_SIZE/$ITER origin=65 face=1
+        ndnd fw route-remove prefix=/my/route/$RIB_SIZE/$ITER origin=65 face=1
         sleep 0.05
     done
 done

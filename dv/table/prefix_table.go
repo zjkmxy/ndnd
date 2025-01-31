@@ -171,16 +171,16 @@ func (r *PrefixTableRouter) GetNextDataName() enc.Name {
 	name := r.Name.Append(
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
 		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
+		enc.NewTimestampComponent(r.BootTime),
 	)
 	if r.Latest-r.Known > PREFIX_SNAP_THRESHOLD {
 		// no version - discover the latest snapshot
+		// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
 		name = append(name, PREFIX_SNAP_COMP)
 	} else {
-		name = append(name,
-			enc.NewTimestampComponent(r.BootTime),
-			enc.NewSequenceNumComponent(r.Known+1),
-			enc.NewVersionComponent(0), // immutable
-		)
+		// zero version - immutable
+		// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
+		name = append(name, enc.NewSequenceNumComponent(r.Known+1), enc.NewVersionComponent(0))
 	}
 	return name
 }
@@ -193,6 +193,8 @@ func (pt *PrefixTable) ApplyData(name enc.Name, data enc.Wire, router *PrefixTab
 	}
 
 	// Get sequence number from name
+	// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
+	// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
 	seqNo := name[len(name)-2]
 	if seqNo.Equal(PREFIX_SNAP_COMP) && name[len(name)-1].Typ == enc.TypeVersionNameComponent {
 		// version is sequence number for snapshot
@@ -222,9 +224,10 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 	pt.me.Latest = seq
 
 	// Produce the operation
+	// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
 	name, err := pt.client.Produce(ndn.ProduceArgs{
 		Name: pt.config.PrefixTableDataPrefix().Append(
-			enc.NewTimestampComponent(pt.svs.GetBootTime()),
+			enc.NewTimestampComponent(pt.me.BootTime),
 			enc.NewSequenceNumComponent(seq),
 		),
 		Content: content,
@@ -258,8 +261,12 @@ func (pt *PrefixTable) publishSnap() {
 	}
 
 	// Produce the snapshot
+	// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
 	name, err := pt.client.Produce(ndn.ProduceArgs{
-		Name:    pt.config.PrefixTableDataPrefix().Append(PREFIX_SNAP_COMP),
+		Name: pt.config.PrefixTableDataPrefix().Append(
+			enc.NewTimestampComponent(pt.me.BootTime),
+			PREFIX_SNAP_COMP,
+		),
 		Content: snap.Encode(),
 		Version: utils.IdPtr(pt.me.Latest),
 	})
