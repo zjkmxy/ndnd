@@ -51,6 +51,14 @@ func (a *ConsumeState) Name() enc.Name {
 	return a.fetchName
 }
 
+// returns the version of the object being consumed
+func (a *ConsumeState) Version() uint64 {
+	if ver := a.fetchName.At(-1); ver.IsVersion() {
+		return ver.NumberVal()
+	}
+	return 0
+}
+
 // returns the error that occurred during fetching
 func (a *ConsumeState) Error() error {
 	return a.err

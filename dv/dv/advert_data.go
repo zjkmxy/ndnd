@@ -17,12 +17,12 @@ func (a *advertModule) generate() {
 	a.seq++
 
 	// Produce the advertisement
+	name := a.dv.config.AdvertisementDataPrefix().
+		Append(enc.NewTimestampComponent(a.bootTime)).
+		WithVersion(a.seq)
 	name, err := a.dv.client.Produce(ndn.ProduceArgs{
-		Name: a.dv.config.AdvertisementDataPrefix().Append(
-			enc.NewTimestampComponent(a.bootTime),
-		),
+		Name:            name,
 		Content:         a.dv.rib.Advert().Encode(),
-		Version:         a.seq,
 		FreshnessPeriod: 10 * time.Second,
 	})
 	if err != nil {
@@ -48,10 +48,9 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 		enc.NewKeywordComponent("DV"),
 		enc.NewKeywordComponent("ADV"),
 		enc.NewTimestampComponent(bootTime),
-		enc.NewVersionComponent(seqNo),
 	)...)
 
-	a.dv.client.Consume(advName, func(state ndn.ConsumeState) {
+	a.dv.client.Consume(advName.WithVersion(seqNo), func(state ndn.ConsumeState) {
 		if !state.IsComplete() {
 			return
 		}

@@ -23,19 +23,10 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 	contentSize := content.Length()
 
 	// Get the correct version
-	version := args.Version
-	switch args.Version {
-	case 0: // nothing
-		return nil, errors.New("object version is not specified or zero")
-	case ndn.VersionImmutable:
-		version = 0
-	case ndn.VersionUnixMicro:
-		if now := time.Now().UnixMicro(); now > 0 { // > 1970
-			version = uint64(now)
-		} else {
-			return nil, errors.New("current unix time is negative")
-		}
+	if !args.Name.At(-1).IsVersion() {
+		return nil, errors.New("object version not set")
 	}
+	version := args.Name.At(-1).NumberVal()
 
 	// Use freshness period or default
 	if args.FreshnessPeriod == 0 {
@@ -47,15 +38,12 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 	if contentSize > 0 {
 		lastSeg = uint64((contentSize - 1) / pSegmentSize)
 	}
-	finalBlockId := enc.NewSegmentComponent(lastSeg)
 
 	cfg := &ndn.DataConfig{
 		ContentType:  utils.IdPtr(ndn.ContentTypeBlob),
 		Freshness:    utils.IdPtr(args.FreshnessPeriod),
-		FinalBlockID: &finalBlockId,
+		FinalBlockID: utils.IdPtr(enc.NewSegmentComponent(lastSeg)),
 	}
-
-	basename := args.Name.Append(enc.NewVersionComponent(version))
 
 	// use a transaction to ensure the entire object is written
 	store.Begin()
@@ -63,7 +51,7 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 
 	var seg uint64
 	for seg = 0; seg <= lastSeg; seg++ {
-		name := basename.Append(enc.NewSegmentComponent(seg))
+		name := args.Name.Append(enc.NewSegmentComponent(seg))
 
 		segContent := enc.Wire{}
 		segContentSize := 0
@@ -100,14 +88,14 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 
 	if !args.NoMetadata {
 		// write metadata packet
-		name := args.Name.Append(
+		name := args.Name.Prefix(-1).Append(
 			enc.NewKeywordComponent(rdr.MetadataKeyword),
 			enc.NewVersionComponent(version),
 			enc.NewSegmentComponent(0),
 		)
 		content := rdr.MetaData{
-			Name:         basename,
-			FinalBlockID: finalBlockId.Bytes(),
+			Name:         args.Name,
+			FinalBlockID: cfg.FinalBlockID.Bytes(),
 		}
 
 		data, err := spec.Spec{}.MakeData(name, cfg, content.Encode(), signer)
@@ -121,13 +109,17 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 		}
 	}
 
-	return basename, nil
+	return args.Name, nil
 }
 
 // Produce and sign data, and insert into the client's store.
 // The input data will be freed as the object is segmented.
 func (c *Client) Produce(args ndn.ProduceArgs) (enc.Name, error) {
-	signer := c.SuggestSigner(args.Name)
+	if !args.Name.At(-1).IsVersion() {
+		return nil, errors.New("object version not set")
+	}
+
+	signer := c.SuggestSigner(args.Name.Prefix(-1))
 	if signer == nil {
 		return nil, fmt.Errorf("no valid signer found for %s", args.Name)
 	}

@@ -59,7 +59,12 @@ func (dv *Router) prefixDataFetch(nName enc.Name) {
 	// Fetch the prefix data object
 	log.Debug(dv.pfx, "Fetching prefix data", "router", nName, "known", router.Known, "latest", router.Latest)
 
+	// Get the versioned name of the next object to fetch
+	// This can be either a snapshot or a normal data depending on
+	// the state of the router in the prefix table
 	name := router.GetNextDataName()
+
+	// Fetch the object
 	dv.client.Consume(name, func(state ndn.ConsumeState) {
 		if !state.IsComplete() {
 			return
@@ -68,7 +73,7 @@ func (dv *Router) prefixDataFetch(nName enc.Name) {
 		go func() {
 			fetchErr := state.Error()
 			if fetchErr != nil {
-				log.Warn(dv.pfx, "Failed to fetch prefix data", "name", state.Name(), "err", fetchErr)
+				log.Warn(dv.pfx, "Failed to fetch prefix data", "name", name, "err", fetchErr)
 				time.Sleep(1 * time.Second) // wait on error
 			}
 

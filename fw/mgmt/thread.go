@@ -212,9 +212,8 @@ func (m *Thread) sendCtrlResp(interest *Interest, statusCode uint64, statusText 
 // Create a segmented status dataset and send the first segment to the internal transport
 func (m *Thread) sendStatusDataset(interest *Interest, name enc.Name, dataset enc.Wire) {
 	objName, err := object.Produce(ndn.ProduceArgs{
-		Name:            name,
+		Name:            name.WithVersion(enc.VersionUnixMicro),
 		Content:         dataset,
-		Version:         ndn.VersionUnixMicro,
 		FreshnessPeriod: time.Millisecond,
 		NoMetadata:      true,
 	}, m.store, m.signer)

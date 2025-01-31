@@ -166,21 +166,22 @@ func (pt *PrefixTable) Apply(ops *tlv.PrefixOpList) (dirty bool) {
 // If the difference between Known and Latest is greater than the threshold,
 // fetch the latest snapshot. Otherwise, fetch the next sequence number.
 func (r *PrefixTableRouter) GetNextDataName() enc.Name {
+	// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
+	// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
 	name := r.Name.Append(
 		enc.NewKeywordComponent("DV"),
 		enc.NewKeywordComponent("PFX"),
 		enc.NewTimestampComponent(r.BootTime),
 	)
+
 	if r.Latest-r.Known > PrefixSnapThreshold {
-		// no version - discover the latest snapshot
-		// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
-		name = append(name, enc.NewKeywordComponent(PrefixSnapKeyword))
-	} else {
-		// zero version - immutable
-		// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
-		name = append(name, enc.NewSequenceNumComponent(r.Known+1), enc.NewVersionComponent(0))
+		return name.
+			Append(enc.NewKeywordComponent(PrefixSnapKeyword))
 	}
-	return name
+
+	return name.
+		Append(enc.NewSequenceNumComponent(r.Known + 1)).
+		WithVersion(enc.VersionImmutable)
 }
 
 // Process the received prefix data. Returns if dirty.
@@ -226,12 +227,11 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 	// Produce the operation
 	// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
 	name, err := pt.client.Produce(ndn.ProduceArgs{
-		Name: pt.config.PrefixTableDataPrefix().Append(
-			enc.NewTimestampComponent(pt.me.BootTime),
-			enc.NewSequenceNumComponent(seq),
-		),
+		Name: pt.config.PrefixTableDataPrefix().
+			Append(enc.NewTimestampComponent(pt.me.BootTime)).
+			Append(enc.NewSequenceNumComponent(seq)).
+			WithVersion(enc.VersionImmutable),
 		Content: content,
-		Version: ndn.VersionImmutable,
 	})
 	if err != nil {
 		log.Error(pt, "Failed to produce op", "err", err)
@@ -263,12 +263,11 @@ func (pt *PrefixTable) publishSnap() {
 	// Produce the snapshot
 	// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
 	name, err := pt.client.Produce(ndn.ProduceArgs{
-		Name: pt.config.PrefixTableDataPrefix().Append(
-			enc.NewTimestampComponent(pt.me.BootTime),
-			enc.NewKeywordComponent(PrefixSnapKeyword),
-		),
+		Name: pt.config.PrefixTableDataPrefix().
+			Append(enc.NewTimestampComponent(pt.me.BootTime)).
+			Append(enc.NewKeywordComponent(PrefixSnapKeyword)).
+			WithVersion(pt.me.Latest),
 		Content: snap.Encode(),
-		Version: pt.me.Latest,
 	})
 	if err != nil {
 		log.Error(pt, "Failed to produce snap", "err", err)
