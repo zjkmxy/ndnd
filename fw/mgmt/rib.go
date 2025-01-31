@@ -218,9 +218,8 @@ func (r *RIBModule) list(interest *Interest) {
 		dataset.Entries = append(dataset.Entries, ribEntry)
 	}
 
-	name := interest.Name()[:len(LOCAL_PREFIX)].Append(
-		enc.NewGenericComponent("rib"),
-		enc.NewGenericComponent("list"),
-	)
+	name := interest.Name()[:len(LOCAL_PREFIX)].
+		Append(enc.NewGenericComponent("rib")).
+		Append(enc.NewGenericComponent("list"))
 	r.manager.sendStatusDataset(interest, name, dataset.Encode())
 }

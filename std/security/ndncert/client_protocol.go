@@ -19,10 +19,10 @@ import (
 func (c *Client) FetchProfile() (*tlv.CaProfile, error) {
 	// TODO: validate packets received by the client using the cert.
 	ch := make(chan ndn.ConsumeState)
-	c.client.Consume(c.caPrefix.Append(
-		enc.NewGenericComponent("CA"),
-		enc.NewGenericComponent("INFO"),
-	), func(status ndn.ConsumeState) {
+	name := c.caPrefix.
+		Append(enc.NewGenericComponent("CA")).
+		Append(enc.NewGenericComponent("INFO"))
+	c.client.Consume(name, func(status ndn.ConsumeState) {
 		if status.IsComplete() {
 			ch <- status
 		}

@@ -44,13 +44,14 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 	}
 
 	// Fetch the advertisement
-	advName := enc.LOCALHOP.Append(nName.Append(
-		enc.NewKeywordComponent("DV"),
-		enc.NewKeywordComponent("ADV"),
-		enc.NewTimestampComponent(bootTime),
-	)...)
+	advName := enc.LOCALHOP.
+		Append(nName...).
+		Append(enc.NewKeywordComponent("DV")).
+		Append(enc.NewKeywordComponent("ADV")).
+		Append(enc.NewTimestampComponent(bootTime)).
+		WithVersion(seqNo)
 
-	a.dv.client.Consume(advName.WithVersion(seqNo), func(state ndn.ConsumeState) {
+	a.dv.client.Consume(advName, func(state ndn.ConsumeState) {
 		if !state.IsComplete() {
 			return
 		}

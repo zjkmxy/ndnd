@@ -123,7 +123,8 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 		}
 	} else {
 		// Add missing version information to strategy name
-		params.Strategy.Name = params.Strategy.Name.Append(enc.NewVersionComponent(strategyVersion))
+		params.Strategy.Name = params.Strategy.Name.
+			Append(enc.NewVersionComponent(strategyVersion))
 	}
 	table.FibStrategyTable.SetStrategyEnc(params.Name, params.Strategy.Name)
 

@@ -12,11 +12,10 @@ import (
 const CostInfinity = uint64(16)
 const NlsrOrigin = uint64(mgmt.RouteOriginNLSR)
 
-var MulticastStrategy = enc.LOCALHOST.Append(
-	enc.NewGenericComponent("nfd"),
-	enc.NewGenericComponent("strategy"),
-	enc.NewGenericComponent("multicast"),
-)
+var MulticastStrategy = enc.LOCALHOST.
+	Append(enc.NewGenericComponent("nfd")).
+	Append(enc.NewGenericComponent("strategy")).
+	Append(enc.NewGenericComponent("multicast"))
 
 //go:embed schema.tlv
 var SchemaBytes []byte
@@ -136,40 +135,34 @@ func (c *Config) Parse() (err error) {
 	}
 
 	// Advertisement sync and data prefixes
-	c.advSyncPfxN = enc.LOCALHOP.Append(c.networkNameN.Append(
-		enc.NewKeywordComponent("DV"),
-		enc.NewKeywordComponent("ADS"),
-	)...)
-	c.advSyncActivePfxN = c.advSyncPfxN.Append(
-		enc.NewKeywordComponent("ACT"),
-	)
-	c.advSyncPassivePfxN = c.advSyncPfxN.Append(
-		enc.NewKeywordComponent("PSV"),
-	)
-	c.advDataPfxN = enc.LOCALHOP.Append(c.routerNameN.Append(
-		enc.NewKeywordComponent("DV"),
-		enc.NewKeywordComponent("ADV"),
-	)...)
+	c.advSyncPfxN = enc.LOCALHOP.
+		Append(c.networkNameN...).
+		Append(enc.NewKeywordComponent("DV")).
+		Append(enc.NewKeywordComponent("ADS"))
+	c.advSyncActivePfxN = c.advSyncPfxN.
+		Append(enc.NewKeywordComponent("ACT"))
+	c.advSyncPassivePfxN = c.advSyncPfxN.
+		Append(enc.NewKeywordComponent("PSV"))
+	c.advDataPfxN = enc.LOCALHOP.
+		Append(c.routerNameN...).
+		Append(enc.NewKeywordComponent("DV")).
+		Append(enc.NewKeywordComponent("ADV"))
 
 	// Prefix table sync prefix
-	c.pfxSyncPfxN = c.networkNameN.Append(
-		enc.NewKeywordComponent("DV"),
-		enc.NewKeywordComponent("PFS"),
-	)
+	c.pfxSyncPfxN = c.networkNameN.
+		Append(enc.NewKeywordComponent("DV")).
+		Append(enc.NewKeywordComponent("PFS"))
 
 	// Router data prefix including prefix data and certificates
-	c.routerDataPfxN = c.routerNameN.Append(
-		enc.NewKeywordComponent("DV"),
-	)
-	c.pfxDataPfxN = c.routerNameN.Append(
-		enc.NewKeywordComponent("DV"),
-		enc.NewKeywordComponent("PFX"),
-	)
+	c.routerDataPfxN = c.routerNameN.
+		Append(enc.NewKeywordComponent("DV"))
+	c.pfxDataPfxN = c.routerNameN.
+		Append(enc.NewKeywordComponent("DV")).
+		Append(enc.NewKeywordComponent("PFX"))
 
 	// Local prefixes to NFD
-	c.mgmtPrefix = enc.LOCALHOST.Append(
-		enc.NewGenericComponent("nlsr"),
-	)
+	c.mgmtPrefix = enc.LOCALHOST.
+		Append(enc.NewGenericComponent("nlsr"))
 
 	return nil
 }

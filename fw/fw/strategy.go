@@ -56,10 +56,9 @@ func (s *StrategyBase) NewStrategyBase(
 ) {
 	s.thread = fwThread
 	s.threadID = s.thread.threadID
-	s.name = defn.STRATEGY_PREFIX.Append(
-		enc.NewGenericComponent(name),
-		enc.NewVersionComponent(version),
-	)
+	s.name = defn.STRATEGY_PREFIX.
+		Append(enc.NewGenericComponent(name)).
+		Append(enc.NewVersionComponent(version))
 	s.version = version
 	s.logName = name
 }

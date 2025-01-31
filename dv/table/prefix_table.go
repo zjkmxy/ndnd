@@ -168,18 +168,17 @@ func (pt *PrefixTable) Apply(ops *tlv.PrefixOpList) (dirty bool) {
 func (r *PrefixTableRouter) GetNextDataName() enc.Name {
 	// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
 	// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
-	name := r.Name.Append(
-		enc.NewKeywordComponent("DV"),
-		enc.NewKeywordComponent("PFX"),
-		enc.NewTimestampComponent(r.BootTime),
-	)
+	prefix := r.Name.
+		Append(enc.NewKeywordComponent("DV")).
+		Append(enc.NewKeywordComponent("PFX")).
+		Append(enc.NewTimestampComponent(r.BootTime))
 
 	if r.Latest-r.Known > PrefixSnapThreshold {
-		return name.
+		return prefix.
 			Append(enc.NewKeywordComponent(PrefixSnapKeyword))
 	}
 
-	return name.
+	return prefix.
 		Append(enc.NewSequenceNumComponent(r.Known + 1)).
 		WithVersion(enc.VersionImmutable)
 }

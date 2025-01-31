@@ -472,10 +472,9 @@ func (f *FaceModule) list(interest *Interest) {
 		dataset.Vals = append(dataset.Vals, f.createDataset(faces[pos]))
 	}
 
-	name := LOCAL_PREFIX.Append(
-		enc.NewGenericComponent("faces"),
-		enc.NewGenericComponent("list"),
-	)
+	name := LOCAL_PREFIX.
+		Append(enc.NewGenericComponent("faces")).
+		Append(enc.NewGenericComponent("list"))
 	f.manager.sendStatusDataset(interest, name, dataset.Encode())
 }
 

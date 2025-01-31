@@ -80,9 +80,8 @@ func (f *ForwarderStatusModule) general(interest *Interest) {
 		status.NUnsatisfiedInterests += thread.(*fw.Thread).NUnsatisfiedInterests
 	}
 
-	name := LOCAL_PREFIX.Append(
-		enc.NewGenericComponent("status"),
-		enc.NewGenericComponent("general"),
-	)
+	name := LOCAL_PREFIX.
+		Append(enc.NewGenericComponent("status")).
+		Append(enc.NewGenericComponent("general"))
 	f.manager.sendStatusDataset(interest, name, status.Encode())
 }

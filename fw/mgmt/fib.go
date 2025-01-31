@@ -153,9 +153,8 @@ func (f *FIBModule) list(interest *Interest) {
 		dataset.Entries = append(dataset.Entries, fibEntry)
 	}
 
-	name := LOCAL_PREFIX.Append(
-		enc.NewGenericComponent("fib"),
-		enc.NewGenericComponent("list"),
-	)
+	name := LOCAL_PREFIX.
+		Append(enc.NewGenericComponent("fib")).
+		Append(enc.NewGenericComponent("list"))
 	f.manager.sendStatusDataset(interest, name, dataset.Encode())
 }

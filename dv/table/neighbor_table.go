@@ -137,16 +137,15 @@ func (ns *NeighborState) delete() {
 }
 
 func (ns *NeighborState) localRoute() enc.Name {
-	return enc.LOCALHOP.Append(ns.Name.Append(
-		enc.NewKeywordComponent("DV"),
-	)...)
+	return enc.LOCALHOP.
+		Append(ns.Name...).
+		Append(enc.NewKeywordComponent("DV"))
 }
 
 func (ns *NeighborState) certRoute() enc.Name {
-	return ns.Name.Append(
-		enc.NewKeywordComponent("DV"),
-		enc.NewGenericComponent("KEY"),
-	)
+	return ns.Name.
+		Append(enc.NewKeywordComponent("DV")).
+		Append(enc.NewGenericComponent("KEY"))
 }
 
 // Register route to this neighbor

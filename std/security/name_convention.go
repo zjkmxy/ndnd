@@ -12,10 +12,9 @@ func MakeKeyName(name enc.Name) enc.Name {
 	keyId := make([]byte, 8)
 	rand.Read(keyId)
 
-	return name.Append(
-		enc.NewGenericComponent("KEY"),
-		enc.NewGenericBytesComponent(keyId),
-	)
+	return name.
+		Append(enc.NewGenericComponent("KEY")).
+		Append(enc.NewGenericBytesComponent(keyId))
 }
 
 // GetIdentityFromKeyName extracts the identity name from a key name.

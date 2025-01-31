@@ -122,10 +122,9 @@ func (c *ContentStoreModule) info(interest *Interest) {
 		status.CsInfo.NCsEntries += uint64(thread.GetNumCsEntries())
 	}
 
-	name := LOCAL_PREFIX.Append(
-		enc.NewGenericComponent("cs"),
-		enc.NewGenericComponent("info"),
-	)
+	name := LOCAL_PREFIX.
+		Append(enc.NewGenericComponent("cs")).
+		Append(enc.NewGenericComponent("info"))
 	c.manager.sendStatusDataset(interest, name, status.Encode())
 }
 

@@ -12,6 +12,6 @@ var NON_LOCAL_PREFIX = enc.Name{enc.LOCALHOP, enc.NewGenericComponent("nfd")}
 var STRATEGY_PREFIX = LOCAL_PREFIX.Append(enc.NewGenericComponent("strategy"))
 
 // Default forwarding strategy name
-var DEFAULT_STRATEGY = STRATEGY_PREFIX.Append(
-	enc.NewGenericComponent("best-route"),
-	enc.NewVersionComponent(1))
+var DEFAULT_STRATEGY = STRATEGY_PREFIX.
+	Append(enc.NewGenericComponent("best-route")).
+	Append(enc.NewVersionComponent(1))

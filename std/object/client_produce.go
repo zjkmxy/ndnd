@@ -88,11 +88,10 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 
 	if !args.NoMetadata {
 		// write metadata packet
-		name := args.Name.Prefix(-1).Append(
-			enc.NewKeywordComponent(rdr.MetadataKeyword),
-			enc.NewVersionComponent(version),
-			enc.NewSegmentComponent(0),
-		)
+		name := args.Name.Prefix(-1).
+			Append(enc.NewKeywordComponent(rdr.MetadataKeyword)).
+			Append(enc.NewVersionComponent(version)).
+			Append(enc.NewSegmentComponent(0))
 		content := rdr.MetaData{
 			Name:         args.Name,
 			FinalBlockID: cfg.FinalBlockID.Bytes(),
