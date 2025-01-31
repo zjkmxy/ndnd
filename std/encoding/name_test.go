@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"strings"
 	"testing"
+	"unsafe"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
@@ -348,8 +349,60 @@ func TestNameAppend(t *testing.T) {
 	// The Append function allocates a new array for the new name
 	name3 := prefix.Append(tu.NoErr(enc.NameFromStr("d3/e3/f3"))...)
 	name4 := prefix.Append(tu.NoErr(enc.NameFromStr("d4/e4/f4"))...)
+
+	// Appends can be chained
+	name5 := prefix.
+		Append(enc.NewGenericComponent("d5")).
+		Append(enc.NewGenericComponent("e5")).
+		Append(enc.NewGenericComponent("f5"))
+	name6 := name5.
+		Append(enc.NewGenericComponent("g6")).
+		Append(enc.NewGenericComponent("h6"))
+	name7 := name5.
+		Append(enc.NewGenericComponent("g7")).
+		Append(enc.NewGenericComponent("h7"))
+
+	// Append will allocate a new array when the underlying
+	// array is too small to hold the new name
+	prefix2 := tu.NoErr(enc.NameFromStr("/a/b/c"))
+	name8 := prefix2.
+		Append(enc.NewGenericComponent("d8")).
+		Append(enc.NewGenericComponent("e8"))
+
+	// This will not allocate a new array as name8 should
+	// have enough space for the new components.
+	name9 := name8.
+		Append(enc.NewGenericComponent("f9")).
+		Append(enc.NewGenericComponent("g9"))
+
+	// This will allocate on the same array as name9 as long as
+	// possible, but will make a new array because space runs out
+	name10 := name9.
+		Append(enc.NewGenericComponent("h10")).
+		Append(enc.NewGenericComponent("i10")).
+		Append(enc.NewGenericComponent("j10")).
+		Append(enc.NewGenericComponent("k10")).
+		Append(enc.NewGenericComponent("l10")).
+		Append(enc.NewGenericComponent("m10")).
+		Append(enc.NewGenericComponent("n10"))
+
 	require.Equal(t, "/a/b/c/d3/e3/f3", name3.String())
 	require.Equal(t, "/a/b/c/d4/e4/f4", name4.String())
+	require.Equal(t, "/a/b/c/d5/e5/f5", name5.String())
+	require.Equal(t, "/a/b/c/d5/e5/f5/g6/h6", name6.String())
+	require.Equal(t, "/a/b/c/d5/e5/f5/g7/h7", name7.String())
+	require.Equal(t, "/a/b/c/d8/e8", name8.String())
+	require.Equal(t, "/a/b/c/d8/e8/f9/g9", name9.String())
+	require.Equal(t, "/a/b/c/d8/e8/f9/g9/h10/i10/j10/k10/l10/m10/n10", name10.String())
+
+	// When appends are chained, a new array should be allocated only once
+	require.True(t, unsafe.SliceData(prefix) != unsafe.SliceData(name3))
+	require.True(t, unsafe.SliceData(prefix) != unsafe.SliceData(name5))
+	require.True(t, unsafe.SliceData(name5) == unsafe.SliceData(name6)) // no malloc
+	require.True(t, unsafe.SliceData(name5) != unsafe.SliceData(name7)) // second append
+	require.True(t, unsafe.SliceData(prefix2) != unsafe.SliceData(name8))
+	require.True(t, unsafe.SliceData(name8) == unsafe.SliceData(name9))
+	require.True(t, unsafe.SliceData(name9) != unsafe.SliceData(name10))
 }
 
 func TestNameAt(t *testing.T) {

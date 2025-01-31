@@ -224,9 +224,29 @@ func NameFromBytes(buf []byte) (Name, error) {
 
 // Append appends one or more components to a shallow copy of the name.
 // Using this function is recommended over the in-built `append`.
+// A copy will not be created for chained appends.
 func (n Name) Append(rest ...Component) Name {
-	ret := make(Name, len(n)+len(rest))
-	copy(ret, n)
+	size := len(n) + len(rest)
+	if len(rest) == 0 {
+		return n
+	}
+
+	var ret Name = nil
+	if cap(n) >= size {
+		// If the next component is a zero component,
+		// we can just reuse the previous buffer.
+		prev := n[:size]
+		if prev[len(n)].Typ == 0 {
+			ret = prev
+		}
+	}
+
+	if ret == nil {
+		// Allocate extra buffer space so that chained appends are faster.
+		ret = make(Name, size, size+8)
+		copy(ret, n)
+	}
+
 	copy(ret[len(n):], rest)
 	return ret
 }
