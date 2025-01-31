@@ -3,6 +3,7 @@ package object
 import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
+	sepc_rdr "github.com/named-data/ndnd/std/ndn/rdr_2024"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/signer"
 )
@@ -13,7 +14,7 @@ func (c *Client) SuggestSigner(name enc.Name) ndn.Signer {
 	if c.trust == nil {
 		return signer.NewSha256Signer()
 	}
-	name = removeSegVer(name)
+	name = removeRdr(name)
 	return c.trust.Suggest(name)
 }
 
@@ -33,8 +34,8 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 		return
 	}
 
-	// Pop off the version and segment components
-	overrideName := removeSegVer(args.Data.Name())
+	// Pop off RDR naming convention components
+	overrideName := removeRdr(args.Data.Name())
 	if len(args.OverrideName) > 0 {
 		overrideName = args.OverrideName
 	}
@@ -59,15 +60,16 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 	})
 }
 
-// removeSegVer removes the segment and version components from a name
-func removeSegVer(name enc.Name) enc.Name {
-	if len(name) > 2 {
-		if name[len(name)-1].Typ == enc.TypeSegmentNameComponent {
-			name = name[:len(name)-1]
-		}
-		if name[len(name)-1].Typ == enc.TypeVersionNameComponent {
-			name = name[:len(name)-1]
-		}
+// removeRdr removes the components from RDR naming convention
+func removeRdr(name enc.Name) enc.Name {
+	if name.At(-1).Typ == enc.TypeSegmentNameComponent {
+		name = name.Prefix(-1)
+	}
+	if name.At(-1).Typ == enc.TypeVersionNameComponent {
+		name = name.Prefix(-1)
+	}
+	if name.At(-1).Equal(sepc_rdr.METADATA) {
+		name = name.Prefix(-1)
 	}
 	return name
 }
