@@ -20,13 +20,10 @@ func MakeKeyName(name enc.Name) enc.Name {
 
 // GetIdentityFromKeyName extracts the identity name from a key name.
 func GetIdentityFromKeyName(name enc.Name) (enc.Name, error) {
-	if len(name) < 3 {
-		return nil, ndn.ErrInvalidValue{Item: "key name"}
-	}
-	if name[len(name)-2].String() != "KEY" {
+	if name.At(-2).String() != "KEY" {
 		return nil, ndn.ErrInvalidValue{Item: "KEY component"}
 	}
-	return name[:len(name)-2], nil
+	return name.Prefix(-2), nil
 }
 
 // MakeCertName generates a new certificate name for a given key name.
@@ -40,16 +37,13 @@ func MakeCertName(keyName enc.Name, issuerId enc.Component, version uint64) (enc
 
 // GetKeyNameFromCertName extracts the key name from a certificate name.
 func GetKeyNameFromCertName(name enc.Name) (enc.Name, error) {
-	if len(name) < 5 {
-		return nil, ndn.ErrInvalidValue{Item: "certificate name"}
-	}
 	if name.At(-1).Typ == enc.TypeImplicitSha256DigestComponent {
 		name = name.Prefix(-1)
 	}
-	if name[len(name)-4].String() != "KEY" {
+	if name.At(-4).String() != "KEY" {
 		return nil, ndn.ErrInvalidValue{Item: "KEY component"}
 	}
-	return name[:len(name)-2], nil
+	return name.Prefix(-2), nil
 }
 
 // GetIdentityFromCertName extracts the identity name from a certificate name.
