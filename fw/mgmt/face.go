@@ -473,8 +473,8 @@ func (f *FaceModule) list(interest *Interest) {
 	}
 
 	name := LOCAL_PREFIX.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "faces"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
+		enc.NewGenericComponent("faces"),
+		enc.NewGenericComponent("list"),
 	)
 	f.manager.sendStatusDataset(interest, name, dataset.Encode())
 }

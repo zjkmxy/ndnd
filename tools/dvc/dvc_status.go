@@ -16,8 +16,8 @@ import (
 func (t *Tool) DvStatus() (*spec_dv.Status, error) {
 	name := enc.Name{
 		enc.LOCALHOST,
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
+		enc.NewGenericComponent("nlsr"),
+		enc.NewGenericComponent("status"),
 	}
 	cfg := &ndn.InterestConfig{
 		MustBeFresh: true,

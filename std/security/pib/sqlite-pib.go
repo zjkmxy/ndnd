@@ -209,7 +209,7 @@ func (key *SqliteKey) KeyBits() []byte {
 func (key *SqliteKey) SelfSignedCert() Cert {
 	return key.FindCert(func(cert Cert) bool {
 		l := len(cert.Name())
-		selfComp := enc.NewStringComponent(enc.TypeGenericNameComponent, "self")
+		selfComp := enc.NewGenericComponent("self")
 		return l > 2 && cert.Name()[l-2].Equal(selfComp)
 	})
 }

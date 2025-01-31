@@ -44,13 +44,13 @@ func TestMakeCertName(t *testing.T) {
 	tu.SetT(t)
 
 	keyName := tu.NoErr(enc.NameFromStr("/my/test/identity/KEY/kid"))
-	certName, err := sec.MakeCertName(keyName, enc.NewStringComponent(enc.TypeGenericNameComponent, "Test"), 123)
+	certName, err := sec.MakeCertName(keyName, enc.NewGenericComponent("Test"), 123)
 	require.NoError(t, err)
 	require.Equal(t, "/my/test/identity/KEY/kid/Test/v=123", certName.String())
 
 	// invalid key name
 	_, err = sec.MakeCertName(tu.NoErr(enc.NameFromStr("/my/test/identity")), // no KEY
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "Test"), 123)
+		enc.NewGenericComponent("Test"), 123)
 	require.Error(t, err)
 }
 

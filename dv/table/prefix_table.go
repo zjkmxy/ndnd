@@ -11,9 +11,8 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
-const PREFIX_SNAP_THRESHOLD = 100
-
-var PREFIX_SNAP_COMP = enc.NewStringComponent(enc.TypeKeywordNameComponent, "SNAP")
+const PrefixSnapThreshold = 100
+const PrefixSnapKeyword = "SNAP"
 
 type PrefixTable struct {
 	config *config.Config
@@ -54,7 +53,7 @@ func NewPrefixTable(
 		me:      nil,
 
 		snapshotAt: 0,
-		objDir:     object.NewMemoryFifoDir(3 * PREFIX_SNAP_THRESHOLD),
+		objDir:     object.NewMemoryFifoDir(3 * PrefixSnapThreshold),
 	}
 
 	pt.me = pt.GetRouter(config.RouterName())
@@ -169,14 +168,14 @@ func (pt *PrefixTable) Apply(ops *tlv.PrefixOpList) (dirty bool) {
 // fetch the latest snapshot. Otherwise, fetch the next sequence number.
 func (r *PrefixTableRouter) GetNextDataName() enc.Name {
 	name := r.Name.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
+		enc.NewKeywordComponent("DV"),
+		enc.NewKeywordComponent("PFX"),
 		enc.NewTimestampComponent(r.BootTime),
 	)
-	if r.Latest-r.Known > PREFIX_SNAP_THRESHOLD {
+	if r.Latest-r.Known > PrefixSnapThreshold {
 		// no version - discover the latest snapshot
 		// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
-		name = append(name, PREFIX_SNAP_COMP)
+		name = append(name, enc.NewKeywordComponent(PrefixSnapKeyword))
 	} else {
 		// zero version - immutable
 		// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
@@ -196,10 +195,10 @@ func (pt *PrefixTable) ApplyData(name enc.Name, data enc.Wire, router *PrefixTab
 	// /<router>/32=DV/32=PFX/t=<boot>/32=SNAP/v=<seq>
 	// /<router>/32=DV/32=PFX/t=<boot>/seq=<seq>/v=0
 	var seqNo uint64
-	if name.At(-2).Equal(PREFIX_SNAP_COMP) {
+	if name.At(-2).IsKeyword(PrefixSnapKeyword) {
 		// version is sequence number for snapshot
 		seqNo = name.At(-1).NumberVal()
-	} else if name.At(-2).Typ == enc.TypeSequenceNumNameComponent {
+	} else if name.At(-2).IsSequenceNum() {
 		// version is immutable, sequence number is in name
 		seqNo = name.At(-2).NumberVal()
 	} else {
@@ -242,7 +241,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 	pt.objDir.Push(name)
 
 	// Create snapshot if needed
-	if seq-pt.snapshotAt >= PREFIX_SNAP_THRESHOLD/2 {
+	if seq-pt.snapshotAt >= PrefixSnapThreshold/2 {
 		pt.publishSnap()
 	}
 }
@@ -267,7 +266,7 @@ func (pt *PrefixTable) publishSnap() {
 	name, err := pt.client.Produce(ndn.ProduceArgs{
 		Name: pt.config.PrefixTableDataPrefix().Append(
 			enc.NewTimestampComponent(pt.me.BootTime),
-			PREFIX_SNAP_COMP,
+			enc.NewKeywordComponent(PrefixSnapKeyword),
 		),
 		Content: snap.Encode(),
 		Version: utils.IdPtr(pt.me.Latest),

@@ -16,8 +16,8 @@ func (t *Tool) ExecStatusGeneral(_ *cobra.Command, args []string) {
 	defer t.Stop()
 
 	suffix := enc.Name{
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "general"),
+		enc.NewGenericComponent("status"),
+		enc.NewGenericComponent("general"),
 	}
 
 	data, err := t.fetchStatusDataset(suffix)

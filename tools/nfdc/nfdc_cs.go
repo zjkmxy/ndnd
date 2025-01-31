@@ -15,8 +15,8 @@ func (t *Tool) ExecCsInfo(_ *cobra.Command, args []string) {
 	defer t.Stop()
 
 	suffix := enc.Name{
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "cs"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "info"),
+		enc.NewGenericComponent("cs"),
+		enc.NewGenericComponent("info"),
 	}
 
 	data, err := t.fetchStatusDataset(suffix)

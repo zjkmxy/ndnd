@@ -53,10 +53,10 @@ func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
 	}
 
 	cmd := enc.Name{enc.LOCALHOST,
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "register"),
-		enc.NewBytesComponent(enc.TypeGenericNameComponent, nameParams.Encode().Join()),
+		enc.NewGenericComponent("nlsr"),
+		enc.NewGenericComponent("rib"),
+		enc.NewGenericComponent("register"),
+		enc.NewGenericBytesComponent(nameParams.Encode().Join()),
 	}
 
 	r.m.sendInterest(cmd, params.Encode())
@@ -89,10 +89,10 @@ func (r *NlsrReadvertiser) Withdraw(name enc.Name, route *table.Route) {
 	}
 
 	cmd := enc.Name{enc.LOCALHOST,
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "unregister"),
-		enc.NewBytesComponent(enc.TypeGenericNameComponent, nameParams.Encode().Join()),
+		enc.NewGenericComponent("nlsr"),
+		enc.NewGenericComponent("rib"),
+		enc.NewGenericComponent("unregister"),
+		enc.NewGenericBytesComponent(nameParams.Encode().Join()),
 	}
 
 	r.m.sendInterest(cmd, params.Encode())

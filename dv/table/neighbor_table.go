@@ -138,14 +138,14 @@ func (ns *NeighborState) delete() {
 
 func (ns *NeighborState) localRoute() enc.Name {
 	return enc.LOCALHOP.Append(ns.Name.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
+		enc.NewKeywordComponent("DV"),
 	)...)
 }
 
 func (ns *NeighborState) certRoute() enc.Name {
 	return ns.Name.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "KEY"),
+		enc.NewKeywordComponent("DV"),
+		enc.NewGenericComponent("KEY"),
 	)
 }
 

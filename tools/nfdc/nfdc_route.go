@@ -16,8 +16,8 @@ func (t *Tool) ExecRouteList(_ *cobra.Command, args []string) {
 	defer t.Stop()
 
 	suffix := enc.Name{
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "rib"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
+		enc.NewGenericComponent("rib"),
+		enc.NewGenericComponent("list"),
 	}
 
 	data, err := t.fetchStatusDataset(suffix)
@@ -60,8 +60,8 @@ func (t *Tool) ExecFibList(_ *cobra.Command, args []string) {
 	defer t.Stop()
 
 	suffix := enc.Name{
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "fib"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
+		enc.NewGenericComponent("fib"),
+		enc.NewGenericComponent("list"),
 	}
 
 	data, err := t.fetchStatusDataset(suffix)

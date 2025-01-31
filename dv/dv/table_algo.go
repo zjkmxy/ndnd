@@ -117,7 +117,7 @@ func (dv *Router) fibUpdate() {
 		fes := dv.rib.GetFibEntries(dv.neighbors, router.Name().Hash())
 
 		// Add entry to the router itself
-		routerPrefix := router.Name().Append(enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"))
+		routerPrefix := router.Name().Append(enc.NewKeywordComponent("DV"))
 		register(routerPrefix, fes)
 
 		// Add entries to all prefixes announced by this router

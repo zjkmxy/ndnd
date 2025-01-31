@@ -3,7 +3,7 @@ package object
 import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
-	sepc_rdr "github.com/named-data/ndnd/std/ndn/rdr_2024"
+	rdr "github.com/named-data/ndnd/std/ndn/rdr_2024"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/signer"
 )
@@ -62,13 +62,13 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 
 // removeRdr removes the components from RDR naming convention
 func removeRdr(name enc.Name) enc.Name {
-	if name.At(-1).Typ == enc.TypeSegmentNameComponent {
+	if name.At(-1).IsSegment() {
 		name = name.Prefix(-1)
 	}
-	if name.At(-1).Typ == enc.TypeVersionNameComponent {
+	if name.At(-1).IsVersion() {
 		name = name.Prefix(-1)
 	}
-	if name.At(-1).Equal(sepc_rdr.METADATA) {
+	if name.At(-1).IsKeyword(rdr.MetadataKeyword) {
 		name = name.Prefix(-1)
 	}
 	return name

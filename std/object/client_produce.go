@@ -94,7 +94,7 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 	if !args.NoMetadata {
 		// write metadata packet
 		name := args.Name.Append(
-			rdr.METADATA,
+			enc.NewKeywordComponent(rdr.MetadataKeyword),
 			enc.NewVersionComponent(version),
 			enc.NewSegmentComponent(0),
 		)
@@ -146,8 +146,9 @@ func (c *Client) Remove(name enc.Name) error {
 
 	// Remove RDR metadata if we have a version
 	// If there is no version, we removed this anyway in the previous step
-	if version := name.At(-1); version.Typ == enc.TypeVersionNameComponent {
-		err = c.store.Remove(name.Prefix(-1).Append(rdr.METADATA, version), true)
+	if version := name.At(-1); version.IsVersion() {
+		metadata := name.Prefix(-1).Append(enc.NewKeywordComponent(rdr.MetadataKeyword), version)
+		err = c.store.Remove(metadata, true)
 		if err != nil {
 			return err
 		}

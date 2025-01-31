@@ -112,6 +112,6 @@ func (t *Tool) Stop() {
 func (t *Tool) Prefix() enc.Name {
 	return enc.Name{
 		enc.LOCALHOST,
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd"),
+		enc.NewGenericComponent("nfd"),
 	}
 }

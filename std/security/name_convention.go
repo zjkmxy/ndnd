@@ -13,8 +13,8 @@ func MakeKeyName(name enc.Name) enc.Name {
 	rand.Read(keyId)
 
 	return name.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "KEY"),
-		enc.NewBytesComponent(enc.TypeGenericNameComponent, keyId),
+		enc.NewGenericComponent("KEY"),
+		enc.NewGenericBytesComponent(keyId),
 	)
 }
 

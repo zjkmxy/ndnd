@@ -192,7 +192,7 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 			return
 		}
 
-		if fbId.Typ != enc.TypeSegmentNameComponent {
+		if !fbId.IsSegment() {
 			state.finalizeError(fmt.Errorf("consume: invalid FinalBlockId type=%d", fbId.Typ))
 			return
 		}
@@ -212,7 +212,7 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 
 	// get segment number from name
 	segComp := name.At(-1)
-	if segComp.Typ != enc.TypeSegmentNameComponent {
+	if !segComp.IsSegment() {
 		state.finalizeError(fmt.Errorf("consume: invalid segment number type=%d", segComp.Typ))
 		return
 	}

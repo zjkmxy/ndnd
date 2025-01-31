@@ -21,6 +21,18 @@ func NewNumberComponent(typ TLNum, val uint64) Component {
 	}
 }
 
+func NewGenericComponent(val string) Component {
+	return NewStringComponent(TypeGenericNameComponent, val)
+}
+
+func NewGenericBytesComponent(val []byte) Component {
+	return NewBytesComponent(TypeGenericNameComponent, val)
+}
+
+func NewKeywordComponent(val string) Component {
+	return NewStringComponent(TypeKeywordNameComponent, val)
+}
+
 func NewSegmentComponent(seg uint64) Component {
 	return NewNumberComponent(TypeSegmentNameComponent, seg)
 }
@@ -39,4 +51,32 @@ func NewVersionComponent(v uint64) Component {
 
 func NewTimestampComponent(t uint64) Component {
 	return NewNumberComponent(TypeTimestampNameComponent, t)
+}
+
+func (c Component) IsGeneric(text string) bool {
+	return c.Typ == TypeGenericNameComponent && string(c.Val) == text
+}
+
+func (c Component) IsKeyword(keyword string) bool {
+	return c.Typ == TypeKeywordNameComponent && string(c.Val) == keyword
+}
+
+func (c Component) IsSegment() bool {
+	return c.Typ == TypeSegmentNameComponent
+}
+
+func (c Component) IsByteOffset() bool {
+	return c.Typ == TypeByteOffsetNameComponent
+}
+
+func (c Component) IsSequenceNum() bool {
+	return c.Typ == TypeSequenceNumNameComponent
+}
+
+func (c Component) IsVersion() bool {
+	return c.Typ == TypeVersionNameComponent
+}
+
+func (c Component) IsTimestamp() bool {
+	return c.Typ == TypeTimestampNameComponent
 }

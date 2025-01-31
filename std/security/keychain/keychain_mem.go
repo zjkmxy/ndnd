@@ -93,10 +93,10 @@ func (kc *KeyChainMem) InsertCert(wire []byte) error {
 
 	// /<IdentityName>/KEY/<KeyId>/<IssuerId>/<Version>
 	name := data.Name()
-	if name.At(-4).String() != "KEY" {
+	if !name.At(-4).IsGeneric("KEY") {
 		return ndn.ErrInvalidValue{Item: "KEY component"}
 	}
-	if name.At(-1).Typ != enc.TypeVersionNameComponent {
+	if !name.At(-1).IsVersion() {
 		return ndn.ErrInvalidValue{Item: "version component"}
 	}
 	version := name.At(-1).NumberVal()

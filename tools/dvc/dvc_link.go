@@ -22,9 +22,9 @@ func (t *Tool) RunDvLinkCreate(cmd *cobra.Command, args []string) {
 
 	// /localhop/<network>/32=DV/32=ADS/32=ACT
 	name := enc.LOCALHOP.Append(status.NetworkName.Name.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADS"),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ACT"),
+		enc.NewKeywordComponent("DV"),
+		enc.NewKeywordComponent("ADS"),
+		enc.NewKeywordComponent("ACT"),
 	)...)
 
 	new(nfdc.Tool).ExecCmd(cmd, "rib", "register", []string{

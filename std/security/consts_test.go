@@ -62,7 +62,7 @@ var KEY_ALICE_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/X%DC%B6%FAg%29%A4%82")
 var KEY_ROOT_NAME, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27")
 
 // Issuer name for testing
-var ISSUER = enc.NewStringComponent(enc.TypeGenericNameComponent, "myissuer")
+var ISSUER = enc.NewGenericComponent("myissuer")
 
 // Validity times for testing
 var T1 = time.Date(2022, 4, 29, 15, 39, 50, 0, time.UTC)

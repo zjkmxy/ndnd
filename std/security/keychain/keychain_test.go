@@ -47,7 +47,7 @@ func signCert(t *testing.T, signer ndn.Signer) []byte {
 	cert, err := sec.SignCert(sec.SignCertArgs{
 		Signer:    signer,
 		Data:      certData,
-		IssuerId:  enc.NewStringComponent(enc.TypeGenericNameComponent, "Test"),
+		IssuerId:  enc.NewGenericComponent("Test"),
 		NotBefore: time.Now(),
 		NotAfter:  time.Now().AddDate(1, 0, 0),
 	})

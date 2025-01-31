@@ -109,7 +109,7 @@ func (t *ToolSignCert) signCert(_ *cobra.Command, args []string) {
 	certWire, err := security.SignCert(security.SignCertArgs{
 		Signer:    signer,
 		Data:      csr,
-		IssuerId:  enc.NewStringComponent(enc.TypeGenericNameComponent, t.Issuer),
+		IssuerId:  enc.NewGenericComponent(t.Issuer),
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
 	})

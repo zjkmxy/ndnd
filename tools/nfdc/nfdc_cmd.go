@@ -72,9 +72,9 @@ func (n *Tool) preprocessArg(
 			}
 
 			dataset, err := n.fetchStatusDataset(enc.Name{
-				enc.NewStringComponent(enc.TypeGenericNameComponent, "faces"),
-				enc.NewStringComponent(enc.TypeGenericNameComponent, "query"),
-				enc.NewBytesComponent(enc.TypeGenericNameComponent, filter.Encode().Join()),
+				enc.NewGenericComponent("faces"),
+				enc.NewGenericComponent("query"),
+				enc.NewGenericBytesComponent(filter.Encode().Join()),
 			})
 			if dataset == nil {
 				fmt.Fprintf(os.Stderr, "Error fetching face status dataset: %+v\n", err)

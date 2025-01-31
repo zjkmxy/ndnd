@@ -84,7 +84,7 @@ func signCert(signer ndn.Signer, wire enc.Wire) (enc.Wire, ndn.Data) {
 	cert, _ := sec.SignCert(sec.SignCertArgs{
 		Signer:    signer,
 		Data:      data,
-		IssuerId:  enc.NewStringComponent(enc.TypeGenericNameComponent, "ndn"),
+		IssuerId:  enc.NewGenericComponent("ndn"),
 		NotBefore: time.Now(),
 		NotAfter:  time.Now().Add(time.Hour),
 	})

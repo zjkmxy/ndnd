@@ -3,7 +3,7 @@ package rdr
 
 import enc "github.com/named-data/ndnd/std/encoding"
 
-var METADATA = enc.NewStringComponent(enc.TypeKeywordNameComponent, "metadata")
+const MetadataKeyword = "metadata"
 
 type ManifestDigest struct {
 	//+field:natural

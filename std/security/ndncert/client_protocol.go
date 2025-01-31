@@ -20,8 +20,8 @@ func (c *Client) FetchProfile() (*tlv.CaProfile, error) {
 	// TODO: validate packets received by the client using the cert.
 	ch := make(chan ndn.ConsumeState)
 	c.client.Consume(c.caPrefix.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "INFO"),
+		enc.NewGenericComponent("CA"),
+		enc.NewGenericComponent("INFO"),
 	), func(status ndn.ConsumeState) {
 		if status.IsComplete() {
 			ch <- status
@@ -42,8 +42,8 @@ func (c *Client) FetchProbe(params ParamMap) (*tlv.ProbeRes, error) {
 	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
 		Name: c.caPrefix.Append(
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "PROBE"),
+			enc.NewGenericComponent("CA"),
+			enc.NewGenericComponent("PROBE"),
 		),
 		Config: &ndn.InterestConfig{
 			CanBePrefix: false,
@@ -142,8 +142,8 @@ func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error)
 	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
 		Name: c.caPrefix.Append(
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "NEW"),
+			enc.NewGenericComponent("CA"),
+			enc.NewGenericComponent("NEW"),
 		),
 		Config: &ndn.InterestConfig{
 			CanBePrefix: false,
@@ -243,9 +243,9 @@ func (c *Client) Challenge(
 	ch := make(chan ndn.ExpressCallbackArgs, 1)
 	c.client.ExpressR(ndn.ExpressRArgs{
 		Name: c.caPrefix.Append(
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "CA"),
-			enc.NewStringComponent(enc.TypeGenericNameComponent, "CHALLENGE"),
-			enc.NewBytesComponent(enc.TypeGenericNameComponent, newRes.ReqId),
+			enc.NewGenericComponent("CA"),
+			enc.NewGenericComponent("CHALLENGE"),
+			enc.NewGenericBytesComponent(newRes.ReqId),
 		),
 		Config: &ndn.InterestConfig{
 			CanBePrefix: false,

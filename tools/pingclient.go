@@ -141,7 +141,7 @@ func (pc *PingClient) run(_ *cobra.Command, args []string) {
 		return
 	}
 	pc.prefix = prefix
-	pc.name = prefix.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
+	pc.name = prefix.Append(enc.NewGenericComponent("ping"))
 
 	// initialize sequence number
 	if pc.seq == 0 {

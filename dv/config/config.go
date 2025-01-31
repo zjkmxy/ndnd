@@ -13,9 +13,9 @@ const CostInfinity = uint64(16)
 const NlsrOrigin = uint64(mgmt.RouteOriginNLSR)
 
 var MulticastStrategy = enc.LOCALHOST.Append(
-	enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd"),
-	enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy"),
-	enc.NewStringComponent(enc.TypeGenericNameComponent, "multicast"),
+	enc.NewGenericComponent("nfd"),
+	enc.NewGenericComponent("strategy"),
+	enc.NewGenericComponent("multicast"),
 )
 
 //go:embed schema.tlv
@@ -137,38 +137,38 @@ func (c *Config) Parse() (err error) {
 
 	// Advertisement sync and data prefixes
 	c.advSyncPfxN = enc.LOCALHOP.Append(c.networkNameN.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADS"),
+		enc.NewKeywordComponent("DV"),
+		enc.NewKeywordComponent("ADS"),
 	)...)
 	c.advSyncActivePfxN = c.advSyncPfxN.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ACT"),
+		enc.NewKeywordComponent("ACT"),
 	)
 	c.advSyncPassivePfxN = c.advSyncPfxN.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PSV"),
+		enc.NewKeywordComponent("PSV"),
 	)
 	c.advDataPfxN = enc.LOCALHOP.Append(c.routerNameN.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
+		enc.NewKeywordComponent("DV"),
+		enc.NewKeywordComponent("ADV"),
 	)...)
 
 	// Prefix table sync prefix
 	c.pfxSyncPfxN = c.networkNameN.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFS"),
+		enc.NewKeywordComponent("DV"),
+		enc.NewKeywordComponent("PFS"),
 	)
 
 	// Router data prefix including prefix data and certificates
 	c.routerDataPfxN = c.routerNameN.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
+		enc.NewKeywordComponent("DV"),
 	)
 	c.pfxDataPfxN = c.routerNameN.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "PFX"),
+		enc.NewKeywordComponent("DV"),
+		enc.NewKeywordComponent("PFX"),
 	)
 
 	// Local prefixes to NFD
 	c.mgmtPrefix = enc.LOCALHOST.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "nlsr"),
+		enc.NewGenericComponent("nlsr"),
 	)
 
 	return nil

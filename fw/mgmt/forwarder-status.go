@@ -81,8 +81,8 @@ func (f *ForwarderStatusModule) general(interest *Interest) {
 	}
 
 	name := LOCAL_PREFIX.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "status"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "general"),
+		enc.NewGenericComponent("status"),
+		enc.NewGenericComponent("general"),
 	)
 	f.manager.sendStatusDataset(interest, name, status.Encode())
 }

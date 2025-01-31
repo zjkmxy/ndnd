@@ -98,7 +98,7 @@ func (s *StrategyChoiceModule) set(interest *Interest) {
 			strategyVersion = version
 		}
 	}
-	if len(params.Strategy.Name) > len(defn.STRATEGY_PREFIX)+1 && params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1].Typ != enc.TypeVersionNameComponent {
+	if len(params.Strategy.Name) > len(defn.STRATEGY_PREFIX)+1 && !params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1].IsVersion() {
 		core.Log.Warn(s, "Unknown strategy version", "strategy", params.Strategy.Name, "version", params.Strategy.Name[len(defn.STRATEGY_PREFIX)+1])
 		s.manager.sendCtrlResp(interest, 404, "Unknown strategy version", nil)
 		return
@@ -182,8 +182,8 @@ func (s *StrategyChoiceModule) list(interest *Interest) {
 	dataset := &mgmt.StrategyChoiceMsg{StrategyChoices: choices}
 
 	name := LOCAL_PREFIX.Append(
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy-choice"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
+		enc.NewGenericComponent("strategy-choice"),
+		enc.NewGenericComponent("list"),
 	)
 	s.manager.sendStatusDataset(interest, name, dataset.Encode())
 }

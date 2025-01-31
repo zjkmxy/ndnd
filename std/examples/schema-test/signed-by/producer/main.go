@@ -133,8 +133,8 @@ func main() {
 	// Issue producer key (signed by the trust anchor)
 	producerKeyName := enc.Name{
 		prefix[0], prefix[1], prefix[2],
-		enc.NewStringComponent(enc.TypeGenericNameComponent, nodeId),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "key"),
+		enc.NewGenericComponent(nodeId),
+		enc.NewGenericComponent("key"),
 	}
 	err = keyStore.EnrollKey(producerKeyName, enc.Buffer(ProducerKey), trustAnchorData.Name())
 	if err != nil {

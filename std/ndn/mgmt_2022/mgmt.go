@@ -29,10 +29,10 @@ func (mgmt *MgmtConfig) MakeCmd(module string, cmd string,
 	}
 
 	name = append(name,
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "nfd"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, module),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, cmd),
-		enc.NewBytesComponent(enc.TypeGenericNameComponent, params.Bytes()),
+		enc.NewGenericComponent("nfd"),
+		enc.NewGenericComponent(module),
+		enc.NewGenericComponent(cmd),
+		enc.NewGenericBytesComponent(params.Bytes()),
 	)
 
 	// Make and sign Interest

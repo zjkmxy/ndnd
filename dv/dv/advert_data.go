@@ -46,8 +46,8 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 
 	// Fetch the advertisement
 	advName := enc.LOCALHOP.Append(nName.Append(
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "DV"),
-		enc.NewStringComponent(enc.TypeKeywordNameComponent, "ADV"),
+		enc.NewKeywordComponent("DV"),
+		enc.NewKeywordComponent("ADV"),
 		enc.NewTimestampComponent(bootTime),
 		enc.NewVersionComponent(seqNo),
 	)...)

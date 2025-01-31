@@ -45,7 +45,7 @@ func (ps *PingServer) run(_ *cobra.Command, args []string) {
 		log.Fatal(ps, "Invalid prefix", "name", args[0])
 		return
 	}
-	ps.name = name.Append(enc.NewStringComponent(enc.TypeGenericNameComponent, "ping"))
+	ps.name = name.Append(enc.NewGenericComponent("ping"))
 
 	ps.signer = signer.NewSha256Signer()
 	ps.app = engine.NewBasicEngine(engine.NewDefaultFace())

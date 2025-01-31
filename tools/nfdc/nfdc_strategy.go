@@ -14,8 +14,8 @@ func (t *Tool) ExecStrategyList(_ *cobra.Command, args []string) {
 	defer t.Stop()
 
 	suffix := enc.Name{
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "strategy-choice"),
-		enc.NewStringComponent(enc.TypeGenericNameComponent, "list"),
+		enc.NewGenericComponent("strategy-choice"),
+		enc.NewGenericComponent("list"),
 	}
 
 	data, err := t.fetchStatusDataset(suffix)
