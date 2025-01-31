@@ -22,20 +22,27 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 	content := args.Content
 	contentSize := content.Length()
 
-	now := time.Now().UnixNano()
-	if now < 0 { // > 1970
-		return nil, errors.New("current unix time is negative")
+	// Get the correct version
+	version := args.Version
+	switch args.Version {
+	case 0: // nothing
+		return nil, errors.New("object version is not specified or zero")
+	case ndn.VersionImmutable:
+		version = 0
+	case ndn.VersionUnixMicro:
+		if now := time.Now().UnixMicro(); now > 0 { // > 1970
+			version = uint64(now)
+		} else {
+			return nil, errors.New("current unix time is negative")
+		}
 	}
 
-	version := uint64(now)
-	if args.Version != nil {
-		version = *args.Version
-	}
-
+	// Use freshness period or default
 	if args.FreshnessPeriod == 0 {
 		args.FreshnessPeriod = 4 * time.Second
 	}
 
+	// Compute final block ID with segment count
 	lastSeg := uint64(0)
 	if contentSize > 0 {
 		lastSeg = uint64((contentSize - 1) / pSegmentSize)

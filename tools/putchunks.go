@@ -84,6 +84,7 @@ func (pc *PutChunks) run(_ *cobra.Command, args []string) {
 	vname, err := cli.Produce(ndn.ProduceArgs{
 		Name:    name,
 		Content: content,
+		Version: ndn.VersionUnixMicro,
 	})
 	if err != nil {
 		log.Fatal(pc, "Unable to produce object", "err", err)

@@ -8,7 +8,6 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 const PrefixSnapThreshold = 100
@@ -232,7 +231,7 @@ func (pt *PrefixTable) publishOp(content enc.Wire) {
 			enc.NewSequenceNumComponent(seq),
 		),
 		Content: content,
-		Version: utils.IdPtr(uint64(0)), // immutable
+		Version: ndn.VersionImmutable,
 	})
 	if err != nil {
 		log.Error(pt, "Failed to produce op", "err", err)
@@ -269,7 +268,7 @@ func (pt *PrefixTable) publishSnap() {
 			enc.NewKeywordComponent(PrefixSnapKeyword),
 		),
 		Content: snap.Encode(),
-		Version: utils.IdPtr(pt.me.Latest),
+		Version: pt.me.Latest,
 	})
 	if err != nil {
 		log.Error(pt, "Failed to produce snap", "err", err)

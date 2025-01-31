@@ -214,6 +214,7 @@ func (m *Thread) sendStatusDataset(interest *Interest, name enc.Name, dataset en
 	objName, err := object.Produce(ndn.ProduceArgs{
 		Name:            name,
 		Content:         dataset,
+		Version:         ndn.VersionUnixMicro,
 		FreshnessPeriod: time.Millisecond,
 		NoMetadata:      true,
 	}, m.store, m.signer)

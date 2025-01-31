@@ -7,7 +7,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 func (a *advertModule) generate() {
@@ -23,7 +22,7 @@ func (a *advertModule) generate() {
 			enc.NewTimestampComponent(a.bootTime),
 		),
 		Content:         a.dv.rib.Advert().Encode(),
-		Version:         utils.IdPtr(a.seq),
+		Version:         a.seq,
 		FreshnessPeriod: 10 * time.Second,
 	})
 	if err != nil {
