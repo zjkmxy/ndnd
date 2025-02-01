@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"iter"
+
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
@@ -40,21 +42,27 @@ func (ps *SimplePs[V]) Unsubscribe(prefix enc.Name) {
 	delete(ps.subs, prefix.String())
 }
 
-func (ps *SimplePs[V]) Subs(prefix enc.Name) (subs []func(V)) {
-	for _, sub := range ps.subs {
-		if sub.Prefix.IsPrefix(prefix) {
-			subs = append(subs, sub.Callback)
+func (ps *SimplePs[V]) Subs(prefix enc.Name) iter.Seq[func(V)] {
+	return func(yield func(func(V)) bool) {
+		for _, sub := range ps.subs {
+			if sub.Prefix.IsPrefix(prefix) {
+				if !yield(sub.Callback) {
+					return
+				}
+			}
 		}
 	}
-	return subs
 }
 
 func (ps *SimplePs[V]) HasSub(prefix enc.Name) bool {
-	return len(ps.Subs(prefix)) > 0
+	for range ps.Subs(prefix) {
+		return true
+	}
+	return false
 }
 
 func (ps *SimplePs[V]) Publish(name enc.Name, data V) {
-	for _, sub := range ps.Subs(name) {
+	for sub := range ps.Subs(name) {
 		sub(data)
 	}
 }

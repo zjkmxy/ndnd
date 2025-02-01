@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"slices"
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -163,7 +164,7 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			// We got these subs when trying to deliver. It doesn't matter
 			// if they were unsubscribed after this function exits. The application
 			// needs to handle the callbacks correctly.
-			subs := s.nodePs.Subs(node)
+			subs := slices.Collect(s.nodePs.Subs(node))
 			if len(subs) == 0 {
 				return // no longer subscribed
 			}
