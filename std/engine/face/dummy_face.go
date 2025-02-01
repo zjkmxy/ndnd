@@ -1,7 +1,7 @@
 package face
 
 import (
-	"errors"
+	"fmt"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 )
@@ -24,10 +24,10 @@ func (f *DummyFace) String() string {
 
 func (f *DummyFace) Open() error {
 	if f.onError == nil || f.onPkt == nil {
-		return errors.New("face callbacks are not set")
+		return fmt.Errorf("face callbacks are not set")
 	}
 	if f.running.Load() {
-		return errors.New("face is already running")
+		return fmt.Errorf("face is already running")
 	}
 	f.running.Store(true)
 	return nil
@@ -35,14 +35,14 @@ func (f *DummyFace) Open() error {
 
 func (f *DummyFace) Close() error {
 	if !f.running.Swap(false) {
-		return errors.New("face is not running")
+		return fmt.Errorf("face is not running")
 	}
 	return nil
 }
 
 func (f *DummyFace) Send(pkt enc.Wire) error {
 	if !f.running.Load() {
-		return errors.New("face is not running")
+		return fmt.Errorf("face is not running")
 	}
 	if len(pkt) == 1 {
 		f.sendPkts = append(f.sendPkts, pkt[0])
@@ -59,7 +59,7 @@ func (f *DummyFace) Send(pkt enc.Wire) error {
 // FeedPacket feeds a packet for the engine to consume
 func (f *DummyFace) FeedPacket(pkt enc.Buffer) error {
 	if !f.running.Load() {
-		return errors.New("face is not running")
+		return fmt.Errorf("face is not running")
 	}
 	return f.onPkt(pkt)
 }
@@ -67,10 +67,10 @@ func (f *DummyFace) FeedPacket(pkt enc.Buffer) error {
 // Consume consumes a packet from the engine
 func (f *DummyFace) Consume() (enc.Buffer, error) {
 	if !f.running.Load() {
-		return nil, errors.New("face is not running")
+		return nil, fmt.Errorf("face is not running")
 	}
 	if len(f.sendPkts) == 0 {
-		return nil, errors.New("no packet to consume")
+		return nil, fmt.Errorf("no packet to consume")
 	}
 	pkt := f.sendPkts[0]
 	f.sendPkts = f.sendPkts[1:]

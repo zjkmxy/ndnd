@@ -1,8 +1,6 @@
 package log
 
-import (
-	"errors"
-)
+import "fmt"
 
 type Level int
 
@@ -28,7 +26,7 @@ func ParseLevel(s string) (Level, error) {
 	case "FATAL":
 		return LevelFatal, nil
 	}
-	return LevelInfo, errors.New("invalid log level")
+	return LevelInfo, fmt.Errorf("invalid log level: %s", s)
 }
 
 func (level Level) String() string {

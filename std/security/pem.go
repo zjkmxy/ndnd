@@ -2,7 +2,6 @@ package security
 
 import (
 	"encoding/pem"
-	"errors"
 	"fmt"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -61,7 +60,7 @@ func PemEncode(raw []byte) ([]byte, error) {
 	case ndn.ContentTypeSigKey:
 		pemType = PEM_TYPE_SECRET
 	default:
-		return nil, errors.New("unsupported content type")
+		return nil, fmt.Errorf("unsupported content type")
 	}
 
 	return pem.EncodeToMemory(&pem.Block{

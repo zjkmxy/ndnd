@@ -171,18 +171,18 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 	}
 
 	if args.Result == ndn.InterestResultError {
-		state.finalizeError(fmt.Errorf("consume: fetch seg failed: %v", args.Error))
+		state.finalizeError(fmt.Errorf("%w: fetch seg failed: %w", ndn.ErrNetwork, args.Error))
 		return
 	}
 
 	if args.Result != ndn.InterestResultData {
-		state.finalizeError(fmt.Errorf("consume: fetch seg failed with result: %s", args.Result))
+		state.finalizeError(fmt.Errorf("%w: fetch seg failed with result: %s", ndn.ErrNetwork, args.Result))
 		return
 	}
 
 	s.client.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
 		if !valid {
-			state.finalizeError(fmt.Errorf("consume: validate seg failed: %v", err))
+			state.finalizeError(fmt.Errorf("%w: validate seg failed: %w", ndn.ErrSecurity, err))
 		} else {
 			s.handleValidatedData(args, state)
 		}
@@ -195,18 +195,18 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 	if state.segCnt == -1 { // TODO: can change?
 		fbId := args.Data.FinalBlockID()
 		if fbId == nil {
-			state.finalizeError(fmt.Errorf("consume: no FinalBlockId in object"))
+			state.finalizeError(fmt.Errorf("%w: no FinalBlockId in object", ndn.ErrProtocol))
 			return
 		}
 
 		if !fbId.IsSegment() {
-			state.finalizeError(fmt.Errorf("consume: invalid FinalBlockId type=%d", fbId.Typ))
+			state.finalizeError(fmt.Errorf("%w: invalid FinalBlockId type=%d", ndn.ErrProtocol, fbId.Typ))
 			return
 		}
 
 		state.segCnt = int(fbId.NumberVal()) + 1
 		if state.segCnt > maxObjectSeg || state.segCnt <= 0 {
-			state.finalizeError(fmt.Errorf("consume: invalid FinalBlockId=%d", state.segCnt))
+			state.finalizeError(fmt.Errorf("%w: invalid FinalBlockId=%d", ndn.ErrProtocol, state.segCnt))
 			return
 		}
 
@@ -220,14 +220,14 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 	// get segment number from name
 	segComp := name.At(-1)
 	if !segComp.IsSegment() {
-		state.finalizeError(fmt.Errorf("consume: invalid segment number type=%d", segComp.Typ))
+		state.finalizeError(fmt.Errorf("%w: invalid segment number type=%d", ndn.ErrProtocol, segComp.Typ))
 		return
 	}
 
 	// parse segment number
 	segNum := int(segComp.NumberVal())
 	if segNum >= state.segCnt || segNum < 0 {
-		state.finalizeError(fmt.Errorf("consume: invalid segment number=%d", segNum))
+		state.finalizeError(fmt.Errorf("%w: invalid segment number=%d", ndn.ErrProtocol, segNum))
 		return
 	}
 

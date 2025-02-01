@@ -8,7 +8,6 @@
 package face
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -81,7 +80,7 @@ func MakeUnicastUDPTransport(
 	remote := net.JoinHostPort(t.remoteURI.Path(), strconv.Itoa(int(t.remoteURI.Port())))
 	conn, err := t.dialer.Dial(t.remoteURI.Scheme(), remote)
 	if err != nil {
-		return nil, errors.New("Unable to connect to remote endpoint: " + err.Error())
+		return nil, fmt.Errorf("unable to connect to remote endpoint: %w", err)
 	}
 
 	t.conn = conn.(*net.UDPConn)

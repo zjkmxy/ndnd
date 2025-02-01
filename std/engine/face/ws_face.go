@@ -1,7 +1,6 @@
 package face
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/gorilla/websocket"
@@ -31,11 +30,11 @@ func (f *WebSocketFace) Trait() Face {
 
 func (f *WebSocketFace) Open() error {
 	if f.IsRunning() {
-		return errors.New("face is already running")
+		return fmt.Errorf("face is already running")
 	}
 
 	if f.onError == nil || f.onPkt == nil {
-		return errors.New("face callbacks are not set")
+		return fmt.Errorf("face callbacks are not set")
 	}
 
 	c, _, err := websocket.DefaultDialer.Dial(f.url, nil)
@@ -60,7 +59,7 @@ func (f *WebSocketFace) Close() error {
 
 func (f *WebSocketFace) Send(pkt enc.Wire) error {
 	if !f.IsRunning() {
-		return errors.New("face is not running")
+		return fmt.Errorf("face is not running")
 	}
 
 	return f.conn.WriteMessage(websocket.BinaryMessage, pkt.Join())

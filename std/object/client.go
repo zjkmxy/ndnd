@@ -1,7 +1,7 @@
 package object
 
 import (
-	"errors"
+	"fmt"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
@@ -37,7 +37,7 @@ func (c *Client) String() string {
 // Start the client. The engine must be running.
 func (c *Client) Start() error {
 	if !c.engine.IsRunning() {
-		return errors.New("client start when engine not running")
+		return fmt.Errorf("engine is not running")
 	}
 
 	if err := c.engine.AttachHandler(enc.Name{}, c.onInterest); err != nil {

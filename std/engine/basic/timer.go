@@ -2,7 +2,7 @@ package basic
 
 import (
 	"crypto/rand"
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/named-data/ndnd/std/ndn"
@@ -26,7 +26,7 @@ func (Timer) Schedule(d time.Duration, f func()) func() error {
 			t = nil
 			return nil
 		} else {
-			return errors.New("event has already been canceled")
+			return fmt.Errorf("event has already been canceled")
 		}
 	}
 }

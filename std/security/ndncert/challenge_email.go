@@ -1,8 +1,6 @@
 package ndncert
 
-import (
-	"errors"
-)
+import "fmt"
 
 type ChallengeEmail struct {
 	// Email address to send the challenge to.
@@ -18,7 +16,7 @@ func (*ChallengeEmail) Name() string {
 func (c *ChallengeEmail) Request(input ParamMap, status *string) (ParamMap, error) {
 	// Validate challenge configuration
 	if len(c.Email) == 0 || c.CodeCallback == nil {
-		return nil, errors.New("email challenge not configured")
+		return nil, fmt.Errorf("email challenge not configured")
 	}
 
 	// Initial request parameters
@@ -32,7 +30,7 @@ func (c *ChallengeEmail) Request(input ParamMap, status *string) (ParamMap, erro
 	if status != nil && (*status == "need-code" || *status == "wrong-code") {
 		code := c.CodeCallback(*status)
 		if code == "" {
-			return nil, errors.New("no code provided")
+			return nil, fmt.Errorf("no code provided")
 		}
 
 		return ParamMap{
@@ -41,5 +39,5 @@ func (c *ChallengeEmail) Request(input ParamMap, status *string) (ParamMap, erro
 	}
 
 	// Unknown status
-	return nil, errors.New("unknown input to email challenge")
+	return nil, fmt.Errorf("unknown input to email challenge")
 }

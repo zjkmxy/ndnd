@@ -1,7 +1,6 @@
 package object
 
 import (
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -98,7 +97,7 @@ func (a *ConsumeState) ProgressMax() int {
 // cancel the consume operation
 func (a *ConsumeState) Cancel() {
 	if !a.complete.Swap(true) {
-		a.err = errors.New("operation cancelled")
+		a.err = ndn.ErrCancelled
 	}
 }
 
@@ -139,7 +138,7 @@ func (c *Client) consumeObject(state *ConsumeState) {
 
 	// will segfault if name is empty
 	if len(name) == 0 {
-		state.finalizeError(fmt.Errorf("consume: name cannot be empty"))
+		state.finalizeError(fmt.Errorf("%w: consume name cannot be empty", ndn.ErrProtocol))
 		return
 	}
 
@@ -148,7 +147,7 @@ func (c *Client) consumeObject(state *ConsumeState) {
 		// when called with metadata, call with versioned name.
 		// state will always have the original object name.
 		if state.meta != nil {
-			state.finalizeError(fmt.Errorf("consume: metadata does not have version component"))
+			state.finalizeError(fmt.Errorf("%w: metadata does not have version component", ndn.ErrProtocol))
 			return
 		}
 
@@ -208,26 +207,26 @@ func (c *Client) fetchMetadata(
 		Retries: 3,
 		Callback: func(args ndn.ExpressCallbackArgs) {
 			if args.Result == ndn.InterestResultError {
-				callback(nil, fmt.Errorf("consume: fetch metadata failed: %v", args.Error))
+				callback(nil, fmt.Errorf("%w: fetch metadata failed: %w", ndn.ErrNetwork, args.Error))
 				return
 			}
 
 			if args.Result != ndn.InterestResultData {
-				callback(nil, fmt.Errorf("consume: fetch metadata failed with result: %s", args.Result))
+				callback(nil, fmt.Errorf("%w: fetch metadata failed with result: %s", ndn.ErrNetwork, args.Result))
 				return
 			}
 
 			c.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
 				// validate with trust config
 				if !valid {
-					callback(nil, fmt.Errorf("consume: validate metadata failed: %v", err))
+					callback(nil, fmt.Errorf("%w: validate metadata failed: %w", ndn.ErrSecurity, err))
 					return
 				}
 
 				// parse metadata
 				metadata, err := rdr.ParseMetaData(enc.NewWireReader(args.Data.Content()), false)
 				if err != nil {
-					callback(nil, fmt.Errorf("consume: failed to parse object metadata (%v)", err))
+					callback(nil, fmt.Errorf("%w: failed to parse object metadata: %w", ndn.ErrProtocol, err))
 					return
 				}
 
@@ -256,18 +255,18 @@ func (c *Client) fetchDataByPrefix(
 		Retries: 3,
 		Callback: func(args ndn.ExpressCallbackArgs) {
 			if args.Result == ndn.InterestResultError {
-				callback(nil, fmt.Errorf("consume: fetch by prefix failed: %v", args.Error))
+				callback(nil, fmt.Errorf("%w: fetch by prefix failed: %w", ndn.ErrNetwork, args.Error))
 				return
 			}
 
 			if args.Result != ndn.InterestResultData {
-				callback(nil, fmt.Errorf("consume: fetch by prefix failed with result: %s", args.Result))
+				callback(nil, fmt.Errorf("%w: fetch by prefix failed with result: %s", ndn.ErrNetwork, args.Result))
 				return
 			}
 
 			c.Validate(args.Data, args.SigCovered, func(valid bool, err error) {
 				if !valid {
-					callback(nil, fmt.Errorf("consume: validate by prefix failed: %v", err))
+					callback(nil, fmt.Errorf("%w: validate by prefix failed: %w", ndn.ErrSecurity, err))
 					return
 				}
 
@@ -283,17 +282,17 @@ func extractSegMetadata(data ndn.Data) (*rdr.MetaData, error) {
 	// check if the object has segment and version components
 	name := data.Name()
 	if len(name) < 2 {
-		return nil, fmt.Errorf("consume: data has no version or segment")
+		return nil, fmt.Errorf("%w: data has no version or segment", ndn.ErrProtocol)
 	}
 
 	// get segment component
 	if !name.At(-1).IsSegment() {
-		return nil, fmt.Errorf("consume: data has no segment")
+		return nil, fmt.Errorf("%w: data has no segment", ndn.ErrProtocol)
 	}
 
 	// get version component
 	if !name.At(-2).IsVersion() {
-		return nil, fmt.Errorf("consume: data has no version")
+		return nil, fmt.Errorf("%w: data has no version", ndn.ErrProtocol)
 	}
 
 	// construct metadata

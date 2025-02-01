@@ -1,7 +1,7 @@
 package encoding
 
 import (
-	"errors"
+	"fmt"
 	"io"
 )
 
@@ -30,7 +30,7 @@ func (r *BufferReader) ReadByte() (byte, error) {
 
 func (r *BufferReader) UnreadByte() error {
 	if r.pos == 0 {
-		return errors.New("encoding.BufferReader.UnreadByte: negative position")
+		return fmt.Errorf("encoding.BufferReader.UnreadByte: negative position")
 	}
 	r.pos--
 	return nil
@@ -46,13 +46,13 @@ func (r *BufferReader) Seek(offset int64, whence int) (int64, error) {
 	case io.SeekEnd:
 		newPos = len(r.buf) - int(offset)
 	default:
-		return 0, errors.New("encoding.BufferReader.Seek: invalid whence")
+		return 0, fmt.Errorf("encoding.BufferReader.Seek: invalid whence")
 	}
 	if newPos < 0 {
-		return 0, errors.New("encoding.BufferReader.Seek: negative position")
+		return 0, fmt.Errorf("encoding.BufferReader.Seek: negative position")
 	}
 	if newPos > len(r.buf) {
-		return 0, errors.New("encoding.BufferReader.Seek: position out of range")
+		return 0, fmt.Errorf("encoding.BufferReader.Seek: position out of range")
 	}
 	r.pos = newPos
 	return int64(r.pos), nil
@@ -61,10 +61,10 @@ func (r *BufferReader) Seek(offset int64, whence int) (int64, error) {
 func (r *BufferReader) Skip(n int) error {
 	newPos := r.pos + n
 	if newPos < 0 {
-		return errors.New("encoding.BufferReader.Skip: negative position")
+		return fmt.Errorf("encoding.BufferReader.Skip: negative position")
 	}
 	if newPos > len(r.buf) {
-		return errors.New("encoding.BufferReader.Skip: position out of range")
+		return fmt.Errorf("encoding.BufferReader.Skip: position out of range")
 	}
 	r.pos = newPos
 	return nil
@@ -160,7 +160,7 @@ func (r *WireReader) ReadByte() (byte, error) {
 func (r *WireReader) UnreadByte() error {
 	if r.pos == 0 {
 		if r.seg == 0 {
-			return errors.New("encoding.WireReader.UnreadByte: negative position")
+			return fmt.Errorf("encoding.WireReader.UnreadByte: negative position")
 		}
 		r.seg--
 		r.pos = len(r.wire[r.seg])
@@ -262,7 +262,7 @@ func (r *WireReader) Range(start, end int) Wire {
 
 func (r *WireReader) Skip(n int) error {
 	if n < 0 {
-		return errors.New("encoding.WireReader.Skip: backword skipping is not allowed")
+		return fmt.Errorf("encoding.WireReader.Skip: backword skipping is not allowed")
 	}
 	r.pos += n
 	for r.pos > len(r.wire[r.seg]) {

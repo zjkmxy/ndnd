@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/named-data/ndnd/dv/config"
@@ -21,7 +20,7 @@ func NewDvExecutor(config *config.Config) (*DvExecutor, error) {
 	// Validate configuration sanity
 	err := config.Parse()
 	if err != nil {
-		return nil, errors.New("failed to validate dv config: " + err.Error())
+		return nil, fmt.Errorf("failed to validate dv config: %w", err)
 	}
 
 	// Start NDN engine
@@ -30,7 +29,7 @@ func NewDvExecutor(config *config.Config) (*DvExecutor, error) {
 	// Create the DV router
 	dve.router, err = dv.NewRouter(config, dve.engine)
 	if err != nil {
-		return nil, errors.New("failed to create dv router: " + err.Error())
+		return nil, fmt.Errorf("failed to create dv router: %w", err)
 	}
 
 	return dve, nil
@@ -39,13 +38,13 @@ func NewDvExecutor(config *config.Config) (*DvExecutor, error) {
 func (dve *DvExecutor) Start() {
 	err := dve.engine.Start()
 	if err != nil {
-		panic(fmt.Errorf("failed to start dv engine: %+v", err))
+		panic(fmt.Errorf("failed to start dv engine: %w", err))
 	}
 	defer dve.engine.Stop()
 
 	err = dve.router.Start() // blocks forever
 	if err != nil {
-		panic(fmt.Errorf("failed to start dv router: %+v", err))
+		panic(fmt.Errorf("failed to start dv router: %w", err))
 	}
 }
 

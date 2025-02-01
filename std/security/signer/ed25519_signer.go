@@ -4,7 +4,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/x509"
-	"errors"
+	"fmt"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
@@ -66,7 +66,7 @@ func ParseEd25519(name enc.Name, key []byte) (ndn.Signer, error) {
 	}
 	sk, ok := pkey.(ed25519.PrivateKey)
 	if !ok {
-		return nil, errors.New("invalid key type")
+		return nil, fmt.Errorf("invalid key type")
 	}
 	return NewEd25519Signer(name, sk), nil
 }

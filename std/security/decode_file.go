@@ -1,7 +1,7 @@
 package security
 
 import (
-	"errors"
+	"fmt"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -16,7 +16,7 @@ import (
 // May return empty slices for signers and certs if no valid entries.
 func DecodeFile(content []byte) (signers []ndn.Signer, certs [][]byte, err error) {
 	if len(content) == 0 {
-		err = errors.New("empty keychain entry")
+		err = fmt.Errorf("empty keychain entry")
 		return
 	}
 
@@ -27,7 +27,7 @@ func DecodeFile(content []byte) (signers []ndn.Signer, certs [][]byte, err error
 		wires = PemDecode(content)
 	}
 	if len(wires) == 0 {
-		err = errors.New("no valid keychain entry found")
+		err = fmt.Errorf("no valid keychain entry found")
 		return
 	}
 

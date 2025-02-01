@@ -1,7 +1,6 @@
 package face
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -42,11 +41,11 @@ func (f *StreamFace) Trait() Face {
 
 func (f *StreamFace) Open() error {
 	if f.IsRunning() {
-		return errors.New("face is already running")
+		return fmt.Errorf("face is already running")
 	}
 
 	if f.onError == nil || f.onPkt == nil {
-		return errors.New("face callbacks are not set")
+		return fmt.Errorf("face callbacks are not set")
 	}
 
 	c, err := net.Dial(f.network, f.addr)
@@ -73,7 +72,7 @@ func (f *StreamFace) Close() error {
 
 func (f *StreamFace) Send(pkt enc.Wire) error {
 	if !f.IsRunning() {
-		return errors.New("face is not running")
+		return fmt.Errorf("face is not running")
 	}
 
 	f.sendMut.Lock()

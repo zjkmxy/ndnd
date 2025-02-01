@@ -151,7 +151,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		// Validate signature on data
 		valid, err := signer.ValidateData(args.Data, args.DataSigCov, args.cert)
 		if !valid || err != nil {
-			args.Callback(false, fmt.Errorf("signature is invalid: %s (%+v)", args.Data.Name(), err))
+			args.Callback(false, fmt.Errorf("signature is invalid: %w", err))
 			return
 		}
 

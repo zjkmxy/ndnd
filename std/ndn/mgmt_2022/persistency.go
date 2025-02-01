@@ -1,6 +1,6 @@
 package mgmt_2022
 
-import "errors"
+import "fmt"
 
 type Persistency uint64
 
@@ -29,5 +29,5 @@ func ParsePersistency(s string) (Persistency, error) {
 			return k, nil
 		}
 	}
-	return 0, errors.New("unknown persistency")
+	return 0, fmt.Errorf("unknown persistency")
 }

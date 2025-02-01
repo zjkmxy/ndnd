@@ -3,7 +3,7 @@
 package face
 
 import (
-	"errors"
+	"fmt"
 	"syscall/js"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -32,11 +32,11 @@ func (f *WasmSimFace) Trait() Face {
 
 func (f *WasmSimFace) Open() error {
 	if f.onError == nil || f.onPkt == nil {
-		return errors.New("face callbacks are not set")
+		return fmt.Errorf("face callbacks are not set")
 	}
 
 	if !f.gosim.IsNull() {
-		return errors.New("face is already running")
+		return fmt.Errorf("face is already running")
 	}
 
 	// It seems now Go cannot handle exceptions thrown by JS
@@ -62,7 +62,7 @@ func (f *WasmSimFace) Close() error {
 
 func (f *WasmSimFace) Send(pkt enc.Wire) error {
 	if !f.IsRunning() {
-		return errors.New("face is not running")
+		return fmt.Errorf("face is not running")
 	}
 
 	l := pkt.Length()

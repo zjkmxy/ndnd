@@ -56,7 +56,7 @@ func (c *Client) FetchProbe(params ParamMap) (*tlv.ProbeRes, error) {
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed to fetch probe response: %s (%+v)", args.Result, args.Error)
+		return nil, fmt.Errorf("failed to fetch probe response: %s (%w)", args.Result, args.Error)
 	}
 
 	if err := c.validate(args); err != nil {
@@ -92,7 +92,7 @@ func (c *Client) FetchProbeRedirect(params ParamMap) (probe *tlv.ProbeRes, err e
 		caCert := probe.RedirectPrefix.Name
 		caPrefix, err := sec.GetIdentityFromCertName(caCert)
 		if err != nil {
-			return nil, fmt.Errorf("invalid redirect %s: %+v", caCert, err)
+			return nil, fmt.Errorf("invalid redirect %s: %w", caCert, err)
 		}
 
 		// Check if the name has implicit digest
@@ -105,7 +105,7 @@ func (c *Client) FetchProbeRedirect(params ParamMap) (probe *tlv.ProbeRes, err e
 		// so we don't need to validate the received redirect certificate.
 		caCertData, _, err := c.fetchCert(caCert, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch CA certificate: %+v", err)
+			return nil, fmt.Errorf("failed to fetch CA certificate: %w", err)
 		}
 
 		// Update the client to use the new CA
@@ -156,7 +156,7 @@ func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error)
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed NEW fetch: %s (%+v)", args.Result, args.Error)
+		return nil, fmt.Errorf("failed NEW fetch: %s (%w)", args.Result, args.Error)
 	}
 
 	if err := c.validate(args); err != nil {
@@ -165,7 +165,7 @@ func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error)
 
 	content := args.Data.Content()
 	if err := IsError(content); err != nil {
-		return nil, fmt.Errorf("failed NEW: %+v", err)
+		return nil, fmt.Errorf("failed NEW: %w", err)
 	}
 
 	newRes, err := tlv.ParseNewRes(enc.NewWireReader(content), false)
@@ -258,7 +258,7 @@ func (c *Client) Challenge(
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, fmt.Errorf("failed CHALLENGE fetch: %s (%+v)", args.Result, args.Error)
+		return nil, fmt.Errorf("failed CHALLENGE fetch: %s (%w)", args.Result, args.Error)
 	}
 
 	if err := c.validate(args); err != nil {
@@ -267,7 +267,7 @@ func (c *Client) Challenge(
 
 	content := args.Data.Content()
 	if err := IsError(content); err != nil {
-		return nil, fmt.Errorf("failed CHALLENGE: %+v", err)
+		return nil, fmt.Errorf("failed CHALLENGE: %w", err)
 	}
 
 	chResEnc, err := tlv.ParseCipherMsg(enc.NewWireReader(content), false)
@@ -339,7 +339,7 @@ func (c *Client) fetchCert(name enc.Name, fwHint []enc.Name) (ndn.Data, enc.Wire
 	})
 	args := <-ch
 	if args.Result != ndn.InterestResultData {
-		return nil, nil, fmt.Errorf("failed to fetch cert: %s (%+v)", args.Result, args.Error)
+		return nil, nil, fmt.Errorf("failed to fetch cert: %s (%w)", args.Result, args.Error)
 	}
 	return args.Data, args.RawData, nil
 }
@@ -348,7 +348,7 @@ func (c *Client) fetchCert(name enc.Name, fwHint []enc.Name) (ndn.Data, enc.Wire
 func (c *Client) validate(args ndn.ExpressCallbackArgs) error {
 	valid, err := sig.ValidateData(args.Data, args.SigCovered, c.caCert)
 	if err != nil || !valid {
-		return fmt.Errorf("validation failure for %s: %+v", args.Data.Name(), err)
+		return fmt.Errorf("validation failure for %s: %w", args.Data.Name(), err)
 	}
 	return nil
 }

@@ -1,8 +1,6 @@
 package ndncert
 
-import (
-	"errors"
-)
+import "fmt"
 
 type ChallengePin struct {
 	// Callback to get the code from the user.
@@ -16,7 +14,7 @@ func (*ChallengePin) Name() string {
 func (c *ChallengePin) Request(input ParamMap, status *string) (ParamMap, error) {
 	// Validate challenge configuration
 	if c.CodeCallback == nil {
-		return nil, errors.New("pin challenge not configured")
+		return nil, fmt.Errorf("pin challenge not configured")
 	}
 
 	// Initial request parameters
@@ -28,7 +26,7 @@ func (c *ChallengePin) Request(input ParamMap, status *string) (ParamMap, error)
 	if status != nil && (*status == "need-code" || *status == "wrong-code") {
 		code := c.CodeCallback(*status)
 		if code == "" {
-			return nil, errors.New("no code provided")
+			return nil, fmt.Errorf("no code provided")
 		}
 
 		return ParamMap{
@@ -37,5 +35,5 @@ func (c *ChallengePin) Request(input ParamMap, status *string) (ParamMap, error)
 	}
 
 	// Unknown status
-	return nil, errors.New("unknown input to pin challenge")
+	return nil, fmt.Errorf("unknown input to pin challenge")
 }

@@ -1,7 +1,6 @@
 package object
 
 import (
-	"errors"
 	"fmt"
 	"runtime"
 	"time"
@@ -24,7 +23,7 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 
 	// Get the correct version
 	if !args.Name.At(-1).IsVersion() {
-		return nil, errors.New("object version not set")
+		return nil, fmt.Errorf("object version not set: %s", args.Name)
 	}
 	version := args.Name.At(-1).NumberVal()
 
@@ -115,7 +114,7 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 // The input data will be freed as the object is segmented.
 func (c *Client) Produce(args ndn.ProduceArgs) (enc.Name, error) {
 	if !args.Name.At(-1).IsVersion() {
-		return nil, errors.New("object version not set")
+		return nil, fmt.Errorf("object version not set: %s", args.Name)
 	}
 
 	signer := c.SuggestSigner(args.Name.Prefix(-1))

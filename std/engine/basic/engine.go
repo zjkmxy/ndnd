@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -362,7 +361,7 @@ func (e *Engine) onError(err error) error {
 
 func (e *Engine) Start() error {
 	if e.face.IsRunning() {
-		return errors.New("face is already running")
+		return fmt.Errorf("face is already running")
 	}
 
 	e.face.OnPacket(e.onPacket)
@@ -378,7 +377,7 @@ func (e *Engine) Start() error {
 
 func (e *Engine) Stop() error {
 	if !e.face.IsRunning() {
-		return errors.New("face is not running")
+		return fmt.Errorf("face is not running")
 	}
 	return e.face.Close()
 }

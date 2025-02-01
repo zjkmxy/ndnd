@@ -8,7 +8,6 @@
 package face
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -51,7 +50,7 @@ func MakeUnicastTCPTransport(
 		return nil, defn.ErrNotCanonical
 	}
 	if localURI != nil {
-		return nil, errors.New("do not specify localURI for TCP")
+		return nil, fmt.Errorf("do not specify localURI for TCP")
 	}
 
 	// Construct transport
@@ -107,7 +106,7 @@ func AcceptUnicastTCPTransport(
 	conn, success := remoteConn.(*net.TCPConn)
 	if !success {
 		core.Log.Error(t, "Specified connection is not a net.TCPConn", "conn", remoteConn)
-		return nil, errors.New("specified connection is not a net.TCPConn")
+		return nil, fmt.Errorf("specified connection is not a net.TCPConn")
 	}
 	t.running.Store(true)
 

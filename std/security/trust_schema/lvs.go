@@ -2,7 +2,7 @@ package trust_schema
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
@@ -25,33 +25,33 @@ func NewLvsSchema(buf []byte) (*LvsSchema, error) {
 
 	// Sanity: Version is supported.
 	if model.Version != LVS_VERSION {
-		return nil, errors.New("invalid light versec schema version")
+		return nil, fmt.Errorf("invalid light versec schema version")
 	}
 
 	for i, node := range model.Nodes {
 		// Sanity: Every node’s NodeId equals to its index in the array.
 		if node.Id != uint64(i) {
-			return nil, errors.New("invalid node id")
+			return nil, fmt.Errorf("invalid node id")
 		}
 
 		// Sanity: All edges refer to existing destination node ID.
 		for _, edge := range node.Edges {
 			if edge.Dest >= uint64(len(model.Nodes)) {
-				return nil, errors.New("invalid edge destination")
+				return nil, fmt.Errorf("invalid edge destination")
 			}
 
 			// Sanity: Every edge's destination sets parent to the source of the edge.
 			// This guarantees all nodes reachable from the root is a tree.
 			parent := model.Nodes[edge.Dest].Parent
 			if parent == nil || *parent != node.Id {
-				return nil, errors.New("invalid edge parent")
+				return nil, fmt.Errorf("invalid edge parent")
 			}
 		}
 
 		// Sanity: Every SignConstraint refers to an existing destination node ID
 		for _, sc := range node.SignCons {
 			if sc >= uint64(len(model.Nodes)) {
-				return nil, errors.New("invalid sign constraint destination")
+				return nil, fmt.Errorf("invalid sign constraint destination")
 			}
 		}
 
@@ -70,7 +70,7 @@ func NewLvsSchema(buf []byte) (*LvsSchema, error) {
 						count++
 					}
 					if count != 1 {
-						return nil, errors.New("invalid constraint option")
+						return nil, fmt.Errorf("invalid constraint option")
 					}
 				}
 			}

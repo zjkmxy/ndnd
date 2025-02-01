@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	rand "math/rand/v2"
@@ -160,7 +159,7 @@ func (s *SvSync) SetSeqNo(name enc.Name, seqNo uint64) error {
 
 	entry := s.state.Get(hash, s.o.BootTime)
 	if seqNo <= entry {
-		return errors.New("SvSync: seqNo must be greater than previous")
+		return fmt.Errorf("SvSync: seqNo must be greater than previous")
 	}
 
 	// [Spec] When the node generates a new publication,

@@ -3,7 +3,6 @@
 package face
 
 import (
-	"errors"
 	"fmt"
 	"syscall/js"
 
@@ -35,11 +34,11 @@ func (f *WasmWsFace) Trait() Face {
 
 func (f *WasmWsFace) Open() error {
 	if f.IsRunning() {
-		return errors.New("face is already running")
+		return fmt.Errorf("face is already running")
 	}
 
 	if f.onError == nil || f.onPkt == nil {
-		return errors.New("face callbacks are not set")
+		return fmt.Errorf("face callbacks are not set")
 	}
 
 	// It seems now Go cannot handle exceptions thrown by JS
@@ -75,7 +74,7 @@ func (f *WasmWsFace) Close() error {
 
 func (f *WasmWsFace) Send(pkt enc.Wire) error {
 	if !f.IsRunning() {
-		return errors.New("face is not running")
+		return fmt.Errorf("face is not running")
 	}
 
 	l := pkt.Length()

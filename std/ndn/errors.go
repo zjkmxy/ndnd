@@ -11,7 +11,7 @@ type ErrInvalidValue struct {
 }
 
 func (e ErrInvalidValue) Error() string {
-	return fmt.Sprintf("Invalid value for %s: %v", e.Item, e.Value)
+	return fmt.Sprintf("invalid value for %s: %v", e.Item, e.Value)
 }
 
 type ErrNotSupported struct {
@@ -19,8 +19,13 @@ type ErrNotSupported struct {
 }
 
 func (e ErrNotSupported) Error() string {
-	return fmt.Sprintf("Not supported field: %s", e.Item)
+	return fmt.Sprintf("not supported field: %s", e.Item)
 }
+
+var ErrCancelled = errors.New("operation cancelled")
+var ErrNetwork = errors.New("network error")
+var ErrProtocol = errors.New("protocol error")
+var ErrSecurity = errors.New("security error")
 
 // ErrFailedToEncode is returned when encoding fails but the input arguments are valid.
 var ErrFailedToEncode = errors.New("failed to encode an NDN packet")

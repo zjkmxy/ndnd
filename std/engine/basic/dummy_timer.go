@@ -1,7 +1,7 @@
 package basic
 
 import (
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -96,7 +96,7 @@ func (tm *DummyTimer) Schedule(d time.Duration, f func()) func() error {
 			tm.events[idx].f = nil
 			return nil
 		} else {
-			return errors.New("event has already been canceled")
+			return fmt.Errorf("event has already been canceled")
 		}
 	}
 }

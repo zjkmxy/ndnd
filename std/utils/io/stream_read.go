@@ -2,6 +2,7 @@ package io
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -57,7 +58,7 @@ func ReadTlvStream(
 				tlvOff += tlvSize
 			} else if recvOff-tlvOff > ndn.MaxNDNPacketSize {
 				// Invalid packet, something went wrong
-				return errors.New("received too much data without valid TLV block")
+				return fmt.Errorf("received too much data without valid TLV block")
 			} else {
 				// Incomplete packet (for sure)
 				break
