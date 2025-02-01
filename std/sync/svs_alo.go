@@ -161,9 +161,8 @@ func (s *SvsALO) deliver(out svsPubOut) {
 	}
 
 	// Commit the successful delivery
-	hash := out.pub.Publisher.String()
-	prev := s.delivered.Get(hash, out.pub.BootTime)
+	prev := s.delivered.Get(out.hash, out.pub.BootTime)
 	if out.pub.SeqNum > prev {
-		s.delivered.Set(hash, out.pub.BootTime, out.pub.SeqNum)
+		s.delivered.Set(out.hash, out.pub.BootTime, out.pub.SeqNum)
 	}
 }

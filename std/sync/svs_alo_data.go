@@ -23,6 +23,7 @@ type seqFetchState struct {
 }
 
 type svsPubOut struct {
+	hash string
 	pub  SvsPub
 	subs []func(SvsPub)
 }
@@ -110,8 +111,10 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 				return // no longer subscribed
 			}
 
-			log.Warn(s, err.Error(), "object", name) // TODO: remove
+			// TODO: replace with OnError callback
+			log.Warn(s, err.Error(), "object", name)
 
+			// TODO: exponential backoff
 			time.AfterFunc(2*time.Second, func() {
 				s.consumeObject(node, boot, seq)
 			})
@@ -149,6 +152,9 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			// it's okay to delete all the pending data.
 			delete(entry.PendingData, nextSeq)
 			deliver = append(deliver, pub)
+
+			// Only updating the local copy of the state
+			// The state will be updated only after finding some subs.
 			entry.Known = nextSeq
 		}
 
@@ -165,7 +171,7 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			// we WILL deliver it, update known state
 			s.state.Set(hash, boot, entry)
 			for _, pub := range deliver {
-				s.outpipe <- svsPubOut{pub, subs}
+				s.outpipe <- svsPubOut{hash, pub, subs}
 			}
 		}
 
