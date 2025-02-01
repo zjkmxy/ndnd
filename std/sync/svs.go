@@ -141,6 +141,14 @@ func (s *SvSync) Stop() {
 	close(s.stop)
 }
 
+// GetSeqNo returns the sequence number for a name.
+func (s *SvSync) GetSeqNo(name enc.Name) uint64 {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	return s.state.Get(name.String(), s.o.BootTime)
+}
+
 // SetSeqNo sets the sequence number for a name.
 // The instance must only set sequence numbers for names it owns.
 // The sequence number must be greater than the previous value.
@@ -170,7 +178,6 @@ func (s *SvSync) IncrSeqNo(name enc.Name) uint64 {
 	defer s.mutex.Unlock()
 
 	hash := name.String()
-
 	entry := s.state.Get(hash, s.o.BootTime)
 	entry++
 	s.state.Set(hash, s.o.BootTime, entry)
