@@ -203,7 +203,10 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	for _, node := range sv.Entries {
 		hash := node.Name.String()
 
-		for _, entry := range node.SeqNoEntries {
+		// Walk through the state vector entries in reverse order.
+		// The ordering is important so we deliver the newest boot time first.
+		for seqi := range node.SeqNoEntries {
+			entry := node.SeqNoEntries[len(node.SeqNoEntries)-1-seqi]
 			recvSv.Set(hash, entry.BootstrapTime, entry.SeqNo)
 
 			// [SPEC] If any received BootstrapTime is more than 86400s in the

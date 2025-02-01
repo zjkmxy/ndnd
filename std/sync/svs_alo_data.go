@@ -9,7 +9,10 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-type seqFetchState struct {
+// Max pending objects for a producer.
+const SvsAloMaxPending = 10
+
+type SvsDataState struct {
 	// Known is the fetched sequence number.
 	// Data is handed off to outgoing pipe.
 	Known uint64
@@ -21,6 +24,8 @@ type seqFetchState struct {
 	Pending uint64
 	// PendingData is the fetched data not yet delivered.
 	PendingData map[uint64]SvsPub
+	// SnapBlock is the snapshot block flag.
+	SnapBlock bool
 }
 
 type svsPubOut struct {
@@ -60,6 +65,14 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 		panic("[BUG] sequence number mismatch - who changed it?")
 	}
 
+	// We don't get notified of changes to our own state.
+	// So we need to update the state vector ourselves.
+	s.state.Set(s.opts.Name.String(), boot, SvsDataState{
+		Known:   seq,
+		Latest:  seq,
+		Pending: seq,
+	})
+
 	return name, nil
 }
 
@@ -74,6 +87,9 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 	for _, entry := range s.state[hash] {
 		fstate := entry.Value
 		totalPending += fstate.Pending - fstate.Known
+		if fstate.SnapBlock {
+			continue
+		}
 
 		// Check if there is something to fetch
 		for fstate.Pending < fstate.Latest {
@@ -107,9 +123,36 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
 
+		// Get the state vector entry
+		hash := node.String()
+		entry := s.state.Get(hash, boot)
+
+		// Always check if we can fetch more
+		defer s.consumeCheck(node, hash)
+
+		// Check if this is already delivered
+		if seq <= entry.Known {
+			return
+		}
+
+		// Reset pending if we cancel the fetch
+		resetPending := func() {
+			entry.Pending = min(entry.Pending, seq-1)
+			s.state.Set(hash, boot, entry)
+		}
+
+		// Check snapshot block
+		if entry.SnapBlock {
+			resetPending()
+			return
+		}
+
+		// Check for errors
 		if err := status.Error(); err != nil {
+			// Check if we are still subscribed
 			if !s.nodePs.HasSub(node) {
-				return // no longer subscribed
+				resetPending()
+				return
 			}
 
 			// TODO: replace with OnError callback
@@ -122,8 +165,6 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			return
 		}
 
-		hash := node.String()
-		entry := s.state.Get(hash, boot)
 		if entry.PendingData == nil {
 			entry.PendingData = make(map[uint64]SvsPub)
 			s.state.Set(hash, boot, entry)
@@ -175,8 +216,5 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 				s.outpipe <- svsPubOut{hash, pub, subs}
 			}
 		}
-
-		// Check if we can fetch more
-		s.consumeCheck(node, hash)
 	})
 }

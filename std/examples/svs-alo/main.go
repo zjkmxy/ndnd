@@ -66,6 +66,7 @@ func main() {
 			Client:      client,
 			GroupPrefix: group,
 		},
+		Snapshot: &ndn_sync.SnapshotNodeLatest{},
 	})
 	if err = svsalo.Start(); err != nil {
 		log.Error(nil, "Unable to start SVS ALO", "err", err)

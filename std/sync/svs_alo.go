@@ -7,9 +7,6 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-// Max pending interests for a producer.
-const SvsAloMaxPending = 20
-
 // SvsALO is a Sync Transport with At Least One delivery semantics.
 type SvsALO struct {
 	// opts is the configuration options.
@@ -25,7 +22,7 @@ type SvsALO struct {
 	wmutex gosync.Mutex
 
 	// state is the current state.
-	state SvMap[seqFetchState]
+	state SvMap[SvsDataState]
 	// delivered is the delivered state vector.
 	// owned by the run() thread (no-lock)
 	delivered SvMap[uint64]
@@ -43,6 +40,8 @@ type SvsAloOpts struct {
 	Name enc.Name
 	// Svs is the options for the underlying SVS instance.
 	Svs SvSyncOpts
+	// Snapshot is the snapshot strategy.
+	Snapshot Snapshot
 }
 
 // NewSvsALO creates a new SvsALO instance.
@@ -59,7 +58,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		mutex:  gosync.Mutex{},
 		wmutex: gosync.Mutex{},
 
-		state:     NewSvMap[seqFetchState](0),
+		state:     NewSvMap[SvsDataState](0),
 		delivered: NewSvMap[uint64](0),
 		nodePs:    NewSimplePs[SvsPub](),
 
@@ -67,8 +66,23 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		stop:    make(chan struct{}),
 	}
 
+	// Use default snapshot strategy if not provided.
+	if s.opts.Snapshot == nil {
+		s.opts.Snapshot = &SnapshotNull{}
+	}
+
+	// Initialize the SVS instance.
 	s.opts.Svs.OnUpdate = s.onSvsUpdate
 	s.svs = NewSvSync(s.opts.Svs)
+
+	// Initialize the state vector with our own state.
+	boot := s.svs.GetBootTime()
+	seq := s.svs.GetSeqNo(s.opts.Name)
+	s.state.Set(s.opts.Name.String(), boot, SvsDataState{
+		Known:   seq,
+		Latest:  seq,
+		Pending: seq,
+	})
 
 	return s
 }
@@ -153,6 +167,20 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 	entry := s.state.Get(hash, update.Boot)
 	entry.Latest = update.High
 	s.state.Set(hash, update.Boot, entry)
+
+	// Skip if the entry is blocked.
+	if entry.SnapBlock {
+		return
+	}
+
+	// Check with the snapshot strategy
+	s.opts.Snapshot.OnUpdate(SnapshotOnUpdateArgs{
+		State:    s.state,
+		Node:     update.Name,
+		NodeHash: hash,
+		Boot:     update.Boot,
+		Updated:  entry,
+	})
 
 	// Check if we want to queue new fetch for this update.
 	s.consumeCheck(update.Name, hash)
