@@ -79,9 +79,12 @@ func (s *SvsALO) String() string {
 }
 
 // Start starts the SvsALO instance.
-func (s *SvsALO) Start() {
-	s.svs.Start()
+func (s *SvsALO) Start() error {
+	if err := s.svs.Start(); err != nil {
+		return err
+	}
 	go s.run()
+	return nil
 }
 
 // Stop stops the SvsALO instance.

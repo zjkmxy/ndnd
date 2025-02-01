@@ -43,8 +43,7 @@ func main() {
 
 	// Create object client
 	client := object.NewClient(app, object.NewMemoryStore(), nil)
-	err = client.Start()
-	if err != nil {
+	if err = client.Start(); err != nil {
 		log.Error(nil, "Unable to start object client", "err", err)
 		return
 	}
@@ -68,7 +67,10 @@ func main() {
 			GroupPrefix: group,
 		},
 	})
-	svsalo.Start()
+	if err = svsalo.Start(); err != nil {
+		log.Error(nil, "Unable to start SVS ALO", "err", err)
+		return
+	}
 	defer svsalo.Stop()
 
 	// Subscribe to all messages
