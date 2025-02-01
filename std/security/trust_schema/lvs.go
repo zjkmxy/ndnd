@@ -3,6 +3,7 @@ package trust_schema
 import (
 	"bytes"
 	"fmt"
+	"iter"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
@@ -14,6 +15,8 @@ const LVS_VERSION uint64 = 0x00011000
 type LvsSchema struct {
 	m *LvsModel
 }
+
+type LvsCtx = map[uint64]enc.Component
 
 func NewLvsSchema(buf []byte) (*LvsSchema, error) {
 	model, err := ParseLvsModel(enc.NewBufferReader(buf), false)
@@ -80,173 +83,161 @@ func NewLvsSchema(buf []byte) (*LvsSchema, error) {
 	return &LvsSchema{m: model}, nil
 }
 
-func (s *LvsSchema) Match(name enc.Name) []*LvsNode {
+func (s *LvsSchema) MatchCollect(name enc.Name) []*LvsNode {
 	nodes := make([]*LvsNode, 0)
-	s.match_(name, nil, func(node *LvsNode, ctx map[uint64]enc.Component) bool {
+	for node := range s.Match(name, nil) {
 		nodes = append(nodes, node)
-		return true
-	})
+	}
 	return nodes
 }
 
-func (s *LvsSchema) match_(
-	name enc.Name, startCtx map[uint64]enc.Component,
-	callback func(node *LvsNode, ctx map[uint64]enc.Component) bool,
-) {
-	// Empty name never matches
-	if len(name) == 0 {
-		return
-	}
-
-	// Remove the implicit SHA-256 digest component
-	if name.At(-1).Typ == enc.TypeImplicitSha256DigestComponent {
-		name = name.Prefix(-1)
-	}
-
-	// Current node in the depth-first search
-	cur := s.m.Nodes[s.m.StartId]
-
-	// Edge index being checked in this cycle
-	//  -1 = check value nodes
-	//  0 <= x < len(cur.PatternEdges) = check pattern nodes
-	//  len(cur.PatternEdges) = backtrack
-	edge_index := -1
-
-	// Edge stack for backtracking
-	edge_indices := make([]int, 0, len(name))
-
-	// Matched tags for backtracking
-	matches := make([]int, 0, len(name))
-
-	// Tag -> name component mapping
-	context := make(map[uint64]enc.Component, len(name))
-	for k, v := range startCtx {
-		context[k] = v
-	}
-
-	// Depth-first search
-	for cur != nil {
-		depth := len(edge_indices)
-		backtrack := false
-
-		// If match succeeds
-		if depth == len(name) {
-			if !callback(cur, context) {
-				return
-			}
-			backtrack = true
-		} else {
-			// Make movements
-			if edge_index < 0 {
-				// Value edge: since it matches at most once, ignore edge_index
-				edge_index = 0
-				for _, ve := range cur.Edges {
-					if bytes.Equal(name[depth].Bytes(), ve.Value) { // TODO: optimize
-						edge_indices = append(edge_indices, 0)
-						matches = append(matches, -1)
-						cur = s.m.Nodes[ve.Dest]
-						edge_index = -1
-						break
-					}
-				}
-			} else if edge_index < len(cur.PatternEdges) {
-				// Pattern edge: check condition and make a move
-				pe := cur.PatternEdges[edge_index]
-				edge_index++
-
-				if _, ok := context[pe.Tag]; ok {
-					if !name[depth].Equal(context[pe.Tag]) {
-						continue
-					}
-					matches = append(matches, -1)
-				} else {
-					if !s.checkCons(name[depth], context, pe.ConsSets) {
-						continue
-					}
-					if pe.Tag <= s.m.NamedPatternCnt {
-						context[pe.Tag] = name[depth]
-						matches = append(matches, int(pe.Tag))
-					} else {
-						matches = append(matches, -1)
-					}
-				}
-
-				edge_indices = append(edge_indices, edge_index)
-				cur = s.m.Nodes[pe.Dest]
-				edge_index = -1
-			} else {
-				backtrack = true
-			}
+func (s *LvsSchema) Match(name enc.Name, startCtx LvsCtx) iter.Seq2[*LvsNode, LvsCtx] {
+	return func(yield func(*LvsNode, LvsCtx) bool) {
+		// Empty name never matches
+		if len(name) == 0 {
+			return
 		}
 
-		if backtrack {
-			if len(edge_indices) > 0 {
-				edge_index = edge_indices[len(edge_indices)-1]
-				edge_indices = edge_indices[:len(edge_indices)-1]
-			}
+		// Remove the implicit SHA-256 digest component
+		if name.At(-1).Typ == enc.TypeImplicitSha256DigestComponent {
+			name = name.Prefix(-1)
+		}
 
-			if len(matches) > 0 {
-				last_tag := matches[len(matches)-1]
-				matches = matches[:len(matches)-1]
-				if last_tag >= 0 {
-					delete(context, uint64(last_tag))
+		// Current node in the depth-first search
+		cur := s.m.Nodes[s.m.StartId]
+
+		// Edge index being checked in this cycle
+		//  -1 = check value nodes
+		//  0 <= x < len(cur.PatternEdges) = check pattern nodes
+		//  len(cur.PatternEdges) = backtrack
+		edge_index := -1
+
+		// Edge stack for backtracking
+		edge_indices := make([]int, 0, len(name))
+
+		// Matched tags for backtracking
+		matches := make([]int, 0, len(name))
+
+		// Tag -> name component mapping
+		context := make(LvsCtx, len(name))
+		for k, v := range startCtx {
+			context[k] = v
+		}
+
+		// Depth-first search
+		for cur != nil {
+			depth := len(edge_indices)
+			backtrack := false
+
+			// If match succeeds
+			if depth == len(name) {
+				if !yield(cur, context) {
+					return
+				}
+				backtrack = true
+			} else {
+				// Make movements
+				if edge_index < 0 {
+					// Value edge: since it matches at most once, ignore edge_index
+					edge_index = 0
+					for _, ve := range cur.Edges {
+						if bytes.Equal(name[depth].Bytes(), ve.Value) { // TODO: optimize
+							edge_indices = append(edge_indices, 0)
+							matches = append(matches, -1)
+							cur = s.m.Nodes[ve.Dest]
+							edge_index = -1
+							break
+						}
+					}
+				} else if edge_index < len(cur.PatternEdges) {
+					// Pattern edge: check condition and make a move
+					pe := cur.PatternEdges[edge_index]
+					edge_index++
+
+					if _, ok := context[pe.Tag]; ok {
+						if !name[depth].Equal(context[pe.Tag]) {
+							continue
+						}
+						matches = append(matches, -1)
+					} else {
+						if !s.checkCons(name[depth], context, pe.ConsSets) {
+							continue
+						}
+						if pe.Tag <= s.m.NamedPatternCnt {
+							context[pe.Tag] = name[depth]
+							matches = append(matches, int(pe.Tag))
+						} else {
+							matches = append(matches, -1)
+						}
+					}
+
+					edge_indices = append(edge_indices, edge_index)
+					cur = s.m.Nodes[pe.Dest]
+					edge_index = -1
+				} else {
+					backtrack = true
 				}
 			}
 
-			if cur.Parent != nil {
-				cur = s.m.Nodes[*cur.Parent]
-			} else {
-				cur = nil
+			if backtrack {
+				if len(edge_indices) > 0 {
+					edge_index = edge_indices[len(edge_indices)-1]
+					edge_indices = edge_indices[:len(edge_indices)-1]
+				}
+
+				if len(matches) > 0 {
+					last_tag := matches[len(matches)-1]
+					matches = matches[:len(matches)-1]
+					if last_tag >= 0 {
+						delete(context, uint64(last_tag))
+					}
+				}
+
+				if cur.Parent != nil {
+					cur = s.m.Nodes[*cur.Parent]
+				} else {
+					cur = nil
+				}
 			}
 		}
 	}
 }
 
 func (s *LvsSchema) Check(pkt enc.Name, key enc.Name) bool {
-	matched := false
-	s.match_(pkt, nil, func(pktNode *LvsNode, pktCtx map[uint64]enc.Component) bool {
-		s.match_(key, pktCtx, func(keyNode *LvsNode, _ map[uint64]enc.Component) bool {
+	for pktNode, pktCtx := range s.Match(pkt, nil) {
+		for keyNode := range s.Match(key, pktCtx) {
 			if s.checkSigner(pktNode, keyNode) {
-				matched = true
+				return true
 			}
-			return !matched
-		})
-		return !matched
-	})
-	return matched
+		}
+	}
+	return false
 }
 
 func (s *LvsSchema) Suggest(pkt enc.Name, keychain ndn.KeyChain) ndn.Signer {
-	var signer ndn.Signer = nil
-
 	// O(n^7) ... but n is small
-	s.match_(pkt, nil, func(pktNode *LvsNode, pktCtx map[uint64]enc.Component) bool {
+	for pktNode, pktCtx := range s.Match(pkt, nil) {
 		for _, id := range keychain.Identities() {
 			for _, key := range id.Keys() {
 				for _, cert := range key.UniqueCerts() {
-					s.match_(cert, pktCtx, func(keyNode *LvsNode, _ map[uint64]enc.Component) bool {
+					for keyNode := range s.Match(enc.Name(cert), pktCtx) {
 						if s.checkSigner(pktNode, keyNode) {
-							signer = &sig.ContextSigner{
+							return &sig.ContextSigner{
 								Signer:         key.Signer(),
 								KeyLocatorName: cert[:len(cert)-1], // remove version
 							}
 						}
-
-						return signer == nil
-					})
+					}
 				}
 			}
 		}
-
-		return signer == nil
-	})
-
-	return signer
+	}
+	return nil
 }
 
 func (s *LvsSchema) checkCons(
 	value enc.Component,
-	context map[uint64]enc.Component,
+	context LvsCtx,
 	consSet []*LvsPatternConstraint,
 ) bool {
 	for _, cons := range consSet {

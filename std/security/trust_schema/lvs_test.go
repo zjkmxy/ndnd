@@ -135,43 +135,43 @@ func TestModelSimpleMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test all valid matches
-	ms := s.Match(sname("/a/blog"))
+	ms := s.MatchCollect(sname("/a/blog"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#site", string(ms[0].RuleName[0]))
 
-	ms = s.Match(sname("/a/blog/KEY/123/issuer/456"))
+	ms = s.MatchCollect(sname("/a/blog/KEY/123/issuer/456"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#root", string(ms[0].RuleName[0]))
 
-	ms = s.Match(sname("/a/blog/article/category/year/month"))
+	ms = s.MatchCollect(sname("/a/blog/article/category/year/month"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#article", string(ms[0].RuleName[0]))
 
-	ms = s.Match(sname("/a/blog/author/PANDA/KEY/kid/iss/v=1"))
+	ms = s.MatchCollect(sname("/a/blog/author/PANDA/KEY/kid/iss/v=1"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#author", string(ms[0].RuleName[0]))
 
-	ms = s.Match(sname("/a/blog/admin/PANDA/KEY/kid/iss/v=1"))
+	ms = s.MatchCollect(sname("/a/blog/admin/PANDA/KEY/kid/iss/v=1"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#admin", string(ms[0].RuleName[0]))
 
 	// Test invalid matches
-	ms = s.Match(sname("/b/blog"))
+	ms = s.MatchCollect(sname("/b/blog"))
 	require.Equal(t, 0, len(ms))
 
-	ms = s.Match(sname("/b/blog/KEY/123/issuer/456"))
+	ms = s.MatchCollect(sname("/b/blog/KEY/123/issuer/456"))
 	require.Equal(t, 0, len(ms))
 
 	// Test partial matches
-	ms = s.Match(sname("/a/blog/article/category/year/month/extra"))
+	ms = s.MatchCollect(sname("/a/blog/article/category/year/month/extra"))
 	require.Equal(t, 0, len(ms))
 
-	ms = s.Match(sname("/a/blog/article/category/year"))
+	ms = s.MatchCollect(sname("/a/blog/article/category/year"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, 0, len(ms[0].RuleName)) // no matching rule
 
 	// Test invalid expansion value
-	ms = s.Match(sname("/a/blog/evil/PANDA/KEY/kid/iss/v=1"))
+	ms = s.MatchCollect(sname("/a/blog/evil/PANDA/KEY/kid/iss/v=1"))
 	require.Equal(t, 0, len(ms))
 }
 
@@ -182,47 +182,47 @@ func TestModelComplexMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	// #r1: a/b/c & { c: b, c: a, a: "a"|"x" }
-	ms := s.Match(sname("/a/a/a"))
+	ms := s.MatchCollect(sname("/a/a/a"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#r1", string(ms[0].RuleName[0]))
 
-	ms = s.Match(sname("/x/x/x"))
+	ms = s.MatchCollect(sname("/x/x/x"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#r1", string(ms[0].RuleName[0]))
 
-	ms = s.Match(sname("/a/a/x"))
+	ms = s.MatchCollect(sname("/a/a/x"))
 	require.Equal(t, 0, len(ms))
 
-	ms = s.Match(sname("/a/c/a"))
+	ms = s.MatchCollect(sname("/a/c/a"))
 	require.Equal(t, 0, len(ms))
 
-	ms = s.Match(sname("/a/x/x"))
+	ms = s.MatchCollect(sname("/a/x/x"))
 	require.Equal(t, 0, len(ms))
 
 	// #r1: a/b/c & { b: "b"|"y" }
-	ms = s.Match(sname("/a/b/c"))
+	ms = s.MatchCollect(sname("/a/b/c"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#r1", string(ms[0].RuleName[0]))
 
-	ms = s.Match(sname("/p/y/q"))
+	ms = s.MatchCollect(sname("/p/y/q"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#r1", string(ms[0].RuleName[0]))
 
 	// #r2: x/y/z & { x: "xxx" }
 	// #r3: x/y/z & { y: "yyy" }
-	ms = s.Match(sname("/xxx/xxx/zzz"))
+	ms = s.MatchCollect(sname("/xxx/xxx/zzz"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#r2", string(ms[0].RuleName[0]))
 
-	ms = s.Match(sname("/abc/yyy/zzz"))
+	ms = s.MatchCollect(sname("/abc/yyy/zzz"))
 	require.Equal(t, 1, len(ms))
 	require.Equal(t, "#r3", string(ms[0].RuleName[0]))
 
 	// Combination
-	ms = s.Match(sname("/xxx/b/zzz"))
+	ms = s.MatchCollect(sname("/xxx/b/zzz"))
 	require.Equal(t, 2, len(ms)) // r1, r2
 
-	ms = s.Match(sname("/xxx/yyy/zzz"))
+	ms = s.MatchCollect(sname("/xxx/yyy/zzz"))
 	require.Equal(t, 2, len(ms)) // r1, r3
 }
 
