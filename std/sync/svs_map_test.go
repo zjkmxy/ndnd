@@ -39,6 +39,28 @@ func TestSvMapBasic(t *testing.T) {
 	require.Equal(t, uint64(138), m.Get("/ndn/alice", 100))
 }
 
+func TestSvMapSet(t *testing.T) {
+	tu.SetT(t)
+
+	m := makeSvMap()
+
+	// Set new
+	m.Set("/ndn/alice", 120, 138)
+	require.Equal(t, uint64(138), m.Get("/ndn/alice", 120))
+
+	// Set existing
+	m.Set("/ndn/alice", 120, 190)
+	require.Equal(t, uint64(190), m.Get("/ndn/alice", 120))
+
+	// Set ordering
+	m.Set("/ndn/alice", 110, 138)
+	require.Equal(t, uint64(138), m.Get("/ndn/alice", 110))
+	boots := []uint64{100, 110, 120, 200}
+	for i, entry := range m["/ndn/alice"] {
+		require.Equal(t, boots[i], entry.Boot)
+	}
+}
+
 func TestSvMapNewer(t *testing.T) {
 	tu.SetT(t)
 

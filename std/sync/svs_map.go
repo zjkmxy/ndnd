@@ -1,8 +1,9 @@
 package sync
 
 import (
+	"cmp"
 	"iter"
-	"sort"
+	"slices"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -18,6 +19,10 @@ type SvMapVal[V any] struct {
 	Value V
 }
 
+func (*SvMapVal[V]) Cmp(a, b SvMapVal[V]) int {
+	return cmp.Compare(a.Boot, b.Boot)
+}
+
 // Create a new state vector map.
 func NewSvMap[V any](size int) SvMap[V] {
 	return make(SvMap[V], size)
@@ -25,27 +30,22 @@ func NewSvMap[V any](size int) SvMap[V] {
 
 // Get seq entry for a bootstrap time.
 func (m SvMap[V]) Get(hash string, boot uint64) (value V) {
-	// TODO: binary search - this is sorted
-	for _, entry := range m[hash] {
-		if entry.Boot == boot {
-			return entry.Value
-		}
+	entry := SvMapVal[V]{boot, value}
+	i, match := slices.BinarySearchFunc(m[hash], entry, entry.Cmp)
+	if match {
+		return m[hash][i].Value
 	}
 	return value
 }
 
 func (m SvMap[V]) Set(hash string, boot uint64, value V) {
-	for i, entry := range m[hash] {
-		if entry.Boot == boot {
-			m[hash][i].Value = value
-			return
-		}
+	entry := SvMapVal[V]{boot, value}
+	i, match := slices.BinarySearchFunc(m[hash], entry, entry.Cmp)
+	if match {
+		m[hash][i] = entry
+		return
 	}
-
-	m[hash] = append(m[hash], SvMapVal[V]{boot, value})
-	sort.Slice(m[hash], func(i, j int) bool {
-		return m[hash][i].Boot < m[hash][j].Boot
-	})
+	m[hash] = slices.Insert(m[hash], i, entry)
 }
 
 // Check if a SvMap is newer than another.
@@ -96,8 +96,8 @@ func (m SvMap[V]) Encode(seq func(V) uint64) *spec_svs.StateVector {
 	}
 
 	// Sort entries by in the NDN canonical order
-	sort.Slice(sv.Entries, func(i, j int) bool {
-		return sv.Entries[i].Name.Compare(sv.Entries[j].Name) < 0
+	slices.SortFunc(sv.Entries, func(a, b *spec_svs.StateVectorEntry) int {
+		return a.Name.Compare(b.Name)
 	})
 
 	return sv
