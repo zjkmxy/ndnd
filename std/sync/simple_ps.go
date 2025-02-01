@@ -28,6 +28,10 @@ func NewSimplePs[V any]() SimplePs[V] {
 }
 
 func (ps *SimplePs[V]) Subscribe(prefix enc.Name, callback func(V)) error {
+	if callback == nil {
+		panic("Callback is required for subscription")
+	}
+
 	ps.mutex.Lock()
 	defer ps.mutex.Unlock()
 

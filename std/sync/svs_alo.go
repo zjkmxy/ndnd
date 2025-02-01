@@ -26,6 +26,11 @@ type SvsALO struct {
 
 	// state is the current state.
 	state SvMap[SeqFetchState]
+	// nodePs is the Pub/Sub coordinator for publisher prefixes
+	nodePs SimplePs[SvsPub]
+	// dataPs is the Pub/Sub coordinator for data prefixes
+	dataPs SimplePs[SvsPub]
+
 	// outpipe is the channel for delivering data.
 	outpipe chan SvsPub
 	// stop is the stop signal.
@@ -37,8 +42,6 @@ type SvsAloOpts struct {
 	Name enc.Name
 	// Svs is the options for the underlying SVS instance.
 	Svs SvSyncOpts
-	// OnData is the callback for new data.
-	OnData func(SvsPub)
 }
 
 // NewSvsALO creates a new SvsALO instance.
@@ -46,15 +49,19 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	if len(opts.Name) == 0 {
 		panic("Name is required")
 	}
-	if opts.OnData == nil {
-		panic("OnData is required")
-	}
 
 	s := &SvsALO{
-		opts:    opts,
-		svs:     nil,
-		client:  opts.Svs.Client,
-		state:   NewSvMap[SeqFetchState](0),
+		opts:   opts,
+		svs:    nil,
+		client: opts.Svs.Client,
+
+		mutex:  gosync.Mutex{},
+		wmutex: gosync.Mutex{},
+
+		state:  NewSvMap[SeqFetchState](0),
+		nodePs: NewSimplePs[SvsPub](),
+		dataPs: NewSimplePs[SvsPub](),
+
 		outpipe: make(chan SvsPub, 256),
 		stop:    make(chan struct{}),
 	}
@@ -87,6 +94,18 @@ func (s *SvsALO) Publish(content enc.Wire) (enc.Name, error) {
 	return s.produceObject(content)
 }
 
+// SubscribePublisher subscribes to all publishers matchin a name prefix.
+// Only one subscriber per prefix is allowed.
+// If the prefix is already subscribed, the callback is replaced.
+func (s *SvsALO) SubscribePublisher(prefix enc.Name, callback func(SvsPub)) error {
+	return s.nodePs.Subscribe(prefix, callback)
+}
+
+// UnsubscribePublisher unsubscribes removes callbacks added with subscribe.
+func (s *SvsALO) UnsubscribePublisher(prefix enc.Name) {
+	s.nodePs.Unsubscribe(prefix)
+}
+
 // run is the main loop for the SvsALO instance.
 func (s *SvsALO) run() {
 	defer s.svs.Stop()
@@ -94,8 +113,8 @@ func (s *SvsALO) run() {
 		select {
 		case <-s.stop:
 			return
-		case data := <-s.outpipe:
-			s.opts.OnData(data)
+		case pub := <-s.outpipe:
+			s.nodePs.Publish(pub.Publisher, pub)
 		}
 	}
 }

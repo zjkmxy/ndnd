@@ -67,18 +67,26 @@ func main() {
 			Client:      client,
 			GroupPrefix: group,
 		},
-		OnData: func(pub ndn_sync.SvsPub) {
-			fmt.Printf("%s: %s\n", pub.Publisher, pub.Bytes())
-		},
 	})
 	svsalo.Start()
 	defer svsalo.Stop()
+
+	// Subscribe to all messages
+	svsalo.SubscribePublisher(enc.Name{}, func(pub ndn_sync.SvsPub) {
+		fmt.Printf("%s: %s\n", pub.Publisher, pub.Bytes())
+	})
 
 	fmt.Fprintln(os.Stderr, "Joined SVS ALO chat group")
 	fmt.Fprintln(os.Stderr, "You are:", name)
 	fmt.Fprintln(os.Stderr, "Type a message and press enter to send.")
 	fmt.Fprintln(os.Stderr, "Press Ctrl+C to exit.")
 	fmt.Fprintln(os.Stderr)
+
+	// Publish initial message
+	_, err = svsalo.Publish(enc.Wire{[]byte("Joined the chatroom")})
+	if err != nil {
+		log.Error(nil, "Unable to publish message", "err", err)
+	}
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
