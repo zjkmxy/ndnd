@@ -36,6 +36,8 @@ type Client interface {
 	// ExpressR sends a single interest with reliability.
 	// Since this is a low-level API, the result is NOT validated.
 	ExpressR(args ExpressRArgs)
+	// IsCongested returns true if the client is congested.
+	IsCongested() bool
 
 	// Suggest suggests a signer for a given name.
 	// nil is returned if no signer is found.

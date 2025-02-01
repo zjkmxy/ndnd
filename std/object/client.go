@@ -66,7 +66,7 @@ func (c *Client) Store() ndn.Store {
 	return c.store
 }
 
-// Get the client interface
-func (c *Client) Client() ndn.Client {
-	return c
+// IsCongested returns true if the client is congested
+func (c *Client) IsCongested() bool {
+	return c.fetcher.IsCongested()
 }

@@ -14,7 +14,7 @@ import (
 // check() and handleData() in the client class
 type rrSegFetcher struct {
 	// mutex for the fetcher
-	mutex sync.Mutex
+	mutex sync.RWMutex
 	// ref to parent
 	client *Client
 	// list of active streams
@@ -29,7 +29,7 @@ type rrSegFetcher struct {
 
 func newRrSegFetcher(client *Client) rrSegFetcher {
 	return rrSegFetcher{
-		mutex:       sync.Mutex{},
+		mutex:       sync.RWMutex{},
 		client:      client,
 		streams:     make([]*ConsumeState, 0),
 		window:      10,
@@ -40,6 +40,13 @@ func newRrSegFetcher(client *Client) rrSegFetcher {
 // log identifier
 func (s *rrSegFetcher) String() string {
 	return "client-seg"
+}
+
+// if there are too many outstanding segments
+func (s *rrSegFetcher) IsCongested() bool {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.outstanding >= s.window
 }
 
 // add a stream to the fetch queue

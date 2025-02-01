@@ -575,7 +575,7 @@ func (e *Engine) RegisterRoute(prefix enc.Name) error {
 		log.Error(e, "Failed to register prefix", "err", err, "name", prefix)
 		return err
 	} else {
-		log.Info(e, "Prefix registered", "name", prefix)
+		log.Debug(e, "Prefix registered", "name", prefix)
 	}
 	return nil
 }
@@ -586,7 +586,7 @@ func (e *Engine) UnregisterRoute(prefix enc.Name) error {
 		log.Error(e, "Failed to unregister prefix", "err", err, "name", prefix)
 		return err
 	} else {
-		log.Info(e, "Prefix unregistered", "name", prefix)
+		log.Debug(e, "Prefix unregistered", "name", prefix)
 	}
 	return nil
 }
