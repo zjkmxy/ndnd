@@ -1,12 +1,9 @@
 package sync
 
-import (
-	enc "github.com/named-data/ndnd/std/encoding"
-)
-
 const ssthresh = 5 // TODO: configurable
 
 type SnapshotNodeLatest struct {
+	callback snapshotCallback
 }
 
 func (s *SnapshotNodeLatest) Snapshot() Snapshot {
@@ -14,6 +11,10 @@ func (s *SnapshotNodeLatest) Snapshot() Snapshot {
 }
 
 func (s *SnapshotNodeLatest) onUpdate(args snapshotOnUpdateArgs) {
+	if args.entry.SnapBlock {
+		return
+	}
+
 	// We only care about the latest boot.
 	// For all other states, make sure the fetch is skipped.
 	entries := args.state[args.nodeHash]
@@ -37,5 +38,6 @@ func (s *SnapshotNodeLatest) onUpdate(args snapshotOnUpdateArgs) {
 	}
 }
 
-func (s *SnapshotNodeLatest) setCallback(enc.Name) {
+func (s *SnapshotNodeLatest) setCallback(callback snapshotCallback) {
+	s.callback = callback
 }

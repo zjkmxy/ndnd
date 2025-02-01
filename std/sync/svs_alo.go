@@ -168,18 +168,14 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 	entry.Latest = update.High
 	s.state.Set(hash, update.Boot, entry)
 
-	// Skip if the entry is blocked.
-	if entry.SnapBlock {
-		return
-	}
-
-	// Check with the snapshot strategy
+	// Inform the snapshot strategy
 	s.opts.Snapshot.onUpdate(snapshotOnUpdateArgs{
 		state:    s.state,
 		node:     update.Name,
 		nodeHash: hash,
 		boot:     update.Boot,
 		entry:    entry,
+		isSelf:   update.Name.Equal(s.opts.Name),
 	})
 
 	// Check if we want to queue new fetch for this update.

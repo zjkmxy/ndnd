@@ -8,16 +8,14 @@ type Snapshot interface {
 
 	// onUpdate is called when the state vector is updated.
 	// The strategy can decide to block fetching for the snapshot.
-	// Any fetching in the pipeline will continue.
 	//
 	// This function call MUST NOT make the callback.
-	onUpdate(args snapshotOnUpdateArgs)
+	onUpdate(snapshotOnUpdateArgs)
 
 	// setCallback sets the callback for fetched snapshot.
 	// The callback should provide the snapshot data and
-	// the updated state vector with affected nodes.
-	// All affected nodes will be unblocked.
-	setCallback(enc.Name)
+	// a function to update the state vector.
+	setCallback(snapshotCallback)
 }
 
 type snapshotOnUpdateArgs struct {
@@ -31,4 +29,9 @@ type snapshotOnUpdateArgs struct {
 	boot uint64
 	// entry is the updated state.
 	entry svsDataState
+	// isSelf is true if the update is from self.
+	isSelf bool
 }
+
+type snapshotUpdater = func(state SvMap[svsDataState])
+type snapshotCallback = func(data []byte, updater snapshotUpdater)

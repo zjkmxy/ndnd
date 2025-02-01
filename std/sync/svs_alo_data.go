@@ -67,10 +67,22 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 
 	// We don't get notified of changes to our own state.
 	// So we need to update the state vector ourselves.
-	s.state.Set(s.opts.Name.String(), boot, svsDataState{
+	entry := svsDataState{
 		Known:   seq,
 		Latest:  seq,
 		Pending: seq,
+	}
+	hash := s.opts.Name.String()
+	s.state.Set(hash, boot, entry)
+
+	// Inform the snapshot strategy
+	s.opts.Snapshot.onUpdate(snapshotOnUpdateArgs{
+		state:    s.state,
+		node:     s.opts.Name,
+		nodeHash: hash,
+		boot:     boot,
+		entry:    entry,
+		isSelf:   true,
 	})
 
 	return name, nil
