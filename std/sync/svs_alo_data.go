@@ -7,6 +7,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 )
 
 // Max pending objects for a producer.
@@ -25,13 +26,21 @@ type svsDataState struct {
 	// PendingData is the fetched data not yet delivered.
 	PendingData map[uint64]SvsPub
 	// SnapBlock is the snapshot block flag.
-	SnapBlock bool
+	// If non-zero, fetching is blocked.
+	SnapBlock int
 }
 
+// svsPubOut is the pipe struct. It is necessary to bundle together differet
+// kinds of output here because go does not support union types.
 type svsPubOut struct {
+	// Fields below are set for a normal pub
 	hash string
 	pub  SvsPub
 	subs []func(SvsPub)
+
+	// Fields below are set if it is a snapshot
+	// Only pub will be set for a snapshot
+	snapstate *spec_svs.StateVector
 }
 
 func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
@@ -43,17 +52,18 @@ func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
 }
 
 func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
-	s.wmutex.Lock()
-	defer s.wmutex.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	// This instance owns the underlying SVS instance.
 	// So we can be sure that the sequence number does not
 	// change while we hold the lock on this instance.
+	node := s.opts.Name
 	boot := s.svs.GetBootTime()
-	seq := s.svs.GetSeqNo(s.opts.Name) + 1
+	seq := s.svs.GetSeqNo(node) + 1
 
 	name, err := s.client.Produce(ndn.ProduceArgs{
-		Name:    s.objectName(s.opts.Name, boot, seq),
+		Name:    s.objectName(node, boot, seq),
 		Content: content,
 	})
 	if err != nil {
@@ -61,29 +71,21 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 	}
 
 	// Update the state vector
-	if got := s.svs.IncrSeqNo(s.opts.Name); got != seq {
+	if got := s.svs.IncrSeqNo(node); got != seq {
 		panic("[BUG] sequence number mismatch - who changed it?")
 	}
 
 	// We don't get notified of changes to our own state.
 	// So we need to update the state vector ourselves.
-	entry := svsDataState{
+	hash := node.String()
+	s.state.Set(hash, boot, svsDataState{
 		Known:   seq,
 		Latest:  seq,
 		Pending: seq,
-	}
-	hash := s.opts.Name.String()
-	s.state.Set(hash, boot, entry)
+	})
 
 	// Inform the snapshot strategy
-	s.opts.Snapshot.onUpdate(snapshotOnUpdateArgs{
-		state:    s.state,
-		node:     s.opts.Name,
-		nodeHash: hash,
-		boot:     boot,
-		entry:    entry,
-		isSelf:   true,
-	})
+	s.opts.Snapshot.check(snapshotOnUpdateArgs{s.state, node, hash})
 
 	return name, nil
 }
@@ -94,12 +96,15 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 		return
 	}
 
+	// Check with the snapshot strategy
+	s.opts.Snapshot.check(snapshotOnUpdateArgs{s.state, node, hash})
+
 	totalPending := uint64(0)
 
 	for _, entry := range s.state[hash] {
 		fstate := entry.Value
 		totalPending += fstate.Pending - fstate.Known
-		if fstate.SnapBlock {
+		if fstate.SnapBlock != 0 {
 			continue
 		}
 
@@ -154,7 +159,7 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 		}
 
 		// Check snapshot block
-		if entry.SnapBlock {
+		if entry.SnapBlock != 0 {
 			resetPending()
 			return
 		}
@@ -225,7 +230,7 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			// we WILL deliver it, update known state
 			s.state.Set(hash, boot, entry)
 			for _, pub := range deliver {
-				s.outpipe <- svsPubOut{hash, pub, subs}
+				s.outpipe <- svsPubOut{hash: hash, pub: pub, subs: subs}
 			}
 		}
 	})

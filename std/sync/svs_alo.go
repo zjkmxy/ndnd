@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"slices"
 	gosync "sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -18,8 +19,6 @@ type SvsALO struct {
 
 	// mutex protects the instance.
 	mutex gosync.Mutex
-	// wmutex protects the write (produce) state.
-	wmutex gosync.Mutex
 
 	// state is the current state.
 	state SvMap[svsDataState]
@@ -55,8 +54,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		svs:    nil,
 		client: opts.Svs.Client,
 
-		mutex:  gosync.Mutex{},
-		wmutex: gosync.Mutex{},
+		mutex: gosync.Mutex{},
 
 		state:     NewSvMap[svsDataState](0),
 		delivered: NewSvMap[uint64](0),
@@ -69,6 +67,9 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	// Use default snapshot strategy if not provided.
 	if s.opts.Snapshot == nil {
 		s.opts.Snapshot = &SnapshotNull{}
+	} else {
+		s.opts.Snapshot.setNames(s.opts.Name, s.opts.Svs.GroupPrefix)
+		s.opts.Snapshot.setCallback(s.snapshotCallback)
 	}
 
 	// Initialize the SVS instance.
@@ -168,16 +169,6 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 	entry.Latest = update.High
 	s.state.Set(hash, update.Boot, entry)
 
-	// Inform the snapshot strategy
-	s.opts.Snapshot.onUpdate(snapshotOnUpdateArgs{
-		state:    s.state,
-		node:     update.Name,
-		nodeHash: hash,
-		boot:     update.Boot,
-		entry:    entry,
-		isSelf:   update.Name.Equal(s.opts.Name),
-	})
-
 	// Check if we want to queue new fetch for this update.
 	s.consumeCheck(update.Name, hash)
 }
@@ -188,8 +179,45 @@ func (s *SvsALO) deliver(out svsPubOut) {
 	}
 
 	// Commit the successful delivery
-	prev := s.delivered.Get(out.hash, out.pub.BootTime)
-	if out.pub.SeqNum > prev {
-		s.delivered.Set(out.hash, out.pub.BootTime, out.pub.SeqNum)
+	if out.snapstate != nil {
+		for _, svEntry := range out.snapstate.Entries {
+			hash := svEntry.Name.String()
+			for _, seqEntry := range svEntry.SeqNoEntries {
+				prev := s.delivered.Get(hash, seqEntry.BootstrapTime)
+				if seqEntry.SeqNo > prev {
+					s.delivered.Set(hash, seqEntry.BootstrapTime, seqEntry.SeqNo)
+				}
+			}
+		}
+	} else {
+		prev := s.delivered.Get(out.hash, out.pub.BootTime)
+		if out.pub.SeqNum > prev {
+			s.delivered.Set(out.hash, out.pub.BootTime, out.pub.SeqNum)
+		}
+	}
+}
+
+func (s *SvsALO) snapshotCallback(callback snapshotCallbackInner) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	snapPub, ok := callback(s.state)
+	if !ok {
+		return
+	}
+
+	// Update delivered vector in order
+	out := svsPubOut{
+		pub:       snapPub,
+		subs:      slices.Collect(s.nodePs.Subs(snapPub.Publisher)), // suspicious
+		snapstate: s.state.Encode(func(state svsDataState) uint64 { return state.Known }),
+	}
+	s.outpipe <- out
+
+	// Trigger fetch for all affected publishers
+	for _, svEntry := range out.snapstate.Entries {
+		if snapPub.Publisher.IsPrefix(svEntry.Name) {
+			s.consumeCheck(svEntry.Name, svEntry.Name.String())
+		}
 	}
 }

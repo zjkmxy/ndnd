@@ -59,14 +59,41 @@ func main() {
 		defer app.UnregisterRoute(route)
 	}
 
+	// Total number and size of messages
+	msgCount := 0
+	msgSize := 0
+
 	// Start SVS instance
 	svsalo := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+		// Name is the name of the node
 		Name: name,
+
+		// Svs is the Sync group options
 		Svs: ndn_sync.SvSyncOpts{
 			Client:      client,
 			GroupPrefix: group,
 		},
-		Snapshot: &ndn_sync.SnapshotNodeLatest{},
+
+		// The snapshot strategy provides a way to prevent slowly aggregating
+		// old publications to arrive at the application's current state.
+		//
+		// The SnapshotNodeLatest strategy will only deliver the latest snapshot
+		// and all publications after the snapshot. As a result, the snapshot
+		// in this case should contain the entire state of the node.
+		Snapshot: &ndn_sync.SnapshotNodeLatest{
+			Client: client,
+			SnapMe: func() (enc.Wire, error) {
+				// In this example, we will ignore the old messages
+				// and only send a message with the total number of messages.
+				//
+				// A real application can bundle all state of the node in
+				// the snapshot publication.
+				message := fmt.Sprintf("[Snapshot] Skipping %d messages with %d bytes", msgCount, msgSize)
+
+				return enc.Wire{[]byte(message)}, nil
+			},
+			Threshold: 10,
+		},
 	})
 	if err = svsalo.Start(); err != nil {
 		log.Error(nil, "Unable to start SVS ALO", "err", err)
@@ -76,6 +103,12 @@ func main() {
 
 	// Subscribe to all messages
 	svsalo.SubscribePublisher(enc.Name{}, func(pub ndn_sync.SvsPub) {
+		// Both normal and snapshot publications will be received here.
+		// Snapshots will have the IsSnapshot flag set to true.
+		// The publications will be received in the order they were published.
+		//
+		// Since the snapshot strategy is set to SnapshotNodeLatest.,
+		// older publications before a snapshot will be ignored.
 		fmt.Printf("%s: %s\n", pub.Publisher, pub.Bytes())
 	})
 
@@ -86,6 +119,7 @@ func main() {
 	fmt.Fprintln(os.Stderr)
 
 	// Publish initial message
+	msgCount++
 	_, err = svsalo.Publish(enc.Wire{[]byte("Joined the chatroom")})
 	if err != nil {
 		log.Error(nil, "Unable to publish message", "err", err)
@@ -102,6 +136,8 @@ func main() {
 
 		// Trim newline character
 		line = line[:len(line)-1]
+		msgCount++
+		msgSize += len(line)
 
 		// Publish chat message
 		_, err = svsalo.Publish(enc.Wire{line})

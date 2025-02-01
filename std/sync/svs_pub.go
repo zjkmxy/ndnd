@@ -14,6 +14,8 @@ type SvsPub struct {
 	BootTime uint64
 	// Sequence number of the publisher.
 	SeqNum uint64
+	// IsSnapshot is true if this is a snapshot.
+	IsSnapshot bool
 }
 
 // Bytes gets the bytes of the data publication.
