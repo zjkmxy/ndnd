@@ -8,18 +8,23 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
-type SeqFetchState struct {
-	// Known is the fetched state vector.
-	// Data is already delivered to the application.
+type seqFetchState struct {
+	// Known is the fetched sequence number.
+	// Data is handed off to outgoing pipe.
 	Known uint64
-	// Latest is the latest state vector.
+	// Latest is the latest sequence number.
 	// (Latest-Pending) is not in the pipeline.
 	Latest uint64
-	// Pending is the pending state vector.
+	// Pending is the pending sequence number.
 	// (Pending-Known) has outstanding Interests.
 	Pending uint64
 	// PendingData is the fetched data not yet delivered.
 	PendingData map[uint64]SvsPub
+}
+
+type svsPubOut struct {
+	pub  SvsPub
+	subs []func(SvsPub)
 }
 
 func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
@@ -58,12 +63,14 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 
 // consumeCheck looks for new objects to fetch and queues them.
 func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
-	// TODO: check if subscribed to this node, otherwise exit
+	if !s.nodePs.HasSub(node) {
+		return
+	}
 
 	totalPending := uint64(0)
 
 	for _, entry := range s.state[hash] {
-		fstate := entry.value
+		fstate := entry.Value
 		totalPending += fstate.Pending - fstate.Known
 
 		// Check if there is something to fetch
@@ -82,8 +89,8 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 			// Queue the fetch
 			totalPending++
 			fstate.Pending++
-			s.state.Set(hash, entry.boot, fstate)
-			s.consumeObject(node, entry.boot, fstate.Pending)
+			s.state.Set(hash, entry.Boot, fstate)
+			s.consumeObject(node, entry.Boot, fstate.Pending)
 		}
 	}
 }
@@ -98,10 +105,13 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
 
-		// TODO: check if still subscribed, otherwise discard
-
 		if err := status.Error(); err != nil {
-			log.Warn(s, err.Error(), "object", name)
+			if !s.nodePs.HasSub(node) {
+				return // no longer subscribed
+			}
+
+			log.Warn(s, err.Error(), "object", name) // TODO: remove
+
 			time.AfterFunc(2*time.Second, func() {
 				s.consumeObject(node, boot, seq)
 			})
@@ -121,9 +131,12 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			Publisher: node,
 			Content:   status.Content(),
 			DataName:  name,
+			BootTime:  boot,
+			SeqNum:    seq,
 		}
 
-		// Check if we can deliver the data
+		// Collect all data to deliver
+		var deliver []SvsPub = nil
 		for {
 			// Check if the next seq is available
 			nextSeq := entry.Known + 1
@@ -131,10 +144,29 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			if !ok {
 				break
 			}
+
+			// Even if we are no longer subscribed,
+			// it's okay to delete all the pending data.
 			delete(entry.PendingData, nextSeq)
+			deliver = append(deliver, pub)
 			entry.Known = nextSeq
+		}
+
+		// Deliver the data with unlocked mutex
+		if len(deliver) > 0 {
+			// We got these subs when trying to deliver. It doesn't matter
+			// if they were unsubscribed after this function exits. The application
+			// needs to handle the callbacks correctly.
+			subs := s.nodePs.Subs(node)
+			if len(subs) == 0 {
+				return // no longer subscribed
+			}
+
+			// we WILL deliver it, update known state
 			s.state.Set(hash, boot, entry)
-			s.outpipe <- pub
+			for _, pub := range deliver {
+				s.outpipe <- svsPubOut{pub, subs}
+			}
 		}
 
 		// Check if we can fetch more

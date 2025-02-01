@@ -18,7 +18,16 @@ func TestSimplePs(t *testing.T) {
 	ps.Subscribe(tu.NoErr(encoding.NameFromStr("/a/b")), func(v int) { val1 = v })
 	ps.Subscribe(tu.NoErr(encoding.NameFromStr("/a/b/c")), func(v int) { val2 = v })
 	ps.Subscribe(tu.NoErr(encoding.NameFromStr("/d")), func(v int) { val3 = v })
+
+	require.True(t, ps.HasSub(tu.NoErr(encoding.NameFromStr("/a/b"))))
+	require.True(t, ps.HasSub(tu.NoErr(encoding.NameFromStr("/d/e/f"))))
+	require.False(t, ps.HasSub(tu.NoErr(encoding.NameFromStr("/"))))
+	require.False(t, ps.HasSub(tu.NoErr(encoding.NameFromStr("/e/f/g"))))
+
+	// Broad subscription
 	ps.Subscribe(tu.NoErr(encoding.NameFromStr("/")), func(v int) { val4 = v })
+	require.True(t, ps.HasSub(tu.NoErr(encoding.NameFromStr("/"))))
+	require.True(t, ps.HasSub(tu.NoErr(encoding.NameFromStr("/e/f/g"))))
 
 	// Test Publish
 	ps.Publish(tu.NoErr(encoding.NameFromStr("/a/b/hello")), 1)

@@ -33,6 +33,10 @@ func TestSvMapBasic(t *testing.T) {
 	// Update entries
 	m.Set("/ndn/bob", 150, 5)
 	require.Equal(t, uint64(5), m.Get("/ndn/bob", 150))
+
+	// Test editing the value directly
+	m["/ndn/alice"][0].Value = 138
+	require.Equal(t, uint64(138), m.Get("/ndn/alice", 100))
 }
 
 func TestSvMapNewer(t *testing.T) {

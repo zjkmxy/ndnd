@@ -1,15 +1,11 @@
 package sync
 
 import (
-	gosync "sync"
-
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
 // SimplePs is a simple Pub/Sub system.
 type SimplePs[V any] struct {
-	// mutex protects the instance.
-	mutex gosync.RWMutex
 	// subs is the list of subscribers.
 	subs map[string]SimplePsSub[V]
 }
@@ -32,9 +28,6 @@ func (ps *SimplePs[V]) Subscribe(prefix enc.Name, callback func(V)) error {
 		panic("Callback is required for subscription")
 	}
 
-	ps.mutex.Lock()
-	defer ps.mutex.Unlock()
-
 	ps.subs[prefix.String()] = SimplePsSub[V]{
 		Prefix:   prefix,
 		Callback: callback,
@@ -44,19 +37,24 @@ func (ps *SimplePs[V]) Subscribe(prefix enc.Name, callback func(V)) error {
 }
 
 func (ps *SimplePs[V]) Unsubscribe(prefix enc.Name) {
-	ps.mutex.Lock()
-	defer ps.mutex.Unlock()
-
 	delete(ps.subs, prefix.String())
 }
 
-func (ps *SimplePs[V]) Publish(name enc.Name, data V) {
-	ps.mutex.RLock()
-	defer ps.mutex.RUnlock()
-
+func (ps *SimplePs[V]) Subs(prefix enc.Name) (subs []func(V)) {
 	for _, sub := range ps.subs {
-		if sub.Prefix.IsPrefix(name) {
-			sub.Callback(data)
+		if sub.Prefix.IsPrefix(prefix) {
+			subs = append(subs, sub.Callback)
 		}
+	}
+	return subs
+}
+
+func (ps *SimplePs[V]) HasSub(prefix enc.Name) bool {
+	return len(ps.Subs(prefix)) > 0
+}
+
+func (ps *SimplePs[V]) Publish(name enc.Name, data V) {
+	for _, sub := range ps.Subs(name) {
+		sub(data)
 	}
 }

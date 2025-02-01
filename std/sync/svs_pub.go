@@ -10,6 +10,10 @@ type SvsPub struct {
 	Content enc.Wire
 	// Full name of the data.
 	DataName enc.Name
+	// Boot time of the publisher.
+	BootTime uint64
+	// Sequence number of the publisher.
+	SeqNum uint64
 }
 
 // Bytes gets the bytes of the data publication.

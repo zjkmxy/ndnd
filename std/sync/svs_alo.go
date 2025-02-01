@@ -25,14 +25,15 @@ type SvsALO struct {
 	wmutex gosync.Mutex
 
 	// state is the current state.
-	state SvMap[SeqFetchState]
+	state SvMap[seqFetchState]
+	// delivered is the delivered state vector.
+	// owned by the run() thread (no-lock)
+	delivered SvMap[uint64]
 	// nodePs is the Pub/Sub coordinator for publisher prefixes
 	nodePs SimplePs[SvsPub]
-	// dataPs is the Pub/Sub coordinator for data prefixes
-	dataPs SimplePs[SvsPub]
 
 	// outpipe is the channel for delivering data.
-	outpipe chan SvsPub
+	outpipe chan svsPubOut
 	// stop is the stop signal.
 	stop chan struct{}
 }
@@ -58,11 +59,11 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		mutex:  gosync.Mutex{},
 		wmutex: gosync.Mutex{},
 
-		state:  NewSvMap[SeqFetchState](0),
-		nodePs: NewSimplePs[SvsPub](),
-		dataPs: NewSimplePs[SvsPub](),
+		state:     NewSvMap[seqFetchState](0),
+		delivered: NewSvMap[uint64](0),
+		nodePs:    NewSimplePs[SvsPub](),
 
-		outpipe: make(chan SvsPub, 256),
+		outpipe: make(chan svsPubOut, 256),
 		stop:    make(chan struct{}),
 	}
 
@@ -98,11 +99,31 @@ func (s *SvsALO) Publish(content enc.Wire) (enc.Name, error) {
 // Only one subscriber per prefix is allowed.
 // If the prefix is already subscribed, the callback is replaced.
 func (s *SvsALO) SubscribePublisher(prefix enc.Name, callback func(SvsPub)) error {
-	return s.nodePs.Subscribe(prefix, callback)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	err := s.nodePs.Subscribe(prefix, callback)
+	if err != nil {
+		return err
+	}
+
+	// Trigger a fetch for all known producers matching this prefix.
+	for _, node := range s.state.Names() {
+		if prefix.IsPrefix(node) {
+			s.consumeCheck(node, node.String())
+		}
+	}
+
+	return nil
 }
 
 // UnsubscribePublisher unsubscribes removes callbacks added with subscribe.
+// The callback may still receive messages for some time after this call.
+// The application must handle these messages correctly.
 func (s *SvsALO) UnsubscribePublisher(prefix enc.Name) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	s.nodePs.Unsubscribe(prefix)
 }
 
@@ -113,8 +134,8 @@ func (s *SvsALO) run() {
 		select {
 		case <-s.stop:
 			return
-		case pub := <-s.outpipe:
-			s.nodePs.Publish(pub.Publisher, pub)
+		case out := <-s.outpipe:
+			s.deliver(out)
 		}
 	}
 }
@@ -132,4 +153,17 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 
 	// Check if we want to queue new fetch for this update.
 	s.consumeCheck(update.Name, hash)
+}
+
+func (s *SvsALO) deliver(out svsPubOut) {
+	for _, sub := range out.subs {
+		sub(out.pub)
+	}
+
+	// Commit the successful delivery
+	hash := out.pub.Publisher.String()
+	prev := s.delivered.Get(hash, out.pub.BootTime)
+	if out.pub.SeqNum > prev {
+		s.delivered.Set(hash, out.pub.BootTime, out.pub.SeqNum)
+	}
 }
