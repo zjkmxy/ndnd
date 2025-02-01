@@ -111,7 +111,7 @@ func (s *SvsALO) SubscribePublisher(prefix enc.Name, callback func(SvsPub)) erro
 	}
 
 	// Trigger a fetch for all known producers matching this prefix.
-	for _, node := range s.state.Names() {
+	for node := range s.state.Iter() {
 		if prefix.IsPrefix(node) {
 			s.consumeCheck(node, node.String())
 		}

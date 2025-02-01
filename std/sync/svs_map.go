@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"iter"
 	"sort"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -77,13 +78,7 @@ func (m SvMap[V]) Encode(seq func(V) uint64) *spec_svs.StateVector {
 		Entries: make([]*spec_svs.StateVectorEntry, 0, len(m)),
 	}
 
-	for hash, vals := range m {
-		name, err := enc.NameFromStr(hash)
-		if err != nil {
-			log.Error(nil, "[BUG] invalid name in SvMap", "hash", hash)
-			continue
-		}
-
+	for name, vals := range m.Iter() {
 		entry := &spec_svs.StateVectorEntry{
 			Name:         name,
 			SeqNoEntries: make([]*spec_svs.SeqNoEntry, 0, len(vals)),
@@ -108,15 +103,17 @@ func (m SvMap[V]) Encode(seq func(V) uint64) *spec_svs.StateVector {
 	return sv
 }
 
-func (m SvMap[V]) Names() []enc.Name {
-	names := make([]enc.Name, 0, len(m))
-	for hash := range m {
-		name, err := enc.NameFromStr(hash)
-		if err != nil {
-			log.Error(nil, "[BUG] invalid name in SvMap", "hash", hash)
-			continue
+func (m SvMap[V]) Iter() iter.Seq2[enc.Name, []SvMapVal[V]] {
+	return func(yield func(enc.Name, []SvMapVal[V]) bool) {
+		for hash, val := range m {
+			name, err := enc.NameFromStr(hash)
+			if err != nil {
+				log.Error(nil, "[BUG] invalid name in SvMap", "hash", hash)
+				continue
+			}
+			if !yield(name, val) {
+				return
+			}
 		}
-		names = append(names, name)
 	}
-	return names
 }
