@@ -12,7 +12,7 @@ import (
 // Max pending objects for a producer.
 const SvsAloMaxPending = 10
 
-type SvsDataState struct {
+type svsDataState struct {
 	// Known is the fetched sequence number.
 	// Data is handed off to outgoing pipe.
 	Known uint64
@@ -67,7 +67,7 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 
 	// We don't get notified of changes to our own state.
 	// So we need to update the state vector ourselves.
-	s.state.Set(s.opts.Name.String(), boot, SvsDataState{
+	s.state.Set(s.opts.Name.String(), boot, svsDataState{
 		Known:   seq,
 		Latest:  seq,
 		Pending: seq,

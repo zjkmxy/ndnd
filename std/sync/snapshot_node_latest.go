@@ -13,13 +13,13 @@ func (s *SnapshotNodeLatest) Snapshot() Snapshot {
 	return s
 }
 
-func (s *SnapshotNodeLatest) OnUpdate(args SnapshotOnUpdateArgs) {
+func (s *SnapshotNodeLatest) onUpdate(args snapshotOnUpdateArgs) {
 	// We only care about the latest boot.
 	// For all other states, make sure the fetch is skipped.
-	entries := args.State[args.NodeHash]
+	entries := args.state[args.nodeHash]
 	for i := range entries {
 		if i == len(entries)-1 {
-			if args.Boot == entries[i].Boot {
+			if args.boot == entries[i].Boot {
 				break // latest boot update
 			}
 			return // old boot update
@@ -32,10 +32,10 @@ func (s *SnapshotNodeLatest) OnUpdate(args SnapshotOnUpdateArgs) {
 		}
 	}
 
-	if args.Updated.Latest-args.Updated.Pending > ssthresh {
+	if args.entry.Latest-args.entry.Pending > ssthresh {
 
 	}
 }
 
-func (s *SnapshotNodeLatest) SetCallback(enc.Name) {
+func (s *SnapshotNodeLatest) setCallback(enc.Name) {
 }

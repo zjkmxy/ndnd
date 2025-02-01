@@ -22,7 +22,7 @@ type SvsALO struct {
 	wmutex gosync.Mutex
 
 	// state is the current state.
-	state SvMap[SvsDataState]
+	state SvMap[svsDataState]
 	// delivered is the delivered state vector.
 	// owned by the run() thread (no-lock)
 	delivered SvMap[uint64]
@@ -58,7 +58,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		mutex:  gosync.Mutex{},
 		wmutex: gosync.Mutex{},
 
-		state:     NewSvMap[SvsDataState](0),
+		state:     NewSvMap[svsDataState](0),
 		delivered: NewSvMap[uint64](0),
 		nodePs:    NewSimplePs[SvsPub](),
 
@@ -78,7 +78,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	// Initialize the state vector with our own state.
 	boot := s.svs.GetBootTime()
 	seq := s.svs.GetSeqNo(s.opts.Name)
-	s.state.Set(s.opts.Name.String(), boot, SvsDataState{
+	s.state.Set(s.opts.Name.String(), boot, svsDataState{
 		Known:   seq,
 		Latest:  seq,
 		Pending: seq,
@@ -174,12 +174,12 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 	}
 
 	// Check with the snapshot strategy
-	s.opts.Snapshot.OnUpdate(SnapshotOnUpdateArgs{
-		State:    s.state,
-		Node:     update.Name,
-		NodeHash: hash,
-		Boot:     update.Boot,
-		Updated:  entry,
+	s.opts.Snapshot.onUpdate(snapshotOnUpdateArgs{
+		state:    s.state,
+		node:     update.Name,
+		nodeHash: hash,
+		boot:     update.Boot,
+		entry:    entry,
 	})
 
 	// Check if we want to queue new fetch for this update.
