@@ -6,7 +6,6 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	def "github.com/named-data/ndnd/std/encoding/tests/gen_signature"
-	"github.com/named-data/ndnd/std/utils"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +16,7 @@ func TestT1(t *testing.T) {
 	// Normal case (w/ & w/o sig.)
 	f := &def.T1{
 		H1: 1,
-		H2: utils.IdPtr[uint64](2),
+		H2: enc.Some[uint64](2),
 		C: enc.Wire{
 			[]byte{0x01, 0x02, 0x03},
 			[]byte{0x04, 0x05, 0x06},
@@ -59,7 +58,7 @@ func TestT1(t *testing.T) {
 	// Single wire
 	f = &def.T1{
 		H1: 4,
-		H2: nil,
+		H2: enc.None[uint64](),
 		C: enc.Wire{
 			[]byte{0x01, 0x02, 0x03},
 		},
@@ -76,7 +75,7 @@ func TestT1(t *testing.T) {
 	f2, cov2, err = def.ReadT1(enc.NewFastReader(wire))
 	require.NoError(t, err)
 	require.Equal(t, f.H1, f2.H1)
-	require.True(t, f2.H2 == nil)
+	require.False(t, f2.H2.IsSet())
 	require.Equal(t, f.C.Join(), f2.C.Join())
 	require.Equal(t, []byte{0x01}, f2.Sig.Join())
 	require.Equal(t, cov.Join(), cov2.Join())
@@ -84,7 +83,7 @@ func TestT1(t *testing.T) {
 	// Empty wire
 	f = &def.T1{
 		H1: 0,
-		H2: nil,
+		H2: enc.None[uint64](),
 		C:  enc.Wire{},
 	}
 	wire, cov = f.Encode(1, []byte{0x01})
@@ -99,7 +98,7 @@ func TestT1(t *testing.T) {
 	f2, cov2, err = def.ReadT1(enc.NewFastReader(wire))
 	require.NoError(t, err)
 	require.Equal(t, f.H1, f2.H1)
-	require.True(t, f2.H2 == nil)
+	require.False(t, f2.H2.IsSet())
 	require.Equal(t, enc.Wire{}, f2.C)
 	require.Equal(t, []byte{0x01}, f2.Sig.Join())
 	require.Equal(t, cov.Join(), cov2.Join())
@@ -107,7 +106,7 @@ func TestT1(t *testing.T) {
 	// Nil case
 	f = &def.T1{
 		H1: 0,
-		H2: nil,
+		H2: enc.None[uint64](),
 		C:  nil,
 	}
 	wire, cov = f.Encode(1, []byte{0x01})
@@ -121,7 +120,7 @@ func TestT1(t *testing.T) {
 	f2, cov2, err = def.ReadT1(enc.NewFastReader(wire))
 	require.NoError(t, err)
 	require.Equal(t, f.H1, f2.H1)
-	require.True(t, f2.H2 == nil)
+	require.False(t, f2.H2.IsSet())
 	require.True(t, f2.C == nil)
 	require.Equal(t, []byte{0x01}, f2.Sig.Join())
 	require.Equal(t, 0, len(cov2.Join()))

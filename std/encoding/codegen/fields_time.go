@@ -22,9 +22,9 @@ func NewTimeField(name string, typeNum uint64, annotation string, _ *TlvModel) (
 func (f *TimeField) GenEncodingLength() (string, error) {
 	g := strErrBuf{}
 	if f.opt {
-		g.printlnf("if value.%s != nil {", f.name)
+		g.printlnf("if optval, ok := value.%s.Get(); ok {", f.name)
 		g.printlne(GenTypeNumLen(f.TypeNum()))
-		g.printlne(GenNaturalNumberLen("uint64(*value."+f.name+"/time.Millisecond)", false))
+		g.printlne(GenNaturalNumberLen("uint64(optval/time.Millisecond)", false))
 		g.printlnf("}")
 	} else {
 		g.printlne(GenTypeNumLen(f.TypeNum()))
@@ -40,9 +40,9 @@ func (f *TimeField) GenEncodingWirePlan() (string, error) {
 func (f *TimeField) GenEncodeInto() (string, error) {
 	g := strErrBuf{}
 	if f.opt {
-		g.printlnf("if value.%s != nil {", f.name)
+		g.printlnf("if optval, ok := value.%s.Get(); ok {", f.name)
 		g.printlne(GenEncodeTypeNum(f.typeNum))
-		g.printlne(GenNaturalNumberEncode("uint64(*value."+f.name+"/time.Millisecond)", false))
+		g.printlne(GenNaturalNumberEncode("uint64(optval/time.Millisecond)", false))
 		g.printlnf("}")
 	} else {
 		g.printlne(GenEncodeTypeNum(f.typeNum))
@@ -57,8 +57,8 @@ func (f *TimeField) GenReadFrom() (string, error) {
 	g.printlnf("timeInt := uint64(0)")
 	g.printlne(GenNaturalNumberDecode("timeInt"))
 	if f.opt {
-		g.printlnf("tempVal := time.Duration(timeInt) * time.Millisecond")
-		g.printlnf("value.%s = &tempVal", f.name)
+		g.printlnf("optval := time.Duration(timeInt) * time.Millisecond")
+		g.printlnf("value.%s.Set(optval)", f.name)
 	} else {
 		g.printlnf("value.%s = time.Duration(timeInt) * time.Millisecond", f.name)
 	}
@@ -68,7 +68,7 @@ func (f *TimeField) GenReadFrom() (string, error) {
 
 func (f *TimeField) GenSkipProcess() (string, error) {
 	if f.opt {
-		return "value." + f.name + " = nil", nil
+		return fmt.Sprintf("value.%s.Unset()", f.name), nil
 	} else {
 		return fmt.Sprintf("err = enc.ErrSkipRequired{Name: \"%s\", TypeNum: %d}", f.name, f.typeNum), nil
 	}

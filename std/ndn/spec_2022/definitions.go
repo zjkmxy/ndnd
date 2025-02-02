@@ -21,9 +21,9 @@ type Links struct {
 
 type MetaInfo struct {
 	//+field:natural:optional
-	ContentType *uint64 `tlv:"0x18"`
+	ContentType enc.Optional[uint64] `tlv:"0x18"`
 	//+field:time:optional
-	FreshnessPeriod *time.Duration `tlv:"0x19"`
+	FreshnessPeriod enc.Optional[time.Duration] `tlv:"0x19"`
 	//+field:binary
 	FinalBlockID []byte `tlv:"0x1a"`
 }
@@ -55,9 +55,9 @@ type SignatureInfo struct {
 	//+field:binary
 	SignatureNonce []byte `tlv:"0x26"`
 	//+field:time:optional
-	SignatureTime *time.Duration `tlv:"0x28"`
+	SignatureTime enc.Optional[time.Duration] `tlv:"0x28"`
 	//+field:natural:optional
-	SignatureSeqNum *uint64 `tlv:"0x2a"`
+	SignatureSeqNum enc.Optional[uint64] `tlv:"0x2a"`
 	//+field:struct:ValidityPeriod
 	ValidityPeriod *ValidityPeriod `tlv:"0xfd"`
 	//+field:struct:CertAdditionalDescription
@@ -86,21 +86,21 @@ type LpPacket struct {
 	//+field:fixedUint:uint64:optional
 	Sequence *uint64 `tlv:"0x51"`
 	//+field:natural:optional
-	FragIndex *uint64 `tlv:"0x52"`
+	FragIndex enc.Optional[uint64] `tlv:"0x52"`
 	//+field:natural:optional
-	FragCount *uint64 `tlv:"0x53"`
+	FragCount enc.Optional[uint64] `tlv:"0x53"`
 	//+field:binary
 	PitToken []byte `tlv:"0x62"`
 	//+field:struct:NetworkNack
 	Nack *NetworkNack `tlv:"0x0320"`
 	//+field:natural:optional
-	IncomingFaceId *uint64 `tlv:"0x032C"`
+	IncomingFaceId enc.Optional[uint64] `tlv:"0x032C"`
 	//+field:natural:optional
-	NextHopFaceId *uint64 `tlv:"0x0330"`
+	NextHopFaceId enc.Optional[uint64] `tlv:"0x0330"`
 	//+field:struct:CachePolicy
 	CachePolicy *CachePolicy `tlv:"0x0334"`
 	//+field:natural:optional
-	CongestionMark *uint64 `tlv:"0x0340"`
+	CongestionMark enc.Optional[uint64] `tlv:"0x0340"`
 	//+field:fixedUint:uint64:optional
 	Ack *uint64 `tlv:"0x0344"`
 	//+field:fixedUint:uint64:optional
@@ -132,7 +132,7 @@ type Interest struct {
 	//+field:fixedUint:uint32:optional
 	NonceV *uint32 `tlv:"0x0a"`
 	//+field:time:optional
-	InterestLifetimeV *time.Duration `tlv:"0x0c"`
+	InterestLifetimeV enc.Optional[time.Duration] `tlv:"0x0c"`
 	//+field:fixedUint:byte:optional
 	HopLimitV *byte `tlv:"0x22"`
 

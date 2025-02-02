@@ -106,7 +106,7 @@ func (e *Engine) onPacket(frame []byte) error {
 
 	var nackReason uint64 = spec.NackReasonNone
 	var pitToken []byte = nil
-	var incomingFaceId *uint64 = nil
+	var incomingFaceId enc.Optional[uint64]
 	var raw enc.Wire = nil
 
 	if hasLogTrace() {
@@ -126,7 +126,7 @@ func (e *Engine) onPacket(frame []byte) error {
 	// First check LpPacket, and do further parse.
 	if pkt.LpPacket != nil {
 		lpPkt := pkt.LpPacket
-		if lpPkt.FragIndex != nil || lpPkt.FragCount != nil {
+		if lpPkt.FragIndex.IsSet() || lpPkt.FragCount.IsSet() {
 			log.Warn(e, "Fragmented LpPackets are not supported - DROP")
 			return nil
 		}
@@ -176,7 +176,7 @@ func (e *Engine) onPacket(frame []byte) error {
 			RawInterest:    raw,
 			SigCovered:     ctx.Interest_context.SigCovered(),
 			PitToken:       pitToken,
-			IncomingFaceId: incomingFaceId,
+			IncomingFaceId: incomingFaceId.Ptr(),
 		})
 	} else if pkt.Data != nil {
 		log.Trace(e, "Data received", "name", pkt.Data.Name())
@@ -479,7 +479,7 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 		lpPkt := &spec.Packet{
 			LpPacket: &spec.LpPacket{
 				Fragment:      wire,
-				NextHopFaceId: interest.Config.NextHopId,
+				NextHopFaceId: enc.OptionPtr(interest.Config.NextHopId),
 			},
 		}
 		encoder := spec.PacketEncoder{}

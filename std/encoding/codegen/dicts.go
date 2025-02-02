@@ -5,8 +5,8 @@ import "text/template"
 func (f *NaturalField) GenToDict() (string, error) {
 	g := strErrBuf{}
 	if f.opt {
-		g.printlnf("if value.%s != nil {", f.name)
-		g.printlnf("\tdict[\"%s\"] = *value.%s", f.name, f.name)
+		g.printlnf("if optval, ok := value.%s.Get(); ok {", f.name)
+		g.printlnf("\tdict[\"%s\"] = optval", f.name)
 		g.printlnf("}")
 	} else {
 		g.printlnf("dict[\"%s\"] = value.%s", f.name, f.name)
@@ -19,7 +19,7 @@ func (f *NaturalField) GenFromDict() (string, error) {
 	g.printlnf("if vv, ok := dict[\"%s\"]; ok {", f.name)
 	g.printlnf("\tif v, ok := vv.(uint64); ok {")
 	if f.opt {
-		g.printlnf("\t\tvalue.%s = &v", f.name)
+		g.printlnf("\t\tvalue.%s.Set(v)", f.name)
 	} else {
 		g.printlnf("\t\tvalue.%s = v", f.name)
 	}
@@ -28,7 +28,7 @@ func (f *NaturalField) GenFromDict() (string, error) {
 	g.printlnf("\t}")
 	g.printlnf("} else {")
 	if f.opt {
-		g.printlnf("\tvalue.%s = nil", f.name)
+		g.printlnf("\tvalue.%s.Unset()", f.name)
 	} else {
 		g.printlnf("err = enc.ErrSkipRequired{Name: \"%s\", TypeNum: %d}", f.name, f.typeNum)
 	}

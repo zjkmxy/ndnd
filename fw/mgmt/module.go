@@ -7,7 +7,10 @@
 
 package mgmt
 
-import spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+import (
+	enc "github.com/named-data/ndnd/std/encoding"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+)
 
 // Module represents a management module
 type Module interface {
@@ -20,5 +23,5 @@ type Module interface {
 type Interest struct {
 	spec.Interest
 	pitToken []byte
-	inFace   *uint64
+	inFace   enc.Optional[uint64]
 }

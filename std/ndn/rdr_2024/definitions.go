@@ -23,19 +23,19 @@ type MetaData struct {
 	//+field:binary
 	FinalBlockID []byte `tlv:"0x1a"`
 	//+field:natural:optional
-	SegmentSize *uint64 `tlv:"0xf500"`
+	SegmentSize enc.Optional[uint64] `tlv:"0xf500"`
 	//+field:natural:optional
-	Size *uint64 `tlv:"0xf502"`
+	Size enc.Optional[uint64] `tlv:"0xf502"`
 	//+field:natural:optional
-	Mode *uint64 `tlv:"0xf504"`
+	Mode enc.Optional[uint64] `tlv:"0xf504"`
 	//+field:natural:optional
-	Atime *uint64 `tlv:"0xf506"`
+	Atime enc.Optional[uint64] `tlv:"0xf506"`
 	//+field:natural:optional
-	Btime *uint64 `tlv:"0xf508"`
+	Btime enc.Optional[uint64] `tlv:"0xf508"`
 	//+field:natural:optional
-	Ctime *uint64 `tlv:"0xf50a"`
+	Ctime enc.Optional[uint64] `tlv:"0xf50a"`
 	//+field:natural:optional
-	Mtime *uint64 `tlv:"0xf50c"`
+	Mtime enc.Optional[uint64] `tlv:"0xf50c"`
 	//+field:string:optional
 	ObjectType *string `tlv:"0xf50e"`
 }

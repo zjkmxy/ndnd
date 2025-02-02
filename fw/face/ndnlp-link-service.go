@@ -178,9 +178,9 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 	// Congestion marking
 	congestionMark := pkt.CongestionMark // from upstream
-	if l.checkCongestion(wire) && congestionMark == nil {
+	if l.checkCongestion(wire) && !congestionMark.IsSet() {
 		core.Log.Warn(l, "Marking congestion")
-		congestionMark = utils.IdPtr(uint64(1)) // ours
+		congestionMark = enc.Some(uint64(1)) // ours
 	}
 
 	// Calculate effective MTU after accounting for packet-specific overhead
@@ -191,7 +191,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 		}
 		effectiveMtu -= pitTokenOverhead
 	}
-	if congestionMark != nil {
+	if congestionMark.IsSet() {
 		effectiveMtu -= congestionMarkOverhead
 	}
 
@@ -205,7 +205,6 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 		// Split up fragment
 		fragCount := (len(wire) + effectiveMtu - 1) / effectiveMtu
-		fragCountPtr := utils.IdPtr(uint64(fragCount))
 		fragments = make([]*spec.LpPacket, fragCount)
 
 		reader := enc.NewFastBufReader(wire)
@@ -226,8 +225,8 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 			fragments[i] = &spec.LpPacket{
 				Fragment:  frag,
 				Sequence:  utils.IdPtr(l.nextSequence),
-				FragIndex: utils.IdPtr(uint64(i)),
-				FragCount: fragCountPtr,
+				FragIndex: enc.Some(uint64(i)),
+				FragCount: enc.Some(uint64(fragCount)),
 			}
 		}
 	} else {
@@ -244,11 +243,11 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 		// Incoming face indication
 		if l.options.IsIncomingFaceIndicationEnabled {
-			fragment.IncomingFaceId = utils.IdPtr(out.InFace)
+			fragment.IncomingFaceId = enc.Some(out.InFace)
 		}
 
 		// Congestion marking
-		if congestionMark != nil {
+		if congestionMark.IsSet() {
 			fragment.CongestionMark = congestionMark
 		}
 
@@ -308,12 +307,12 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		// Reassembly
 		if l.options.IsReassemblyEnabled && LP.Sequence != nil {
 			fragIndex := uint64(0)
-			if LP.FragIndex != nil {
-				fragIndex = *LP.FragIndex
+			if v, ok := LP.FragIndex.Get(); ok {
+				fragIndex = v
 			}
 			fragCount := uint64(1)
-			if LP.FragCount != nil {
-				fragCount = *LP.FragCount
+			if v, ok := LP.FragCount.Get(); ok {
+				fragCount = v
 			}
 			baseSequence := *LP.Sequence - fragIndex
 
@@ -327,7 +326,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 					return
 				}
 			}
-		} else if LP.FragCount != nil || LP.FragIndex != nil {
+		} else if LP.FragCount.IsSet() || LP.FragIndex.IsSet() {
 			core.Log.Warn(l, "Received NDNLPv2 frame with fragmentation fields but reassembly disabled - DROP")
 			return
 		}
@@ -336,7 +335,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		pkt.CongestionMark = LP.CongestionMark
 
 		// Consumer-controlled forwarding (NextHopFaceId)
-		if l.options.IsConsumerControlledForwardingEnabled && LP.NextHopFaceId != nil {
+		if l.options.IsConsumerControlledForwardingEnabled {
 			pkt.NextHopFaceID = LP.NextHopFaceId
 		}
 

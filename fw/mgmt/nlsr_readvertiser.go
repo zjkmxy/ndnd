@@ -7,7 +7,6 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	spec_mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 // Simple readvertiser that echoes the register command to NLSR.
@@ -44,8 +43,8 @@ func (r *NlsrReadvertiser) Announce(name enc.Name, route *table.Route) {
 
 	params := &spec_mgmt.ControlArgs{
 		Name:   name,
-		Origin: utils.IdPtr(route.Origin),
-		Cost:   utils.IdPtr(route.Cost),
+		Origin: enc.Some(route.Origin),
+		Cost:   enc.Some(route.Cost),
 	}
 
 	nameParams := &spec_mgmt.ControlParameters{
@@ -81,7 +80,7 @@ func (r *NlsrReadvertiser) Withdraw(name enc.Name, route *table.Route) {
 
 	params := &spec_mgmt.ControlArgs{
 		Name:   name,
-		Origin: utils.IdPtr(route.Origin),
+		Origin: enc.Some(route.Origin),
 	}
 
 	nameParams := &spec_mgmt.ControlParameters{

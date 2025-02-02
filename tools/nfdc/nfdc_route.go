@@ -35,8 +35,8 @@ func (t *Tool) ExecRouteList(_ *cobra.Command, args []string) {
 	for _, entry := range status.Entries {
 		for _, route := range entry.Routes {
 			expiry := "never"
-			if route.ExpirationPeriod != nil {
-				expiry = (time.Duration(*route.ExpirationPeriod) * time.Millisecond).String()
+			if rexpiry, ok := route.ExpirationPeriod.Get(); ok {
+				expiry = (time.Duration(rexpiry) * time.Millisecond).String()
 			}
 
 			flagList := make([]string, 0)

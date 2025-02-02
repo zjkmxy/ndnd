@@ -75,8 +75,8 @@ func TestOptField(t *testing.T) {
 	tu.SetT(t)
 
 	f := gen_basic.OptField{
-		Number: utils.IdPtr[uint64](1),
-		Time:   utils.IdPtr(2 * time.Second),
+		Number: enc.Some[uint64](1),
+		Time:   enc.Some(2 * time.Second),
 		Binary: []byte{3, 4, 5},
 		Bool:   true,
 	}
@@ -93,8 +93,8 @@ func TestOptField(t *testing.T) {
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.OptField{
-		Number: nil,
-		Time:   nil,
+		Number: enc.None[uint64](),
+		Time:   enc.None[time.Duration](),
 		Binary: nil,
 		Bool:   false,
 	}
@@ -106,8 +106,8 @@ func TestOptField(t *testing.T) {
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.OptField{
-		Number: utils.IdPtr[uint64](0),
-		Time:   utils.IdPtr(0 * time.Second),
+		Number: enc.Some[uint64](0),
+		Time:   enc.Some(0 * time.Second),
 		Binary: []byte{},
 	}
 	buf = f.Bytes()

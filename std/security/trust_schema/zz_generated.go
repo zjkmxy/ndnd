@@ -22,9 +22,9 @@ func (encoder *LvsUserFnArgEncoder) Init(value *LvsUserFnArg) {
 		l += uint(enc.TLNum(len(value.Value)).EncodingLength())
 		l += uint(len(value.Value))
 	}
-	if value.Tag != nil {
+	if optval, ok := value.Tag.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Tag).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	encoder.length = l
 
@@ -45,11 +45,11 @@ func (encoder *LvsUserFnArgEncoder) EncodeInto(value *LvsUserFnArg, buf []byte) 
 		copy(buf[pos:], value.Value)
 		pos += uint(len(value.Value))
 	}
-	if value.Tag != nil {
+	if optval, ok := value.Tag.Get(); ok {
 		buf[pos] = byte(35)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Tag).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -107,8 +107,8 @@ func (context *LvsUserFnArgParsingContext) Parse(reader enc.FastReader, ignoreCr
 					handled = true
 					handled_Tag = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -119,10 +119,10 @@ func (context *LvsUserFnArgParsingContext) Parse(reader enc.FastReader, ignoreCr
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Tag = &tempVal
+						value.Tag.Set(optval)
 					}
 				}
 			default:
@@ -147,7 +147,7 @@ func (context *LvsUserFnArgParsingContext) Parse(reader enc.FastReader, ignoreCr
 		value.Value = nil
 	}
 	if !handled_Tag && err == nil {
-		value.Tag = nil
+		value.Tag.Unset()
 	}
 
 	if err != nil {
@@ -422,9 +422,9 @@ func (encoder *LvsConstraintOptionEncoder) Init(value *LvsConstraintOption) {
 		l += uint(enc.TLNum(len(value.Value)).EncodingLength())
 		l += uint(len(value.Value))
 	}
-	if value.Tag != nil {
+	if optval, ok := value.Tag.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Tag).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.Fn != nil {
 		l += 1
@@ -451,11 +451,11 @@ func (encoder *LvsConstraintOptionEncoder) EncodeInto(value *LvsConstraintOption
 		copy(buf[pos:], value.Value)
 		pos += uint(len(value.Value))
 	}
-	if value.Tag != nil {
+	if optval, ok := value.Tag.Get(); ok {
 		buf[pos] = byte(35)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Tag).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -523,8 +523,8 @@ func (context *LvsConstraintOptionParsingContext) Parse(reader enc.FastReader, i
 					handled = true
 					handled_Tag = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -535,10 +535,10 @@ func (context *LvsConstraintOptionParsingContext) Parse(reader enc.FastReader, i
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Tag = &tempVal
+						value.Tag.Set(optval)
 					}
 				}
 			case 49:
@@ -569,7 +569,7 @@ func (context *LvsConstraintOptionParsingContext) Parse(reader enc.FastReader, i
 		value.Value = nil
 	}
 	if !handled_Tag && err == nil {
-		value.Tag = nil
+		value.Tag.Unset()
 	}
 	if !handled_Fn && err == nil {
 		value.Fn = nil
@@ -1333,9 +1333,9 @@ func (encoder *LvsNodeEncoder) Init(value *LvsNode) {
 	l := uint(0)
 	l += 1
 	l += uint(1 + enc.Nat(value.Id).EncodingLength())
-	if value.Parent != nil {
+	if optval, ok := value.Parent.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Parent).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.RuleName != nil {
 		for seq_i, seq_v := range value.RuleName {
@@ -1438,11 +1438,11 @@ func (encoder *LvsNodeEncoder) EncodeInto(value *LvsNode, buf []byte) {
 
 	buf[pos] = byte(enc.Nat(value.Id).EncodeInto(buf[pos+1:]))
 	pos += uint(1 + buf[pos])
-	if value.Parent != nil {
+	if optval, ok := value.Parent.Get(); ok {
 		buf[pos] = byte(87)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Parent).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -1610,8 +1610,8 @@ func (context *LvsNodeParsingContext) Parse(reader enc.FastReader, ignoreCritica
 					handled = true
 					handled_Parent = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1622,10 +1622,10 @@ func (context *LvsNodeParsingContext) Parse(reader enc.FastReader, ignoreCritica
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Parent = &tempVal
+						value.Parent.Set(optval)
 					}
 				}
 			case 41:
@@ -1744,7 +1744,7 @@ func (context *LvsNodeParsingContext) Parse(reader enc.FastReader, ignoreCritica
 		err = enc.ErrSkipRequired{Name: "Id", TypeNum: 37}
 	}
 	if !handled_Parent && err == nil {
-		value.Parent = nil
+		value.Parent.Unset()
 	}
 	if !handled_RuleName && err == nil {
 		// sequence - skip
@@ -1792,9 +1792,9 @@ type LvsTagSymbolParsingContext struct {
 func (encoder *LvsTagSymbolEncoder) Init(value *LvsTagSymbol) {
 
 	l := uint(0)
-	if value.Tag != nil {
+	if optval, ok := value.Tag.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Tag).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.Ident != nil {
 		l += 1
@@ -1813,11 +1813,11 @@ func (encoder *LvsTagSymbolEncoder) EncodeInto(value *LvsTagSymbol, buf []byte) 
 
 	pos := uint(0)
 
-	if value.Tag != nil {
+	if optval, ok := value.Tag.Get(); ok {
 		buf[pos] = byte(35)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Tag).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -1875,8 +1875,8 @@ func (context *LvsTagSymbolParsingContext) Parse(reader enc.FastReader, ignoreCr
 					handled = true
 					handled_Tag = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1887,10 +1887,10 @@ func (context *LvsTagSymbolParsingContext) Parse(reader enc.FastReader, ignoreCr
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Tag = &tempVal
+						value.Tag.Set(optval)
 					}
 				}
 			case 41:
@@ -1919,7 +1919,7 @@ func (context *LvsTagSymbolParsingContext) Parse(reader enc.FastReader, ignoreCr
 	err = nil
 
 	if !handled_Tag && err == nil {
-		value.Tag = nil
+		value.Tag.Unset()
 	}
 	if !handled_Ident && err == nil {
 		value.Ident = nil

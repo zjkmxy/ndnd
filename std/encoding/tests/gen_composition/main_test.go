@@ -5,7 +5,6 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	def "github.com/named-data/ndnd/std/encoding/tests/gen_composition"
-	"github.com/named-data/ndnd/std/utils"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -106,7 +105,7 @@ func TestNestedWire(t *testing.T) {
 				[]byte{1, 2, 3},
 				[]byte{4, 5, 6},
 			},
-			Num: utils.IdPtr[uint64](255),
+			Num: enc.Some[uint64](255),
 		},
 		N: 13,
 		W2: &def.InnerWire2{
@@ -135,7 +134,7 @@ func TestNestedWire(t *testing.T) {
 	f = def.NestedWire{
 		W1: &def.InnerWire1{
 			Wire1: enc.Wire{},
-			Num:   nil,
+			Num:   enc.None[uint64](),
 		},
 		N: 0,
 		W2: &def.InnerWire2{
@@ -159,7 +158,7 @@ func TestNestedWire(t *testing.T) {
 	f = def.NestedWire{
 		W1: &def.InnerWire1{
 			Wire1: nil,
-			Num:   nil,
+			Num:   enc.None[uint64](),
 		},
 		N: 0,
 		W2: &def.InnerWire2{

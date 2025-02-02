@@ -55,9 +55,9 @@ func (d *Data) SetSigTime(t *time.Time) error {
 		d.SignatureInfo = &SignatureInfo{}
 	}
 	if t == nil {
-		d.SignatureInfo.SignatureTime = nil
+		d.SignatureInfo.SignatureTime.Unset()
 	} else {
-		d.SignatureInfo.SignatureTime = utils.IdPtr(time.Duration(t.UnixMilli()) * time.Millisecond)
+		d.SignatureInfo.SignatureTime = enc.Some(time.Duration(t.UnixMilli()) * time.Millisecond)
 	}
 	return nil
 }
@@ -99,8 +99,8 @@ func (d *Data) Name() enc.Name {
 }
 
 func (d *Data) ContentType() *ndn.ContentType {
-	if d.MetaInfo != nil && d.MetaInfo.ContentType != nil {
-		ret := ndn.ContentType(*d.MetaInfo.ContentType)
+	if d.MetaInfo != nil && d.MetaInfo.ContentType.IsSet() {
+		ret := ndn.ContentType(d.MetaInfo.ContentType.Unwrap())
 		return &ret
 	} else {
 		return nil
@@ -109,7 +109,7 @@ func (d *Data) ContentType() *ndn.ContentType {
 
 func (d *Data) Freshness() *time.Duration {
 	if d.MetaInfo != nil {
-		return d.MetaInfo.FreshnessPeriod
+		return d.MetaInfo.FreshnessPeriod.Ptr()
 	} else {
 		return nil
 	}
@@ -158,16 +158,16 @@ func (t *Interest) SigNonce() []byte {
 }
 
 func (t *Interest) SigTime() *time.Time {
-	if t.SignatureInfo != nil && t.SignatureInfo.SignatureTime != nil {
-		return utils.IdPtr(time.UnixMilli(t.SignatureInfo.SignatureTime.Milliseconds()))
+	if t.SignatureInfo != nil && t.SignatureInfo.SignatureTime.IsSet() {
+		return utils.IdPtr(time.UnixMilli(t.SignatureInfo.SignatureTime.Unwrap().Milliseconds()))
 	} else {
 		return nil
 	}
 }
 
 func (t *Interest) SigSeqNum() *uint64 {
-	if t.SignatureInfo != nil {
-		return t.SignatureInfo.SignatureSeqNum
+	if t.SignatureInfo != nil && t.SignatureInfo.SignatureSeqNum.IsSet() {
+		return utils.IdPtr(t.SignatureInfo.SignatureSeqNum.Unwrap())
 	} else {
 		return nil
 	}
@@ -213,7 +213,7 @@ func (t *Interest) Nonce() *uint64 {
 }
 
 func (t *Interest) Lifetime() *time.Duration {
-	return t.InterestLifetimeV
+	return t.InterestLifetimeV.Ptr()
 }
 
 func (t *Interest) HopLimit() *uint {
@@ -243,8 +243,8 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 	data := &Data{
 		NameV: name,
 		MetaInfo: &MetaInfo{
-			ContentType:     utils.ConvIntPtr[ndn.ContentType, uint64](config.ContentType),
-			FreshnessPeriod: config.Freshness,
+			ContentType:     enc.OptionPtr(utils.ConvIntPtr[ndn.ContentType, uint64](config.ContentType)),
+			FreshnessPeriod: enc.OptionPtr(config.Freshness),
 			FinalBlockID:    finalBlock,
 		},
 		ContentV:       content,
@@ -356,7 +356,7 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 		MustBeFreshV:          config.MustBeFresh,
 		ForwardingHintV:       forwardingHint,
 		NonceV:                utils.ConvIntPtr[uint64, uint32](config.Nonce),
-		InterestLifetimeV:     config.Lifetime,
+		InterestLifetimeV:     enc.OptionPtr(config.Lifetime),
 		HopLimitV:             utils.ConvIntPtr[uint, byte](config.HopLimit),
 		ApplicationParameters: appParam,
 		SignatureInfo:         nil,
@@ -380,8 +380,8 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 		interest.SignatureInfo = &SignatureInfo{
 			SignatureType:   uint64(signer.Type()),
 			SignatureNonce:  config.SigNonce,
-			SignatureTime:   config.SigTime,
-			SignatureSeqNum: config.SigSeqNo,
+			SignatureTime:   enc.OptionPtr(config.SigTime),
+			SignatureSeqNum: enc.OptionPtr(config.SigSeqNo),
 		}
 
 		if key := signer.KeyLocator(); key != nil {

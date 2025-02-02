@@ -18,9 +18,9 @@ type FakeMetaInfo struct {
 
 type OptField struct {
 	//+field:natural:optional
-	Number *uint64 `tlv:"0x18"`
+	Number enc.Optional[uint64] `tlv:"0x18"`
 	//+field:time:optional
-	Time *time.Duration `tlv:"0x19"`
+	Time enc.Optional[time.Duration] `tlv:"0x19"`
 	//+field:binary
 	Binary []byte `tlv:"0x1a"`
 	//+field:bool

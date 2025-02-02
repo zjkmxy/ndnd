@@ -909,9 +909,9 @@ func (encoder *InnerWire1Encoder) Init(value *InnerWire1) {
 		l += uint(enc.TLNum(encoder.Wire1_length).EncodingLength())
 		l += encoder.Wire1_length
 	}
-	if value.Num != nil {
+	if optval, ok := value.Num.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Num).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	encoder.length = l
 
@@ -927,9 +927,9 @@ func (encoder *InnerWire1Encoder) Init(value *InnerWire1) {
 			l = 0
 		}
 	}
-	if value.Num != nil {
+	if optval, ok := value.Num.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Num).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if l > 0 {
 		wirePlan = append(wirePlan, l)
@@ -970,11 +970,11 @@ func (encoder *InnerWire1Encoder) EncodeInto(value *InnerWire1, wire enc.Wire) {
 			}
 		}
 	}
-	if value.Num != nil {
+	if optval, ok := value.Num.Get(); ok {
 		buf[pos] = byte(2)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Num).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -1034,8 +1034,8 @@ func (context *InnerWire1ParsingContext) Parse(reader enc.FastReader, ignoreCrit
 					handled = true
 					handled_Num = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1046,10 +1046,10 @@ func (context *InnerWire1ParsingContext) Parse(reader enc.FastReader, ignoreCrit
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Num = &tempVal
+						value.Num.Set(optval)
 					}
 				}
 			default:
@@ -1074,7 +1074,7 @@ func (context *InnerWire1ParsingContext) Parse(reader enc.FastReader, ignoreCrit
 		value.Wire1 = nil
 	}
 	if !handled_Num && err == nil {
-		value.Num = nil
+		value.Num.Unset()
 	}
 
 	if err != nil {

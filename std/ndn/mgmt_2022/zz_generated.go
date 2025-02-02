@@ -201,9 +201,9 @@ func (encoder *ControlArgsEncoder) Init(value *ControlArgs) {
 		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
-	if value.FaceId != nil {
+	if optval, ok := value.FaceId.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FaceId).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.Uri != nil {
 		l += 1
@@ -215,54 +215,54 @@ func (encoder *ControlArgsEncoder) Init(value *ControlArgs) {
 		l += uint(enc.TLNum(len(*value.LocalUri)).EncodingLength())
 		l += uint(len(*value.LocalUri))
 	}
-	if value.Origin != nil {
+	if optval, ok := value.Origin.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Origin).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Cost != nil {
+	if optval, ok := value.Cost.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Cost).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Capacity != nil {
+	if optval, ok := value.Capacity.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Capacity).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Count != nil {
+	if optval, ok := value.Count.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Count).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Flags != nil {
+	if optval, ok := value.Flags.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Flags).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Mask != nil {
+	if optval, ok := value.Mask.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Mask).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.Strategy != nil {
 		l += 1
 		l += uint(enc.TLNum(encoder.Strategy_encoder.length).EncodingLength())
 		l += encoder.Strategy_encoder.length
 	}
-	if value.ExpirationPeriod != nil {
+	if optval, ok := value.ExpirationPeriod.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.ExpirationPeriod).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.FacePersistency != nil {
+	if optval, ok := value.FacePersistency.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FacePersistency).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.BaseCongestionMarkInterval != nil {
+	if optval, ok := value.BaseCongestionMarkInterval.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.BaseCongestionMarkInterval).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.DefaultCongestionThreshold != nil {
+	if optval, ok := value.DefaultCongestionThreshold.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.DefaultCongestionThreshold).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Mtu != nil {
+	if optval, ok := value.Mtu.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Mtu).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	encoder.length = l
 
@@ -286,11 +286,11 @@ func (encoder *ControlArgsEncoder) EncodeInto(value *ControlArgs, buf []byte) {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
 	}
-	if value.FaceId != nil {
+	if optval, ok := value.FaceId.Get(); ok {
 		buf[pos] = byte(105)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.FaceId).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -308,51 +308,51 @@ func (encoder *ControlArgsEncoder) EncodeInto(value *ControlArgs, buf []byte) {
 		copy(buf[pos:], *value.LocalUri)
 		pos += uint(len(*value.LocalUri))
 	}
-	if value.Origin != nil {
+	if optval, ok := value.Origin.Get(); ok {
 		buf[pos] = byte(111)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Origin).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Cost != nil {
+	if optval, ok := value.Cost.Get(); ok {
 		buf[pos] = byte(106)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Cost).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Capacity != nil {
+	if optval, ok := value.Capacity.Get(); ok {
 		buf[pos] = byte(131)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Capacity).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Count != nil {
+	if optval, ok := value.Count.Get(); ok {
 		buf[pos] = byte(132)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Count).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Flags != nil {
+	if optval, ok := value.Flags.Get(); ok {
 		buf[pos] = byte(108)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Flags).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Mask != nil {
+	if optval, ok := value.Mask.Get(); ok {
 		buf[pos] = byte(112)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Mask).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -365,43 +365,43 @@ func (encoder *ControlArgsEncoder) EncodeInto(value *ControlArgs, buf []byte) {
 			pos += encoder.Strategy_encoder.length
 		}
 	}
-	if value.ExpirationPeriod != nil {
+	if optval, ok := value.ExpirationPeriod.Get(); ok {
 		buf[pos] = byte(109)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.ExpirationPeriod).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.FacePersistency != nil {
+	if optval, ok := value.FacePersistency.Get(); ok {
 		buf[pos] = byte(133)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.FacePersistency).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.BaseCongestionMarkInterval != nil {
+	if optval, ok := value.BaseCongestionMarkInterval.Get(); ok {
 		buf[pos] = byte(135)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.BaseCongestionMarkInterval).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.DefaultCongestionThreshold != nil {
+	if optval, ok := value.DefaultCongestionThreshold.Get(); ok {
 		buf[pos] = byte(136)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.DefaultCongestionThreshold).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Mtu != nil {
+	if optval, ok := value.Mtu.Get(); ok {
 		buf[pos] = byte(137)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Mtu).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -473,8 +473,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_FaceId = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -485,10 +485,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.FaceId = &tempVal
+						value.FaceId.Set(optval)
 					}
 				}
 			case 114:
@@ -522,8 +522,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_Origin = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -534,10 +534,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Origin = &tempVal
+						value.Origin.Set(optval)
 					}
 				}
 			case 106:
@@ -545,8 +545,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_Cost = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -557,10 +557,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Cost = &tempVal
+						value.Cost.Set(optval)
 					}
 				}
 			case 131:
@@ -568,8 +568,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_Capacity = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -580,10 +580,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Capacity = &tempVal
+						value.Capacity.Set(optval)
 					}
 				}
 			case 132:
@@ -591,8 +591,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_Count = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -603,10 +603,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Count = &tempVal
+						value.Count.Set(optval)
 					}
 				}
 			case 108:
@@ -614,8 +614,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_Flags = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -626,10 +626,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Flags = &tempVal
+						value.Flags.Set(optval)
 					}
 				}
 			case 112:
@@ -637,8 +637,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_Mask = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -649,10 +649,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Mask = &tempVal
+						value.Mask.Set(optval)
 					}
 				}
 			case 107:
@@ -666,8 +666,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_ExpirationPeriod = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -678,10 +678,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.ExpirationPeriod = &tempVal
+						value.ExpirationPeriod.Set(optval)
 					}
 				}
 			case 133:
@@ -689,8 +689,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_FacePersistency = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -701,10 +701,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.FacePersistency = &tempVal
+						value.FacePersistency.Set(optval)
 					}
 				}
 			case 135:
@@ -712,8 +712,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_BaseCongestionMarkInterval = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -724,10 +724,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.BaseCongestionMarkInterval = &tempVal
+						value.BaseCongestionMarkInterval.Set(optval)
 					}
 				}
 			case 136:
@@ -735,8 +735,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_DefaultCongestionThreshold = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -747,10 +747,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.DefaultCongestionThreshold = &tempVal
+						value.DefaultCongestionThreshold.Set(optval)
 					}
 				}
 			case 137:
@@ -758,8 +758,8 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled = true
 					handled_Mtu = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -770,10 +770,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Mtu = &tempVal
+						value.Mtu.Set(optval)
 					}
 				}
 			default:
@@ -798,7 +798,7 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 		value.Name = nil
 	}
 	if !handled_FaceId && err == nil {
-		value.FaceId = nil
+		value.FaceId.Unset()
 	}
 	if !handled_Uri && err == nil {
 		value.Uri = nil
@@ -807,40 +807,40 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 		value.LocalUri = nil
 	}
 	if !handled_Origin && err == nil {
-		value.Origin = nil
+		value.Origin.Unset()
 	}
 	if !handled_Cost && err == nil {
-		value.Cost = nil
+		value.Cost.Unset()
 	}
 	if !handled_Capacity && err == nil {
-		value.Capacity = nil
+		value.Capacity.Unset()
 	}
 	if !handled_Count && err == nil {
-		value.Count = nil
+		value.Count.Unset()
 	}
 	if !handled_Flags && err == nil {
-		value.Flags = nil
+		value.Flags.Unset()
 	}
 	if !handled_Mask && err == nil {
-		value.Mask = nil
+		value.Mask.Unset()
 	}
 	if !handled_Strategy && err == nil {
 		value.Strategy = nil
 	}
 	if !handled_ExpirationPeriod && err == nil {
-		value.ExpirationPeriod = nil
+		value.ExpirationPeriod.Unset()
 	}
 	if !handled_FacePersistency && err == nil {
-		value.FacePersistency = nil
+		value.FacePersistency.Unset()
 	}
 	if !handled_BaseCongestionMarkInterval && err == nil {
-		value.BaseCongestionMarkInterval = nil
+		value.BaseCongestionMarkInterval.Unset()
 	}
 	if !handled_DefaultCongestionThreshold && err == nil {
-		value.DefaultCongestionThreshold = nil
+		value.DefaultCongestionThreshold.Unset()
 	}
 	if !handled_Mtu && err == nil {
-		value.Mtu = nil
+		value.Mtu.Unset()
 	}
 
 	if err != nil {
@@ -871,8 +871,8 @@ func (value *ControlArgs) ToDict() map[string]any {
 	if value.Name != nil {
 		dict["Name"] = value.Name
 	}
-	if value.FaceId != nil {
-		dict["FaceId"] = *value.FaceId
+	if optval, ok := value.FaceId.Get(); ok {
+		dict["FaceId"] = optval
 	}
 	if value.Uri != nil {
 		dict["Uri"] = *value.Uri
@@ -880,41 +880,41 @@ func (value *ControlArgs) ToDict() map[string]any {
 	if value.LocalUri != nil {
 		dict["LocalUri"] = *value.LocalUri
 	}
-	if value.Origin != nil {
-		dict["Origin"] = *value.Origin
+	if optval, ok := value.Origin.Get(); ok {
+		dict["Origin"] = optval
 	}
-	if value.Cost != nil {
-		dict["Cost"] = *value.Cost
+	if optval, ok := value.Cost.Get(); ok {
+		dict["Cost"] = optval
 	}
-	if value.Capacity != nil {
-		dict["Capacity"] = *value.Capacity
+	if optval, ok := value.Capacity.Get(); ok {
+		dict["Capacity"] = optval
 	}
-	if value.Count != nil {
-		dict["Count"] = *value.Count
+	if optval, ok := value.Count.Get(); ok {
+		dict["Count"] = optval
 	}
-	if value.Flags != nil {
-		dict["Flags"] = *value.Flags
+	if optval, ok := value.Flags.Get(); ok {
+		dict["Flags"] = optval
 	}
-	if value.Mask != nil {
-		dict["Mask"] = *value.Mask
+	if optval, ok := value.Mask.Get(); ok {
+		dict["Mask"] = optval
 	}
 	if value.Strategy != nil {
 		dict["Strategy"] = value.Strategy.ToDict()
 	}
-	if value.ExpirationPeriod != nil {
-		dict["ExpirationPeriod"] = *value.ExpirationPeriod
+	if optval, ok := value.ExpirationPeriod.Get(); ok {
+		dict["ExpirationPeriod"] = optval
 	}
-	if value.FacePersistency != nil {
-		dict["FacePersistency"] = *value.FacePersistency
+	if optval, ok := value.FacePersistency.Get(); ok {
+		dict["FacePersistency"] = optval
 	}
-	if value.BaseCongestionMarkInterval != nil {
-		dict["BaseCongestionMarkInterval"] = *value.BaseCongestionMarkInterval
+	if optval, ok := value.BaseCongestionMarkInterval.Get(); ok {
+		dict["BaseCongestionMarkInterval"] = optval
 	}
-	if value.DefaultCongestionThreshold != nil {
-		dict["DefaultCongestionThreshold"] = *value.DefaultCongestionThreshold
+	if optval, ok := value.DefaultCongestionThreshold.Get(); ok {
+		dict["DefaultCongestionThreshold"] = optval
 	}
-	if value.Mtu != nil {
-		dict["Mtu"] = *value.Mtu
+	if optval, ok := value.Mtu.Get(); ok {
+		dict["Mtu"] = optval
 	}
 	return dict
 }
@@ -936,12 +936,12 @@ func DictToControlArgs(dict map[string]any) (*ControlArgs, error) {
 	}
 	if vv, ok := dict["FaceId"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.FaceId = &v
+			value.FaceId.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "FaceId", TypeNum: 105, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.FaceId = nil
+		value.FaceId.Unset()
 	}
 	if err != nil {
 		return nil, err
@@ -972,72 +972,72 @@ func DictToControlArgs(dict map[string]any) (*ControlArgs, error) {
 	}
 	if vv, ok := dict["Origin"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.Origin = &v
+			value.Origin.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "Origin", TypeNum: 111, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.Origin = nil
+		value.Origin.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["Cost"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.Cost = &v
+			value.Cost.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "Cost", TypeNum: 106, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.Cost = nil
+		value.Cost.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["Capacity"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.Capacity = &v
+			value.Capacity.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "Capacity", TypeNum: 131, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.Capacity = nil
+		value.Capacity.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["Count"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.Count = &v
+			value.Count.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "Count", TypeNum: 132, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.Count = nil
+		value.Count.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["Flags"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.Flags = &v
+			value.Flags.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "Flags", TypeNum: 108, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.Flags = nil
+		value.Flags.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["Mask"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.Mask = &v
+			value.Mask.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "Mask", TypeNum: 112, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.Mask = nil
+		value.Mask.Unset()
 	}
 	if err != nil {
 		return nil, err
@@ -1056,60 +1056,60 @@ func DictToControlArgs(dict map[string]any) (*ControlArgs, error) {
 	}
 	if vv, ok := dict["ExpirationPeriod"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.ExpirationPeriod = &v
+			value.ExpirationPeriod.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "ExpirationPeriod", TypeNum: 109, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.ExpirationPeriod = nil
+		value.ExpirationPeriod.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["FacePersistency"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.FacePersistency = &v
+			value.FacePersistency.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "FacePersistency", TypeNum: 133, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.FacePersistency = nil
+		value.FacePersistency.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["BaseCongestionMarkInterval"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.BaseCongestionMarkInterval = &v
+			value.BaseCongestionMarkInterval.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "BaseCongestionMarkInterval", TypeNum: 135, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.BaseCongestionMarkInterval = nil
+		value.BaseCongestionMarkInterval.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["DefaultCongestionThreshold"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.DefaultCongestionThreshold = &v
+			value.DefaultCongestionThreshold.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "DefaultCongestionThreshold", TypeNum: 136, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.DefaultCongestionThreshold = nil
+		value.DefaultCongestionThreshold.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["Mtu"]; ok {
 		if v, ok := vv.(uint64); ok {
-			value.Mtu = &v
+			value.Mtu.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "Mtu", TypeNum: 137, ValType: "uint64", Value: vv}
 		}
 	} else {
-		value.Mtu = nil
+		value.Mtu.Unset()
 	}
 	if err != nil {
 		return nil, err
@@ -2136,41 +2136,41 @@ func (encoder *GeneralStatusEncoder) Init(value *GeneralStatus) {
 	l += uint(1 + enc.Nat(value.NSatisfiedInterests).EncodingLength())
 	l += 1
 	l += uint(1 + enc.Nat(value.NUnsatisfiedInterests).EncodingLength())
-	if value.NFragmentationError != nil {
+	if optval, ok := value.NFragmentationError.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NFragmentationError).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NOutOverMtu != nil {
+	if optval, ok := value.NOutOverMtu.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NOutOverMtu).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NInLpInvalid != nil {
+	if optval, ok := value.NInLpInvalid.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NInLpInvalid).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NReassemblyTimeouts != nil {
+	if optval, ok := value.NReassemblyTimeouts.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NReassemblyTimeouts).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NInNetInvalid != nil {
+	if optval, ok := value.NInNetInvalid.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NInNetInvalid).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NAcknowledged != nil {
+	if optval, ok := value.NAcknowledged.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NAcknowledged).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NRetransmitted != nil {
+	if optval, ok := value.NRetransmitted.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NRetransmitted).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NRetxExhausted != nil {
+	if optval, ok := value.NRetxExhausted.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NRetxExhausted).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NConngestionMarked != nil {
+	if optval, ok := value.NConngestionMarked.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.NConngestionMarked).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	encoder.length = l
 
@@ -2264,75 +2264,75 @@ func (encoder *GeneralStatusEncoder) EncodeInto(value *GeneralStatus, buf []byte
 
 	buf[pos] = byte(enc.Nat(value.NUnsatisfiedInterests).EncodeInto(buf[pos+1:]))
 	pos += uint(1 + buf[pos])
-	if value.NFragmentationError != nil {
+	if optval, ok := value.NFragmentationError.Get(); ok {
 		buf[pos] = byte(200)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NFragmentationError).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NOutOverMtu != nil {
+	if optval, ok := value.NOutOverMtu.Get(); ok {
 		buf[pos] = byte(201)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NOutOverMtu).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NInLpInvalid != nil {
+	if optval, ok := value.NInLpInvalid.Get(); ok {
 		buf[pos] = byte(202)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NInLpInvalid).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NReassemblyTimeouts != nil {
+	if optval, ok := value.NReassemblyTimeouts.Get(); ok {
 		buf[pos] = byte(203)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NReassemblyTimeouts).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NInNetInvalid != nil {
+	if optval, ok := value.NInNetInvalid.Get(); ok {
 		buf[pos] = byte(204)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NInNetInvalid).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NAcknowledged != nil {
+	if optval, ok := value.NAcknowledged.Get(); ok {
 		buf[pos] = byte(205)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NAcknowledged).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NRetransmitted != nil {
+	if optval, ok := value.NRetransmitted.Get(); ok {
 		buf[pos] = byte(206)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NRetransmitted).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NRetxExhausted != nil {
+	if optval, ok := value.NRetxExhausted.Get(); ok {
 		buf[pos] = byte(207)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NRetxExhausted).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NConngestionMarked != nil {
+	if optval, ok := value.NConngestionMarked.Get(); ok {
 		buf[pos] = byte(208)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.NConngestionMarked).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -2711,8 +2711,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NFragmentationError = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2723,10 +2723,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NFragmentationError = &tempVal
+						value.NFragmentationError.Set(optval)
 					}
 				}
 			case 201:
@@ -2734,8 +2734,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NOutOverMtu = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2746,10 +2746,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NOutOverMtu = &tempVal
+						value.NOutOverMtu.Set(optval)
 					}
 				}
 			case 202:
@@ -2757,8 +2757,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NInLpInvalid = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2769,10 +2769,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NInLpInvalid = &tempVal
+						value.NInLpInvalid.Set(optval)
 					}
 				}
 			case 203:
@@ -2780,8 +2780,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NReassemblyTimeouts = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2792,10 +2792,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NReassemblyTimeouts = &tempVal
+						value.NReassemblyTimeouts.Set(optval)
 					}
 				}
 			case 204:
@@ -2803,8 +2803,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NInNetInvalid = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2815,10 +2815,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NInNetInvalid = &tempVal
+						value.NInNetInvalid.Set(optval)
 					}
 				}
 			case 205:
@@ -2826,8 +2826,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NAcknowledged = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2838,10 +2838,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NAcknowledged = &tempVal
+						value.NAcknowledged.Set(optval)
 					}
 				}
 			case 206:
@@ -2849,8 +2849,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NRetransmitted = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2861,10 +2861,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NRetransmitted = &tempVal
+						value.NRetransmitted.Set(optval)
 					}
 				}
 			case 207:
@@ -2872,8 +2872,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NRetxExhausted = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2884,10 +2884,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NRetxExhausted = &tempVal
+						value.NRetxExhausted.Set(optval)
 					}
 				}
 			case 208:
@@ -2895,8 +2895,8 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_NConngestionMarked = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2907,10 +2907,10 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NConngestionMarked = &tempVal
+						value.NConngestionMarked.Set(optval)
 					}
 				}
 			default:
@@ -2980,31 +2980,31 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 		err = enc.ErrSkipRequired{Name: "NUnsatisfiedInterests", TypeNum: 154}
 	}
 	if !handled_NFragmentationError && err == nil {
-		value.NFragmentationError = nil
+		value.NFragmentationError.Unset()
 	}
 	if !handled_NOutOverMtu && err == nil {
-		value.NOutOverMtu = nil
+		value.NOutOverMtu.Unset()
 	}
 	if !handled_NInLpInvalid && err == nil {
-		value.NInLpInvalid = nil
+		value.NInLpInvalid.Unset()
 	}
 	if !handled_NReassemblyTimeouts && err == nil {
-		value.NReassemblyTimeouts = nil
+		value.NReassemblyTimeouts.Unset()
 	}
 	if !handled_NInNetInvalid && err == nil {
-		value.NInNetInvalid = nil
+		value.NInNetInvalid.Unset()
 	}
 	if !handled_NAcknowledged && err == nil {
-		value.NAcknowledged = nil
+		value.NAcknowledged.Unset()
 	}
 	if !handled_NRetransmitted && err == nil {
-		value.NRetransmitted = nil
+		value.NRetransmitted.Unset()
 	}
 	if !handled_NRetxExhausted && err == nil {
-		value.NRetxExhausted = nil
+		value.NRetxExhausted.Unset()
 	}
 	if !handled_NConngestionMarked && err == nil {
-		value.NConngestionMarked = nil
+		value.NConngestionMarked.Unset()
 	}
 
 	if err != nil {
@@ -3048,9 +3048,9 @@ func (encoder *FaceStatusEncoder) Init(value *FaceStatus) {
 	l += 1
 	l += uint(enc.TLNum(len(value.LocalUri)).EncodingLength())
 	l += uint(len(value.LocalUri))
-	if value.ExpirationPeriod != nil {
+	if optval, ok := value.ExpirationPeriod.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.ExpirationPeriod).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	l += 1
 	l += uint(1 + enc.Nat(value.FaceScope).EncodingLength())
@@ -3058,17 +3058,17 @@ func (encoder *FaceStatusEncoder) Init(value *FaceStatus) {
 	l += uint(1 + enc.Nat(value.FacePersistency).EncodingLength())
 	l += 1
 	l += uint(1 + enc.Nat(value.LinkType).EncodingLength())
-	if value.BaseCongestionMarkInterval != nil {
+	if optval, ok := value.BaseCongestionMarkInterval.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.BaseCongestionMarkInterval).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.DefaultCongestionThreshold != nil {
+	if optval, ok := value.DefaultCongestionThreshold.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.DefaultCongestionThreshold).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Mtu != nil {
+	if optval, ok := value.Mtu.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Mtu).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	l += 1
 	l += uint(1 + enc.Nat(value.NInInterests).EncodingLength())
@@ -3115,11 +3115,11 @@ func (encoder *FaceStatusEncoder) EncodeInto(value *FaceStatus, buf []byte) {
 	pos += uint(enc.TLNum(len(value.LocalUri)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.LocalUri)
 	pos += uint(len(value.LocalUri))
-	if value.ExpirationPeriod != nil {
+	if optval, ok := value.ExpirationPeriod.Get(); ok {
 		buf[pos] = byte(109)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.ExpirationPeriod).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -3138,27 +3138,27 @@ func (encoder *FaceStatusEncoder) EncodeInto(value *FaceStatus, buf []byte) {
 
 	buf[pos] = byte(enc.Nat(value.LinkType).EncodeInto(buf[pos+1:]))
 	pos += uint(1 + buf[pos])
-	if value.BaseCongestionMarkInterval != nil {
+	if optval, ok := value.BaseCongestionMarkInterval.Get(); ok {
 		buf[pos] = byte(135)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.BaseCongestionMarkInterval).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.DefaultCongestionThreshold != nil {
+	if optval, ok := value.DefaultCongestionThreshold.Get(); ok {
 		buf[pos] = byte(136)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.DefaultCongestionThreshold).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Mtu != nil {
+	if optval, ok := value.Mtu.Get(); ok {
 		buf[pos] = byte(137)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Mtu).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -3314,8 +3314,8 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 					handled = true
 					handled_ExpirationPeriod = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -3326,10 +3326,10 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.ExpirationPeriod = &tempVal
+						value.ExpirationPeriod.Set(optval)
 					}
 				}
 			case 132:
@@ -3394,8 +3394,8 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 					handled = true
 					handled_BaseCongestionMarkInterval = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -3406,10 +3406,10 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.BaseCongestionMarkInterval = &tempVal
+						value.BaseCongestionMarkInterval.Set(optval)
 					}
 				}
 			case 136:
@@ -3417,8 +3417,8 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 					handled = true
 					handled_DefaultCongestionThreshold = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -3429,10 +3429,10 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.DefaultCongestionThreshold = &tempVal
+						value.DefaultCongestionThreshold.Set(optval)
 					}
 				}
 			case 137:
@@ -3440,8 +3440,8 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 					handled = true
 					handled_Mtu = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -3452,10 +3452,10 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Mtu = &tempVal
+						value.Mtu.Set(optval)
 					}
 				}
 			case 144:
@@ -3657,7 +3657,7 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 		err = enc.ErrSkipRequired{Name: "LocalUri", TypeNum: 129}
 	}
 	if !handled_ExpirationPeriod && err == nil {
-		value.ExpirationPeriod = nil
+		value.ExpirationPeriod.Unset()
 	}
 	if !handled_FaceScope && err == nil {
 		err = enc.ErrSkipRequired{Name: "FaceScope", TypeNum: 132}
@@ -3669,13 +3669,13 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 		err = enc.ErrSkipRequired{Name: "LinkType", TypeNum: 134}
 	}
 	if !handled_BaseCongestionMarkInterval && err == nil {
-		value.BaseCongestionMarkInterval = nil
+		value.BaseCongestionMarkInterval.Unset()
 	}
 	if !handled_DefaultCongestionThreshold && err == nil {
-		value.DefaultCongestionThreshold = nil
+		value.DefaultCongestionThreshold.Unset()
 	}
 	if !handled_Mtu && err == nil {
-		value.Mtu = nil
+		value.Mtu.Unset()
 	}
 	if !handled_NInInterests && err == nil {
 		err = enc.ErrSkipRequired{Name: "NInInterests", TypeNum: 144}
@@ -3940,9 +3940,9 @@ type FaceQueryFilterValueParsingContext struct {
 func (encoder *FaceQueryFilterValueEncoder) Init(value *FaceQueryFilterValue) {
 
 	l := uint(0)
-	if value.FaceId != nil {
+	if optval, ok := value.FaceId.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FaceId).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.UriScheme != nil {
 		l += 1
@@ -3959,17 +3959,17 @@ func (encoder *FaceQueryFilterValueEncoder) Init(value *FaceQueryFilterValue) {
 		l += uint(enc.TLNum(len(*value.LocalUri)).EncodingLength())
 		l += uint(len(*value.LocalUri))
 	}
-	if value.FaceScope != nil {
+	if optval, ok := value.FaceScope.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FaceScope).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.FacePersistency != nil {
+	if optval, ok := value.FacePersistency.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FacePersistency).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.LinkType != nil {
+	if optval, ok := value.LinkType.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.LinkType).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	encoder.length = l
 
@@ -3983,11 +3983,11 @@ func (encoder *FaceQueryFilterValueEncoder) EncodeInto(value *FaceQueryFilterVal
 
 	pos := uint(0)
 
-	if value.FaceId != nil {
+	if optval, ok := value.FaceId.Get(); ok {
 		buf[pos] = byte(105)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.FaceId).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -4012,27 +4012,27 @@ func (encoder *FaceQueryFilterValueEncoder) EncodeInto(value *FaceQueryFilterVal
 		copy(buf[pos:], *value.LocalUri)
 		pos += uint(len(*value.LocalUri))
 	}
-	if value.FaceScope != nil {
+	if optval, ok := value.FaceScope.Get(); ok {
 		buf[pos] = byte(132)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.FaceScope).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.FacePersistency != nil {
+	if optval, ok := value.FacePersistency.Get(); ok {
 		buf[pos] = byte(133)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.FacePersistency).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.LinkType != nil {
+	if optval, ok := value.LinkType.Get(); ok {
 		buf[pos] = byte(134)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.LinkType).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -4088,8 +4088,8 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 					handled = true
 					handled_FaceId = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -4100,10 +4100,10 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.FaceId = &tempVal
+						value.FaceId.Set(optval)
 					}
 				}
 			case 131:
@@ -4150,8 +4150,8 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 					handled = true
 					handled_FaceScope = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -4162,10 +4162,10 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.FaceScope = &tempVal
+						value.FaceScope.Set(optval)
 					}
 				}
 			case 133:
@@ -4173,8 +4173,8 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 					handled = true
 					handled_FacePersistency = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -4185,10 +4185,10 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.FacePersistency = &tempVal
+						value.FacePersistency.Set(optval)
 					}
 				}
 			case 134:
@@ -4196,8 +4196,8 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 					handled = true
 					handled_LinkType = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -4208,10 +4208,10 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.LinkType = &tempVal
+						value.LinkType.Set(optval)
 					}
 				}
 			default:
@@ -4233,7 +4233,7 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 	err = nil
 
 	if !handled_FaceId && err == nil {
-		value.FaceId = nil
+		value.FaceId.Unset()
 	}
 	if !handled_UriScheme && err == nil {
 		value.UriScheme = nil
@@ -4245,13 +4245,13 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 		value.LocalUri = nil
 	}
 	if !handled_FaceScope && err == nil {
-		value.FaceScope = nil
+		value.FaceScope.Unset()
 	}
 	if !handled_FacePersistency && err == nil {
-		value.FacePersistency = nil
+		value.FacePersistency.Unset()
 	}
 	if !handled_LinkType && err == nil {
-		value.LinkType = nil
+		value.LinkType.Unset()
 	}
 
 	if err != nil {
@@ -4429,9 +4429,9 @@ func (encoder *RouteEncoder) Init(value *Route) {
 	l += uint(1 + enc.Nat(value.Cost).EncodingLength())
 	l += 1
 	l += uint(1 + enc.Nat(value.Flags).EncodingLength())
-	if value.ExpirationPeriod != nil {
+	if optval, ok := value.ExpirationPeriod.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.ExpirationPeriod).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	encoder.length = l
 
@@ -4465,11 +4465,11 @@ func (encoder *RouteEncoder) EncodeInto(value *Route, buf []byte) {
 
 	buf[pos] = byte(enc.Nat(value.Flags).EncodeInto(buf[pos+1:]))
 	pos += uint(1 + buf[pos])
-	if value.ExpirationPeriod != nil {
+	if optval, ok := value.ExpirationPeriod.Get(); ok {
 		buf[pos] = byte(109)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.ExpirationPeriod).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -4599,8 +4599,8 @@ func (context *RouteParsingContext) Parse(reader enc.FastReader, ignoreCritical 
 					handled = true
 					handled_ExpirationPeriod = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -4611,10 +4611,10 @@ func (context *RouteParsingContext) Parse(reader enc.FastReader, ignoreCritical 
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.ExpirationPeriod = &tempVal
+						value.ExpirationPeriod.Set(optval)
 					}
 				}
 			default:
@@ -4648,7 +4648,7 @@ func (context *RouteParsingContext) Parse(reader enc.FastReader, ignoreCritical 
 		err = enc.ErrSkipRequired{Name: "Flags", TypeNum: 108}
 	}
 	if !handled_ExpirationPeriod && err == nil {
-		value.ExpirationPeriod = nil
+		value.ExpirationPeriod.Unset()
 	}
 
 	if err != nil {

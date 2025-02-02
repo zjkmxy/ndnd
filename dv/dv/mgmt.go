@@ -126,9 +126,9 @@ func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 	res.Val.StatusText = "Readvertise command successful"
 	res.Val.Params = &mgmt.ControlArgs{
 		Name:   params.Val.Name,
-		FaceId: utils.IdPtr(uint64(1)), // NFD compatibility
-		Origin: utils.IdPtr(uint64(65)),
-		Cost:   utils.IdPtr(uint64(0)),
-		Flags:  utils.IdPtr(uint64(0)),
+		FaceId: enc.Some(uint64(1)), // NFD compatibility
+		Origin: enc.Some(uint64(65)),
+		Cost:   enc.Some(uint64(0)),
+		Flags:  enc.Some(uint64(0)),
 	}
 }

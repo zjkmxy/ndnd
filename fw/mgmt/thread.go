@@ -94,7 +94,7 @@ func (m *Thread) Run() {
 			break
 		}
 
-		if lpPkt.IncomingFaceId == nil || len(lpPkt.Fragment) == 0 {
+		if !lpPkt.IncomingFaceId.IsSet() || len(lpPkt.Fragment) == 0 {
 			core.Log.Warn(m, "Received malformed packet on internal face - DROP")
 			continue
 		}

@@ -1,11 +1,13 @@
 //go:generate gondn_tlv_gen
 package trust_schema
 
+import enc "github.com/named-data/ndnd/std/encoding"
+
 type LvsUserFnArg struct {
 	//+field:binary
 	Value []byte `tlv:"0x21"`
 	//+field:natural:optional
-	Tag *uint64 `tlv:"0x23"`
+	Tag enc.Optional[uint64] `tlv:"0x23"`
 }
 
 type LvsUserFnCall struct {
@@ -19,7 +21,7 @@ type LvsConstraintOption struct {
 	//+field:binary
 	Value []byte `tlv:"0x21"`
 	//+field:natural:optional
-	Tag *uint64 `tlv:"0x23"`
+	Tag enc.Optional[uint64] `tlv:"0x23"`
 	//+field:struct:LvsUserFnCall
 	Fn *LvsUserFnCall `tlv:"0x31"`
 }
@@ -49,7 +51,7 @@ type LvsNode struct {
 	//+field:natural
 	Id uint64 `tlv:"0x25"`
 	//+field:natural:optional
-	Parent *uint64 `tlv:"0x57"`
+	Parent enc.Optional[uint64] `tlv:"0x57"`
 	//+field:sequence:[]byte:binary:[]byte
 	RuleName [][]byte `tlv:"0x29"`
 	//+field:sequence:*LvsValueEdge:struct:LvsValueEdge
@@ -62,7 +64,7 @@ type LvsNode struct {
 
 type LvsTagSymbol struct {
 	//+field:natural:optional
-	Tag *uint64 `tlv:"0x23"`
+	Tag enc.Optional[uint64] `tlv:"0x23"`
 	//+field:binary
 	Ident []byte `tlv:"0x29"`
 }

@@ -108,13 +108,13 @@ func (n *Tool) preprocessArg(
 				faceArgs.LocalUri = ctrlArgs.LocalUri
 				ctrlArgs.LocalUri = nil
 			}
-			if ctrlArgs.Mtu != nil {
+			if ctrlArgs.Mtu.IsSet() {
 				faceArgs.Mtu = ctrlArgs.Mtu
-				ctrlArgs.Mtu = nil
+				ctrlArgs.Mtu.Unset()
 			}
-			if ctrlArgs.FacePersistency != nil {
+			if ctrlArgs.FacePersistency.IsSet() {
 				faceArgs.FacePersistency = ctrlArgs.FacePersistency
-				ctrlArgs.FacePersistency = nil
+				ctrlArgs.FacePersistency.Unset()
 			}
 
 			// create or use existing face
@@ -130,12 +130,12 @@ func (n *Tool) preprocessArg(
 				os.Exit(1)
 			}
 			n.printCtrlResponse(res)
-			if res.Val == nil || res.Val.Params == nil || res.Val.Params.FaceId == nil {
+			if res.Val == nil || res.Val.Params == nil || !res.Val.Params.FaceId.IsSet() {
 				fmt.Fprintf(os.Stderr, "Failed to create face for route\n")
 				os.Exit(1)
 			}
 
-			return key, fmt.Sprintf("%d", *res.Val.Params.FaceId)
+			return key, fmt.Sprintf("%d", res.Val.Params.FaceId.Unwrap())
 		}
 	}
 
@@ -167,30 +167,30 @@ func (n *Tool) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 	switch key {
 	// face arguments
 	case "face":
-		ctrlArgs.FaceId = utils.IdPtr(parseUint(val))
+		ctrlArgs.FaceId = enc.Some(parseUint(val))
 	case "remote":
 		ctrlArgs.Uri = utils.IdPtr(val)
 	case "local":
 		ctrlArgs.LocalUri = utils.IdPtr(val)
 	case "mtu":
-		ctrlArgs.Mtu = utils.IdPtr(parseUint(val))
+		ctrlArgs.Mtu = enc.Some(parseUint(val))
 	case "persistency":
 		persistency, err := mgmt.ParsePersistency(val)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Invalid persistency: %s\n", val)
 			os.Exit(9)
 		}
-		ctrlArgs.FacePersistency = utils.IdPtr(uint64(persistency))
+		ctrlArgs.FacePersistency = enc.Some(uint64(persistency))
 
 	// route arguments
 	case "prefix":
 		ctrlArgs.Name = parseName(val)
 	case "cost":
-		ctrlArgs.Cost = utils.IdPtr(parseUint(val))
+		ctrlArgs.Cost = enc.Some(parseUint(val))
 	case "origin":
-		ctrlArgs.Origin = utils.IdPtr(parseUint(val))
+		ctrlArgs.Origin = enc.Some(parseUint(val))
 	case "expires":
-		ctrlArgs.ExpirationPeriod = utils.IdPtr(parseUint(val))
+		ctrlArgs.ExpirationPeriod = enc.Some(parseUint(val))
 
 	// strategy arguments
 	case "strategy":

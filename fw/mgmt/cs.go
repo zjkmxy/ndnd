@@ -14,7 +14,6 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 // ContentStoreModule is the module that handles Content Store Management.
@@ -72,34 +71,37 @@ func (c *ContentStoreModule) config(interest *Interest) {
 		return
 	}
 
-	if (params.Flags == nil && params.Mask != nil) || (params.Flags != nil && params.Mask == nil) {
+	if (!params.Flags.IsSet() && params.Mask.IsSet()) || (params.Flags.IsSet() && !params.Mask.IsSet()) {
 		core.Log.Warn(c, "Flags and Mask fields must either both be present or both be not present")
 		c.manager.sendCtrlResp(interest, 409, "ControlParameters are incorrect", nil)
 		return
 	}
 
-	if params.Capacity != nil {
-		core.Log.Info(c, "Setting CS capacity", "capacity", *params.Capacity)
-		table.CfgSetCsCapacity(int(*params.Capacity))
+	if capacity, ok := params.Capacity.Get(); ok {
+		core.Log.Info(c, "Setting CS capacity", "capacity", capacity)
+		table.CfgSetCsCapacity(int(capacity))
 	}
 
-	if params.Mask != nil && params.Flags != nil {
-		if *params.Mask&mgmt.CsEnableAdmit > 0 {
-			val := *params.Flags&mgmt.CsEnableAdmit > 0
+	if params.Mask.IsSet() && params.Flags.IsSet() {
+		mask := params.Mask.Unwrap()
+		flags := params.Flags.Unwrap()
+
+		if mask&mgmt.CsEnableAdmit > 0 {
+			val := flags&mgmt.CsEnableAdmit > 0
 			core.Log.Info(c, "Setting CS admit flag", "value", val)
 			table.CfgSetCsAdmit(val)
 		}
 
-		if *params.Mask&mgmt.CsEnableServe > 0 {
-			val := *params.Flags&mgmt.CsEnableServe > 0
+		if mask&mgmt.CsEnableServe > 0 {
+			val := flags&mgmt.CsEnableServe > 0
 			core.Log.Info(c, "Setting CS serve flag", "value", val)
 			table.CfgSetCsServe(val)
 		}
 	}
 
 	c.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
-		Capacity: utils.IdPtr(uint64(table.CfgCsCapacity())),
-		Flags:    utils.IdPtr(c.getFlags()),
+		Capacity: enc.Some(uint64(table.CfgCsCapacity())),
+		Flags:    enc.Some(c.getFlags()),
 	})
 }
 

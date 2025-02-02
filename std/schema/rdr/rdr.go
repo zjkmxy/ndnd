@@ -293,7 +293,7 @@ func (n *RdrNode) Provide(mNode schema.MatchedNode, content enc.Wire) uint64 {
 	metaData := &rtlv.MetaData{
 		Name:         dataName,
 		FinalBlockID: enc.NewSegmentComponent(segCnt - 1).Bytes(),
-		Size:         utils.IdPtr(content.Length()),
+		Size:         enc.Some(content.Length()),
 	}
 	metaMNode.Call("Provide", metaData.Encode(), metaDataCfg)
 
@@ -470,7 +470,7 @@ func (n *GeneralObjNode) Provide(mNode schema.MatchedNode, content enc.Wire) uin
 	metaData := &rtlv.MetaData{
 		Name:         dataName,
 		FinalBlockID: enc.NewSegmentComponent(segCnt - 1).Bytes(),
-		Size:         utils.IdPtr(content.Length()),
+		Size:         enc.Some(content.Length()),
 	}
 	metaMNode.Call("Provide", metaData.Encode(), metaDataCfg)
 

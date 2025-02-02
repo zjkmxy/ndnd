@@ -578,9 +578,9 @@ func (encoder *ProbeResValsEncoder) Init(value *ProbeResVals) {
 		l += uint(enc.TLNum(encoder.Response_length).EncodingLength())
 		l += encoder.Response_length
 	}
-	if value.MaxSuffixLength != nil {
+	if optval, ok := value.MaxSuffixLength.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.MaxSuffixLength).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	encoder.length = l
 
@@ -602,11 +602,11 @@ func (encoder *ProbeResValsEncoder) EncodeInto(value *ProbeResVals, buf []byte) 
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
 	}
-	if value.MaxSuffixLength != nil {
+	if optval, ok := value.MaxSuffixLength.Get(); ok {
 		buf[pos] = byte(143)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.MaxSuffixLength).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -664,8 +664,8 @@ func (context *ProbeResValsParsingContext) Parse(reader enc.FastReader, ignoreCr
 					handled = true
 					handled_MaxSuffixLength = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -676,10 +676,10 @@ func (context *ProbeResValsParsingContext) Parse(reader enc.FastReader, ignoreCr
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.MaxSuffixLength = &tempVal
+						value.MaxSuffixLength.Set(optval)
 					}
 				}
 			default:
@@ -704,7 +704,7 @@ func (context *ProbeResValsParsingContext) Parse(reader enc.FastReader, ignoreCr
 		value.Response = nil
 	}
 	if !handled_MaxSuffixLength && err == nil {
-		value.MaxSuffixLength = nil
+		value.MaxSuffixLength.Unset()
 	}
 
 	if err != nil {
@@ -1871,13 +1871,13 @@ func (encoder *ChallengeResEncoder) Init(value *ChallengeRes) {
 		l += uint(enc.TLNum(len(*value.ChalStatus)).EncodingLength())
 		l += uint(len(*value.ChalStatus))
 	}
-	if value.RemainTries != nil {
+	if optval, ok := value.RemainTries.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.RemainTries).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.RemainTime != nil {
+	if optval, ok := value.RemainTime.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.RemainTime).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.CertName != nil {
 		l += 1
@@ -1942,19 +1942,19 @@ func (encoder *ChallengeResEncoder) EncodeInto(value *ChallengeRes, buf []byte) 
 		copy(buf[pos:], *value.ChalStatus)
 		pos += uint(len(*value.ChalStatus))
 	}
-	if value.RemainTries != nil {
+	if optval, ok := value.RemainTries.Get(); ok {
 		buf[pos] = byte(165)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.RemainTries).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.RemainTime != nil {
+	if optval, ok := value.RemainTime.Get(); ok {
 		buf[pos] = byte(167)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.RemainTime).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -2090,8 +2090,8 @@ func (context *ChallengeResParsingContext) Parse(reader enc.FastReader, ignoreCr
 					handled = true
 					handled_RemainTries = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2102,10 +2102,10 @@ func (context *ChallengeResParsingContext) Parse(reader enc.FastReader, ignoreCr
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.RemainTries = &tempVal
+						value.RemainTries.Set(optval)
 					}
 				}
 			case 167:
@@ -2113,8 +2113,8 @@ func (context *ChallengeResParsingContext) Parse(reader enc.FastReader, ignoreCr
 					handled = true
 					handled_RemainTime = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2125,10 +2125,10 @@ func (context *ChallengeResParsingContext) Parse(reader enc.FastReader, ignoreCr
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.RemainTime = &tempVal
+						value.RemainTime.Set(optval)
 					}
 				}
 			case 169:
@@ -2210,10 +2210,10 @@ func (context *ChallengeResParsingContext) Parse(reader enc.FastReader, ignoreCr
 		value.ChalStatus = nil
 	}
 	if !handled_RemainTries && err == nil {
-		value.RemainTries = nil
+		value.RemainTries.Unset()
 	}
 	if !handled_RemainTime && err == nil {
-		value.RemainTime = nil
+		value.RemainTime.Unset()
 	}
 	if !handled_CertName && err == nil {
 		value.CertName = nil

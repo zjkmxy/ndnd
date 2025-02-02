@@ -17,7 +17,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 // RIBModule is the module that handles RIB Management.
@@ -72,34 +71,23 @@ func (r *RIBModule) register(interest *Interest) {
 		return
 	}
 
-	faceID := *interest.inFace
-	if params.FaceId != nil && *params.FaceId != 0 {
-		faceID = *params.FaceId
+	faceID := interest.inFace.Unwrap()
+	if fid, ok := params.FaceId.Get(); ok && fid != 0 {
+		faceID = fid
 		if face.FaceTable.Get(faceID) == nil {
 			r.manager.sendCtrlResp(interest, 410, "Face does not exist", nil)
 			return
 		}
 	}
 
-	origin := uint64(mgmt.RouteOriginApp)
-	if params.Origin != nil {
-		origin = *params.Origin
-	}
-
-	cost := uint64(0)
-	if params.Cost != nil {
-		cost = *params.Cost
-	}
-
-	flags := uint64(mgmt.RouteFlagChildInherit)
-	if params.Flags != nil {
-		flags = *params.Flags
-	}
+	origin := params.Origin.GetOr(uint64(mgmt.RouteOriginApp))
+	cost := params.Cost.GetOr(uint64(0))
+	flags := params.Flags.GetOr(uint64(mgmt.RouteFlagChildInherit))
 
 	expirationPeriod := (*time.Duration)(nil)
-	if params.ExpirationPeriod != nil {
+	if expiry, ok := params.ExpirationPeriod.Get(); ok {
 		expirationPeriod = new(time.Duration)
-		*expirationPeriod = time.Duration(*params.ExpirationPeriod) * time.Millisecond
+		*expirationPeriod = time.Duration(expiry) * time.Millisecond
 	}
 
 	table.Rib.AddEncRoute(params.Name, &table.Route{
@@ -118,13 +106,13 @@ func (r *RIBModule) register(interest *Interest) {
 	}
 	responseParams := &mgmt.ControlArgs{
 		Name:   params.Name,
-		FaceId: utils.IdPtr(faceID),
-		Origin: utils.IdPtr(origin),
-		Cost:   utils.IdPtr(cost),
-		Flags:  utils.IdPtr(flags),
+		FaceId: enc.Some(faceID),
+		Origin: enc.Some(origin),
+		Cost:   enc.Some(cost),
+		Flags:  enc.Some(flags),
 	}
 	if expirationPeriod != nil {
-		responseParams.ExpirationPeriod = utils.IdPtr(uint64(expirationPeriod.Milliseconds()))
+		responseParams.ExpirationPeriod = enc.Some(uint64(expirationPeriod.Milliseconds()))
 	}
 	r.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 }
@@ -146,21 +134,18 @@ func (r *RIBModule) unregister(interest *Interest) {
 		return
 	}
 
-	faceID := *interest.inFace
-	if params.FaceId != nil && *params.FaceId != 0 {
-		faceID = *params.FaceId
+	faceID := interest.inFace.Unwrap()
+	if fid, ok := params.FaceId.Get(); ok && fid != 0 {
+		faceID = fid
 	}
 
-	origin := uint64(mgmt.RouteOriginApp)
-	if params.Origin != nil {
-		origin = *params.Origin
-	}
+	origin := params.Origin.GetOr(uint64(mgmt.RouteOriginApp))
 	table.Rib.RemoveRouteEnc(params.Name, faceID, origin)
 
 	r.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,
-		FaceId: utils.IdPtr(faceID),
-		Origin: utils.IdPtr(origin),
+		FaceId: enc.Some(faceID),
+		Origin: enc.Some(origin),
 	})
 
 	core.Log.Info(r, "Removed route", "name", params.Name, "faceid", faceID, "origin", origin)
@@ -211,7 +196,7 @@ func (r *RIBModule) list(interest *Interest) {
 			ribEntry.Routes[i].Cost = route.Cost
 			ribEntry.Routes[i].Flags = route.Flags
 			if route.ExpirationPeriod != nil {
-				ribEntry.Routes[i].ExpirationPeriod = utils.IdPtr(uint64(*route.ExpirationPeriod / time.Millisecond))
+				ribEntry.Routes[i].ExpirationPeriod = enc.Some(uint64(*route.ExpirationPeriod / time.Millisecond))
 			}
 		}
 

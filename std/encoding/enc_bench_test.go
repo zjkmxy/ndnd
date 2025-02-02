@@ -8,7 +8,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/utils"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 )
 
@@ -21,8 +20,8 @@ func encodeDataCases(count int, payloadSize int, nameSize int) (ret []*spec.Data
 			NameV:    randomNames(1, nameSize)[0],
 			ContentV: enc.Wire{make([]byte, payloadSize)},
 			MetaInfo: &spec.MetaInfo{
-				ContentType:     utils.IdPtr(uint64(ndn.ContentTypeBlob)),
-				FreshnessPeriod: utils.IdPtr(4000 * time.Millisecond),
+				ContentType:     enc.Some(uint64(ndn.ContentTypeBlob)),
+				FreshnessPeriod: enc.Some(4000 * time.Millisecond),
 			},
 			SignatureInfo: &spec.SignatureInfo{
 				SignatureType: uint64(ndn.SignatureEd25519),

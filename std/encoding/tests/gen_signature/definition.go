@@ -15,7 +15,7 @@ type T1 struct {
 	//+field:offsetMarker
 	sigCoverStart enc.PlaceHolder
 	//+field:natural:optional
-	H2 *uint64 `tlv:"0x02"`
+	H2 enc.Optional[uint64] `tlv:"0x02"`
 	//+field:wire
 	C enc.Wire `tlv:"0x03"`
 	//+field:signature:sigCoverStart:sigCovered

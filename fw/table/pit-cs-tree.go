@@ -393,8 +393,8 @@ func (p *PitCsTree) FindMatchingDataFromCS(interest *spec.Interest) CsEntry {
 func (p *PitCsTree) InsertData(data *spec.Data, wire []byte) {
 	index := data.NameV.Hash()
 	staleTime := time.Now()
-	if data.MetaInfo != nil && data.MetaInfo.FreshnessPeriod != nil {
-		staleTime = staleTime.Add(*data.MetaInfo.FreshnessPeriod)
+	if data.MetaInfo != nil && data.MetaInfo.FreshnessPeriod.IsSet() {
+		staleTime = staleTime.Add(data.MetaInfo.FreshnessPeriod.Unwrap())
 	}
 
 	store := make([]byte, len(wire))

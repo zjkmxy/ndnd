@@ -35,7 +35,7 @@ type InnerWire1 struct {
 	//+field:wire
 	Wire1 enc.Wire `tlv:"0x01"`
 	//+field:natural:optional
-	Num *uint64 `tlv:"0x02"`
+	Num enc.Optional[uint64] `tlv:"0x02"`
 }
 
 // +tlv-model:nocopy,private

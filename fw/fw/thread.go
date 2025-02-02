@@ -284,13 +284,13 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	table.UpdateExpirationTimer(pitEntry)
 
 	// If NextHopFaceId set, forward to that face (if it exists) or drop
-	if packet.NextHopFaceID != nil {
-		if face := dispatch.GetFace(*packet.NextHopFaceID); face != nil {
+	if hop, ok := packet.NextHopFaceID.Get(); ok {
+		if face := dispatch.GetFace(hop); face != nil {
 			core.Log.Trace(t, "NextHopFaceId is set for Interest", "name", packet.Name)
-			t.processOutgoingInterest(packet, pitEntry, *packet.NextHopFaceID, incomingFace.FaceID())
+			t.processOutgoingInterest(packet, pitEntry, hop, incomingFace.FaceID())
 		} else {
 			core.Log.Info(t, "Non-existent face specified in NextHopFaceId for Interest",
-				"name", packet.Name, "faceid", *packet.NextHopFaceID)
+				"name", packet.Name, "faceid", hop)
 		}
 		return
 	}

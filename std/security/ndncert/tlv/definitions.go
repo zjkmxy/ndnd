@@ -27,7 +27,7 @@ type ProbeResVals struct {
 	//+field:name
 	Response enc.Name `tlv:"0x07"`
 	//+field:natural:optional
-	MaxSuffixLength *uint64 `tlv:"0x8F"`
+	MaxSuffixLength enc.Optional[uint64] `tlv:"0x8F"`
 }
 
 type ProbeRes struct {
@@ -77,9 +77,9 @@ type ChallengeRes struct {
 	//+field:string:optional
 	ChalStatus *string `tlv:"0xA3"`
 	//+field:natural:optional
-	RemainTries *uint64 `tlv:"0xA5"`
+	RemainTries enc.Optional[uint64] `tlv:"0xA5"`
 	//+field:natural:optional
-	RemainTime *uint64 `tlv:"0xA7"`
+	RemainTime enc.Optional[uint64] `tlv:"0xA7"`
 	//+field:struct:NameContainer
 	CertName *NameContainer `tlv:"0xA9"`
 	//+field:struct:NameContainer

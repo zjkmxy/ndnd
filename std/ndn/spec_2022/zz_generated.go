@@ -383,13 +383,13 @@ type MetaInfoParsingContext struct {
 func (encoder *MetaInfoEncoder) Init(value *MetaInfo) {
 
 	l := uint(0)
-	if value.ContentType != nil {
+	if optval, ok := value.ContentType.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.ContentType).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.FreshnessPeriod != nil {
+	if optval, ok := value.FreshnessPeriod.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(uint64(*value.FreshnessPeriod/time.Millisecond)).EncodingLength())
+		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
 	}
 	if value.FinalBlockID != nil {
 		l += 1
@@ -408,19 +408,19 @@ func (encoder *MetaInfoEncoder) EncodeInto(value *MetaInfo, buf []byte) {
 
 	pos := uint(0)
 
-	if value.ContentType != nil {
+	if optval, ok := value.ContentType.Get(); ok {
 		buf[pos] = byte(24)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.ContentType).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.FreshnessPeriod != nil {
+	if optval, ok := value.FreshnessPeriod.Get(); ok {
 		buf[pos] = byte(25)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(uint64(*value.FreshnessPeriod / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(uint64(optval / time.Millisecond)).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -479,8 +479,8 @@ func (context *MetaInfoParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_ContentType = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -491,10 +491,10 @@ func (context *MetaInfoParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.ContentType = &tempVal
+						value.ContentType.Set(optval)
 					}
 				}
 			case 25:
@@ -517,8 +517,8 @@ func (context *MetaInfoParsingContext) Parse(reader enc.FastReader, ignoreCritic
 								timeInt = uint64(timeInt<<8) | uint64(x)
 							}
 						}
-						tempVal := time.Duration(timeInt) * time.Millisecond
-						value.FreshnessPeriod = &tempVal
+						optval := time.Duration(timeInt) * time.Millisecond
+						value.FreshnessPeriod.Set(optval)
 					}
 				}
 			case 26:
@@ -547,10 +547,10 @@ func (context *MetaInfoParsingContext) Parse(reader enc.FastReader, ignoreCritic
 	err = nil
 
 	if !handled_ContentType && err == nil {
-		value.ContentType = nil
+		value.ContentType.Unset()
 	}
 	if !handled_FreshnessPeriod && err == nil {
-		value.FreshnessPeriod = nil
+		value.FreshnessPeriod.Unset()
 	}
 	if !handled_FinalBlockID && err == nil {
 		value.FinalBlockID = nil
@@ -1132,13 +1132,13 @@ func (encoder *SignatureInfoEncoder) Init(value *SignatureInfo) {
 		l += uint(enc.TLNum(len(value.SignatureNonce)).EncodingLength())
 		l += uint(len(value.SignatureNonce))
 	}
-	if value.SignatureTime != nil {
+	if optval, ok := value.SignatureTime.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(uint64(*value.SignatureTime/time.Millisecond)).EncodingLength())
+		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
 	}
-	if value.SignatureSeqNum != nil {
+	if optval, ok := value.SignatureSeqNum.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.SignatureSeqNum).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.ValidityPeriod != nil {
 		l += 3
@@ -1187,19 +1187,19 @@ func (encoder *SignatureInfoEncoder) EncodeInto(value *SignatureInfo, buf []byte
 		copy(buf[pos:], value.SignatureNonce)
 		pos += uint(len(value.SignatureNonce))
 	}
-	if value.SignatureTime != nil {
+	if optval, ok := value.SignatureTime.Get(); ok {
 		buf[pos] = byte(40)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(uint64(*value.SignatureTime / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(uint64(optval / time.Millisecond)).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.SignatureSeqNum != nil {
+	if optval, ok := value.SignatureSeqNum.Get(); ok {
 		buf[pos] = byte(42)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.SignatureSeqNum).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -1322,8 +1322,8 @@ func (context *SignatureInfoParsingContext) Parse(reader enc.FastReader, ignoreC
 								timeInt = uint64(timeInt<<8) | uint64(x)
 							}
 						}
-						tempVal := time.Duration(timeInt) * time.Millisecond
-						value.SignatureTime = &tempVal
+						optval := time.Duration(timeInt) * time.Millisecond
+						value.SignatureTime.Set(optval)
 					}
 				}
 			case 42:
@@ -1331,8 +1331,8 @@ func (context *SignatureInfoParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled = true
 					handled_SignatureSeqNum = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1343,10 +1343,10 @@ func (context *SignatureInfoParsingContext) Parse(reader enc.FastReader, ignoreC
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.SignatureSeqNum = &tempVal
+						value.SignatureSeqNum.Set(optval)
 					}
 				}
 			case 253:
@@ -1389,10 +1389,10 @@ func (context *SignatureInfoParsingContext) Parse(reader enc.FastReader, ignoreC
 		value.SignatureNonce = nil
 	}
 	if !handled_SignatureTime && err == nil {
-		value.SignatureTime = nil
+		value.SignatureTime.Unset()
 	}
 	if !handled_SignatureSeqNum && err == nil {
-		value.SignatureSeqNum = nil
+		value.SignatureSeqNum.Unset()
 	}
 	if !handled_ValidityPeriod && err == nil {
 		value.ValidityPeriod = nil
@@ -1741,13 +1741,13 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 		l += 1
 		l += 1 + 8
 	}
-	if value.FragIndex != nil {
+	if optval, ok := value.FragIndex.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FragIndex).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.FragCount != nil {
+	if optval, ok := value.FragCount.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FragCount).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.PitToken != nil {
 		l += 1
@@ -1759,22 +1759,22 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 		l += uint(enc.TLNum(encoder.Nack_encoder.length).EncodingLength())
 		l += encoder.Nack_encoder.length
 	}
-	if value.IncomingFaceId != nil {
+	if optval, ok := value.IncomingFaceId.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.IncomingFaceId).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NextHopFaceId != nil {
+	if optval, ok := value.NextHopFaceId.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.NextHopFaceId).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.CachePolicy != nil {
 		l += 3
 		l += uint(enc.TLNum(encoder.CachePolicy_encoder.length).EncodingLength())
 		l += encoder.CachePolicy_encoder.length
 	}
-	if value.CongestionMark != nil {
+	if optval, ok := value.CongestionMark.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.CongestionMark).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.Ack != nil {
 		l += 3
@@ -1806,13 +1806,13 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 		l += 1
 		l += 1 + 8
 	}
-	if value.FragIndex != nil {
+	if optval, ok := value.FragIndex.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FragIndex).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.FragCount != nil {
+	if optval, ok := value.FragCount.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.FragCount).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.PitToken != nil {
 		l += 1
@@ -1824,22 +1824,22 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 		l += uint(enc.TLNum(encoder.Nack_encoder.length).EncodingLength())
 		l += encoder.Nack_encoder.length
 	}
-	if value.IncomingFaceId != nil {
+	if optval, ok := value.IncomingFaceId.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.IncomingFaceId).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.NextHopFaceId != nil {
+	if optval, ok := value.NextHopFaceId.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.NextHopFaceId).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.CachePolicy != nil {
 		l += 3
 		l += uint(enc.TLNum(encoder.CachePolicy_encoder.length).EncodingLength())
 		l += encoder.CachePolicy_encoder.length
 	}
-	if value.CongestionMark != nil {
+	if optval, ok := value.CongestionMark.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.CongestionMark).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.Ack != nil {
 		l += 3
@@ -1901,19 +1901,19 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 		binary.BigEndian.PutUint64(buf[pos+1:], uint64(*value.Sequence))
 		pos += 9
 	}
-	if value.FragIndex != nil {
+	if optval, ok := value.FragIndex.Get(); ok {
 		buf[pos] = byte(82)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.FragIndex).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.FragCount != nil {
+	if optval, ok := value.FragCount.Get(); ok {
 		buf[pos] = byte(83)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.FragCount).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -1934,21 +1934,21 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 			pos += encoder.Nack_encoder.length
 		}
 	}
-	if value.IncomingFaceId != nil {
+	if optval, ok := value.IncomingFaceId.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(812))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.IncomingFaceId).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.NextHopFaceId != nil {
+	if optval, ok := value.NextHopFaceId.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(816))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.NextHopFaceId).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -1962,12 +1962,12 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 			pos += encoder.CachePolicy_encoder.length
 		}
 	}
-	if value.CongestionMark != nil {
+	if optval, ok := value.CongestionMark.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(832))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.CongestionMark).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -2124,8 +2124,8 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_FragIndex = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2136,10 +2136,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.FragIndex = &tempVal
+						value.FragIndex.Set(optval)
 					}
 				}
 			case 83:
@@ -2147,8 +2147,8 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_FragCount = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2159,10 +2159,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.FragCount = &tempVal
+						value.FragCount.Set(optval)
 					}
 				}
 			case 98:
@@ -2183,8 +2183,8 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_IncomingFaceId = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2195,10 +2195,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.IncomingFaceId = &tempVal
+						value.IncomingFaceId.Set(optval)
 					}
 				}
 			case 816:
@@ -2206,8 +2206,8 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_NextHopFaceId = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2218,10 +2218,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.NextHopFaceId = &tempVal
+						value.NextHopFaceId.Set(optval)
 					}
 				}
 			case 820:
@@ -2235,8 +2235,8 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_CongestionMark = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2247,10 +2247,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.CongestionMark = &tempVal
+						value.CongestionMark.Set(optval)
 					}
 				}
 			case 836:
@@ -2339,10 +2339,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 		value.Sequence = nil
 	}
 	if !handled_FragIndex && err == nil {
-		value.FragIndex = nil
+		value.FragIndex.Unset()
 	}
 	if !handled_FragCount && err == nil {
-		value.FragCount = nil
+		value.FragCount.Unset()
 	}
 	if !handled_PitToken && err == nil {
 		value.PitToken = nil
@@ -2351,16 +2351,16 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 		value.Nack = nil
 	}
 	if !handled_IncomingFaceId && err == nil {
-		value.IncomingFaceId = nil
+		value.IncomingFaceId.Unset()
 	}
 	if !handled_NextHopFaceId && err == nil {
-		value.NextHopFaceId = nil
+		value.NextHopFaceId.Unset()
 	}
 	if !handled_CachePolicy && err == nil {
 		value.CachePolicy = nil
 	}
 	if !handled_CongestionMark && err == nil {
-		value.CongestionMark = nil
+		value.CongestionMark.Unset()
 	}
 	if !handled_Ack && err == nil {
 		value.Ack = nil
@@ -2488,9 +2488,9 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 		l += 1
 		l += 1 + 4
 	}
-	if value.InterestLifetimeV != nil {
+	if optval, ok := value.InterestLifetimeV.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(uint64(*value.InterestLifetimeV/time.Millisecond)).EncodingLength())
+		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
 	}
 	if value.HopLimitV != nil {
 		l += 1
@@ -2541,9 +2541,9 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 		l += 1
 		l += 1 + 4
 	}
-	if value.InterestLifetimeV != nil {
+	if optval, ok := value.InterestLifetimeV.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(uint64(*value.InterestLifetimeV/time.Millisecond)).EncodingLength())
+		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
 	}
 	if value.HopLimitV != nil {
 		l += 1
@@ -2648,11 +2648,11 @@ func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
 		binary.BigEndian.PutUint32(buf[pos+1:], uint32(*value.NonceV))
 		pos += 5
 	}
-	if value.InterestLifetimeV != nil {
+	if optval, ok := value.InterestLifetimeV.Get(); ok {
 		buf[pos] = byte(12)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(uint64(*value.InterestLifetimeV / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(uint64(optval / time.Millisecond)).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -2888,8 +2888,8 @@ func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritic
 								timeInt = uint64(timeInt<<8) | uint64(x)
 							}
 						}
-						tempVal := time.Duration(timeInt) * time.Millisecond
-						value.InterestLifetimeV = &tempVal
+						optval := time.Duration(timeInt) * time.Millisecond
+						value.InterestLifetimeV.Set(optval)
 					}
 				}
 			case 34:
@@ -2958,7 +2958,7 @@ func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					value.NonceV = nil
 				case 7 - 1:
 					handled_InterestLifetimeV = true
-					value.InterestLifetimeV = nil
+					value.InterestLifetimeV.Unset()
 				case 8 - 1:
 					handled_HopLimitV = true
 					value.HopLimitV = nil
@@ -3014,7 +3014,7 @@ func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritic
 		value.NonceV = nil
 	}
 	if !handled_InterestLifetimeV && err == nil {
-		value.InterestLifetimeV = nil
+		value.InterestLifetimeV.Unset()
 	}
 	if !handled_HopLimitV && err == nil {
 		value.HopLimitV = nil

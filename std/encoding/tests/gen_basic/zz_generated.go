@@ -211,13 +211,13 @@ type OptFieldParsingContext struct {
 func (encoder *OptFieldEncoder) Init(value *OptField) {
 
 	l := uint(0)
-	if value.Number != nil {
+	if optval, ok := value.Number.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Number).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Time != nil {
+	if optval, ok := value.Time.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(uint64(*value.Time/time.Millisecond)).EncodingLength())
+		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
 	}
 	if value.Binary != nil {
 		l += 1
@@ -240,19 +240,19 @@ func (encoder *OptFieldEncoder) EncodeInto(value *OptField, buf []byte) {
 
 	pos := uint(0)
 
-	if value.Number != nil {
+	if optval, ok := value.Number.Get(); ok {
 		buf[pos] = byte(24)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Number).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Time != nil {
+	if optval, ok := value.Time.Get(); ok {
 		buf[pos] = byte(25)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(uint64(*value.Time / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(uint64(optval / time.Millisecond)).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -318,8 +318,8 @@ func (context *OptFieldParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_Number = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -330,10 +330,10 @@ func (context *OptFieldParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Number = &tempVal
+						value.Number.Set(optval)
 					}
 				}
 			case 25:
@@ -356,8 +356,8 @@ func (context *OptFieldParsingContext) Parse(reader enc.FastReader, ignoreCritic
 								timeInt = uint64(timeInt<<8) | uint64(x)
 							}
 						}
-						tempVal := time.Duration(timeInt) * time.Millisecond
-						value.Time = &tempVal
+						optval := time.Duration(timeInt) * time.Millisecond
+						value.Time.Set(optval)
 					}
 				}
 			case 26:
@@ -392,10 +392,10 @@ func (context *OptFieldParsingContext) Parse(reader enc.FastReader, ignoreCritic
 	err = nil
 
 	if !handled_Number && err == nil {
-		value.Number = nil
+		value.Number.Unset()
 	}
 	if !handled_Time && err == nil {
-		value.Time = nil
+		value.Time.Unset()
 	}
 	if !handled_Binary && err == nil {
 		value.Binary = nil
