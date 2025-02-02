@@ -5,6 +5,7 @@ import (
 	gosync "sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 )
 
@@ -197,12 +198,25 @@ func (s *SvsALO) deliver(out svsPubOut) {
 	}
 }
 
-func (s *SvsALO) snapshotCallback(callback snapshotCallbackInner) {
+func (s *SvsALO) snapshotCallback(callback snapshotCallback) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	snapPub, ok := callback(s.state)
-	if !ok {
+	snapPub, err := callback(s.state)
+
+	// Trigger fetch for all affected publishers even if
+	// the callback has failed
+	defer func() {
+		for name := range s.state.Iter() {
+			if snapPub.Publisher.IsPrefix(name) {
+				s.consumeCheck(name, name.String())
+			}
+		}
+	}()
+
+	if err != nil {
+		// TODO: error callback
+		log.Error(nil, "Failed to fetch snapshot", "err", err)
 		return
 	}
 
@@ -213,11 +227,4 @@ func (s *SvsALO) snapshotCallback(callback snapshotCallbackInner) {
 		snapstate: s.state.Encode(func(state svsDataState) uint64 { return state.Known }),
 	}
 	s.outpipe <- out
-
-	// Trigger fetch for all affected publishers
-	for _, svEntry := range out.snapstate.Entries {
-		if snapPub.Publisher.IsPrefix(svEntry.Name) {
-			s.consumeCheck(svEntry.Name, svEntry.Name.String())
-		}
-	}
 }

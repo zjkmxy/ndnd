@@ -13,7 +13,7 @@ type Snapshot interface {
 	//
 	// The callback provides a function to update the state vector,
 	// and return the snapshot publication. When updating the state vector,
-	// make sure to only update the following fields. Updating pending is
+	// make sure to only update the following fields. Updating Pending is
 	// required, otherwise the fetcher will break.
 	//
 	//   - SnapBlock - to unblock fetching for the node
@@ -27,7 +27,10 @@ type Snapshot interface {
 	// Only Publisher, Content and DataName fields in the pub are required.
 	// Other fields are informational and the application can ignore them.
 	//
-	setCallback(snapshotCallback)
+	// Even if the callback returns an error, the Publication field should
+	// be appropriately set. This will trigger a re-fetch for the producers.
+	//
+	setCallback(snapshotCallbackWrap)
 
 	// check is called when the state vector is updated.
 	// The strategy can decide to block fetching for the snapshot.
@@ -45,5 +48,5 @@ type snapshotOnUpdateArgs struct {
 	hash string
 }
 
-type snapshotCallbackInner = func(state SvMap[svsDataState]) (SvsPub, bool)
-type snapshotCallback = func(callback snapshotCallbackInner)
+type snapshotCallback = func(state SvMap[svsDataState]) (SvsPub, error)
+type snapshotCallbackWrap = func(callback snapshotCallback)

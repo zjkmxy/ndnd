@@ -13,7 +13,7 @@ func (s *SnapshotNull) Snapshot() Snapshot {
 func (s *SnapshotNull) setNames(enc.Name, enc.Name) {
 }
 
-func (s *SnapshotNull) setCallback(snapshotCallback) {
+func (s *SnapshotNull) setCallback(snapshotCallbackWrap) {
 }
 
 func (s *SnapshotNull) check(snapshotOnUpdateArgs) {

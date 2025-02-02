@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"fmt"
+
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
@@ -26,7 +28,7 @@ type SnapshotNodeLatest struct {
 	// groupPrefix is the groupPrefix name.
 	groupPrefix enc.Name
 	// callback is the snapshot callback.
-	callback snapshotCallback
+	callback snapshotCallbackWrap
 
 	// prevSeq is my last snapshot sequence number.
 	prevSeq uint64
@@ -41,7 +43,7 @@ func (s *SnapshotNodeLatest) setNames(node enc.Name, group enc.Name) {
 	s.groupPrefix = group
 }
 
-func (s *SnapshotNodeLatest) setCallback(callback snapshotCallback) {
+func (s *SnapshotNodeLatest) setCallback(callback snapshotCallbackWrap) {
 	if s.Client == nil || s.SnapMe == nil || s.Threshold == 0 {
 		panic("SnapshotNodeLatest: not initialized")
 	}
@@ -96,24 +98,23 @@ func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 			return
 		}
 
-		s.callback(func(state SvMap[svsDataState]) (pub SvsPub, ok bool) {
+		s.callback(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
 			hash := node.String()
+			pub.Publisher = node
 
 			if err := cstate.Error(); err != nil {
-				log.Error(nil, "Failed to fetch snapshot", "err", err)
-
 				// Unblock the state - will lead back to us
 				entry := state.Get(hash, boot)
 				if entry.SnapBlock == 1 {
 					entry.SnapBlock = 0
 					state.Set(hash, boot, entry)
 				}
-				return pub, false
+				return pub, err
 			}
 
 			entry := state.Get(hash, boot)
 			if entry.SnapBlock != 1 || entry.Known >= cstate.Version() {
-				return pub, false
+				return pub, fmt.Errorf("fetched invalid snapshot")
 			}
 
 			entry.SnapBlock = 0
@@ -128,7 +129,7 @@ func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 				BootTime:   boot,
 				SeqNum:     cstate.Version(),
 				IsSnapshot: true,
-			}, true
+			}, nil
 		})
 	})
 }
