@@ -1,6 +1,8 @@
 package encoding_test
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"encoding/hex"
 	"strings"
 	"testing"
@@ -436,4 +438,96 @@ func TestNamePrefix(t *testing.T) {
 	require.Equal(t, "/a", n.Prefix(-3).String())
 	require.Equal(t, "/", n.Prefix(-4).String())
 	require.Equal(t, "/", n.Prefix(-5).String())
+}
+
+func TestNameTlvStr(t *testing.T) {
+	tu.SetT(t)
+	for _, name := range randomNames(1000, 20) {
+		comp2 := tu.NoErr(enc.ComponentFromTlvStr(name[10].TlvStr()))
+		require.Equal(t, name[10], comp2)
+		name2 := tu.NoErr(enc.NameFromTlvStr(name.TlvStr()))
+		require.Equal(t, name, name2)
+	}
+}
+
+func benchmarkNameEncode(b *testing.B, size int, encode func(name enc.Name)) {
+	names := randomNames(b.N, size)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		encode(names[i])
+	}
+}
+
+func BenchmarkNameHash(b *testing.B) {
+	benchmarkNameEncode(b, 20, func(name enc.Name) { _ = name.Hash() })
+}
+
+func BenchmarkNameStringEncode(b *testing.B) {
+	benchmarkNameEncode(b, 20, func(name enc.Name) { _ = name.String() })
+}
+
+func BenchmarkNameTlvStrEncode(b *testing.B) {
+	benchmarkNameEncode(b, 20, func(name enc.Name) { _ = name.TlvStr() })
+}
+
+func BenchmarkNameBytesEncode(b *testing.B) {
+	benchmarkNameEncode(b, 20, func(name enc.Name) { _ = name.Bytes() })
+}
+
+func BenchmarkNameComponentStringEncode(b *testing.B) {
+	benchmarkNameEncode(b, 1, func(name enc.Name) { _ = name[0].String() })
+}
+
+func BenchmarkNameComponentTlvStrEncode(b *testing.B) {
+	benchmarkNameEncode(b, 1, func(name enc.Name) { _ = name[0].TlvStr() })
+}
+
+func benchmarkNameDecode[T any](b *testing.B, size int, encode func(name enc.Name) T, decode func(e T)) {
+	names := randomNames(b.N, size)
+	nameEncs := make([]T, b.N)
+	for i := 0; i < b.N; i++ {
+		nameEncs[i] = encode(names[i])
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		decode(nameEncs[i])
+	}
+}
+
+func BenchmarkNameStringDecode(b *testing.B) {
+	benchmarkNameDecode(b, 20,
+		func(name enc.Name) string { return name.String() },
+		func(s string) { _ = tu.NoErrB(enc.NameFromStr(s)) })
+}
+
+func BenchmarkNameTlvStrDecode(b *testing.B) {
+	benchmarkNameDecode(b, 20,
+		func(name enc.Name) string { return name.TlvStr() },
+		func(s string) { _ = tu.NoErrB(enc.NameFromTlvStr(s)) })
+}
+
+func BenchmarkNameComponentStringDecode(b *testing.B) {
+	benchmarkNameDecode(b, 1,
+		func(name enc.Name) string { return name[0].String() },
+		func(s string) { _ = tu.NoErrB(enc.ComponentFromStr(s)) })
+}
+
+func BenchmarkNameComponentTlvStrDecode(b *testing.B) {
+	benchmarkNameDecode(b, 1,
+		func(name enc.Name) string { return name[0].TlvStr() },
+		func(s string) { _ = tu.NoErrB(enc.ComponentFromTlvStr(s)) })
+}
+
+// randomNames generates random names for benchmarking.
+func randomNames(count int, size int) []enc.Name {
+	names := make([]enc.Name, count)
+	for i := 0; i < count; i++ {
+		for j := 0; j < size; j++ {
+			bytes := make([]byte, 12+j)
+			rand.Read(bytes)
+			typ := max(enc.TLNum(uint16(binary.BigEndian.Uint16(bytes[:4])-1024)), 1024)
+			names[i] = append(names[i], enc.NewBytesComponent(typ, bytes[4:]))
+		}
+	}
+	return names
 }

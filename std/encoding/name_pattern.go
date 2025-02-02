@@ -5,6 +5,7 @@ import (
 	"hash"
 	"io"
 	"strings"
+	"unsafe"
 )
 
 type Name []Component
@@ -107,7 +108,7 @@ func (n Name) Prefix(i int) Name {
 func ReadName(r ParseReader) (Name, error) {
 	var err error
 	var c Component
-	ret := make(Name, 0)
+	ret := make(Name, 0, 8)
 	// Bad design of Go: it does not allow you use := to create a temp var c and write the error to err.
 	for c, err = ReadComponent(r); err == nil; c, err = ReadComponent(r) {
 		ret = append(ret, c)
@@ -362,4 +363,30 @@ func (n Name) ToFullName(rawData Wire) Name {
 		Typ: TypeImplicitSha256DigestComponent,
 		Val: digest,
 	})
+}
+
+// TlvStr returns the TLV encoding of a Component as a string.
+// This is a lot faster than converting to a URI string.
+func (c Component) TlvStr() string {
+	buf := make([]byte, c.EncodingLength())
+	c.EncodeInto(buf)
+	// https://github.com/golang/go/blob/37f27fbecd422da9fefb8ae1cc601bc5b4fec44b/src/strings/builder.go#L39-L42
+	return unsafe.String(unsafe.SliceData(buf), len(buf))
+}
+
+// TlvStr returns the TLV encoding of a Name as a string.
+func (n Name) TlvStr() string {
+	buf := make([]byte, n.EncodingLength())
+	n.EncodeInto(buf)
+	return unsafe.String(unsafe.SliceData(buf), len(buf))
+}
+
+// ComponentFromTlvStr parses the output of TlvStr into a Component.
+func ComponentFromTlvStr(s string) (Component, error) {
+	return ReadComponent(NewBufferReader([]byte(s)))
+}
+
+// NameFromFStr parses the output of FStr into a Name.
+func NameFromTlvStr(s string) (Name, error) {
+	return ReadName(NewBufferReader([]byte(s)))
 }
