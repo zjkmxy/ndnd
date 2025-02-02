@@ -67,11 +67,6 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 		return nil, err
 	}
 
-	// Update the state vector
-	if got := s.svs.IncrSeqNo(node); got != seq {
-		panic("[BUG] sequence number mismatch - who changed it?")
-	}
-
 	// We don't get notified of changes to our own state.
 	// So we need to update the state vector ourselves.
 	hash := node.String()
@@ -83,6 +78,11 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 
 	// Inform the snapshot strategy
 	s.opts.Snapshot.check(snapshotOnUpdateArgs{s.state, node, hash})
+
+	// Update the state vector
+	if got := s.svs.IncrSeqNo(node); got != seq {
+		panic("[BUG] sequence number mismatch - who changed it?")
+	}
 
 	return name, nil
 }

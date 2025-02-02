@@ -10,7 +10,7 @@ func (s *SnapshotNull) Snapshot() Snapshot {
 	return s
 }
 
-func (s *SnapshotNull) setNames(enc.Name, enc.Name) {
+func (s *SnapshotNull) initialize(enc.Name, enc.Name) {
 }
 
 func (s *SnapshotNull) setCallback(snapshotCallbackWrap) {

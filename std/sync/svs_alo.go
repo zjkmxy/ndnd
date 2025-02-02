@@ -91,7 +91,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	if s.opts.Snapshot == nil {
 		s.opts.Snapshot = &SnapshotNull{}
 	} else {
-		s.opts.Snapshot.setNames(s.opts.Name, s.opts.Svs.GroupPrefix)
+		s.opts.Snapshot.initialize(s.opts.Name, s.opts.Svs.GroupPrefix)
 		s.opts.Snapshot.setCallback(s.snapshotCallback)
 	}
 

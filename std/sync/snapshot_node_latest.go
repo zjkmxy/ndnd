@@ -47,23 +47,21 @@ func (s *SnapshotNodeLatest) Snapshot() Snapshot {
 	return s
 }
 
-func (s *SnapshotNodeLatest) setNames(node enc.Name, group enc.Name) {
+func (s *SnapshotNodeLatest) initialize(node enc.Name, group enc.Name) {
+	if s.Client == nil || s.SnapMe == nil || s.Threshold == 0 {
+		panic("SnapshotNodeLatest: not initialized")
+	}
+
 	s.nodePrefix = node
 	s.groupPrefix = group
 }
 
 func (s *SnapshotNodeLatest) setCallback(callback snapshotCallbackWrap) {
-	if s.Client == nil || s.SnapMe == nil || s.Threshold == 0 {
-		panic("SnapshotNodeLatest: not initialized")
-	}
-
 	s.callback = callback
 }
 
 // check determines if a snapshot should be taken or fetched.
 func (s *SnapshotNodeLatest) check(args snapshotOnUpdateArgs) {
-	// TODO: fetch snapshot if rebooted
-
 	// We only care about the latest boot.
 	// For all other states, make sure the fetch is skipped.
 	entries := args.state[args.hash]
@@ -74,12 +72,17 @@ func (s *SnapshotNodeLatest) check(args snapshotOnUpdateArgs) {
 
 			if args.node.Equal(s.nodePrefix) {
 				// This is me - check if I should snapshot
-				if lastV.Latest-s.prevSeq >= s.Threshold {
+				// 1. I have reached the threshold
+				// 2. I have not taken any snapshot yet
+				if lastV.Latest-s.prevSeq >= s.Threshold || (s.prevSeq == 0 && lastV.Latest > 0) {
 					s.snap(last.Boot, lastV.Latest)
 				}
 			} else {
-				// This is not me - check if I should block
-				if lastV.SnapBlock == 0 && lastV.Latest-lastV.Pending >= s.Threshold*2 {
+				// This is not me - check if I should fetch
+				// 1. Pending gap is more than 2*threshold
+				// 2. I have not fetched anything yet
+				// And, I'm not already blocked by a fetch
+				if lastV.SnapBlock == 0 && (lastV.Latest-lastV.Pending >= s.Threshold*2 || lastV.Pending == 0) {
 					entries[i].Value.SnapBlock = 1 // released by fetch callback
 					s.fetch(args.node, entries[i].Boot)
 				}

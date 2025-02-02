@@ -173,9 +173,8 @@ func main() {
 	fmt.Fprintln(os.Stderr, "*** Press Ctrl+C to exit.")
 	fmt.Fprintln(os.Stderr)
 
-	// Publish initial message
-	msgCount++
-	_, err = svsalo.Publish(enc.Wire{[]byte("Joined the chatroom")})
+	// Publish an initial empty message to announce our presence
+	_, err = svsalo.Publish(enc.Wire{})
 	if err != nil {
 		log.Error(nil, "Unable to publish message", "err", err)
 	}
@@ -191,10 +190,13 @@ func main() {
 
 		// Trim newline character
 		line = line[:len(line)-1]
-		msgCount++
-		msgSize += len(line)
+		if len(line) == 0 {
+			continue
+		}
 
 		// Publish chat message
+		msgCount++
+		msgSize += len(line)
 		_, err = svsalo.Publish(enc.Wire{line})
 		if err != nil {
 			log.Error(nil, "Unable to publish message", "err", err)

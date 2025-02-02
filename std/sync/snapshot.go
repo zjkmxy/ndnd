@@ -6,8 +6,8 @@ type Snapshot interface {
 	// Snapshot returns the Snapshot trait.
 	Snapshot() Snapshot
 
-	// setName sets the name of the node and group.
-	setNames(node enc.Name, group enc.Name)
+	// initialize the strategy, and set basic parameters.
+	initialize(node enc.Name, group enc.Name)
 
 	// setCallback sets the callback for fetched snapshot.
 	//
