@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
+	"runtime"
 	"strings"
 	"testing"
 	"unsafe"
@@ -450,7 +451,17 @@ func TestNameTlvStr(t *testing.T) {
 	}
 }
 
+func TestNameClone(t *testing.T) {
+	tu.SetT(t)
+	n := tu.NoErr(enc.NameFromStr("/a/b/c/d"))
+	n2 := n.Clone()
+	require.Equal(t, n, n2)
+	require.True(t, unsafe.SliceData(n) != unsafe.SliceData(n2))
+	require.True(t, unsafe.SliceData(n[0].Val) != unsafe.SliceData(n2[0].Val))
+}
+
 func benchmarkNameEncode(b *testing.B, size int, encode func(name enc.Name)) {
+	runtime.GC()
 	names := randomNames(b.N, size)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -480,6 +491,10 @@ func BenchmarkNameComponentStringEncode(b *testing.B) {
 
 func BenchmarkNameComponentTlvStrEncode(b *testing.B) {
 	benchmarkNameEncode(b, 1, func(name enc.Name) { _ = name[0].TlvStr() })
+}
+
+func BenchmarkNameClone(b *testing.B) {
+	benchmarkNameEncode(b, 20, func(name enc.Name) { _ = name.Clone() })
 }
 
 func benchmarkNameDecode[T any](b *testing.B, size int, encode func(name enc.Name) T, decode func(e T)) {
