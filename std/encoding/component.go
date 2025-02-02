@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"bytes"
-	"encoding/binary"
 	"hash"
 	"io"
 	"strconv"
@@ -159,16 +158,8 @@ func (c Component) Hash() uint64 {
 	h := hashPool.Get().(hash.Hash64)
 	defer hashPool.Put(h)
 	h.Reset()
-	c.HashInto(h)
+	h.Write(c.Bytes())
 	return h.Sum64()
-}
-
-// HashInto hashes the current component into the hasher
-func (c Component) HashInto(h hash.Hash) {
-	tbuf := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	binary.BigEndian.PutUint64(tbuf, uint64(c.Typ))
-	h.Write(tbuf)
-	h.Write(c.Val)
 }
 
 func (c Component) Equal(rhs ComponentPattern) bool {

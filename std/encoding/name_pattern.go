@@ -130,14 +130,19 @@ func (n Name) Bytes() []byte {
 	return buf
 }
 
+// BytesInner returns the encoded bytes of a Name **excluding** the TL prefix.
+func (n Name) BytesInner() []byte {
+	buf := make([]byte, n.EncodingLength())
+	n.EncodeInto(buf)
+	return buf
+}
+
 // Hash returns the hash of the name
 func (n Name) Hash() uint64 {
 	h := hashPool.Get().(hash.Hash64)
 	defer hashPool.Put(h)
 	h.Reset()
-	for _, c := range n {
-		c.HashInto(h)
-	}
+	h.Write(n.BytesInner())
 	return h.Sum64()
 }
 
@@ -149,8 +154,8 @@ func (n Name) PrefixHash() []uint64 {
 	h.Reset()
 	ret := make([]uint64, len(n)+1)
 	ret[0] = h.Sum64()
-	for i, c := range n {
-		c.HashInto(h)
+	for i := range n {
+		h.Write(n[i].Bytes())
 		ret[i+1] = h.Sum64()
 	}
 	return ret
@@ -368,16 +373,14 @@ func (n Name) ToFullName(rawData Wire) Name {
 // TlvStr returns the TLV encoding of a Component as a string.
 // This is a lot faster than converting to a URI string.
 func (c Component) TlvStr() string {
-	buf := make([]byte, c.EncodingLength())
-	c.EncodeInto(buf)
 	// https://github.com/golang/go/blob/37f27fbecd422da9fefb8ae1cc601bc5b4fec44b/src/strings/builder.go#L39-L42
+	buf := c.Bytes()
 	return unsafe.String(unsafe.SliceData(buf), len(buf))
 }
 
 // TlvStr returns the TLV encoding of a Name as a string.
 func (n Name) TlvStr() string {
-	buf := make([]byte, n.EncodingLength())
-	n.EncodeInto(buf)
+	buf := n.BytesInner()
 	return unsafe.String(unsafe.SliceData(buf), len(buf))
 }
 
