@@ -1,11 +1,11 @@
 package sync
 
 import (
+	"fmt"
 	"slices"
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 )
@@ -172,8 +172,8 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 				return
 			}
 
-			// TODO: replace with OnError callback
-			log.Warn(s, err.Error(), "object", name)
+			// Propagate the error to application
+			s.errpipe <- &ErrSync{node, err}
 
 			// TODO: exponential backoff
 			time.AfterFunc(2*time.Second, func() {
@@ -234,4 +234,37 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			}
 		}
 	})
+}
+
+func (s *SvsALO) snapshotCallback(callback snapshotCallback) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	snapPub, err := callback(s.state)
+
+	// Trigger fetch for all affected publishers even if
+	// the callback has failed
+	defer func() {
+		for name := range s.state.Iter() {
+			if snapPub.Publisher.IsPrefix(name) {
+				s.consumeCheck(name, name.String())
+			}
+		}
+	}()
+
+	if err != nil {
+		s.errpipe <- &ErrSync{
+			name: snapPub.Publisher,
+			err:  fmt.Errorf("%w: %w", ErrSnapshot, err),
+		}
+		return
+	}
+
+	// Update delivered vector in order
+	out := svsPubOut{
+		pub:       snapPub,
+		subs:      slices.Collect(s.nodePs.Subs(snapPub.Publisher)), // suspicious
+		snapstate: s.state.Encode(func(state svsDataState) uint64 { return state.Known }),
+	}
+	s.outpipe <- out
 }

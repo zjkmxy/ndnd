@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"slices"
 	gosync "sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -31,8 +30,17 @@ type SvsALO struct {
 
 	// outpipe is the channel for delivering data.
 	outpipe chan svsPubOut
+	// errpipe is the channel for delivering errors.
+	errpipe chan error
+	// publpipe is the channel for delivering new publishers.
+	publpipe chan enc.Name
 	// stop is the stop signal.
 	stop chan struct{}
+
+	// error callback
+	onError func(error)
+	// publisher callback
+	onPublisher func(enc.Name)
 }
 
 type SvsAloOpts struct {
@@ -61,8 +69,13 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		delivered: NewSvMap[uint64](0),
 		nodePs:    NewSimplePs[SvsPub](),
 
-		outpipe: make(chan svsPubOut, 256),
-		stop:    make(chan struct{}),
+		outpipe:  make(chan svsPubOut, 256),
+		errpipe:  make(chan error, 256),
+		publpipe: make(chan enc.Name, 256),
+		stop:     make(chan struct{}),
+
+		onError:     func(err error) { log.Error(nil, err.Error()) },
+		onPublisher: nil,
 	}
 
 	// Use default snapshot strategy if not provided.
@@ -107,6 +120,26 @@ func (s *SvsALO) Start() error {
 func (s *SvsALO) Stop() {
 	s.stop <- struct{}{}
 	close(s.stop)
+}
+
+// SetOnError sets the error callback.
+// You can likely cast the received error as SyncError.
+//
+// SyncError includes the name of the affected publisher and the error.
+// Applications can use this callback to selectively unsubscribe from
+// publishers that are not responding.
+func (s *SvsALO) SetOnError(callback func(error)) {
+	s.onError = callback
+}
+
+// SetOnPublisher sets the publisher callback.
+//
+// This will be called when an update from a new publisher is received.
+// This includes both updates for publishers that are already subscribed
+// and other non-subscribed publishers. Applications can use this callback
+// to test the liveness of publishers and selectively subscribe to them.
+func (s *SvsALO) SetOnPublisher(callback func(enc.Name)) {
+	s.onPublisher = callback
 }
 
 // Publish sends a message to the group
@@ -155,12 +188,21 @@ func (s *SvsALO) run() {
 			return
 		case out := <-s.outpipe:
 			s.deliver(out)
+		case err := <-s.errpipe:
+			s.onError(err)
+		case publ := <-s.publpipe:
+			s.onPublisher(publ)
 		}
 	}
 }
 
 // onSvsUpdate is the handler for new sequence numbers.
 func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
+	// App callback for new publishers
+	if s.onPublisher != nil {
+		s.publpipe <- update.Name
+	}
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -196,35 +238,4 @@ func (s *SvsALO) deliver(out svsPubOut) {
 			s.delivered.Set(out.hash, out.pub.BootTime, out.pub.SeqNum)
 		}
 	}
-}
-
-func (s *SvsALO) snapshotCallback(callback snapshotCallback) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	snapPub, err := callback(s.state)
-
-	// Trigger fetch for all affected publishers even if
-	// the callback has failed
-	defer func() {
-		for name := range s.state.Iter() {
-			if snapPub.Publisher.IsPrefix(name) {
-				s.consumeCheck(name, name.String())
-			}
-		}
-	}()
-
-	if err != nil {
-		// TODO: error callback
-		log.Error(nil, "Failed to fetch snapshot", "err", err)
-		return
-	}
-
-	// Update delivered vector in order
-	out := svsPubOut{
-		pub:       snapPub,
-		subs:      slices.Collect(s.nodePs.Subs(snapPub.Publisher)), // suspicious
-		snapstate: s.state.Encode(func(state svsDataState) uint64 { return state.Known }),
-	}
-	s.outpipe <- out
 }
