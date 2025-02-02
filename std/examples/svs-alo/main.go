@@ -142,7 +142,6 @@ func main() {
 	// If we get more than three errors from a publisher, we will stop
 	// subscribing to that publisher.
 	svsalo.SetOnError(func(err error) {
-		fmt.Fprintf(os.Stderr, "*** %v\n", err)
 		errSync := &ndn_sync.ErrSync{}
 		if errors.As(err, &errSync) {
 			hash := errSync.Name().Hash()
@@ -151,7 +150,7 @@ func main() {
 			}
 
 			subs[hash]++
-			if subs[hash] > 3 {
+			if subs[hash] >= 3 {
 				fmt.Fprintf(os.Stderr, "*** Unsubscribing from %s (too many errors)\n", errSync.Name())
 				svsalo.UnsubscribePublisher(errSync.Name())
 				delete(subs, hash)
