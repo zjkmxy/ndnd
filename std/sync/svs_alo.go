@@ -189,6 +189,7 @@ func (s *SvsALO) UnsubscribePublisher(prefix enc.Name) {
 }
 
 // run is the main loop for the SvsALO instance.
+// Only this thread has interaction with the application.
 func (s *SvsALO) run() {
 	defer s.svs.Stop()
 	for {
@@ -225,6 +226,7 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 	s.consumeCheck(update.Name, hash)
 }
 
+// deliver is the outgoing pipeline handler on the run() thread.
 func (s *SvsALO) deliver(out svsPubOut) {
 	for _, sub := range out.subs {
 		sub(out.pub)

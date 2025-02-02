@@ -8,6 +8,15 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 )
 
+// SnapshotNodeLatest is a snapshot strategy that takes a snapshot of the
+// application state whenever a certain number of updates have been made.
+//
+// Each snapshot is treated as self-contained and replaces any previous
+// publications completely. Only the latest (hence the name) snapshot is
+// fetched by other nodes, and previous publications are ignored.
+//
+// When a node bootstraps again, this strategy assumes that the previous
+// state is now invalid and fetches the latest snapshot.
 type SnapshotNodeLatest struct {
 	// Client is the object client.
 	Client ndn.Client
@@ -51,7 +60,10 @@ func (s *SnapshotNodeLatest) setCallback(callback snapshotCallbackWrap) {
 	s.callback = callback
 }
 
+// check determines if a snapshot should be taken or fetched.
 func (s *SnapshotNodeLatest) check(args snapshotOnUpdateArgs) {
+	// TODO: fetch snapshot if rebooted
+
 	// We only care about the latest boot.
 	// For all other states, make sure the fetch is skipped.
 	entries := args.state[args.hash]
@@ -84,6 +96,7 @@ func (s *SnapshotNodeLatest) check(args snapshotOnUpdateArgs) {
 	}
 }
 
+// snapName is the naming convention for snapshots.
 func (s *SnapshotNodeLatest) snapName(node enc.Name, boot uint64) enc.Name {
 	return node.
 		Append(s.groupPrefix...).
@@ -91,6 +104,7 @@ func (s *SnapshotNodeLatest) snapName(node enc.Name, boot uint64) enc.Name {
 		Append(enc.NewKeywordComponent("snap"))
 }
 
+// fetch fetches the latest snapshot.
 func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 	// Discover the latest snapshot
 	s.Client.Consume(s.snapName(node, boot), func(cstate ndn.ConsumeState) {
@@ -134,6 +148,7 @@ func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 	})
 }
 
+// snap takes a snapshot of the application state.
 func (s *SnapshotNodeLatest) snap(boot uint64, seq uint64) {
 	wire, err := s.SnapMe()
 	if err != nil {

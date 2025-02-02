@@ -127,6 +127,9 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 	}
 }
 
+// consumeObject fetches a single object from the network.
+// The callback puts data on the outgoing pipeline and re-calls
+// check to fetch more objects if necessary.
 func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 	name := s.objectName(node, boot, seq)
 	s.client.Consume(name, func(status ndn.ConsumeState) {
@@ -233,10 +236,14 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 	})
 }
 
+// snapshotCallback is called by the snapshot strategy to indicate
+// that a snapshot has been fetched.
 func (s *SvsALO) snapshotCallback(callback snapshotCallback) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	// Get the snapshot under the lock, and let the strategy
+	// mutate the state safely.
 	snapPub, err := callback(s.state)
 
 	// Trigger fetch for all affected publishers even if
@@ -257,7 +264,8 @@ func (s *SvsALO) snapshotCallback(callback snapshotCallback) {
 		return
 	}
 
-	// Update delivered vector in order
+	// Update delivered vector after the snapshot is delivered
+	// (this is the reason it needs to go out on the outpipe)
 	out := svsPubOut{
 		pub:       snapPub,
 		subs:      slices.Collect(s.nodePs.Subs(snapPub.Publisher)), // suspicious
