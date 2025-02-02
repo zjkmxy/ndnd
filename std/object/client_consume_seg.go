@@ -2,6 +2,7 @@ package object
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -61,12 +62,8 @@ func (s *rrSegFetcher) add(state *ConsumeState) {
 // remove a stream from the fetch queue
 // requires the mutex to be locked
 func (s *rrSegFetcher) remove(state *ConsumeState) {
-	for i, stream := range s.streams {
-		if stream == state {
-			s.streams = append(s.streams[:i], s.streams[i+1:]...)
-			return
-		}
-	}
+	s.streams = slices.DeleteFunc(s.streams,
+		func(s *ConsumeState) bool { return s == state })
 }
 
 // find another state to work on
@@ -110,6 +107,7 @@ func (s *rrSegFetcher) findWork() *ConsumeState {
 			if s.rrIndex < 0 {
 				s.rrIndex = len(s.streams) - 1
 			}
+			i-- // length reduced
 			continue
 		}
 
