@@ -10,9 +10,6 @@ import (
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 )
 
-// Max pending objects for a producer.
-const SvsAloMaxPending = 10
-
 type svsDataState struct {
 	// Known is the fetched sequence number.
 	// Data is handed off to outgoing pipe.
@@ -111,7 +108,7 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 		// Check if there is something to fetch
 		for fstate.Pending < fstate.Latest {
 			// Too many pending interests
-			if totalPending > SvsAloMaxPending {
+			if totalPending > s.opts.MaxPipelineSize {
 				return
 			}
 

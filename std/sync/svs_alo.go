@@ -50,6 +50,10 @@ type SvsAloOpts struct {
 	Svs SvSyncOpts
 	// Snapshot is the snapshot strategy.
 	Snapshot Snapshot
+
+	// MaxPipelineSize is the number of objects to fetch
+	// concurrently for a single publisher (default 10)
+	MaxPipelineSize uint64
 }
 
 // NewSvsALO creates a new SvsALO instance.
@@ -78,7 +82,12 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		onPublisher: nil,
 	}
 
-	// Use default snapshot strategy if not provided.
+	// Default options
+	if s.opts.MaxPipelineSize == 0 {
+		s.opts.MaxPipelineSize = 10
+	}
+
+	// Use null snapshot strategy by default
 	if s.opts.Snapshot == nil {
 		s.opts.Snapshot = &SnapshotNull{}
 	} else {
