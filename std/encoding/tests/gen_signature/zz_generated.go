@@ -59,7 +59,7 @@ func (encoder *T1Encoder) Init(value *T1) {
 
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	l += 1
 	l += uint(1 + enc.Nat(value.H1).EncodingLength())
@@ -180,11 +180,17 @@ func (encoder *T1Encoder) EncodeInto(value *T1, wire enc.Wire) {
 }
 
 func (encoder *T1Encoder) Encode(value *T1) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)
@@ -430,7 +436,7 @@ func (encoder *T2Encoder) Init(value *T2) {
 
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	if value.Name != nil {
 		l += 1
@@ -564,11 +570,17 @@ func (encoder *T2Encoder) EncodeInto(value *T2, wire enc.Wire) {
 }
 
 func (encoder *T2Encoder) Encode(value *T2) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)

@@ -835,7 +835,7 @@ func (encoder *NoCopyStructEncoder) Init(value *NoCopyStruct) {
 	}
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	if value.Wire1 != nil {
 		l += 1
@@ -928,11 +928,17 @@ func (encoder *NoCopyStructEncoder) EncodeInto(value *NoCopyStruct, wire enc.Wir
 }
 
 func (encoder *NoCopyStructEncoder) Encode(value *NoCopyStruct) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)
