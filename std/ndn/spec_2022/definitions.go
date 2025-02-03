@@ -5,6 +5,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type KeyLocator struct {
@@ -21,9 +22,9 @@ type Links struct {
 
 type MetaInfo struct {
 	//+field:natural:optional
-	ContentType enc.Optional[uint64] `tlv:"0x18"`
+	ContentType optional.Optional[uint64] `tlv:"0x18"`
 	//+field:time:optional
-	FreshnessPeriod enc.Optional[time.Duration] `tlv:"0x19"`
+	FreshnessPeriod optional.Optional[time.Duration] `tlv:"0x19"`
 	//+field:binary
 	FinalBlockID []byte `tlv:"0x1a"`
 }
@@ -55,9 +56,9 @@ type SignatureInfo struct {
 	//+field:binary
 	SignatureNonce []byte `tlv:"0x26"`
 	//+field:time:optional
-	SignatureTime enc.Optional[time.Duration] `tlv:"0x28"`
+	SignatureTime optional.Optional[time.Duration] `tlv:"0x28"`
 	//+field:natural:optional
-	SignatureSeqNum enc.Optional[uint64] `tlv:"0x2a"`
+	SignatureSeqNum optional.Optional[uint64] `tlv:"0x2a"`
 	//+field:struct:ValidityPeriod
 	ValidityPeriod *ValidityPeriod `tlv:"0xfd"`
 	//+field:struct:CertAdditionalDescription
@@ -84,27 +85,27 @@ type CachePolicy struct {
 // +tlv-model:nocopy,private
 type LpPacket struct {
 	//+field:fixedUint:uint64:optional
-	Sequence enc.Optional[uint64] `tlv:"0x51"`
+	Sequence optional.Optional[uint64] `tlv:"0x51"`
 	//+field:natural:optional
-	FragIndex enc.Optional[uint64] `tlv:"0x52"`
+	FragIndex optional.Optional[uint64] `tlv:"0x52"`
 	//+field:natural:optional
-	FragCount enc.Optional[uint64] `tlv:"0x53"`
+	FragCount optional.Optional[uint64] `tlv:"0x53"`
 	//+field:binary
 	PitToken []byte `tlv:"0x62"`
 	//+field:struct:NetworkNack
 	Nack *NetworkNack `tlv:"0x0320"`
 	//+field:natural:optional
-	IncomingFaceId enc.Optional[uint64] `tlv:"0x032C"`
+	IncomingFaceId optional.Optional[uint64] `tlv:"0x032C"`
 	//+field:natural:optional
-	NextHopFaceId enc.Optional[uint64] `tlv:"0x0330"`
+	NextHopFaceId optional.Optional[uint64] `tlv:"0x0330"`
 	//+field:struct:CachePolicy
 	CachePolicy *CachePolicy `tlv:"0x0334"`
 	//+field:natural:optional
-	CongestionMark enc.Optional[uint64] `tlv:"0x0340"`
+	CongestionMark optional.Optional[uint64] `tlv:"0x0340"`
 	//+field:fixedUint:uint64:optional
-	Ack enc.Optional[uint64] `tlv:"0x0344"`
+	Ack optional.Optional[uint64] `tlv:"0x0344"`
 	//+field:fixedUint:uint64:optional
-	TxSequence enc.Optional[uint64] `tlv:"0x0348"`
+	TxSequence optional.Optional[uint64] `tlv:"0x0348"`
 	//+field:bool
 	NonDiscovery bool `tlv:"0x034C"`
 	//+field:wire
@@ -130,9 +131,9 @@ type Interest struct {
 	//+field:struct:Links
 	ForwardingHintV *Links `tlv:"0x1e"`
 	//+field:fixedUint:uint32:optional
-	NonceV enc.Optional[uint32] `tlv:"0x0a"`
+	NonceV optional.Optional[uint32] `tlv:"0x0a"`
 	//+field:time:optional
-	InterestLifetimeV enc.Optional[time.Duration] `tlv:"0x0c"`
+	InterestLifetimeV optional.Optional[time.Duration] `tlv:"0x0c"`
 	//+field:byte
 	HopLimitV *byte `tlv:"0x22"`
 

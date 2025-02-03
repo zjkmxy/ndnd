@@ -12,6 +12,7 @@ import (
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/spf13/cobra"
 )
@@ -71,7 +72,7 @@ func (pc *PingClient) send(seq uint64) {
 	name := pc.name.Append(enc.NewSequenceNumComponent(seq))
 
 	cfg := &ndn.InterestConfig{
-		Lifetime: enc.Some(time.Duration(pc.timeout) * time.Millisecond),
+		Lifetime: optional.Some(time.Duration(pc.timeout) * time.Millisecond),
 		Nonce:    utils.ConvertNonce(pc.app.Timer().Nonce()),
 	}
 

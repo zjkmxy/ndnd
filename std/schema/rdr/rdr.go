@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	rtlv "github.com/named-data/ndnd/std/ndn/rdr_2024"
 	"github.com/named-data/ndnd/std/schema"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -72,9 +73,9 @@ func (n *SegmentedNode) Provide(mNode schema.MatchedNode, content enc.Wire, need
 	copy(newName, mNode.Name)
 
 	dataCfg := &ndn.DataConfig{
-		ContentType:  enc.Some(n.ContentType),
-		Freshness:    enc.Some(n.Freshness),
-		FinalBlockID: enc.Some(enc.NewSegmentComponent(segCnt - 1)),
+		ContentType:  optional.Some(n.ContentType),
+		Freshness:    optional.Some(n.Freshness),
+		FinalBlockID: optional.Some(enc.NewSegmentComponent(segCnt - 1)),
 	}
 
 	for i := uint64(0); i < segCnt; i++ {
@@ -286,14 +287,14 @@ func (n *RdrNode) Provide(mNode schema.MatchedNode, content enc.Wire) uint64 {
 
 	// generate metadata
 	metaDataCfg := &ndn.DataConfig{
-		ContentType:  enc.Some(ndn.ContentTypeBlob),
-		Freshness:    enc.Some(n.MetaFreshness),
-		FinalBlockID: enc.Some(enc.NewSegmentComponent(0)),
+		ContentType:  optional.Some(ndn.ContentTypeBlob),
+		Freshness:    optional.Some(n.MetaFreshness),
+		FinalBlockID: optional.Some(enc.NewSegmentComponent(0)),
 	}
 	metaData := &rtlv.MetaData{
 		Name:         dataName,
 		FinalBlockID: enc.NewSegmentComponent(segCnt - 1).Bytes(),
-		Size:         enc.Some(content.Length()),
+		Size:         optional.Some(content.Length()),
 	}
 	metaMNode.Call("Provide", metaData.Encode(), metaDataCfg)
 
@@ -464,13 +465,13 @@ func (n *GeneralObjNode) Provide(mNode schema.MatchedNode, content enc.Wire) uin
 	metaName[nameLen] = enc.NewStringComponent(32, "metadata")
 	metaMNode := mNode.Refine(metaName)
 	metaDataCfg := &ndn.DataConfig{
-		ContentType: enc.Some(ndn.ContentTypeBlob),
-		Freshness:   enc.Some(n.MetaFreshness),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
+		Freshness:   optional.Some(n.MetaFreshness),
 	}
 	metaData := &rtlv.MetaData{
 		Name:         dataName,
 		FinalBlockID: enc.NewSegmentComponent(segCnt - 1).Bytes(),
-		Size:         enc.Some(content.Length()),
+		Size:         optional.Some(content.Length()),
 	}
 	metaMNode.Call("Provide", metaData.Encode(), metaDataCfg)
 
@@ -480,8 +481,8 @@ func (n *GeneralObjNode) Provide(mNode schema.MatchedNode, content enc.Wire) uin
 	manifestName[nameLen] = enc.NewStringComponent(32, "manifest")
 	manifestMNode := mNode.Refine(manifestName)
 	manifestDataCfg := &ndn.DataConfig{
-		ContentType: enc.Some(ndn.ContentTypeBlob),
-		Freshness:   enc.Some(n.ManifestFreshness),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
+		Freshness:   optional.Some(n.ManifestFreshness),
 	}
 	manifestData := &rtlv.ManifestData{
 		Entries: make([]*rtlv.ManifestDigest, segCnt),

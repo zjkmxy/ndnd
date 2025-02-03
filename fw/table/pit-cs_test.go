@@ -7,6 +7,7 @@ import (
 
 	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -91,7 +92,7 @@ func TestInsertInRecord(t *testing.T) {
 	val := uint32(1)
 	interest := &defn.FwInterest{
 		NameV:  name,
-		NonceV: enc.Some(val),
+		NonceV: optional.Some(val),
 	}
 	pitToken := []byte("abc")
 	bpe := basePitEntry{
@@ -127,7 +128,7 @@ func TestInsertInRecord(t *testing.T) {
 	val2 := uint32(1)
 	interest2 := &defn.FwInterest{
 		NameV:  name2,
-		NonceV: enc.Some(val2),
+		NonceV: optional.Some(val2),
 	}
 	pitToken2 := []byte("xyz")
 	faceID2 := uint64(6789)

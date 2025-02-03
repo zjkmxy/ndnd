@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +41,7 @@ func makeData(name enc.Name) *defn.FwData {
 func makeInterest(name enc.Name) *defn.FwInterest {
 	return &defn.FwInterest{
 		NameV:  name,
-		NonceV: enc.Some(rand.Uint32()),
+		NonceV: optional.Some(rand.Uint32()),
 	}
 }
 

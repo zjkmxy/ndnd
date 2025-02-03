@@ -7,6 +7,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -40,8 +41,8 @@ func (n *LeafNode) Provide(
 	spec := engine.Spec()
 	if dataCfg == nil {
 		dataCfg = &ndn.DataConfig{
-			ContentType: enc.Some(n.ContentType),
-			Freshness:   enc.Some(n.Freshness),
+			ContentType: optional.Some(n.ContentType),
+			Freshness:   optional.Some(n.Freshness),
 		}
 	}
 	validDur := n.ValidDur

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // Client is the interface for the Object Client API
@@ -124,5 +125,5 @@ type ValidateExtArgs struct {
 	// Override data name during first validation.
 	OverrideName enc.Name
 	// Next Hop ID to use for fetching certificates.
-	CertNextHop enc.Optional[uint64]
+	CertNextHop optional.Optional[uint64]
 }

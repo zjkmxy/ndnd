@@ -18,6 +18,7 @@ import (
 	"github.com/named-data/ndnd/fw/face"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // FaceModule is the module that handles Face Management.
@@ -302,13 +303,13 @@ func (f *FaceModule) update(interest *Interest) {
 	selectedFace := face.FaceTable.Get(faceID)
 	if selectedFace == nil {
 		core.Log.Warn(f, "Cannot update specified (or implicit) face because it does not exist", "faceid", faceID)
-		f.manager.sendCtrlResp(interest, 404, "Face does not exist", &mgmt.ControlArgs{FaceId: enc.Some(faceID)})
+		f.manager.sendCtrlResp(interest, 404, "Face does not exist", &mgmt.ControlArgs{FaceId: optional.Some(faceID)})
 		return
 	}
 
 	// Can't update null (or internal) faces via management
 	if selectedFace.RemoteURI().Scheme() == "null" || selectedFace.RemoteURI().Scheme() == "internal" {
-		f.manager.sendCtrlResp(interest, 401, "Face cannot be updated via management", &mgmt.ControlArgs{FaceId: enc.Some(faceID)})
+		f.manager.sendCtrlResp(interest, 401, "Face cannot be updated via management", &mgmt.ControlArgs{FaceId: optional.Some(faceID)})
 		return
 	}
 
@@ -546,7 +547,7 @@ func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStat
 		FaceScope:       uint64(selectedFace.Scope()),
 		FacePersistency: uint64(selectedFace.Persistency()),
 		LinkType:        uint64(selectedFace.LinkType()),
-		Mtu:             enc.Some(uint64(selectedFace.MTU())),
+		Mtu:             optional.Some(uint64(selectedFace.MTU())),
 		NInInterests:    selectedFace.NInInterests(),
 		NInData:         selectedFace.NInData(),
 		NInNacks:        0,
@@ -557,14 +558,14 @@ func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStat
 		NOutBytes:       selectedFace.NInBytes(),
 	}
 	if selectedFace.ExpirationPeriod() != 0 {
-		faceDataset.ExpirationPeriod = enc.Some(uint64(selectedFace.ExpirationPeriod().Milliseconds()))
+		faceDataset.ExpirationPeriod = optional.Some(uint64(selectedFace.ExpirationPeriod().Milliseconds()))
 	}
 	linkService, ok := selectedFace.(*face.NDNLPLinkService)
 	if ok {
 		options := linkService.Options()
 
-		faceDataset.BaseCongestionMarkInterval = enc.Some(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
-		faceDataset.DefaultCongestionThreshold = enc.Some(options.DefaultCongestionThresholdBytes)
+		faceDataset.BaseCongestionMarkInterval = optional.Some(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
+		faceDataset.DefaultCongestionThreshold = optional.Some(options.DefaultCongestionThresholdBytes)
 		faceDataset.Flags = options.Flags()
 		if options.IsConsumerControlledForwardingEnabled {
 			// This one will only be enabled if the other two local fields are enabled (and vice versa)
@@ -579,17 +580,17 @@ func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStat
 }
 
 func (f *FaceModule) fillFaceProperties(params *mgmt.ControlArgs, selectedFace face.LinkService) {
-	params.FaceId = enc.Some(selectedFace.FaceID())
-	params.Uri = enc.Some(selectedFace.RemoteURI().String())
-	params.LocalUri = enc.Some(selectedFace.LocalURI().String())
-	params.FacePersistency = enc.Some(uint64(selectedFace.Persistency()))
-	params.Mtu = enc.Some(uint64(selectedFace.MTU()))
-	params.Flags = enc.Some(uint64(0))
+	params.FaceId = optional.Some(selectedFace.FaceID())
+	params.Uri = optional.Some(selectedFace.RemoteURI().String())
+	params.LocalUri = optional.Some(selectedFace.LocalURI().String())
+	params.FacePersistency = optional.Some(uint64(selectedFace.Persistency()))
+	params.Mtu = optional.Some(uint64(selectedFace.MTU()))
+	params.Flags = optional.Some(uint64(0))
 
 	if linkService, ok := selectedFace.(*face.NDNLPLinkService); ok {
 		options := linkService.Options()
-		params.BaseCongestionMarkInterval = enc.Some(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
-		params.DefaultCongestionThreshold = enc.Some(options.DefaultCongestionThresholdBytes)
-		params.Flags = enc.Some(uint64(options.Flags()))
+		params.BaseCongestionMarkInterval = optional.Some(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
+		params.DefaultCongestionThreshold = optional.Some(options.DefaultCongestionThresholdBytes)
+		params.Flags = optional.Some(uint64(options.Flags()))
 	}
 }

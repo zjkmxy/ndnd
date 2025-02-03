@@ -10,6 +10,7 @@ import (
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/ndncert/tlv"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // The functions defined in this file implement the client protocol for the NDNCERT protocol.
@@ -195,7 +196,7 @@ func (c *Client) Challenge(
 	prevRes *tlv.ChallengeRes,
 ) (*tlv.ChallengeRes, error) {
 	var prevParams ParamMap = nil
-	var prevStatus enc.Optional[string]
+	var prevStatus optional.Optional[string]
 
 	if prevRes != nil {
 		prevStatus = prevRes.ChalStatus

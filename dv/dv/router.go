@@ -16,6 +16,7 @@ import (
 	"github.com/named-data/ndnd/std/security/keychain"
 	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -194,8 +195,8 @@ func (dv *Router) configureFace() (err error) {
 		Module: "faces",
 		Cmd:    "update",
 		Args: &mgmt.ControlArgs{
-			Mask:  enc.Some(mgmt.FaceFlagLocalFieldsEnabled),
-			Flags: enc.Some(mgmt.FaceFlagLocalFieldsEnabled),
+			Mask:  optional.Some(mgmt.FaceFlagLocalFieldsEnabled),
+			Flags: optional.Some(mgmt.FaceFlagLocalFieldsEnabled),
 		},
 		Retries: -1,
 	})
@@ -246,8 +247,8 @@ func (dv *Router) register() (err error) {
 			Cmd:    "register",
 			Args: &mgmt.ControlArgs{
 				Name:   prefix,
-				Cost:   enc.Some(uint64(0)),
-				Origin: enc.Some(config.NlsrOrigin),
+				Cost:   optional.Some(uint64(0)),
+				Origin: optional.Some(config.NlsrOrigin),
 			},
 			Retries: -1,
 		})
@@ -278,14 +279,14 @@ func (dv *Router) register() (err error) {
 // createFaces creates faces to all neighbors.
 func (dv *Router) createFaces() {
 	for i, neighbor := range dv.config.Neighbors {
-		var mtu enc.Optional[uint64]
+		var mtu optional.Optional[uint64]
 		if neighbor.Mtu > 0 {
-			mtu = enc.Some(neighbor.Mtu)
+			mtu = optional.Some(neighbor.Mtu)
 		}
 
 		faceId, created, err := dv.nfdc.CreateFace(&mgmt.ControlArgs{
-			Uri:             enc.Some(neighbor.Uri),
-			FacePersistency: enc.Some(uint64(mgmt.PersistencyPermanent)),
+			Uri:             optional.Some(neighbor.Uri),
+			FacePersistency: optional.Some(uint64(mgmt.PersistencyPermanent)),
 			Mtu:             mtu,
 		})
 		if err != nil {
@@ -304,9 +305,9 @@ func (dv *Router) createFaces() {
 			Cmd:    "register",
 			Args: &mgmt.ControlArgs{
 				Name:   dv.config.AdvertisementSyncActivePrefix(),
-				Cost:   enc.Some(uint64(1)),
-				Origin: enc.Some(config.NlsrOrigin),
-				FaceId: enc.Some(faceId),
+				Cost:   optional.Some(uint64(1)),
+				Origin: optional.Some(config.NlsrOrigin),
+				FaceId: optional.Some(faceId),
 			},
 			Retries: 3,
 		})
@@ -322,14 +323,14 @@ func (dv *Router) destroyFaces() {
 
 		dv.engine.ExecMgmtCmd("rib", "unregister", &mgmt.ControlArgs{
 			Name:   dv.config.AdvertisementSyncActivePrefix(),
-			Origin: enc.Some(config.NlsrOrigin),
-			FaceId: enc.Some(neighbor.FaceId),
+			Origin: optional.Some(config.NlsrOrigin),
+			FaceId: optional.Some(neighbor.FaceId),
 		})
 
 		// only destroy faces that we created
 		if neighbor.Created {
 			dv.engine.ExecMgmtCmd("faces", "destroy", &mgmt.ControlArgs{
-				FaceId: enc.Some(neighbor.FaceId),
+				FaceId: optional.Some(neighbor.FaceId),
 			})
 		}
 	}

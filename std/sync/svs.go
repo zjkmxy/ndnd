@@ -14,6 +14,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -322,7 +323,7 @@ func (s *SvSync) sendSyncInterest() {
 	}
 
 	dataCfg := &ndn.DataConfig{
-		ContentType: enc.Some(ndn.ContentTypeBlob),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
 	}
 	data, err := s.o.Client.Engine().Spec().MakeData(syncName, dataCfg, svWire, signer)
 	if err != nil {
@@ -332,7 +333,7 @@ func (s *SvSync) sendSyncInterest() {
 
 	// Make SVS Sync Interest
 	intCfg := &ndn.InterestConfig{
-		Lifetime: enc.Some(1 * time.Second),
+		Lifetime: optional.Some(1 * time.Second),
 		Nonce:    utils.ConvertNonce(s.o.Client.Engine().Timer().Nonce()),
 	}
 	interest, err := s.o.Client.Engine().Spec().MakeInterest(syncName, intCfg, data.Wire, nil)

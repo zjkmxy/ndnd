@@ -17,6 +17,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // RIBModule is the module that handles RIB Management.
@@ -106,13 +107,13 @@ func (r *RIBModule) register(interest *Interest) {
 	}
 	responseParams := &mgmt.ControlArgs{
 		Name:   params.Name,
-		FaceId: enc.Some(faceID),
-		Origin: enc.Some(origin),
-		Cost:   enc.Some(cost),
-		Flags:  enc.Some(flags),
+		FaceId: optional.Some(faceID),
+		Origin: optional.Some(origin),
+		Cost:   optional.Some(cost),
+		Flags:  optional.Some(flags),
 	}
 	if expirationPeriod != nil {
-		responseParams.ExpirationPeriod = enc.Some(uint64(expirationPeriod.Milliseconds()))
+		responseParams.ExpirationPeriod = optional.Some(uint64(expirationPeriod.Milliseconds()))
 	}
 	r.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 }
@@ -144,8 +145,8 @@ func (r *RIBModule) unregister(interest *Interest) {
 
 	r.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,
-		FaceId: enc.Some(faceID),
-		Origin: enc.Some(origin),
+		FaceId: optional.Some(faceID),
+		Origin: optional.Some(origin),
 	})
 
 	core.Log.Info(r, "Removed route", "name", params.Name, "faceid", faceID, "origin", origin)
@@ -196,7 +197,7 @@ func (r *RIBModule) list(interest *Interest) {
 			ribEntry.Routes[i].Cost = route.Cost
 			ribEntry.Routes[i].Flags = route.Flags
 			if route.ExpirationPeriod != nil {
-				ribEntry.Routes[i].ExpirationPeriod = enc.Some(uint64(*route.ExpirationPeriod / time.Millisecond))
+				ribEntry.Routes[i].ExpirationPeriod = optional.Some(uint64(*route.ExpirationPeriod / time.Millisecond))
 			}
 		}
 

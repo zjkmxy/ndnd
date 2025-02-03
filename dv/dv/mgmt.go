@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -48,8 +49,8 @@ func (dv *Router) mgmtOnStatus(args ndn.InterestHandlerArgs) {
 
 	name := args.Interest.Name()
 	cfg := &ndn.DataConfig{
-		ContentType: enc.Some(ndn.ContentTypeBlob),
-		Freshness:   enc.Some(time.Second),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
+		Freshness:   optional.Some(time.Second),
 	}
 
 	data, err := dv.engine.Spec().MakeData(name, cfg, status.Encode(), nil)
@@ -76,8 +77,8 @@ func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 		data, err := dv.engine.Spec().MakeData(
 			args.Interest.Name(),
 			&ndn.DataConfig{
-				ContentType: enc.Some(ndn.ContentTypeBlob),
-				Freshness:   enc.Some(1 * time.Second),
+				ContentType: optional.Some(ndn.ContentTypeBlob),
+				Freshness:   optional.Some(1 * time.Second),
 			},
 			res.Encode(),
 			signer)
@@ -126,9 +127,9 @@ func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 	res.Val.StatusText = "Readvertise command successful"
 	res.Val.Params = &mgmt.ControlArgs{
 		Name:   params.Val.Name,
-		FaceId: enc.Some(uint64(1)), // NFD compatibility
-		Origin: enc.Some(uint64(65)),
-		Cost:   enc.Some(uint64(0)),
-		Flags:  enc.Some(uint64(0)),
+		FaceId: optional.Some(uint64(1)), // NFD compatibility
+		Origin: optional.Some(uint64(65)),
+		Cost:   optional.Some(uint64(0)),
+		Flags:  optional.Some(uint64(0)),
 	}
 }

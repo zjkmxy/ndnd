@@ -1,6 +1,6 @@
 package ndncert
 
-import enc "github.com/named-data/ndnd/std/encoding"
+import "github.com/named-data/ndnd/std/types/optional"
 
 type ChallengeStatus uint64
 
@@ -24,5 +24,5 @@ type Challenge interface {
 	// The input provides the params of the previous challenge response.
 	// Input is nil for the initial request.
 	// Status is for the previous challenge response.
-	Request(input ParamMap, status enc.Optional[string]) (ParamMap, error)
+	Request(input ParamMap, status optional.Optional[string]) (ParamMap, error)
 }

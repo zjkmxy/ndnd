@@ -3,7 +3,7 @@ package ndncert
 import (
 	"errors"
 
-	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type ChallengeEmail struct {
@@ -17,7 +17,7 @@ func (*ChallengeEmail) Name() string {
 	return KwEmail
 }
 
-func (c *ChallengeEmail) Request(input ParamMap, status enc.Optional[string]) (ParamMap, error) {
+func (c *ChallengeEmail) Request(input ParamMap, status optional.Optional[string]) (ParamMap, error) {
 	// Validate challenge configuration
 	if len(c.Email) == 0 || c.CodeCallback == nil {
 		return nil, errors.New("email challenge not configured")

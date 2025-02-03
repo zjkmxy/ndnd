@@ -5,6 +5,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 const (
@@ -57,35 +58,35 @@ type ControlArgs struct {
 	//+field:name
 	Name enc.Name `tlv:"0x07"`
 	//+field:natural:optional
-	FaceId enc.Optional[uint64] `tlv:"0x69"`
+	FaceId optional.Optional[uint64] `tlv:"0x69"`
 	//+field:string:optional
-	Uri enc.Optional[string] `tlv:"0x72"`
+	Uri optional.Optional[string] `tlv:"0x72"`
 	//+field:string:optional
-	LocalUri enc.Optional[string] `tlv:"0x81"`
+	LocalUri optional.Optional[string] `tlv:"0x81"`
 	//+field:natural:optional
-	Origin enc.Optional[uint64] `tlv:"0x6f"`
+	Origin optional.Optional[uint64] `tlv:"0x6f"`
 	//+field:natural:optional
-	Cost enc.Optional[uint64] `tlv:"0x6a"`
+	Cost optional.Optional[uint64] `tlv:"0x6a"`
 	//+field:natural:optional
-	Capacity enc.Optional[uint64] `tlv:"0x83"`
+	Capacity optional.Optional[uint64] `tlv:"0x83"`
 	//+field:natural:optional
-	Count enc.Optional[uint64] `tlv:"0x84"`
+	Count optional.Optional[uint64] `tlv:"0x84"`
 	//+field:natural:optional
-	Flags enc.Optional[uint64] `tlv:"0x6c"`
+	Flags optional.Optional[uint64] `tlv:"0x6c"`
 	//+field:natural:optional
-	Mask enc.Optional[uint64] `tlv:"0x70"`
+	Mask optional.Optional[uint64] `tlv:"0x70"`
 	//+field:struct:Strategy
 	Strategy *Strategy `tlv:"0x6b"`
 	//+field:natural:optional
-	ExpirationPeriod enc.Optional[uint64] `tlv:"0x6d"`
+	ExpirationPeriod optional.Optional[uint64] `tlv:"0x6d"`
 	//+field:natural:optional
-	FacePersistency enc.Optional[uint64] `tlv:"0x85"`
+	FacePersistency optional.Optional[uint64] `tlv:"0x85"`
 	//+field:natural:optional
-	BaseCongestionMarkInterval enc.Optional[uint64] `tlv:"0x87"`
+	BaseCongestionMarkInterval optional.Optional[uint64] `tlv:"0x87"`
 	//+field:natural:optional
-	DefaultCongestionThreshold enc.Optional[uint64] `tlv:"0x88"`
+	DefaultCongestionThreshold optional.Optional[uint64] `tlv:"0x88"`
 	//+field:natural:optional
-	Mtu enc.Optional[uint64] `tlv:"0x89"`
+	Mtu optional.Optional[uint64] `tlv:"0x89"`
 }
 
 // +tlv-model:dict
@@ -167,23 +168,23 @@ type GeneralStatus struct {
 	NUnsatisfiedInterests uint64 `tlv:"0x9a"`
 
 	//+field:natural:optional
-	NFragmentationError enc.Optional[uint64] `tlv:"0xc8"`
+	NFragmentationError optional.Optional[uint64] `tlv:"0xc8"`
 	//+field:natural:optional
-	NOutOverMtu enc.Optional[uint64] `tlv:"0xc9"`
+	NOutOverMtu optional.Optional[uint64] `tlv:"0xc9"`
 	//+field:natural:optional
-	NInLpInvalid enc.Optional[uint64] `tlv:"0xca"`
+	NInLpInvalid optional.Optional[uint64] `tlv:"0xca"`
 	//+field:natural:optional
-	NReassemblyTimeouts enc.Optional[uint64] `tlv:"0xcb"`
+	NReassemblyTimeouts optional.Optional[uint64] `tlv:"0xcb"`
 	//+field:natural:optional
-	NInNetInvalid enc.Optional[uint64] `tlv:"0xcc"`
+	NInNetInvalid optional.Optional[uint64] `tlv:"0xcc"`
 	//+field:natural:optional
-	NAcknowledged enc.Optional[uint64] `tlv:"0xcd"`
+	NAcknowledged optional.Optional[uint64] `tlv:"0xcd"`
 	//+field:natural:optional
-	NRetransmitted enc.Optional[uint64] `tlv:"0xce"`
+	NRetransmitted optional.Optional[uint64] `tlv:"0xce"`
 	//+field:natural:optional
-	NRetxExhausted enc.Optional[uint64] `tlv:"0xcf"`
+	NRetxExhausted optional.Optional[uint64] `tlv:"0xcf"`
 	//+field:natural:optional
-	NConngestionMarked enc.Optional[uint64] `tlv:"0xd0"`
+	NConngestionMarked optional.Optional[uint64] `tlv:"0xd0"`
 }
 
 type FaceStatus struct {
@@ -194,7 +195,7 @@ type FaceStatus struct {
 	//+field:string
 	LocalUri string `tlv:"0x81"`
 	//+field:natural:optional
-	ExpirationPeriod enc.Optional[uint64] `tlv:"0x6d"`
+	ExpirationPeriod optional.Optional[uint64] `tlv:"0x6d"`
 	//+field:natural
 	FaceScope uint64 `tlv:"0x84"`
 	//+field:natural
@@ -202,11 +203,11 @@ type FaceStatus struct {
 	//+field:natural
 	LinkType uint64 `tlv:"0x86"`
 	//+field:natural:optional
-	BaseCongestionMarkInterval enc.Optional[uint64] `tlv:"0x87"`
+	BaseCongestionMarkInterval optional.Optional[uint64] `tlv:"0x87"`
 	//+field:natural:optional
-	DefaultCongestionThreshold enc.Optional[uint64] `tlv:"0x88"`
+	DefaultCongestionThreshold optional.Optional[uint64] `tlv:"0x88"`
 	//+field:natural:optional
-	Mtu enc.Optional[uint64] `tlv:"0x89"`
+	Mtu optional.Optional[uint64] `tlv:"0x89"`
 
 	//+field:natural
 	NInInterests uint64 `tlv:"0x90"`
@@ -236,19 +237,19 @@ type FaceStatusMsg struct {
 
 type FaceQueryFilterValue struct {
 	//+field:natural:optional
-	FaceId enc.Optional[uint64] `tlv:"0x69"`
+	FaceId optional.Optional[uint64] `tlv:"0x69"`
 	//+field:string:optional
-	UriScheme enc.Optional[string] `tlv:"0x83"`
+	UriScheme optional.Optional[string] `tlv:"0x83"`
 	//+field:string:optional
-	Uri enc.Optional[string] `tlv:"0x72"`
+	Uri optional.Optional[string] `tlv:"0x72"`
 	//+field:string:optional
-	LocalUri enc.Optional[string] `tlv:"0x81"`
+	LocalUri optional.Optional[string] `tlv:"0x81"`
 	//+field:natural:optional
-	FaceScope enc.Optional[uint64] `tlv:"0x84"`
+	FaceScope optional.Optional[uint64] `tlv:"0x84"`
 	//+field:natural:optional
-	FacePersistency enc.Optional[uint64] `tlv:"0x85"`
+	FacePersistency optional.Optional[uint64] `tlv:"0x85"`
 	//+field:natural:optional
-	LinkType enc.Optional[uint64] `tlv:"0x86"`
+	LinkType optional.Optional[uint64] `tlv:"0x86"`
 }
 
 type FaceQueryFilter struct {
@@ -266,7 +267,7 @@ type Route struct {
 	//+field:natural
 	Flags uint64 `tlv:"0x6c"`
 	//+field:natural:optional
-	ExpirationPeriod enc.Optional[uint64] `tlv:"0x6d"`
+	ExpirationPeriod optional.Optional[uint64] `tlv:"0x6d"`
 }
 
 type RibEntry struct {

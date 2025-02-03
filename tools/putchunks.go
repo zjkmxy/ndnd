@@ -12,6 +12,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/spf13/cobra"
 )
 
@@ -93,9 +94,9 @@ func (pc *PutChunks) run(_ *cobra.Command, args []string) {
 	log.Info(pc, "Object produced", "name", vname)
 
 	// register route to the object
-	var origin enc.Optional[uint64]
+	var origin optional.Optional[uint64]
 	if pc.expose {
-		origin = enc.Some(uint64(mgmt.RouteOriginClient))
+		origin = optional.Some(uint64(mgmt.RouteOriginClient))
 	}
 	_, err = app.ExecMgmtCmd("rib", "register", &mgmt.ControlArgs{
 		Name:   name,

@@ -9,6 +9,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/spf13/cobra"
 )
 
@@ -67,7 +68,7 @@ func (n *Tool) preprocessArg(
 			(mod == "rib" && cmd == "unregister") {
 
 			filter := mgmt.FaceQueryFilter{
-				Val: &mgmt.FaceQueryFilterValue{Uri: enc.Some(val)},
+				Val: &mgmt.FaceQueryFilterValue{Uri: optional.Some(val)},
 			}
 
 			dataset, err := n.fetchStatusDataset(enc.Name{
@@ -102,7 +103,7 @@ func (n *Tool) preprocessArg(
 		// only for rib/register, create a new face if it doesn't exist
 		if mod == "rib" && cmd == "register" {
 			// copy over any face arguments that are already set
-			faceArgs := mgmt.ControlArgs{Uri: enc.Some(val)}
+			faceArgs := mgmt.ControlArgs{Uri: optional.Some(val)}
 			if ctrlArgs.LocalUri.IsSet() {
 				faceArgs.LocalUri = ctrlArgs.LocalUri
 				ctrlArgs.LocalUri.Unset()
@@ -166,30 +167,30 @@ func (n *Tool) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 	switch key {
 	// face arguments
 	case "face":
-		ctrlArgs.FaceId = enc.Some(parseUint(val))
+		ctrlArgs.FaceId = optional.Some(parseUint(val))
 	case "remote":
-		ctrlArgs.Uri = enc.Some(val)
+		ctrlArgs.Uri = optional.Some(val)
 	case "local":
-		ctrlArgs.LocalUri = enc.Some(val)
+		ctrlArgs.LocalUri = optional.Some(val)
 	case "mtu":
-		ctrlArgs.Mtu = enc.Some(parseUint(val))
+		ctrlArgs.Mtu = optional.Some(parseUint(val))
 	case "persistency":
 		persistency, err := mgmt.ParsePersistency(val)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Invalid persistency: %s\n", val)
 			os.Exit(9)
 		}
-		ctrlArgs.FacePersistency = enc.Some(uint64(persistency))
+		ctrlArgs.FacePersistency = optional.Some(uint64(persistency))
 
 	// route arguments
 	case "prefix":
 		ctrlArgs.Name = parseName(val)
 	case "cost":
-		ctrlArgs.Cost = enc.Some(parseUint(val))
+		ctrlArgs.Cost = optional.Some(parseUint(val))
 	case "origin":
-		ctrlArgs.Origin = enc.Some(parseUint(val))
+		ctrlArgs.Origin = optional.Some(parseUint(val))
 	case "expires":
-		ctrlArgs.ExpirationPeriod = enc.Some(parseUint(val))
+		ctrlArgs.ExpirationPeriod = optional.Some(parseUint(val))
 
 	// strategy arguments
 	case "strategy":

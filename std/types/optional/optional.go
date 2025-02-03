@@ -1,4 +1,4 @@
-package encoding
+package optional
 
 type Optional[T any] struct {
 	value T

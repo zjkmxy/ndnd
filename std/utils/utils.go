@@ -3,7 +3,7 @@ package utils
 import (
 	"time"
 
-	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 	"golang.org/x/exp/constraints"
 )
 
@@ -27,7 +27,7 @@ func ConvIntPtr[A, B constraints.Integer](a *A) *B {
 }
 
 // ConvOptional converts an optional value to another type
-func ConvIntOpt[A, B constraints.Integer](a enc.Optional[A]) (out enc.Optional[B]) {
+func ConvIntOpt[A, B constraints.Integer](a optional.Optional[A]) (out optional.Optional[B]) {
 	if a.IsSet() {
 		out.Set(B(a.Unwrap()))
 	}
@@ -38,7 +38,7 @@ func MakeTimestamp(t time.Time) uint64 {
 	return uint64(t.UnixNano() / int64(time.Millisecond))
 }
 
-func ConvertNonce(nonce []byte) (ret enc.Optional[uint32]) {
+func ConvertNonce(nonce []byte) (ret optional.Optional[uint32]) {
 	x := uint32(0)
 	for _, b := range nonce {
 		x = (x << 8) | uint32(b)

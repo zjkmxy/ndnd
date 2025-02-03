@@ -8,6 +8,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -177,7 +178,7 @@ func (n *ExpressPoint) NeedCallback(
 		intConfig = &ndn.InterestConfig{
 			CanBePrefix:    n.CanBePrefix,
 			MustBeFresh:    n.MustBeFresh,
-			Lifetime:       enc.Some(n.Lifetime),
+			Lifetime:       optional.Some(n.Lifetime),
 			Nonce:          utils.ConvertNonce(engine.Timer().Nonce()),
 			HopLimit:       nil,
 			ForwardingHint: nil,

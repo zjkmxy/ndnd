@@ -16,6 +16,7 @@ import (
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/dispatch"
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 const lpPacketOverhead = 1 + 3 + 1 + 3 // LpPacket+Fragment
@@ -178,7 +179,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 	congestionMark := pkt.CongestionMark // from upstream
 	if l.checkCongestion(wire) && !congestionMark.IsSet() {
 		core.Log.Warn(l, "Marking congestion")
-		congestionMark = enc.Some(uint64(1)) // ours
+		congestionMark = optional.Some(uint64(1)) // ours
 	}
 
 	// Calculate effective MTU after accounting for packet-specific overhead
@@ -223,9 +224,9 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 			l.nextSequence++
 			fragments[i] = &defn.FwLpPacket{
 				Fragment:  frag,
-				Sequence:  enc.Some(l.nextSequence),
-				FragIndex: enc.Some(uint64(i)),
-				FragCount: enc.Some(uint64(fragCount)),
+				Sequence:  optional.Some(l.nextSequence),
+				FragIndex: optional.Some(uint64(i)),
+				FragCount: optional.Some(uint64(fragCount)),
 			}
 		}
 	} else {
@@ -242,7 +243,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 		// Incoming face indication
 		if l.options.IsIncomingFaceIndicationEnabled {
-			fragment.IncomingFaceId = enc.Some(out.InFace)
+			fragment.IncomingFaceId = optional.Some(out.InFace)
 		}
 
 		// Congestion marking

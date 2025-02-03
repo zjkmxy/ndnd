@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/types/optional"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -102,7 +103,7 @@ func testSignSize(t *testing.T, rsaSize int) {
 	encData, err := spec.Spec{}.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
-			ContentType: enc.Some(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		enc.Wire{content},
 		signer,

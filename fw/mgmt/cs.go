@@ -14,6 +14,7 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // ContentStoreModule is the module that handles Content Store Management.
@@ -100,8 +101,8 @@ func (c *ContentStoreModule) config(interest *Interest) {
 	}
 
 	c.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
-		Capacity: enc.Some(uint64(table.CfgCsCapacity())),
-		Flags:    enc.Some(c.getFlags()),
+		Capacity: optional.Some(uint64(table.CfgCsCapacity())),
+		Flags:    optional.Some(c.getFlags()),
 	})
 }
 

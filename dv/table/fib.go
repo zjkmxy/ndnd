@@ -5,6 +5,7 @@ import (
 	"github.com/named-data/ndnd/dv/nfdc"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type FibEntry struct {
@@ -115,8 +116,8 @@ func (fib *Fib) UpdateH(nameH uint64, name enc.Name, newEntries []FibEntry) bool
 				Cmd:    "unregister",
 				Args: &mgmt.ControlArgs{
 					Name:   name,
-					FaceId: enc.Some(oldEntry.FaceId),
-					Origin: enc.Some(config.NlsrOrigin),
+					FaceId: optional.Some(oldEntry.FaceId),
+					Origin: optional.Some(config.NlsrOrigin),
 				},
 				Retries: 3,
 			})
@@ -137,9 +138,9 @@ func (fib *Fib) UpdateH(nameH uint64, name enc.Name, newEntries []FibEntry) bool
 			Cmd:    "register",
 			Args: &mgmt.ControlArgs{
 				Name:   name,
-				FaceId: enc.Some(entry.FaceId),
-				Cost:   enc.Some(entry.Cost),
-				Origin: enc.Some(config.NlsrOrigin),
+				FaceId: optional.Some(entry.FaceId),
+				Cost:   optional.Some(entry.Cost),
+				Origin: optional.Some(config.NlsrOrigin),
 			},
 			Retries: 3,
 		})

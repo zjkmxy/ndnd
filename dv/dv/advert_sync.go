@@ -11,6 +11,7 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -70,7 +71,7 @@ func (a *advertModule) sendSyncInterestImpl(prefix enc.Name) (err error) {
 
 	// Make Data packet
 	dataCfg := &ndn.DataConfig{
-		ContentType: enc.Some(ndn.ContentTypeBlob),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
 	}
 	data, err := a.dv.engine.Spec().MakeData(syncName, dataCfg, sv.Encode(), signer)
 	if err != nil {
@@ -80,7 +81,7 @@ func (a *advertModule) sendSyncInterestImpl(prefix enc.Name) (err error) {
 
 	// Make SVS Sync Interest
 	intCfg := &ndn.InterestConfig{
-		Lifetime: enc.Some(1 * time.Second),
+		Lifetime: optional.Some(1 * time.Second),
 		Nonce:    utils.ConvertNonce(a.dv.engine.Timer().Nonce()),
 		HopLimit: utils.IdPtr(byte(2)), // use localhop w/ this
 	}

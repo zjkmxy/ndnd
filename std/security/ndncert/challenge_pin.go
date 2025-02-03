@@ -3,7 +3,7 @@ package ndncert
 import (
 	"errors"
 
-	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type ChallengePin struct {
@@ -15,7 +15,7 @@ func (*ChallengePin) Name() string {
 	return KwPin
 }
 
-func (c *ChallengePin) Request(input ParamMap, status enc.Optional[string]) (ParamMap, error) {
+func (c *ChallengePin) Request(input ParamMap, status optional.Optional[string]) (ParamMap, error) {
 	// Validate challenge configuration
 	if c.CodeCallback == nil {
 		return nil, errors.New("pin challenge not configured")

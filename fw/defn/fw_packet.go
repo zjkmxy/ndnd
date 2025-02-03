@@ -5,6 +5,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // +tlv-model:nocopy
@@ -28,9 +29,9 @@ type FwInterest struct {
 	//+field:struct:FwLinks
 	ForwardingHintV *FwLinks `tlv:"0x1e"`
 	//+field:fixedUint:uint32:optional
-	NonceV enc.Optional[uint32] `tlv:"0x0a"`
+	NonceV optional.Optional[uint32] `tlv:"0x0a"`
 	//+field:time:optional
-	InterestLifetimeV enc.Optional[time.Duration] `tlv:"0x0c"`
+	InterestLifetimeV optional.Optional[time.Duration] `tlv:"0x0c"`
 	//+field:byte
 	HopLimitV *byte `tlv:"0x22"`
 
@@ -64,9 +65,9 @@ type FwData struct {
 
 type FwMetaInfo struct {
 	//+field:natural:optional
-	ContentType enc.Optional[uint64] `tlv:"0x18"`
+	ContentType optional.Optional[uint64] `tlv:"0x18"`
 	//+field:time:optional
-	FreshnessPeriod enc.Optional[time.Duration] `tlv:"0x19"`
+	FreshnessPeriod optional.Optional[time.Duration] `tlv:"0x19"`
 
 	//+field:bool
 	FinalBlockID bool `tlv:"0x1a"`
@@ -75,23 +76,23 @@ type FwMetaInfo struct {
 // +tlv-model:nocopy
 type FwLpPacket struct {
 	//+field:fixedUint:uint64:optional
-	Sequence enc.Optional[uint64] `tlv:"0x51"`
+	Sequence optional.Optional[uint64] `tlv:"0x51"`
 	//+field:natural:optional
-	FragIndex enc.Optional[uint64] `tlv:"0x52"`
+	FragIndex optional.Optional[uint64] `tlv:"0x52"`
 	//+field:natural:optional
-	FragCount enc.Optional[uint64] `tlv:"0x53"`
+	FragCount optional.Optional[uint64] `tlv:"0x53"`
 	//+field:binary
 	PitToken []byte `tlv:"0x62"`
 	//+field:struct:FwNetworkNack
 	Nack *FwNetworkNack `tlv:"0x0320"`
 	//+field:natural:optional
-	IncomingFaceId enc.Optional[uint64] `tlv:"0x032C"`
+	IncomingFaceId optional.Optional[uint64] `tlv:"0x032C"`
 	//+field:natural:optional
-	NextHopFaceId enc.Optional[uint64] `tlv:"0x0330"`
+	NextHopFaceId optional.Optional[uint64] `tlv:"0x0330"`
 	//+field:struct:FwCachePolicy
 	CachePolicy *FwCachePolicy `tlv:"0x0334"`
 	//+field:natural:optional
-	CongestionMark enc.Optional[uint64] `tlv:"0x0340"`
+	CongestionMark optional.Optional[uint64] `tlv:"0x0340"`
 
 	//+field:wire
 	Fragment enc.Wire `tlv:"0x50"`
@@ -111,6 +112,6 @@ func (p *FwInterest) Name() enc.Name {
 	return p.NameV
 }
 
-func (p *FwInterest) Lifetime() enc.Optional[time.Duration] {
+func (p *FwInterest) Lifetime() optional.Optional[time.Duration] {
 	return p.InterestLifetimeV
 }

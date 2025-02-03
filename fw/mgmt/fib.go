@@ -13,6 +13,7 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // FIBModule is the module that handles FIB Management.
@@ -87,8 +88,8 @@ func (f *FIBModule) add(interest *Interest) {
 
 	f.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,
-		FaceId: enc.Some(faceID),
-		Cost:   enc.Some(cost),
+		FaceId: optional.Some(faceID),
+		Cost:   optional.Some(cost),
 	})
 }
 
@@ -119,7 +120,7 @@ func (f *FIBModule) remove(interest *Interest) {
 
 	f.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,
-		FaceId: enc.Some(faceID),
+		FaceId: optional.Some(faceID),
 	})
 }
 

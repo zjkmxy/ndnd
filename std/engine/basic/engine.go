@@ -17,6 +17,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -106,7 +107,7 @@ func (e *Engine) onPacket(frame []byte) error {
 
 	var nackReason uint64 = spec.NackReasonNone
 	var pitToken []byte = nil
-	var incomingFaceId enc.Optional[uint64]
+	var incomingFaceId optional.Optional[uint64]
 	var raw enc.Wire = nil
 
 	if hasLogTrace() {
@@ -497,13 +498,13 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 	}
 
 	intCfg := &ndn.InterestConfig{
-		Lifetime:    enc.Some(1 * time.Second),
+		Lifetime:    optional.Some(1 * time.Second),
 		Nonce:       utils.ConvertNonce(e.timer.Nonce()),
 		MustBeFresh: true,
 
 		// Signed interest shenanigans (NFD wants this)
 		SigNonce: e.timer.Nonce(),
-		SigTime:  enc.Some(time.Duration(e.timer.Now().UnixMilli()) * time.Millisecond),
+		SigTime:  optional.Some(time.Duration(e.timer.Now().UnixMilli()) * time.Millisecond),
 	}
 	interest, err := e.mgmtConf.MakeCmd(module, cmd, cmdArgs, intCfg)
 	if err != nil {

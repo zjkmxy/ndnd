@@ -6,6 +6,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/encoding/tests/gen_basic"
+	"github.com/named-data/ndnd/std/types/optional"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -74,8 +75,8 @@ func TestOptField(t *testing.T) {
 	tu.SetT(t)
 
 	f := gen_basic.OptField{
-		Number: enc.Some[uint64](1),
-		Time:   enc.Some(2 * time.Second),
+		Number: optional.Some[uint64](1),
+		Time:   optional.Some(2 * time.Second),
 		Binary: []byte{3, 4, 5},
 		Bool:   true,
 	}
@@ -92,8 +93,8 @@ func TestOptField(t *testing.T) {
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.OptField{
-		Number: enc.None[uint64](),
-		Time:   enc.None[time.Duration](),
+		Number: optional.None[uint64](),
+		Time:   optional.None[time.Duration](),
 		Binary: nil,
 		Bool:   false,
 	}
@@ -105,8 +106,8 @@ func TestOptField(t *testing.T) {
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.OptField{
-		Number: enc.Some[uint64](0),
-		Time:   enc.Some(0 * time.Second),
+		Number: optional.Some[uint64](0),
+		Time:   optional.Some(0 * time.Second),
 		Binary: []byte{},
 	}
 	buf = f.Bytes()
@@ -211,7 +212,7 @@ func TestStrField(t *testing.T) {
 
 	f := gen_basic.StrField{
 		Str1: "hello",
-		Str2: enc.Some("world"),
+		Str2: optional.Some("world"),
 	}
 	buf := f.Bytes()
 	require.Equal(t, []byte{0x01, 0x05, 'h', 'e', 'l', 'l', 'o', 0x02, 0x05, 'w', 'o', 'r', 'l', 'd'}, buf)
@@ -220,7 +221,7 @@ func TestStrField(t *testing.T) {
 
 	f = gen_basic.StrField{
 		Str1: "",
-		Str2: enc.None[string](),
+		Str2: optional.None[string](),
 	}
 	buf = f.Bytes()
 	require.Equal(t, []byte{0x01, 0x00}, buf)
@@ -236,8 +237,8 @@ func TestFixedUintField(t *testing.T) {
 
 	f := gen_basic.FixedUintField{
 		Byte:    1,
-		U32:     enc.Some[uint32](2),
-		U64:     enc.Some[uint64](3),
+		U32:     optional.Some[uint32](2),
+		U64:     optional.Some[uint64](3),
 		BytePtr: nil,
 	}
 	buf := f.Bytes()
@@ -251,8 +252,8 @@ func TestFixedUintField(t *testing.T) {
 
 	f = gen_basic.FixedUintField{
 		Byte:    0,
-		U32:     enc.None[uint32](),
-		U64:     enc.None[uint64](),
+		U32:     optional.None[uint32](),
+		U64:     optional.None[uint64](),
 		BytePtr: nil,
 	}
 	buf = f.Bytes()

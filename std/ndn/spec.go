@@ -4,6 +4,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // Spec represents an NDN packet specification.
@@ -29,9 +30,9 @@ type Interest interface {
 	// ForwardingHint is the list of names to guide the Interest forwarding
 	ForwardingHint() []enc.Name
 	// Number to identify the Interest uniquely
-	Nonce() enc.Optional[uint32]
+	Nonce() optional.Optional[uint32]
 	// Lifetime of the Interest
-	Lifetime() enc.Optional[time.Duration]
+	Lifetime() optional.Optional[time.Duration]
 	// Max number of hops the Interest can traverse
 	HopLimit() *uint
 	// Application parameters of the Interest (optional)
@@ -46,8 +47,8 @@ type InterestConfig struct {
 	CanBePrefix    bool
 	MustBeFresh    bool
 	ForwardingHint []enc.Name
-	Nonce          enc.Optional[uint32]
-	Lifetime       enc.Optional[time.Duration]
+	Nonce          optional.Optional[uint32]
+	Lifetime       optional.Optional[time.Duration]
 	HopLimit       *byte
 
 	// Signed Interest parameters.
@@ -55,11 +56,11 @@ type InterestConfig struct {
 	// be gradually phased out, which is why these parameters are
 	// not directly provided by the signer.
 	SigNonce []byte
-	SigTime  enc.Optional[time.Duration]
-	SigSeqNo enc.Optional[uint64]
+	SigTime  optional.Optional[time.Duration]
+	SigSeqNo optional.Optional[uint64]
 
 	// NDNLPv2 parameters
-	NextHopId enc.Optional[uint64]
+	NextHopId optional.Optional[uint64]
 }
 
 // Container for an encoded Interest packet
@@ -77,9 +78,9 @@ type EncodedInterest struct {
 // Data is the abstract of a received Data packet.
 type Data interface {
 	Name() enc.Name
-	ContentType() enc.Optional[ContentType]
-	Freshness() enc.Optional[time.Duration]
-	FinalBlockID() enc.Optional[enc.Component]
+	ContentType() optional.Optional[ContentType]
+	Freshness() optional.Optional[time.Duration]
+	FinalBlockID() optional.Optional[enc.Component]
 	Content() enc.Wire
 	Signature() Signature
 }
@@ -87,13 +88,13 @@ type Data interface {
 // DataConfig is used to create a Data.
 type DataConfig struct {
 	// Standard Data parameters
-	ContentType  enc.Optional[ContentType]
-	Freshness    enc.Optional[time.Duration]
-	FinalBlockID enc.Optional[enc.Component]
+	ContentType  optional.Optional[ContentType]
+	Freshness    optional.Optional[time.Duration]
+	FinalBlockID optional.Optional[enc.Component]
 
 	// Certificate parameters
-	SigNotBefore enc.Optional[time.Time]
-	SigNotAfter  enc.Optional[time.Time]
+	SigNotBefore optional.Optional[time.Time]
+	SigNotAfter  optional.Optional[time.Time]
 }
 
 // Container for an encoded Data packet

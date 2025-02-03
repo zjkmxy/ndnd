@@ -1,7 +1,10 @@
 //go:generate gondn_tlv_gen
 package rdr
 
-import enc "github.com/named-data/ndnd/std/encoding"
+import (
+	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
+)
 
 const MetadataKeyword = "metadata"
 
@@ -23,19 +26,19 @@ type MetaData struct {
 	//+field:binary
 	FinalBlockID []byte `tlv:"0x1a"`
 	//+field:natural:optional
-	SegmentSize enc.Optional[uint64] `tlv:"0xf500"`
+	SegmentSize optional.Optional[uint64] `tlv:"0xf500"`
 	//+field:natural:optional
-	Size enc.Optional[uint64] `tlv:"0xf502"`
+	Size optional.Optional[uint64] `tlv:"0xf502"`
 	//+field:natural:optional
-	Mode enc.Optional[uint64] `tlv:"0xf504"`
+	Mode optional.Optional[uint64] `tlv:"0xf504"`
 	//+field:natural:optional
-	Atime enc.Optional[uint64] `tlv:"0xf506"`
+	Atime optional.Optional[uint64] `tlv:"0xf506"`
 	//+field:natural:optional
-	Btime enc.Optional[uint64] `tlv:"0xf508"`
+	Btime optional.Optional[uint64] `tlv:"0xf508"`
 	//+field:natural:optional
-	Ctime enc.Optional[uint64] `tlv:"0xf50a"`
+	Ctime optional.Optional[uint64] `tlv:"0xf50a"`
 	//+field:natural:optional
-	Mtime enc.Optional[uint64] `tlv:"0xf50c"`
+	Mtime optional.Optional[uint64] `tlv:"0xf50c"`
 	//+field:string:optional
-	ObjectType enc.Optional[string] `tlv:"0xf50e"`
+	ObjectType optional.Optional[string] `tlv:"0xf50e"`
 }

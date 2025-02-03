@@ -8,6 +8,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -57,7 +58,7 @@ func (d *Data) SetSigTime(t *time.Time) error {
 	if t == nil {
 		d.SignatureInfo.SignatureTime.Unset()
 	} else {
-		d.SignatureInfo.SignatureTime = enc.Some(time.Duration(t.UnixMilli()) * time.Millisecond)
+		d.SignatureInfo.SignatureTime = optional.Some(time.Duration(t.UnixMilli()) * time.Millisecond)
 	}
 	return nil
 }
@@ -98,25 +99,25 @@ func (d *Data) Name() enc.Name {
 	return d.NameV
 }
 
-func (d *Data) ContentType() (val enc.Optional[ndn.ContentType]) {
+func (d *Data) ContentType() (val optional.Optional[ndn.ContentType]) {
 	if d.MetaInfo != nil {
 		return utils.ConvIntOpt[uint64, ndn.ContentType](d.MetaInfo.ContentType)
 	}
 	return val
 }
 
-func (d *Data) Freshness() (val enc.Optional[time.Duration]) {
+func (d *Data) Freshness() (val optional.Optional[time.Duration]) {
 	if d.MetaInfo != nil {
 		return d.MetaInfo.FreshnessPeriod
 	}
 	return val
 }
 
-func (d *Data) FinalBlockID() (val enc.Optional[enc.Component]) {
+func (d *Data) FinalBlockID() (val optional.Optional[enc.Component]) {
 	if d.MetaInfo != nil && d.MetaInfo.FinalBlockID != nil {
 		reader := enc.NewBufferView(d.MetaInfo.FinalBlockID)
 		if ret, err := reader.ReadComponent(); err == nil {
-			return enc.Some(ret)
+			return optional.Some(ret)
 		}
 	}
 	return val
@@ -197,11 +198,11 @@ func (t *Interest) ForwardingHint() []enc.Name {
 	return t.ForwardingHintV.Names
 }
 
-func (t *Interest) Nonce() enc.Optional[uint32] {
+func (t *Interest) Nonce() optional.Optional[uint32] {
 	return t.NonceV
 }
 
-func (t *Interest) Lifetime() enc.Optional[time.Duration] {
+func (t *Interest) Lifetime() optional.Optional[time.Duration] {
 	return t.InterestLifetimeV
 }
 

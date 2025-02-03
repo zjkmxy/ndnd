@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func TestMakeDataBasic(t *testing.T) {
 	data, err := spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
-			ContentType: enc.Some(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		nil,
 		sig.NewSha256Signer(),
@@ -40,7 +41,7 @@ func TestMakeDataBasic(t *testing.T) {
 	data, err = spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
-			ContentType: enc.Some(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		enc.Wire{[]byte("01020304")},
 		sig.NewSha256Signer(),
@@ -58,7 +59,7 @@ func TestMakeDataBasic(t *testing.T) {
 	data, err = spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
-			ContentType: enc.Some(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		nil,
 		nil,
@@ -72,7 +73,7 @@ func TestMakeDataBasic(t *testing.T) {
 	data, err = spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/E")),
 		&ndn.DataConfig{
-			ContentType: enc.None[ndn.ContentType](),
+			ContentType: optional.None[ndn.ContentType](),
 		},
 		enc.Wire{},
 		sig.NewSha256Signer(),
@@ -92,9 +93,9 @@ func TestMakeDataMetaInfo(t *testing.T) {
 	data, err := spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix/37=%00")),
 		&ndn.DataConfig{
-			ContentType:  enc.Some(ndn.ContentTypeBlob),
-			Freshness:    enc.Some(1000 * time.Millisecond),
-			FinalBlockID: enc.Some(enc.NewSequenceNumComponent(2)),
+			ContentType:  optional.Some(ndn.ContentTypeBlob),
+			Freshness:    optional.Some(1000 * time.Millisecond),
+			FinalBlockID: optional.Some(enc.NewSequenceNumComponent(2)),
 		},
 		nil,
 		sig.NewSha256Signer(),
@@ -142,7 +143,7 @@ func TestMakeDataShrink(t *testing.T) {
 	data, err := spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/test")),
 		&ndn.DataConfig{
-			ContentType: enc.Some(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		nil,
 		testSigner{},
@@ -267,7 +268,7 @@ func TestMakeIntBasic(t *testing.T) {
 	interest, err := spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: enc.Some(4 * time.Second),
+			Lifetime: optional.Some(4 * time.Second),
 		},
 		nil,
 		nil,
@@ -282,9 +283,9 @@ func TestMakeIntBasic(t *testing.T) {
 		&ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,
-			Lifetime:    enc.Some(10 * time.Millisecond),
+			Lifetime:    optional.Some(10 * time.Millisecond),
 			HopLimit:    utils.IdPtr[byte](1),
-			Nonce:       enc.Some[uint32](0),
+			Nonce:       optional.Some[uint32](0),
 		},
 		nil,
 		nil,
@@ -298,8 +299,8 @@ func TestMakeIntBasic(t *testing.T) {
 	interest, err = spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: enc.Some(4 * time.Second),
-			Nonce:    enc.Some[uint32](0x01020304),
+			Lifetime: optional.Some(4 * time.Second),
+			Nonce:    optional.Some[uint32](0x01020304),
 			ForwardingHint: []enc.Name{
 				tu.NoErr(enc.NameFromStr("/name/A")),
 				tu.NoErr(enc.NameFromStr("/ndn/B")),
@@ -330,7 +331,7 @@ func TestMakeIntLargeAppParam(t *testing.T) {
 	encoded, err := spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/interest/with/large/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: enc.Some(4 * time.Second),
+			Lifetime: optional.Some(4 * time.Second),
 		},
 		enc.Wire{appParam},
 		sig.NewHmacSigner([]byte("temp-hmac-key")),
@@ -350,7 +351,7 @@ func TestMakeIntSign(t *testing.T) {
 	interest, err := spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: enc.Some(4 * time.Second),
+			Lifetime: optional.Some(4 * time.Second),
 		},
 		enc.Wire{[]byte{1, 2, 3, 4}},
 		nil,
@@ -371,8 +372,8 @@ func TestMakeIntSign(t *testing.T) {
 	interest, err = spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: enc.Some(4 * time.Second),
-			Nonce:    enc.Some[uint32](0x6c211166),
+			Lifetime: optional.Some(4 * time.Second),
+			Nonce:    optional.Some[uint32](0x6c211166),
 		},
 		enc.Wire{[]byte{1, 2, 3, 4}},
 		sig.NewSha256Signer(),
@@ -395,8 +396,8 @@ func TestMakeIntSign(t *testing.T) {
 	interest, err = spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: enc.Some(4 * time.Second),
-			Nonce:    enc.Some[uint32](0x6c211166),
+			Lifetime: optional.Some(4 * time.Second),
+			Nonce:    optional.Some[uint32](0x6c211166),
 		},
 		enc.Wire{},
 		sig.NewSha256Signer(),

@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	rdr "github.com/named-data/ndnd/std/ndn/rdr_2024"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // size of produced segment (~800B for header)
@@ -39,9 +40,9 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 	}
 
 	cfg := &ndn.DataConfig{
-		ContentType:  enc.Some(ndn.ContentTypeBlob),
-		Freshness:    enc.Some(args.FreshnessPeriod),
-		FinalBlockID: enc.Some(enc.NewSegmentComponent(lastSeg)),
+		ContentType:  optional.Some(ndn.ContentTypeBlob),
+		Freshness:    optional.Some(args.FreshnessPeriod),
+		FinalBlockID: optional.Some(enc.NewSegmentComponent(lastSeg)),
 	}
 
 	// use a transaction to ensure the entire object is written

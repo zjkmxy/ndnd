@@ -4,6 +4,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // Engine represents a running NDN App low-level engine.
@@ -98,7 +99,7 @@ type InterestHandlerArgs struct {
 	// PIT token
 	PitToken []byte
 	// Incoming face ID (if available)
-	IncomingFaceId enc.Optional[uint64]
+	IncomingFaceId optional.Optional[uint64]
 }
 
 // ReplyFunc represents the callback function to reply for an Interest.

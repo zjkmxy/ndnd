@@ -7,7 +7,7 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
-	pq "github.com/named-data/ndnd/std/utils/priority_queue"
+	"github.com/named-data/ndnd/std/types/priority_queue"
 )
 
 const expiredPitTickerInterval = 100 * time.Millisecond
@@ -25,16 +25,16 @@ type PitCsTree struct {
 	csReplacement CsReplacementPolicy
 	csMap         map[uint64]*nameTreeCsEntry
 
-	pitExpiryQueue pq.Queue[*nameTreePitEntry, int64]
+	pitExpiryQueue priority_queue.Queue[*nameTreePitEntry, int64]
 	updateTimer    chan struct{}
 	onExpiration   OnPitExpiration
 }
 
 type nameTreePitEntry struct {
-	basePitEntry                                    // compose with BasePitEntry
-	pitCsTable   *PitCsTree                         // pointer to tree
-	node         *pitCsTreeNode                     // the tree node associated with this entry
-	pqItem       *pq.Item[*nameTreePitEntry, int64] // entry in the expiring queue
+	basePitEntry                                                // compose with BasePitEntry
+	pitCsTable   *PitCsTree                                     // pointer to tree
+	node         *pitCsTreeNode                                 // the tree node associated with this entry
+	pqItem       *priority_queue.Item[*nameTreePitEntry, int64] // entry in the expiring queue
 }
 
 type nameTreeCsEntry struct {
@@ -65,7 +65,7 @@ func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	pitCs.root.children = make(map[uint64]*pitCsTreeNode)
 	pitCs.onExpiration = onExpiration
 	pitCs.pitTokenMap = make(map[uint32]*nameTreePitEntry)
-	pitCs.pitExpiryQueue = pq.New[*nameTreePitEntry, int64]()
+	pitCs.pitExpiryQueue = priority_queue.New[*nameTreePitEntry, int64]()
 	pitCs.updateTimer = make(chan struct{})
 
 	// This value has already been validated from loading the configuration,
