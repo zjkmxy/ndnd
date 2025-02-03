@@ -36,26 +36,10 @@ func (o Optional[T]) Unwrap() T {
 	panic("Optional value is not set")
 }
 
-// Deprecated: Will be removed in the future.
-func (o Optional[T]) Ptr() *T {
-	if o.isSet {
-		return &o.value
-	}
-	return nil
-}
-
 func Some[T any](v T) Optional[T] {
 	return Optional[T]{value: v, isSet: true}
 }
 
 func None[T any]() Optional[T] {
 	return Optional[T]{isSet: false}
-}
-
-// Deprecated: Will be removed in the future.
-func OptionPtr[T any](v *T) Optional[T] {
-	if v == nil {
-		return Optional[T]{isSet: false}
-	}
-	return Optional[T]{value: *v, isSet: true}
 }

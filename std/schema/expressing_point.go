@@ -319,7 +319,10 @@ func (n *ExpressPoint) NeedCallback(
 			cbEvt.NeedStatus = utils.IdPtr(ndn.InterestResultData)
 
 			// Save (cache) the data in the storage
-			cbEvt.ValidDuration = data.Freshness().Ptr()
+			cbEvt.ValidDuration = nil
+			if freshness, ok := data.Freshness().Get(); ok {
+				cbEvt.ValidDuration = utils.IdPtr(freshness)
+			}
 			n.OnSaveStorage.Dispatch(cbEvt)
 
 			// Return the result
