@@ -64,8 +64,8 @@ func ParseTLNum(buf Buffer) (val TLNum, pos int) {
 	return
 }
 
-// ReadTLNum reads a TLNum from a io.Reader.
-func ReadTLNum(r io.ByteReader) (val TLNum, err error) {
+// ReadTLNum reads a TLNum from a wire view
+func (r *WireView) ReadTLNum() (val TLNum, err error) {
 	var x byte
 	if x, err = r.ReadByte(); err != nil {
 		return

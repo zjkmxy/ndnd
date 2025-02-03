@@ -169,6 +169,12 @@ func (r *WireView) ReadBuf(size int) ([]byte, error) {
 	if size > r.end-r.apos {
 		return nil, r._overflow()
 	}
+	if size == 0 {
+		return []byte{}, nil
+	}
+	if r.IsEOF() {
+		return []byte{}, r._eof()
+	}
 
 	// skip allocation if the entire buffer is in the current segment
 	if size <= len(r.wire[r.seg])-r.rpos {

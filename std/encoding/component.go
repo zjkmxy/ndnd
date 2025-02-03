@@ -201,7 +201,8 @@ func ComponentFromStr(s string) (Component, error) {
 }
 
 func ComponentFromBytes(buf []byte) (Component, error) {
-	return ReadComponent(NewBufferReader(buf))
+	r := NewBufferView(buf)
+	return r.ReadComponent()
 }
 
 func ParseComponent(buf Buffer) (Component, int) {
@@ -215,12 +216,12 @@ func ParseComponent(buf Buffer) (Component, int) {
 	}, end
 }
 
-func ReadComponent(r ParseReader) (Component, error) {
-	typ, err := ReadTLNum(r)
+func (r *WireView) ReadComponent() (Component, error) {
+	typ, err := r.ReadTLNum()
 	if err != nil {
 		return Component{}, err
 	}
-	l, err := ReadTLNum(r)
+	l, err := r.ReadTLNum()
 	if err != nil {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF

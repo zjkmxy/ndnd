@@ -114,12 +114,12 @@ func (n Name) Prefix(i int) Name {
 }
 
 // ReadName reads a Name from a Wire **excluding** the TL prefix.
-func ReadName(r ParseReader) (Name, error) {
+func (r *WireView) ReadName() (Name, error) {
 	var err error
 	var c Component
 	ret := make(Name, 0, 8)
 	// Bad design of Go: it does not allow you use := to create a temp var c and write the error to err.
-	for c, err = ReadComponent(r); err == nil; c, err = ReadComponent(r) {
+	for c, err = r.ReadComponent(); err == nil; c, err = r.ReadComponent() {
 		ret = append(ret, c)
 	}
 	if err != io.EOF {
@@ -213,20 +213,20 @@ func NamePatternFromStr(s string) (NamePattern, error) {
 
 // NameFromBytes parses a URI byte slice into a Name
 func NameFromBytes(buf []byte) (Name, error) {
-	r := NewBufferReader(buf)
-	t, err := ReadTLNum(r)
+	r := NewBufferView(buf)
+	t, err := r.ReadTLNum()
 	if err != nil {
 		return nil, err
 	}
 	if t != TypeName {
 		return nil, ErrFormat{"encoding.NameFromBytes: given bytes is not a Name"}
 	}
-	l, err := ReadTLNum(r)
+	l, err := r.ReadTLNum()
 	if err != nil {
 		return nil, err
 	}
 	start := r.Pos()
-	ret, err := ReadName(r)
+	ret, err := r.ReadName()
 	if err != nil {
 		return nil, err
 	}
@@ -395,10 +395,12 @@ func (n Name) TlvStr() string {
 
 // ComponentFromTlvStr parses the output of TlvStr into a Component.
 func ComponentFromTlvStr(s string) (Component, error) {
-	return ReadComponent(NewBufferReader([]byte(s)))
+	r := NewBufferView([]byte(s))
+	return r.ReadComponent()
 }
 
 // NameFromFStr parses the output of FStr into a Name.
 func NameFromTlvStr(s string) (Name, error) {
-	return ReadName(NewBufferReader([]byte(s)))
+	r := NewBufferView([]byte(s))
+	return r.ReadName()
 }
