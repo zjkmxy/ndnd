@@ -3,34 +3,25 @@ package encoding
 import (
 	"bytes"
 	"hash"
-	"sync"
 
 	"github.com/cespare/xxhash"
+	"github.com/named-data/ndnd/std/types/sync_pool"
 )
 
-type hashPoolObj struct {
+type hashPoolVal struct {
 	hash   hash.Hash64
 	buffer bytes.Buffer
 }
 
-var xxHashPool = sync.Pool{
-	New: func() any { return xxHashPoolNew() },
-}
-
-func xxHashPoolNew() *hashPoolObj {
-	return &hashPoolObj{
-		hash:   xxhash.New(),
-		buffer: bytes.Buffer{},
-	}
-}
-
-func xxHashPoolGet() *hashPoolObj {
-	obj := xxHashPool.Get().(*hashPoolObj)
-	obj.hash.Reset()
-	obj.buffer.Reset()
-	return obj
-}
-
-func xxHashPoolPut(obj *hashPoolObj) {
-	xxHashPool.Put(obj)
-}
+var xxHashPool = sync_pool.New(
+	func() *hashPoolVal {
+		return &hashPoolVal{
+			hash:   xxhash.New(),
+			buffer: bytes.Buffer{},
+		}
+	},
+	func(obj *hashPoolVal) {
+		obj.hash.Reset()
+		obj.buffer.Reset()
+	},
+)

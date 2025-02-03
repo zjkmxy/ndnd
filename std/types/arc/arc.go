@@ -30,7 +30,7 @@ func (a *Arc[T]) Inc() {
 func (a *Arc[T]) Dec() int32 {
 	c := a.c.Add(-1)
 	if c == 0 && a.p != nil {
-		a.p.pool.Put(a)
+		a.p.Put(a)
 	}
 	return c
 }

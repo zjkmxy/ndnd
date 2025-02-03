@@ -147,8 +147,8 @@ func (n Name) BytesInner() []byte {
 
 // Hash returns the hash of the name
 func (n Name) Hash() uint64 {
-	xx := xxHashPoolGet()
-	defer xxHashPoolPut(xx)
+	xx := xxHashPool.Get()
+	defer xxHashPool.Put(xx)
 
 	size := n.EncodingLength()
 	xx.buffer.Grow(size)
@@ -162,8 +162,8 @@ func (n Name) Hash() uint64 {
 // PrefixHash returns the hash value of all prefixes of the name
 // ret[n] means the hash of the prefix of length n. ret[0] is the same for all names.
 func (n Name) PrefixHash() []uint64 {
-	xx := xxHashPoolGet()
-	defer xxHashPoolPut(xx)
+	xx := xxHashPool.Get()
+	defer xxHashPool.Put(xx)
 
 	ret := make([]uint64, len(n)+1)
 	ret[0] = xx.hash.Sum64()
