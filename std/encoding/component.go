@@ -147,10 +147,15 @@ func (c Component) NumberVal() uint64 {
 
 // Hash returns the hash of the component
 func (c Component) Hash() uint64 {
-	xx := xxHashPoolGet(c.EncodingLength())
+	xx := xxHashPoolGet()
 	defer xxHashPoolPut(xx)
-	c.EncodeInto(xx.buffer)
-	xx.hash.Write(xx.buffer)
+
+	size := c.EncodingLength()
+	xx.buffer.Grow(size)
+	buf := xx.buffer.AvailableBuffer()[:size]
+	c.EncodeInto(buf)
+
+	xx.hash.Write(buf)
 	return xx.hash.Sum64()
 }
 

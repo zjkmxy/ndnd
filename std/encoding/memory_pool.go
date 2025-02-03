@@ -1,6 +1,7 @@
 package encoding
 
 import (
+	"bytes"
 	"hash"
 	"sync"
 
@@ -9,7 +10,7 @@ import (
 
 type hashPoolObj struct {
 	hash   hash.Hash64
-	buffer []byte
+	buffer bytes.Buffer
 }
 
 var xxHashPool = sync.Pool{
@@ -19,18 +20,14 @@ var xxHashPool = sync.Pool{
 func xxHashPoolNew() *hashPoolObj {
 	return &hashPoolObj{
 		hash:   xxhash.New(),
-		buffer: make([]byte, 0, 512),
+		buffer: bytes.Buffer{},
 	}
 }
 
-func xxHashPoolGet(bufSize int) *hashPoolObj {
+func xxHashPoolGet() *hashPoolObj {
 	obj := xxHashPool.Get().(*hashPoolObj)
 	obj.hash.Reset()
-	if cap(obj.buffer) < bufSize {
-		obj.buffer = make([]byte, bufSize)
-	} else {
-		obj.buffer = obj.buffer[0:bufSize]
-	}
+	obj.buffer.Reset()
 	return obj
 }
 
