@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,15 +33,12 @@ var VALID_DATA_2 = []byte{
 	0x7d, 0xa9, 0x20, 0xea, 0x8b, 0xda, 0xf6, 0x13, 0xed,
 }
 
-func makeData(name enc.Name, content enc.Wire) *spec.Data {
-	return &spec.Data{
-		NameV:    name,
-		ContentV: content,
-	}
+func makeData(name enc.Name) *defn.FwData {
+	return &defn.FwData{NameV: name}
 }
 
-func makeInterest(name enc.Name) *spec.Interest {
-	return &spec.Interest{
+func makeInterest(name enc.Name) *defn.FwInterest {
+	return &defn.FwInterest{
 		NameV:  name,
 		NonceV: enc.Some(rand.Uint32()),
 	}
@@ -65,7 +62,7 @@ func TestNewPitCSTree(t *testing.T) {
 	interest := makeInterest(name)
 	pitEntry := pitCS.FindInterestExactMatchEnc(interest)
 	assert.Nil(t, pitEntry)
-	data := makeData(name, enc.Wire{})
+	data := makeData(name)
 	pitEntries := pitCS.FindInterestPrefixMatchByDataEnc(data, nil)
 	assert.Equal(t, len(pitEntries), 0)
 
@@ -79,7 +76,7 @@ func TestNewPitCSTree(t *testing.T) {
 	pitEntry = pitCS.FindInterestExactMatchEnc(interest2)
 	assert.Nil(t, pitEntry)
 
-	data2 := makeData(name, enc.Wire{})
+	data2 := makeData(name)
 	pitEntries = pitCS.FindInterestPrefixMatchByDataEnc(data2, nil)
 	assert.Equal(t, len(pitEntries), 0)
 
@@ -362,7 +359,7 @@ func TestFindInterestPrefixMatchByData(t *testing.T) {
 	// Basically the same as FindInterestPrefixMatch, but with data instead
 	pitCS := NewPitCS(func(PitEntry) {})
 	name, _ := enc.NameFromStr("/interest1")
-	data := makeData(name, enc.Wire{})
+	data := makeData(name)
 	hint, _ := enc.NameFromStr("/")
 	inFace := uint64(1111)
 	interest := makeInterest(name)
@@ -383,14 +380,14 @@ func TestFindInterestPrefixMatchByData(t *testing.T) {
 
 	// Look for nonexistent name
 	name2, _ := enc.NameFromStr("/nonexistent")
-	data2 := makeData(name2, enc.Wire{})
+	data2 := makeData(name2)
 	pitEntriesEmpty := pitCS.FindInterestPrefixMatchByDataEnc(data2, nil)
 	assert.Equal(t, len(pitEntriesEmpty), 0)
 
 	// /a exists but we're looking for /a/b, return just /a
 	longername, _ := enc.NameFromStr("/interest1/more_name_content")
 	interest3 := makeInterest(longername)
-	data3 := makeData(longername, enc.Wire{})
+	data3 := makeData(longername)
 
 	pitEntriesEmpty = pitCS.FindInterestPrefixMatchByDataEnc(data3, nil)
 	assert.Equal(t, len(pitEntriesEmpty), 1)
@@ -490,7 +487,7 @@ func FindMatchingDataFromCS(t *testing.T) {
 	interest1 := makeInterest(name1)
 	interest1.CanBePrefixV = false
 
-	pkt, _, _ := spec.ReadPacket(enc.NewBufferView(VALID_DATA_1))
+	pkt, _ := defn.ParseFwPacket(enc.NewBufferView(VALID_DATA_1), false)
 	data1 := pkt.Data
 
 	pitCS.InsertData(data1, VALID_DATA_1)
@@ -512,7 +509,7 @@ func FindMatchingDataFromCS(t *testing.T) {
 	interest2 := makeInterest(name2)
 	interest2.CanBePrefixV = false
 
-	pkt, _, _ = spec.ReadPacket(enc.NewBufferView(VALID_DATA_2))
+	pkt, _ = defn.ParseFwPacket(enc.NewBufferView(VALID_DATA_2), false)
 	data2 := pkt.Data
 
 	pitCS.InsertData(data2, VALID_DATA_2)

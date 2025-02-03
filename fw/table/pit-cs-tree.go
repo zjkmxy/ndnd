@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	pq "github.com/named-data/ndnd/std/utils/priority_queue"
 )
 
@@ -130,7 +130,7 @@ func (e *nameTreePitEntry) PitCs() PitCsTable {
 
 // InsertInterest inserts an entry in the PIT upon receipt of an Interest.
 // Returns tuple of PIT entry and whether the Nonce is a duplicate.
-func (p *PitCsTree) InsertInterest(interest *spec.Interest, hint enc.Name, inFace uint64) (PitEntry, bool) {
+func (p *PitCsTree) InsertInterest(interest *defn.FwInterest, hint enc.Name, inFace uint64) (PitEntry, bool) {
 	name := interest.Name()
 
 	node := p.root.fillTreeToPrefixEnc(name)
@@ -204,7 +204,7 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 // by the given data.
 // Example: If we have interests /a and /a/b, a prefix search for data with name /a/b
 // will return PitEntries for both /a and /a/b
-func (p *PitCsTree) FindInterestExactMatchEnc(interest *spec.Interest) PitEntry {
+func (p *PitCsTree) FindInterestExactMatchEnc(interest *defn.FwInterest) PitEntry {
 	node := p.root.findExactMatchEntryEnc(interest.NameV)
 	if node != nil {
 		for _, curEntry := range node.pitEntries {
@@ -221,7 +221,7 @@ func (p *PitCsTree) FindInterestExactMatchEnc(interest *spec.Interest) PitEntry 
 // by the given data.
 // Example: If we have interests /a and /a/b, a prefix search for data with name /a/b
 // will return PitEntries for both /a and /a/b
-func (p *PitCsTree) FindInterestPrefixMatchByDataEnc(data *spec.Data, token *uint32) []PitEntry {
+func (p *PitCsTree) FindInterestPrefixMatchByDataEnc(data *defn.FwData, token *uint32) []PitEntry {
 	if token != nil {
 		if entry, ok := p.pitTokenMap[*token]; ok && entry.Token() == *token {
 			return []PitEntry{entry}
@@ -266,7 +266,7 @@ func (p *PitCsTree) IsCsServing() bool {
 
 // InsertOutRecord inserts an outrecord for the given interest, updating the
 // preexisting one if it already occcurs.
-func (e *nameTreePitEntry) InsertOutRecord(interest *spec.Interest, face uint64) *PitOutRecord {
+func (e *nameTreePitEntry) InsertOutRecord(interest *defn.FwInterest, face uint64) *PitOutRecord {
 	lifetime := interest.Lifetime().GetOr(time.Millisecond * 4000)
 	var record *PitOutRecord
 	var ok bool
@@ -369,7 +369,7 @@ func (p *PitCsTree) generateNewPitToken() uint32 {
 // FindMatchingDataFromCS finds the best matching entry in the CS (if any).
 // If MustBeFresh is set to true in the Interest, only non-stale CS entries
 // will be returned.
-func (p *PitCsTree) FindMatchingDataFromCS(interest *spec.Interest) CsEntry {
+func (p *PitCsTree) FindMatchingDataFromCS(interest *defn.FwInterest) CsEntry {
 	node := p.root.findExactMatchEntryEnc(interest.NameV)
 	if node != nil {
 		if !interest.CanBePrefixV {
@@ -388,7 +388,7 @@ func (p *PitCsTree) FindMatchingDataFromCS(interest *spec.Interest) CsEntry {
 }
 
 // InsertData inserts a Data packet into the Content Store.
-func (p *PitCsTree) InsertData(data *spec.Data, wire []byte) {
+func (p *PitCsTree) InsertData(data *defn.FwData, wire []byte) {
 	index := data.NameV.Hash()
 	staleTime := time.Now()
 	if data.MetaInfo != nil && data.MetaInfo.FreshnessPeriod.IsSet() {
@@ -440,7 +440,7 @@ func (p *PitCsTree) eraseCsDataFromReplacementStrategy(index uint64) {
 // the interest as far as possible with the nodes components in the PitCSTree.
 // For example, if we have data for /a/b/v=10 and the interest is /a/b,
 // p should be the `b` node, not the root node.
-func (p *pitCsTreeNode) findMatchingDataCSPrefix(interest *spec.Interest) CsEntry {
+func (p *pitCsTreeNode) findMatchingDataCSPrefix(interest *defn.FwInterest) CsEntry {
 	if p.csEntry != nil && (!interest.MustBeFreshV || time.Now().Before(p.csEntry.staleTime)) {
 		// A csEntry exists at this node and is acceptable to satisfy the interest
 		return p.csEntry

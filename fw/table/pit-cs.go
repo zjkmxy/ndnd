@@ -10,21 +10,21 @@ package table
 import (
 	"time"
 
+	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 )
 
 // PitCsTable dictates what functionality a Pit-Cs table should implement
 // Warning: All functions must be called in the same forwarding goroutine as the creation of the table.
 type PitCsTable interface {
-	InsertInterest(interest *spec.Interest, hint enc.Name, inFace uint64) (PitEntry, bool)
+	InsertInterest(interest *defn.FwInterest, hint enc.Name, inFace uint64) (PitEntry, bool)
 	RemoveInterest(pitEntry PitEntry) bool
-	FindInterestExactMatchEnc(interest *spec.Interest) PitEntry
-	FindInterestPrefixMatchByDataEnc(data *spec.Data, token *uint32) []PitEntry
+	FindInterestExactMatchEnc(interest *defn.FwInterest) PitEntry
+	FindInterestPrefixMatchByDataEnc(data *defn.FwData, token *uint32) []PitEntry
 	PitSize() int
 
-	InsertData(data *spec.Data, wire []byte)
-	FindMatchingDataFromCS(interest *spec.Interest) CsEntry
+	InsertData(data *defn.FwData, wire []byte)
+	FindMatchingDataFromCS(interest *defn.FwInterest) CsEntry
 	CsSize() int
 	IsCsAdmitting() bool
 	IsCsServing() bool
@@ -57,8 +57,8 @@ type PitEntry interface {
 
 	Token() uint32
 
-	InsertInRecord(interest *spec.Interest, face uint64, incomingPitToken []byte) (*PitInRecord, bool, uint32)
-	InsertOutRecord(interest *spec.Interest, face uint64) *PitOutRecord
+	InsertInRecord(interest *defn.FwInterest, face uint64, incomingPitToken []byte) (*PitInRecord, bool, uint32)
+	InsertOutRecord(interest *defn.FwInterest, face uint64) *PitOutRecord
 
 	GetOutRecords() []*PitOutRecord
 	ClearOutRecords()
@@ -103,7 +103,7 @@ type PitOutRecord struct {
 type CsEntry interface {
 	Index() uint64 // the hash of the entry, for fast lookup
 	StaleTime() time.Time
-	Copy() (*spec.Data, []byte, error)
+	Copy() (*defn.FwData, []byte, error)
 }
 
 type baseCsEntry struct {
@@ -116,7 +116,7 @@ type baseCsEntry struct {
 // metadata and returning whether there was already an in-record in the entry.
 // The third return value is the previous nonce if the in-record already existed.
 func (bpe *basePitEntry) InsertInRecord(
-	interest *spec.Interest,
+	interest *defn.FwInterest,
 	face uint64,
 	incomingPitToken []byte,
 ) (*PitInRecord, bool, uint32) {
@@ -231,11 +231,11 @@ func (bce *baseCsEntry) StaleTime() time.Time {
 	return bce.staleTime
 }
 
-func (bce *baseCsEntry) Copy() (*spec.Data, []byte, error) {
+func (bce *baseCsEntry) Copy() (*defn.FwData, []byte, error) {
 	wire := make([]byte, len(bce.wire))
 	copy(wire, bce.wire)
 
-	data, _, err := spec.ReadPacket(enc.NewBufferView(wire))
+	data, err := defn.ParseFwPacket(enc.NewBufferView(wire), false)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -89,7 +89,7 @@ func TestInsertInRecord(t *testing.T) {
 	// Case 1: interest does not already exist in basePitEntry.inRecords
 	name, _ := enc.NameFromStr("/something")
 	val := uint32(1)
-	interest := &spec.Interest{
+	interest := &defn.FwInterest{
 		NameV:  name,
 		NonceV: enc.Some(val),
 	}
@@ -125,7 +125,7 @@ func TestInsertInRecord(t *testing.T) {
 	// Add another inRecord
 	name2, _ := enc.NameFromStr("/another_something")
 	val2 := uint32(1)
-	interest2 := &spec.Interest{
+	interest2 := &defn.FwInterest{
 		NameV:  name2,
 		NonceV: enc.Some(val2),
 	}
@@ -158,7 +158,8 @@ func TestBaseCsEntryGetters(t *testing.T) {
 	assert.Equal(t, bpe.Index(), uint64(1234))
 	assert.Equal(t, bpe.StaleTime(), currTime)
 
-	csData, csWire, _ := bpe.Copy()
+	csData, csWire, err := bpe.Copy()
+	assert.Nil(t, err)
 	assert.Equal(t, csData.NameV, name)
 	assert.Equal(t, csWire, VALID_DATA_1)
 }

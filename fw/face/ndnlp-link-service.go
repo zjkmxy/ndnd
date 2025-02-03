@@ -16,7 +16,6 @@ import (
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/dispatch"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -196,7 +195,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 	}
 
 	// Fragment packet if necessary
-	var fragments []*spec.LpPacket
+	var fragments []*defn.FwLpPacket
 	frameLen := int(wire.Length())
 	if frameLen > effectiveMtu {
 		if !l.options.IsFragmentationEnabled {
@@ -206,7 +205,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 		// Split up fragment
 		fragCount := (frameLen + effectiveMtu - 1) / effectiveMtu
-		fragments = make([]*spec.LpPacket, fragCount)
+		fragments = make([]*defn.FwLpPacket, fragCount)
 
 		reader := enc.NewWireView(wire)
 		for i := range fragments {
@@ -223,7 +222,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 			// Create fragment with sequence and index
 			l.nextSequence++
-			fragments[i] = &spec.LpPacket{
+			fragments[i] = &defn.FwLpPacket{
 				Fragment:  frag,
 				Sequence:  enc.Some(l.nextSequence),
 				FragIndex: enc.Some(uint64(i)),
@@ -232,7 +231,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 		}
 	} else {
 		// No fragmentation necessary
-		fragments = []*spec.LpPacket{{Fragment: wire}}
+		fragments = []*defn.FwLpPacket{{Fragment: wire}}
 	}
 
 	// Send fragment(s)
@@ -253,12 +252,8 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 		}
 
 		// Encode final LP frame
-		pkt := &spec.Packet{
-			LpPacket: fragment,
-		}
-		encoder := spec.PacketEncoder{}
-		encoder.Init(pkt)
-		frameWire := encoder.Encode(pkt)
+		pkt := defn.FwPacket{LpPacket: fragment}
+		frameWire := pkt.Encode()
 		if frameWire == nil {
 			core.Log.Error(l, "Unable to encode fragment - DROP")
 			break
@@ -285,7 +280,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 	}
 
 	wire := enc.Wire{frameCopy}
-	L2, err := readPacketUnverified(enc.NewWireView(wire))
+	L2, err := defn.ParseFwPacket(enc.NewWireView(wire), false)
 	if err != nil {
 		core.Log.Error(l, "Unable to decode incoming frame", "err", err)
 		return
@@ -353,7 +348,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		}
 
 		// Parse inner packet in place
-		L3, err := readPacketUnverified(enc.NewWireView(fragment))
+		L3, err := defn.ParseFwPacket(enc.NewWireView(fragment), false)
 		if err != nil {
 			return
 		}
@@ -374,7 +369,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 }
 
 func (l *NDNLPLinkService) reassemble(
-	frame *spec.LpPacket,
+	frame *defn.FwLpPacket,
 	baseSequence uint64,
 	fragIndex uint64,
 	fragCount uint64,
@@ -461,11 +456,4 @@ func (op *NDNLPLinkServiceOptions) Flags() (ret uint64) {
 		ret |= FaceFlagCongestionMarking
 	}
 	return
-}
-
-// Reads a packet without validating the internal fields
-func readPacketUnverified(reader enc.WireView) (*spec.Packet, error) {
-	context := spec.PacketParsingContext{}
-	context.Init()
-	return context.Parse(reader, false)
 }

@@ -9,14 +9,13 @@ package defn
 
 import (
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 )
 
 // Pkt represents a pending packet to be sent or recently
 // received on the link, plus any associated metadata.
 type Pkt struct {
 	Name enc.Name
-	L3   *spec.Packet
+	L3   *FwPacket
 	Raw  enc.Wire
 
 	PitToken       []byte
