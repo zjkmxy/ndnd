@@ -175,6 +175,10 @@ func (r *WireView) ReadBuf(size int) ([]byte, error) {
 		ret := r.wire[r.seg][r.rpos : r.rpos+size]
 		r.apos += size
 		r.rpos += size
+		if r.rpos == len(r.wire[r.seg]) {
+			r.rpos = 0
+			r.seg++
+		}
 		return ret, nil
 	}
 
