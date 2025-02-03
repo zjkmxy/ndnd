@@ -999,6 +999,7 @@ func (context *PrefixOpListParsingContext) Parse(reader enc.WireView, ignoreCrit
 					handled = true
 					handled_PrefixOpReset = true
 					value.PrefixOpReset = true
+					err = reader.Skip(int(l))
 				}
 			case 304:
 				if true {

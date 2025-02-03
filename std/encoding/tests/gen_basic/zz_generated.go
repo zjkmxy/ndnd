@@ -372,6 +372,7 @@ func (context *OptFieldParsingContext) Parse(reader enc.WireView, ignoreCritical
 					handled = true
 					handled_Bool = true
 					value.Bool = true
+					err = reader.Skip(int(l))
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {

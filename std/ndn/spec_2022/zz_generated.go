@@ -2310,6 +2310,7 @@ func (context *LpPacketParsingContext) Parse(reader enc.WireView, ignoreCritical
 					handled = true
 					handled_NonDiscovery = true
 					value.NonDiscovery = true
+					err = reader.Skip(int(l))
 				}
 			case 848:
 				if true {
@@ -2844,12 +2845,14 @@ func (context *InterestParsingContext) Parse(reader enc.WireView, ignoreCritical
 					handled = true
 					handled_CanBePrefixV = true
 					value.CanBePrefixV = true
+					err = reader.Skip(int(l))
 				}
 			case 18:
 				if progress+1 == 4 {
 					handled = true
 					handled_MustBeFreshV = true
 					value.MustBeFreshV = true
+					err = reader.Skip(int(l))
 				}
 			case 30:
 				if progress+1 == 5 {
