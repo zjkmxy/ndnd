@@ -62,7 +62,7 @@ func (encoder *ManifestDigestEncoder) Encode(value *ManifestDigest) enc.Wire {
 	return wire
 }
 
-func (context *ManifestDigestParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*ManifestDigest, error) {
+func (context *ManifestDigestParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ManifestDigest, error) {
 
 	var handled_SegNo bool = false
 	var handled_Digest bool = false
@@ -160,7 +160,7 @@ func (value *ManifestDigest) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseManifestDigest(reader enc.FastReader, ignoreCritical bool) (*ManifestDigest, error) {
+func ParseManifestDigest(reader enc.WireView, ignoreCritical bool) (*ManifestDigest, error) {
 	context := ManifestDigestParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -274,7 +274,7 @@ func (encoder *ManifestDataEncoder) Encode(value *ManifestData) enc.Wire {
 	return wire
 }
 
-func (context *ManifestDataParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*ManifestData, error) {
+func (context *ManifestDataParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ManifestData, error) {
 
 	var handled_Entries bool = false
 
@@ -362,7 +362,7 @@ func (value *ManifestData) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseManifestData(reader enc.FastReader, ignoreCritical bool) (*ManifestData, error) {
+func ParseManifestData(reader enc.WireView, ignoreCritical bool) (*ManifestData, error) {
 	context := ManifestDataParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -539,7 +539,7 @@ func (encoder *MetaDataEncoder) Encode(value *MetaData) enc.Wire {
 	return wire
 }
 
-func (context *MetaDataParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*MetaData, error) {
+func (context *MetaDataParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*MetaData, error) {
 
 	var handled_Name bool = false
 	var handled_FinalBlockID bool = false
@@ -830,7 +830,7 @@ func (value *MetaData) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseMetaData(reader enc.FastReader, ignoreCritical bool) (*MetaData, error) {
+func ParseMetaData(reader enc.WireView, ignoreCritical bool) (*MetaData, error) {
 	context := MetaDataParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

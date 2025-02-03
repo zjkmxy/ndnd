@@ -27,21 +27,21 @@ func TestFakeMetaInfo(t *testing.T) {
 		},
 		buf)
 
-	f2 := tu.NoErr(gen_basic.ParseFakeMetaInfo(enc.NewFastBufReader(buf), false))
+	f2 := tu.NoErr(gen_basic.ParseFakeMetaInfo(enc.NewBufferView(buf), false))
 	require.Equal(t, f, *f2)
 
 	buf2 := []byte{
 		0x19, 0x02, 0x07, 0xd0,
 		0x1a, 0x03, 0x03, 0x04, 0x05,
 	}
-	tu.Err(gen_basic.ParseFakeMetaInfo(enc.NewFastBufReader(buf2), false))
+	tu.Err(gen_basic.ParseFakeMetaInfo(enc.NewBufferView(buf2), false))
 
 	buf2 = []byte{
 		0x18, 0x01, 0x01,
 		0x19, 0x02, 0x07, 0xd0,
 		0x1a, 0x08, 0x03, 0x04, 0x05,
 	}
-	tu.Err(gen_basic.ParseFakeMetaInfo(enc.NewFastBufReader(buf2), false))
+	tu.Err(gen_basic.ParseFakeMetaInfo(enc.NewBufferView(buf2), false))
 
 	buf2 = []byte{
 		0x18, 0x01, 0x01,
@@ -49,7 +49,7 @@ func TestFakeMetaInfo(t *testing.T) {
 		0x1a, 0x03, 0x03, 0x04, 0x05,
 		0x30, 0x01, 0x00,
 	}
-	f2 = tu.NoErr(gen_basic.ParseFakeMetaInfo(enc.NewFastBufReader(buf2), false))
+	f2 = tu.NoErr(gen_basic.ParseFakeMetaInfo(enc.NewBufferView(buf2), false))
 	require.Equal(t, f, *f2)
 
 	buf2 = []byte{
@@ -58,7 +58,7 @@ func TestFakeMetaInfo(t *testing.T) {
 		0x1a, 0x03, 0x03, 0x04, 0x05,
 		0x31, 0x01, 0x00,
 	}
-	f2 = tu.NoErr(gen_basic.ParseFakeMetaInfo(enc.NewFastBufReader(buf2), true))
+	f2 = tu.NoErr(gen_basic.ParseFakeMetaInfo(enc.NewBufferView(buf2), true))
 	require.Equal(t, f, *f2)
 
 	buf2 = []byte{
@@ -67,7 +67,7 @@ func TestFakeMetaInfo(t *testing.T) {
 		0x1a, 0x03, 0x03, 0x04, 0x05,
 		0x31, 0x01, 0x00,
 	}
-	tu.Err(gen_basic.ParseFakeMetaInfo(enc.NewFastBufReader(buf2), false))
+	tu.Err(gen_basic.ParseFakeMetaInfo(enc.NewBufferView(buf2), false))
 }
 
 func TestOptField(t *testing.T) {
@@ -88,7 +88,7 @@ func TestOptField(t *testing.T) {
 			0x30, 0x00,
 		},
 		buf)
-	f2 := tu.NoErr(gen_basic.ParseOptField(enc.NewFastBufReader(buf), false))
+	f2 := tu.NoErr(gen_basic.ParseOptField(enc.NewBufferView(buf), false))
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.OptField{
@@ -101,7 +101,7 @@ func TestOptField(t *testing.T) {
 	require.Equal(t,
 		[]byte{},
 		buf)
-	f2 = tu.NoErr(gen_basic.ParseOptField(enc.NewFastBufReader(buf), false))
+	f2 = tu.NoErr(gen_basic.ParseOptField(enc.NewBufferView(buf), false))
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.OptField{
@@ -117,7 +117,7 @@ func TestOptField(t *testing.T) {
 			0x1a, 0x00,
 		},
 		buf)
-	f2 = tu.NoErr(gen_basic.ParseOptField(enc.NewFastBufReader(buf), false))
+	f2 = tu.NoErr(gen_basic.ParseOptField(enc.NewBufferView(buf), false))
 	require.Equal(t, f, *f2)
 }
 
@@ -138,15 +138,15 @@ func TestWireName(t *testing.T) {
 			0x02, 0x09, 0x08, 0x01, 'A', 0x08, 0x01, 'B', 0x08, 0x01, 'C',
 		},
 		buf)
-	f2 := tu.NoErr(gen_basic.ParseWireNameField(enc.NewFastBufReader(buf), false))
+	f2 := tu.NoErr(gen_basic.ParseWireNameField(enc.NewBufferView(buf), false))
 	require.True(t, f.Name.Equal(f2.Name))
 	require.Equal(t, f.Wire.Join(), f2.Wire.Join())
 
-	f2 = tu.NoErr(gen_basic.ParseWireNameField(enc.NewFastBufReader([]byte{}), false))
+	f2 = tu.NoErr(gen_basic.ParseWireNameField(enc.NewBufferView([]byte{}), false))
 	require.Equal(t, enc.Name(nil), f2.Name)
 	require.Equal(t, enc.Wire(nil), f2.Wire)
 
-	f2 = tu.NoErr(gen_basic.ParseWireNameField(enc.NewFastBufReader(
+	f2 = tu.NoErr(gen_basic.ParseWireNameField(enc.NewBufferView(
 		[]byte{
 			0x01, 0x00, 0x02, 0x00,
 		}), false))
@@ -200,7 +200,7 @@ func TestNoCopy(t *testing.T) {
 	for i := 6; i < len(wire); i++ {
 		require.Equal(t, enc.Buffer(nil), wire[i])
 	}
-	f2 := tu.NoErr(gen_basic.ParseNoCopyStruct(enc.NewFastReader(wire), true))
+	f2 := tu.NoErr(gen_basic.ParseNoCopyStruct(enc.NewWireView(wire), true))
 	require.Equal(t, f.Wire1.Join(), f2.Wire1.Join())
 	require.Equal(t, f.Number, f2.Number)
 	require.Equal(t, f.Wire2.Join(), f2.Wire2.Join())
@@ -215,7 +215,7 @@ func TestStrField(t *testing.T) {
 	}
 	buf := f.Bytes()
 	require.Equal(t, []byte{0x01, 0x05, 'h', 'e', 'l', 'l', 'o', 0x02, 0x05, 'w', 'o', 'r', 'l', 'd'}, buf)
-	f2 := tu.NoErr(gen_basic.ParseStrField(enc.NewFastBufReader(buf), false))
+	f2 := tu.NoErr(gen_basic.ParseStrField(enc.NewBufferView(buf), false))
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.StrField{
@@ -224,11 +224,11 @@ func TestStrField(t *testing.T) {
 	}
 	buf = f.Bytes()
 	require.Equal(t, []byte{0x01, 0x00}, buf)
-	f2 = tu.NoErr(gen_basic.ParseStrField(enc.NewFastBufReader(buf), false))
+	f2 = tu.NoErr(gen_basic.ParseStrField(enc.NewBufferView(buf), false))
 	require.Equal(t, f, *f2)
 
 	buf = []byte{}
-	tu.Err(gen_basic.ParseStrField(enc.NewFastBufReader(buf), false))
+	tu.Err(gen_basic.ParseStrField(enc.NewBufferView(buf), false))
 }
 
 func TestFixedUintField(t *testing.T) {
@@ -246,7 +246,7 @@ func TestFixedUintField(t *testing.T) {
 		0x02, 0x04, 0x00, 0x00, 0x00, 0x02,
 		0x03, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
 	}, buf)
-	f2 := tu.NoErr(gen_basic.ParseFixedUintField(enc.NewFastBufReader(buf), false))
+	f2 := tu.NoErr(gen_basic.ParseFixedUintField(enc.NewBufferView(buf), false))
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.FixedUintField{
@@ -259,11 +259,11 @@ func TestFixedUintField(t *testing.T) {
 	require.Equal(t, []byte{
 		0x01, 0x01, 0x00,
 	}, buf)
-	f2 = tu.NoErr(gen_basic.ParseFixedUintField(enc.NewFastBufReader(buf), false))
+	f2 = tu.NoErr(gen_basic.ParseFixedUintField(enc.NewBufferView(buf), false))
 	require.Equal(t, f, *f2)
 
 	buf = []byte{}
-	tu.Err(gen_basic.ParseFixedUintField(enc.NewFastBufReader(buf), false))
+	tu.Err(gen_basic.ParseFixedUintField(enc.NewBufferView(buf), false))
 
 	bytePtr := new(byte)
 	*bytePtr = 5
@@ -274,13 +274,13 @@ func TestFixedUintField(t *testing.T) {
 
 	buf = f.Bytes()
 
-	f2 = tu.NoErr(gen_basic.ParseFixedUintField(enc.NewFastBufReader(buf), false))
+	f2 = tu.NoErr(gen_basic.ParseFixedUintField(enc.NewBufferView(buf), false))
 	require.Equal(t, uint8(7), f2.Byte)
 	require.Equal(t, uint8(5), *f2.BytePtr)
 
 	f2.Byte = 8
 	*f2.BytePtr = 9
-	f2 = tu.NoErr(gen_basic.ParseFixedUintField(enc.NewFastBufReader(buf), false))
+	f2 = tu.NoErr(gen_basic.ParseFixedUintField(enc.NewBufferView(buf), false))
 	require.Equal(t, uint8(7), f2.Byte)     // unchanged
 	require.Equal(t, uint8(9), *f2.BytePtr) // changed
 }

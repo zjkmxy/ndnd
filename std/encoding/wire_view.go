@@ -4,7 +4,9 @@ import (
 	"io"
 )
 
-type FastReader struct {
+// WireView is a parsing view of a Wire.
+// It lives entirely on the stack and fits in a cache line.
+type WireView struct {
 	wire  Wire
 	apos  int // absolute position from start of wire
 	rpos  int // relative position within segment
@@ -13,31 +15,31 @@ type FastReader struct {
 	end   int // last allowed position (absolute)
 }
 
-func NewFastReader(wire Wire) FastReader {
+func NewWireView(wire Wire) WireView {
 	end := 0
 	for _, seg := range wire {
 		end += len(seg)
 	}
-	return FastReader{wire: wire, end: end}
+	return WireView{wire: wire, end: end}
 }
 
-func NewFastBufReader(buf Buffer) FastReader {
-	return NewFastReader(Wire{buf})
+func NewBufferView(buf Buffer) WireView {
+	return NewWireView(Wire{buf})
 }
 
-func (r *FastReader) IsEOF() bool {
+func (r *WireView) IsEOF() bool {
 	return r.apos >= r.end
 }
 
-func (r *FastReader) Pos() int {
+func (r *WireView) Pos() int {
 	return r.apos - r.start
 }
 
-func (r *FastReader) Length() int {
+func (r *WireView) Length() int {
 	return r.end - r.start
 }
 
-func (r *FastReader) ReadByte() (byte, error) {
+func (r *WireView) ReadByte() (byte, error) {
 	if r.IsEOF() {
 		return 0, r._eof()
 	}
@@ -51,7 +53,7 @@ func (r *FastReader) ReadByte() (byte, error) {
 	return b, nil
 }
 
-func (r *FastReader) ReadFull(cpy []byte) (int, error) {
+func (r *WireView) ReadFull(cpy []byte) (int, error) {
 	cpypos := 0
 	for cpypos < len(cpy) {
 		if r.IsEOF() {
@@ -69,14 +71,14 @@ func (r *FastReader) ReadFull(cpy []byte) (int, error) {
 	return cpypos, nil
 }
 
-func (r *FastReader) Skip(n int) error {
+func (r *WireView) Skip(n int) error {
 	_, err := r.SkipGetSegCount(n)
 	return err
 }
 
 // _skip skips the next n bytes.
 // used as utility for ReadWire to get the number of segments to read.
-func (r *FastReader) SkipGetSegCount(n int) (int, error) {
+func (r *WireView) SkipGetSegCount(n int) (int, error) {
 	segcount := 0
 	left := n
 	for left > 0 {
@@ -99,7 +101,7 @@ func (r *FastReader) SkipGetSegCount(n int) (int, error) {
 	return segcount, nil
 }
 
-func (r *FastReader) ReadWire(size int) (Wire, error) {
+func (r *WireView) ReadWire(size int) (Wire, error) {
 	r_sz := *r // copy
 	w_size, err := r_sz.SkipGetSegCount(size)
 	if err != nil {
@@ -117,7 +119,7 @@ func (r *FastReader) ReadWire(size int) (Wire, error) {
 }
 
 // reads upto size bytes from the current segment, without copying.
-func (r *FastReader) readSeg(size int) []byte {
+func (r *WireView) readSeg(size int) []byte {
 	segleft := len(r.wire[r.seg]) - r.rpos
 	if size < segleft {
 		ret := r.wire[r.seg][r.rpos : r.rpos+size]
@@ -133,9 +135,9 @@ func (r *FastReader) readSeg(size int) []byte {
 	}
 }
 
-func (r *FastReader) Delegate(size int) FastReader {
+func (r *WireView) Delegate(size int) WireView {
 	if size > r.end-r.apos {
-		return FastReader{} // invalid
+		return WireView{} // invalid
 	}
 	ret := *r
 	ret.start = ret.apos
@@ -144,7 +146,7 @@ func (r *FastReader) Delegate(size int) FastReader {
 	return ret
 }
 
-func (r *FastReader) CopyN(w io.Writer, size int) (int, error) {
+func (r *WireView) CopyN(w io.Writer, size int) (int, error) {
 	written := 0
 	for written < size {
 		if r.IsEOF() {
@@ -163,7 +165,7 @@ func (r *FastReader) CopyN(w io.Writer, size int) (int, error) {
 	return written, nil
 }
 
-func (r *FastReader) ReadBuf(size int) ([]byte, error) {
+func (r *WireView) ReadBuf(size int) ([]byte, error) {
 	if size > r.end-r.apos {
 		return nil, r._overflow()
 	}
@@ -186,8 +188,8 @@ func (r *FastReader) ReadBuf(size int) ([]byte, error) {
 	return ret, nil
 }
 
-func (r *FastReader) Range(start, end int) Wire {
-	rcopy := FastReader{wire: r.wire, end: r.end}
+func (r *WireView) Range(start, end int) Wire {
+	rcopy := WireView{wire: r.wire, end: r.end}
 	rcopy.Skip(r.start + start)
 	w, err := rcopy.ReadWire(end - start)
 	if err != nil {
@@ -197,15 +199,15 @@ func (r *FastReader) Range(start, end int) Wire {
 }
 
 // Debug prints the remaining bytes in the buffer.
-func (r FastReader) Debug() []byte {
+func (r WireView) Debug() []byte {
 	b, _ := r.ReadBuf(r.end - r.apos)
 	return b
 }
 
-func (r *FastReader) _eof() error {
+func (r *WireView) _eof() error {
 	return io.EOF
 }
 
-func (r *FastReader) _overflow() error {
+func (r *WireView) _overflow() error {
 	return ErrBufferOverflow
 }

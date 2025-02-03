@@ -114,7 +114,7 @@ func (d *Data) Freshness() (val enc.Optional[time.Duration]) {
 
 func (d *Data) FinalBlockID() (val enc.Optional[enc.Component]) {
 	if d.MetaInfo != nil && d.MetaInfo.FinalBlockID != nil {
-		reader := enc.NewFastBufReader(d.MetaInfo.FinalBlockID)
+		reader := enc.NewBufferView(d.MetaInfo.FinalBlockID)
 		if ret, err := reader.ReadComponent(); err == nil {
 			return enc.Some(ret)
 		}
@@ -309,7 +309,7 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 	}, nil
 }
 
-func (Spec) ReadData(reader enc.FastReader) (ndn.Data, enc.Wire, error) {
+func (Spec) ReadData(reader enc.WireView) (ndn.Data, enc.Wire, error) {
 	context := PacketParsingContext{}
 	context.Init()
 	ret, err := context.Parse(reader, false)
@@ -490,7 +490,7 @@ func checkInterest(val *Interest, context *InterestParsingContext) error {
 	return nil
 }
 
-func (Spec) ReadInterest(reader enc.FastReader) (ndn.Interest, enc.Wire, error) {
+func (Spec) ReadInterest(reader enc.WireView) (ndn.Interest, enc.Wire, error) {
 	context := PacketParsingContext{}
 	context.Init()
 	pkt, err := context.Parse(reader, false)
@@ -515,7 +515,7 @@ func (Spec) ReadInterest(reader enc.FastReader) (ndn.Interest, enc.Wire, error) 
 //	Postcondition: exactly one of Interest, Data, or LpPacket is returned.
 //
 // If precondition is not met, then postcondition is not required to hold. But the call won't crash.
-func ReadPacket(reader enc.FastReader) (ret *Packet, context PacketParsingContext, err error) {
+func ReadPacket(reader enc.WireView) (ret *Packet, context PacketParsingContext, err error) {
 	context.Init()
 	ret, err = context.Parse(reader, false)
 	if err != nil {

@@ -64,7 +64,7 @@ func (encoder *StrategyEncoder) Encode(value *Strategy) enc.Wire {
 	return wire
 }
 
-func (context *StrategyParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Strategy, error) {
+func (context *StrategyParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Strategy, error) {
 
 	var handled_Name bool = false
 
@@ -139,7 +139,7 @@ func (value *Strategy) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStrategy(reader enc.FastReader, ignoreCritical bool) (*Strategy, error) {
+func ParseStrategy(reader enc.WireView, ignoreCritical bool) (*Strategy, error) {
 	context := StrategyParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -417,7 +417,7 @@ func (encoder *ControlArgsEncoder) Encode(value *ControlArgs) enc.Wire {
 	return wire
 }
 
-func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*ControlArgs, error) {
+func (context *ControlArgsParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ControlArgs, error) {
 
 	var handled_Name bool = false
 	var handled_FaceId bool = false
@@ -858,7 +858,7 @@ func (value *ControlArgs) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseControlArgs(reader enc.FastReader, ignoreCritical bool) (*ControlArgs, error) {
+func ParseControlArgs(reader enc.WireView, ignoreCritical bool) (*ControlArgs, error) {
 	context := ControlArgsParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1186,7 +1186,7 @@ func (encoder *ControlResponseValEncoder) Encode(value *ControlResponseVal) enc.
 	return wire
 }
 
-func (context *ControlResponseValParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*ControlResponseVal, error) {
+func (context *ControlResponseValParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ControlResponseVal, error) {
 
 	var handled_StatusCode bool = false
 	var handled_StatusText bool = false
@@ -1299,7 +1299,7 @@ func (value *ControlResponseVal) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseControlResponseVal(reader enc.FastReader, ignoreCritical bool) (*ControlResponseVal, error) {
+func ParseControlResponseVal(reader enc.WireView, ignoreCritical bool) (*ControlResponseVal, error) {
 	context := ControlResponseValParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1411,7 +1411,7 @@ func (encoder *ControlParametersEncoder) Encode(value *ControlParameters) enc.Wi
 	return wire
 }
 
-func (context *ControlParametersParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*ControlParameters, error) {
+func (context *ControlParametersParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ControlParameters, error) {
 
 	var handled_Val bool = false
 
@@ -1485,7 +1485,7 @@ func (value *ControlParameters) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseControlParameters(reader enc.FastReader, ignoreCritical bool) (*ControlParameters, error) {
+func ParseControlParameters(reader enc.WireView, ignoreCritical bool) (*ControlParameters, error) {
 	context := ControlParametersParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1545,7 +1545,7 @@ func (encoder *ControlResponseEncoder) Encode(value *ControlResponse) enc.Wire {
 	return wire
 }
 
-func (context *ControlResponseParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*ControlResponse, error) {
+func (context *ControlResponseParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ControlResponse, error) {
 
 	var handled_Val bool = false
 
@@ -1619,7 +1619,7 @@ func (value *ControlResponse) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseControlResponse(reader enc.FastReader, ignoreCritical bool) (*ControlResponse, error) {
+func ParseControlResponse(reader enc.WireView, ignoreCritical bool) (*ControlResponse, error) {
 	context := ControlResponseParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1717,7 +1717,7 @@ func (encoder *FaceEventNotificationValueEncoder) Encode(value *FaceEventNotific
 	return wire
 }
 
-func (context *FaceEventNotificationValueParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FaceEventNotificationValue, error) {
+func (context *FaceEventNotificationValueParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FaceEventNotificationValue, error) {
 
 	var handled_FaceEventKind bool = false
 	var handled_FaceId bool = false
@@ -1951,7 +1951,7 @@ func (value *FaceEventNotificationValue) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFaceEventNotificationValue(reader enc.FastReader, ignoreCritical bool) (*FaceEventNotificationValue, error) {
+func ParseFaceEventNotificationValue(reader enc.WireView, ignoreCritical bool) (*FaceEventNotificationValue, error) {
 	context := FaceEventNotificationValueParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -2011,7 +2011,7 @@ func (encoder *FaceEventNotificationEncoder) Encode(value *FaceEventNotification
 	return wire
 }
 
-func (context *FaceEventNotificationParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FaceEventNotification, error) {
+func (context *FaceEventNotificationParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FaceEventNotification, error) {
 
 	var handled_Val bool = false
 
@@ -2085,7 +2085,7 @@ func (value *FaceEventNotification) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFaceEventNotification(reader enc.FastReader, ignoreCritical bool) (*FaceEventNotification, error) {
+func ParseFaceEventNotification(reader enc.WireView, ignoreCritical bool) (*FaceEventNotification, error) {
 	context := FaceEventNotificationParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -2346,7 +2346,7 @@ func (encoder *GeneralStatusEncoder) Encode(value *GeneralStatus) enc.Wire {
 	return wire
 }
 
-func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*GeneralStatus, error) {
+func (context *GeneralStatusParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*GeneralStatus, error) {
 
 	var handled_NfdVersion bool = false
 	var handled_StartTimestamp bool = false
@@ -3022,7 +3022,7 @@ func (value *GeneralStatus) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseGeneralStatus(reader enc.FastReader, ignoreCritical bool) (*GeneralStatus, error) {
+func ParseGeneralStatus(reader enc.WireView, ignoreCritical bool) (*GeneralStatus, error) {
 	context := GeneralStatusParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -3217,7 +3217,7 @@ func (encoder *FaceStatusEncoder) Encode(value *FaceStatus) enc.Wire {
 	return wire
 }
 
-func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FaceStatus, error) {
+func (context *FaceStatusParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FaceStatus, error) {
 
 	var handled_FaceId bool = false
 	var handled_Uri bool = false
@@ -3720,7 +3720,7 @@ func (value *FaceStatus) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFaceStatus(reader enc.FastReader, ignoreCritical bool) (*FaceStatus, error) {
+func ParseFaceStatus(reader enc.WireView, ignoreCritical bool) (*FaceStatus, error) {
 	context := FaceStatusParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -3834,7 +3834,7 @@ func (encoder *FaceStatusMsgEncoder) Encode(value *FaceStatusMsg) enc.Wire {
 	return wire
 }
 
-func (context *FaceStatusMsgParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FaceStatusMsg, error) {
+func (context *FaceStatusMsgParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FaceStatusMsg, error) {
 
 	var handled_Vals bool = false
 
@@ -3922,7 +3922,7 @@ func (value *FaceStatusMsg) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFaceStatusMsg(reader enc.FastReader, ignoreCritical bool) (*FaceStatusMsg, error) {
+func ParseFaceStatusMsg(reader enc.WireView, ignoreCritical bool) (*FaceStatusMsg, error) {
 	context := FaceStatusMsgParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -4046,7 +4046,7 @@ func (encoder *FaceQueryFilterValueEncoder) Encode(value *FaceQueryFilterValue) 
 	return wire
 }
 
-func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FaceQueryFilterValue, error) {
+func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FaceQueryFilterValue, error) {
 
 	var handled_FaceId bool = false
 	var handled_UriScheme bool = false
@@ -4266,7 +4266,7 @@ func (value *FaceQueryFilterValue) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFaceQueryFilterValue(reader enc.FastReader, ignoreCritical bool) (*FaceQueryFilterValue, error) {
+func ParseFaceQueryFilterValue(reader enc.WireView, ignoreCritical bool) (*FaceQueryFilterValue, error) {
 	context := FaceQueryFilterValueParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -4326,7 +4326,7 @@ func (encoder *FaceQueryFilterEncoder) Encode(value *FaceQueryFilter) enc.Wire {
 	return wire
 }
 
-func (context *FaceQueryFilterParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FaceQueryFilter, error) {
+func (context *FaceQueryFilterParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FaceQueryFilter, error) {
 
 	var handled_Val bool = false
 
@@ -4400,7 +4400,7 @@ func (value *FaceQueryFilter) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFaceQueryFilter(reader enc.FastReader, ignoreCritical bool) (*FaceQueryFilter, error) {
+func ParseFaceQueryFilter(reader enc.WireView, ignoreCritical bool) (*FaceQueryFilter, error) {
 	context := FaceQueryFilterParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -4480,7 +4480,7 @@ func (encoder *RouteEncoder) Encode(value *Route) enc.Wire {
 	return wire
 }
 
-func (context *RouteParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Route, error) {
+func (context *RouteParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Route, error) {
 
 	var handled_FaceId bool = false
 	var handled_Origin bool = false
@@ -4663,7 +4663,7 @@ func (value *Route) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseRoute(reader enc.FastReader, ignoreCritical bool) (*Route, error) {
+func ParseRoute(reader enc.WireView, ignoreCritical bool) (*Route, error) {
 	context := RouteParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -4798,7 +4798,7 @@ func (encoder *RibEntryEncoder) Encode(value *RibEntry) enc.Wire {
 	return wire
 }
 
-func (context *RibEntryParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*RibEntry, error) {
+func (context *RibEntryParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*RibEntry, error) {
 
 	var handled_Name bool = false
 	var handled_Routes bool = false
@@ -4897,7 +4897,7 @@ func (value *RibEntry) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseRibEntry(reader enc.FastReader, ignoreCritical bool) (*RibEntry, error) {
+func ParseRibEntry(reader enc.WireView, ignoreCritical bool) (*RibEntry, error) {
 	context := RibEntryParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -5011,7 +5011,7 @@ func (encoder *RibStatusEncoder) Encode(value *RibStatus) enc.Wire {
 	return wire
 }
 
-func (context *RibStatusParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*RibStatus, error) {
+func (context *RibStatusParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*RibStatus, error) {
 
 	var handled_Entries bool = false
 
@@ -5099,7 +5099,7 @@ func (value *RibStatus) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseRibStatus(reader enc.FastReader, ignoreCritical bool) (*RibStatus, error) {
+func ParseRibStatus(reader enc.WireView, ignoreCritical bool) (*RibStatus, error) {
 	context := RibStatusParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -5153,7 +5153,7 @@ func (encoder *NextHopRecordEncoder) Encode(value *NextHopRecord) enc.Wire {
 	return wire
 }
 
-func (context *NextHopRecordParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*NextHopRecord, error) {
+func (context *NextHopRecordParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NextHopRecord, error) {
 
 	var handled_FaceId bool = false
 	var handled_Cost bool = false
@@ -5263,7 +5263,7 @@ func (value *NextHopRecord) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNextHopRecord(reader enc.FastReader, ignoreCritical bool) (*NextHopRecord, error) {
+func ParseNextHopRecord(reader enc.WireView, ignoreCritical bool) (*NextHopRecord, error) {
 	context := NextHopRecordParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -5398,7 +5398,7 @@ func (encoder *FibEntryEncoder) Encode(value *FibEntry) enc.Wire {
 	return wire
 }
 
-func (context *FibEntryParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FibEntry, error) {
+func (context *FibEntryParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FibEntry, error) {
 
 	var handled_Name bool = false
 	var handled_NextHopRecords bool = false
@@ -5497,7 +5497,7 @@ func (value *FibEntry) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFibEntry(reader enc.FastReader, ignoreCritical bool) (*FibEntry, error) {
+func ParseFibEntry(reader enc.WireView, ignoreCritical bool) (*FibEntry, error) {
 	context := FibEntryParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -5611,7 +5611,7 @@ func (encoder *FibStatusEncoder) Encode(value *FibStatus) enc.Wire {
 	return wire
 }
 
-func (context *FibStatusParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FibStatus, error) {
+func (context *FibStatusParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FibStatus, error) {
 
 	var handled_Entries bool = false
 
@@ -5699,7 +5699,7 @@ func (value *FibStatus) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFibStatus(reader enc.FastReader, ignoreCritical bool) (*FibStatus, error) {
+func ParseFibStatus(reader enc.WireView, ignoreCritical bool) (*FibStatus, error) {
 	context := FibStatusParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -5780,7 +5780,7 @@ func (encoder *StrategyChoiceEncoder) Encode(value *StrategyChoice) enc.Wire {
 	return wire
 }
 
-func (context *StrategyChoiceParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*StrategyChoice, error) {
+func (context *StrategyChoiceParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*StrategyChoice, error) {
 
 	var handled_Name bool = false
 	var handled_Strategy bool = false
@@ -5865,7 +5865,7 @@ func (value *StrategyChoice) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStrategyChoice(reader enc.FastReader, ignoreCritical bool) (*StrategyChoice, error) {
+func ParseStrategyChoice(reader enc.WireView, ignoreCritical bool) (*StrategyChoice, error) {
 	context := StrategyChoiceParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -5979,7 +5979,7 @@ func (encoder *StrategyChoiceMsgEncoder) Encode(value *StrategyChoiceMsg) enc.Wi
 	return wire
 }
 
-func (context *StrategyChoiceMsgParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*StrategyChoiceMsg, error) {
+func (context *StrategyChoiceMsgParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*StrategyChoiceMsg, error) {
 
 	var handled_StrategyChoices bool = false
 
@@ -6067,7 +6067,7 @@ func (value *StrategyChoiceMsg) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStrategyChoiceMsg(reader enc.FastReader, ignoreCritical bool) (*StrategyChoiceMsg, error) {
+func ParseStrategyChoiceMsg(reader enc.WireView, ignoreCritical bool) (*StrategyChoiceMsg, error) {
 	context := StrategyChoiceMsgParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -6142,7 +6142,7 @@ func (encoder *CsInfoEncoder) Encode(value *CsInfo) enc.Wire {
 	return wire
 }
 
-func (context *CsInfoParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*CsInfo, error) {
+func (context *CsInfoParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*CsInfo, error) {
 
 	var handled_Capacity bool = false
 	var handled_Flags bool = false
@@ -6321,7 +6321,7 @@ func (value *CsInfo) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseCsInfo(reader enc.FastReader, ignoreCritical bool) (*CsInfo, error) {
+func ParseCsInfo(reader enc.WireView, ignoreCritical bool) (*CsInfo, error) {
 	context := CsInfoParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -6381,7 +6381,7 @@ func (encoder *CsInfoMsgEncoder) Encode(value *CsInfoMsg) enc.Wire {
 	return wire
 }
 
-func (context *CsInfoMsgParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*CsInfoMsg, error) {
+func (context *CsInfoMsgParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*CsInfoMsg, error) {
 
 	var handled_CsInfo bool = false
 
@@ -6455,7 +6455,7 @@ func (value *CsInfoMsg) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseCsInfoMsg(reader enc.FastReader, ignoreCritical bool) (*CsInfoMsg, error) {
+func ParseCsInfoMsg(reader enc.WireView, ignoreCritical bool) (*CsInfoMsg, error) {
 	context := CsInfoMsgParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

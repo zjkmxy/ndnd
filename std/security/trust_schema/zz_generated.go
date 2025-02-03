@@ -65,7 +65,7 @@ func (encoder *LvsUserFnArgEncoder) Encode(value *LvsUserFnArg) enc.Wire {
 	return wire
 }
 
-func (context *LvsUserFnArgParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsUserFnArg, error) {
+func (context *LvsUserFnArgParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsUserFnArg, error) {
 
 	var handled_Value bool = false
 	var handled_Tag bool = false
@@ -167,7 +167,7 @@ func (value *LvsUserFnArg) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsUserFnArg(reader enc.FastReader, ignoreCritical bool) (*LvsUserFnArg, error) {
+func ParseLvsUserFnArg(reader enc.WireView, ignoreCritical bool) (*LvsUserFnArg, error) {
 	context := LvsUserFnArgParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -295,7 +295,7 @@ func (encoder *LvsUserFnCallEncoder) Encode(value *LvsUserFnCall) enc.Wire {
 	return wire
 }
 
-func (context *LvsUserFnCallParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsUserFnCall, error) {
+func (context *LvsUserFnCallParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsUserFnCall, error) {
 
 	var handled_FnId bool = false
 	var handled_Args bool = false
@@ -394,7 +394,7 @@ func (value *LvsUserFnCall) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsUserFnCall(reader enc.FastReader, ignoreCritical bool) (*LvsUserFnCall, error) {
+func ParseLvsUserFnCall(reader enc.WireView, ignoreCritical bool) (*LvsUserFnCall, error) {
 	context := LvsUserFnCallParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -480,7 +480,7 @@ func (encoder *LvsConstraintOptionEncoder) Encode(value *LvsConstraintOption) en
 	return wire
 }
 
-func (context *LvsConstraintOptionParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsConstraintOption, error) {
+func (context *LvsConstraintOptionParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsConstraintOption, error) {
 
 	var handled_Value bool = false
 	var handled_Tag bool = false
@@ -592,7 +592,7 @@ func (value *LvsConstraintOption) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsConstraintOption(reader enc.FastReader, ignoreCritical bool) (*LvsConstraintOption, error) {
+func ParseLvsConstraintOption(reader enc.WireView, ignoreCritical bool) (*LvsConstraintOption, error) {
 	context := LvsConstraintOptionParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -706,7 +706,7 @@ func (encoder *LvsPatternConstraintEncoder) Encode(value *LvsPatternConstraint) 
 	return wire
 }
 
-func (context *LvsPatternConstraintParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsPatternConstraint, error) {
+func (context *LvsPatternConstraintParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsPatternConstraint, error) {
 
 	var handled_ConsOptions bool = false
 
@@ -794,7 +794,7 @@ func (value *LvsPatternConstraint) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsPatternConstraint(reader enc.FastReader, ignoreCritical bool) (*LvsPatternConstraint, error) {
+func ParseLvsPatternConstraint(reader enc.WireView, ignoreCritical bool) (*LvsPatternConstraint, error) {
 	context := LvsPatternConstraintParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -924,7 +924,7 @@ func (encoder *LvsPatternEdgeEncoder) Encode(value *LvsPatternEdge) enc.Wire {
 	return wire
 }
 
-func (context *LvsPatternEdgeParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsPatternEdge, error) {
+func (context *LvsPatternEdgeParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsPatternEdge, error) {
 
 	var handled_Dest bool = false
 	var handled_Tag bool = false
@@ -1058,7 +1058,7 @@ func (value *LvsPatternEdge) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsPatternEdge(reader enc.FastReader, ignoreCritical bool) (*LvsPatternEdge, error) {
+func ParseLvsPatternEdge(reader enc.WireView, ignoreCritical bool) (*LvsPatternEdge, error) {
 	context := LvsPatternEdgeParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1117,7 +1117,7 @@ func (encoder *LvsValueEdgeEncoder) Encode(value *LvsValueEdge) enc.Wire {
 	return wire
 }
 
-func (context *LvsValueEdgeParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsValueEdge, error) {
+func (context *LvsValueEdgeParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsValueEdge, error) {
 
 	var handled_Dest bool = false
 	var handled_Value bool = false
@@ -1215,7 +1215,7 @@ func (value *LvsValueEdge) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsValueEdge(reader enc.FastReader, ignoreCritical bool) (*LvsValueEdge, error) {
+func ParseLvsValueEdge(reader enc.WireView, ignoreCritical bool) (*LvsValueEdge, error) {
 	context := LvsValueEdgeParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1552,7 +1552,7 @@ func (encoder *LvsNodeEncoder) Encode(value *LvsNode) enc.Wire {
 	return wire
 }
 
-func (context *LvsNodeParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsNode, error) {
+func (context *LvsNodeParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsNode, error) {
 
 	var handled_Id bool = false
 	var handled_Parent bool = false
@@ -1776,7 +1776,7 @@ func (value *LvsNode) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsNode(reader enc.FastReader, ignoreCritical bool) (*LvsNode, error) {
+func ParseLvsNode(reader enc.WireView, ignoreCritical bool) (*LvsNode, error) {
 	context := LvsNodeParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1840,7 +1840,7 @@ func (encoder *LvsTagSymbolEncoder) Encode(value *LvsTagSymbol) enc.Wire {
 	return wire
 }
 
-func (context *LvsTagSymbolParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsTagSymbol, error) {
+func (context *LvsTagSymbolParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsTagSymbol, error) {
 
 	var handled_Tag bool = false
 	var handled_Ident bool = false
@@ -1942,7 +1942,7 @@ func (value *LvsTagSymbol) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsTagSymbol(reader enc.FastReader, ignoreCritical bool) (*LvsTagSymbol, error) {
+func ParseLvsTagSymbol(reader enc.WireView, ignoreCritical bool) (*LvsTagSymbol, error) {
 	context := LvsTagSymbolParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -2153,7 +2153,7 @@ func (encoder *LvsModelEncoder) Encode(value *LvsModel) enc.Wire {
 	return wire
 }
 
-func (context *LvsModelParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LvsModel, error) {
+func (context *LvsModelParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LvsModel, error) {
 
 	var handled_Version bool = false
 	var handled_StartId bool = false
@@ -2334,7 +2334,7 @@ func (value *LvsModel) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLvsModel(reader enc.FastReader, ignoreCritical bool) (*LvsModel, error) {
+func ParseLvsModel(reader enc.WireView, ignoreCritical bool) (*LvsModel, error) {
 	context := LvsModelParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

@@ -34,7 +34,7 @@ func TestT1(t *testing.T) {
 		0x02, 0x01, 0x02,
 		0x03, 0x06, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
 	}, cov.Join())
-	f2, cov2, err := def.ReadT1(enc.NewFastReader(wire))
+	f2, cov2, err := def.ReadT1(enc.NewWireView(wire))
 	require.NoError(t, err)
 	require.Equal(t, f.H1, f2.H1)
 	require.Equal(t, f.H2, f2.H2)
@@ -48,7 +48,7 @@ func TestT1(t *testing.T) {
 		0x01, 0x01, 0x01, 0x02, 0x01, 0x02,
 		0x03, 0x06, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
 	}, wire.Join())
-	f2, _, err = def.ReadT1(enc.NewFastReader(wire))
+	f2, _, err = def.ReadT1(enc.NewWireView(wire))
 	require.NoError(t, err)
 	require.Equal(t, f.H1, f2.H1)
 	require.Equal(t, f.H2, f2.H2)
@@ -72,7 +72,7 @@ func TestT1(t *testing.T) {
 		0x04, 0x01, 0x01,
 	}, wire.Join())
 	require.Equal(t, []byte{0x03, 0x03, 0x01, 0x02, 0x03}, cov.Join())
-	f2, cov2, err = def.ReadT1(enc.NewFastReader(wire))
+	f2, cov2, err = def.ReadT1(enc.NewWireView(wire))
 	require.NoError(t, err)
 	require.Equal(t, f.H1, f2.H1)
 	require.False(t, f2.H2.IsSet())
@@ -95,7 +95,7 @@ func TestT1(t *testing.T) {
 		0x04, 0x01, 0x01,
 	}, wire.Join())
 	require.Equal(t, []byte{0x03, 0x00}, cov.Join())
-	f2, cov2, err = def.ReadT1(enc.NewFastReader(wire))
+	f2, cov2, err = def.ReadT1(enc.NewWireView(wire))
 	require.NoError(t, err)
 	require.Equal(t, f.H1, f2.H1)
 	require.False(t, f2.H2.IsSet())
@@ -117,7 +117,7 @@ func TestT1(t *testing.T) {
 		0x04, 0x01, 0x01,
 	}, wire.Join())
 	require.Equal(t, 0, len(cov.Join()))
-	f2, cov2, err = def.ReadT1(enc.NewFastReader(wire))
+	f2, cov2, err = def.ReadT1(enc.NewWireView(wire))
 	require.NoError(t, err)
 	require.Equal(t, f.H1, f2.H1)
 	require.False(t, f2.H2.IsSet())
@@ -148,7 +148,7 @@ func TestT2(t *testing.T) {
 		0x8, 0x3, 0x6e, 0x64, 0x6e, 0x8, 0x4, 0x74, 0x65, 0x73, 0x74,
 		0x3, 0x6, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6,
 	}, cov.Join())
-	f2, cov2, err := def.ReadT2(enc.NewFastReader(wire), false)
+	f2, cov2, err := def.ReadT2(enc.NewWireView(wire), false)
 	require.NoError(t, err)
 	require.Equal(t, f.Name.String(), f2.Name.String())
 	require.Equal(t, f.C.Join(), f2.C.Join())
@@ -180,7 +180,7 @@ func TestT2(t *testing.T) {
 		0x8, 0x3, 0x6e, 0x64, 0x6e, 0x8, 0x4, 0x74, 0x65, 0x73, 0x74,
 		0x3, 0x6, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6,
 	}, cov.Join())
-	f2, cov2, err = def.ReadT2(enc.NewFastReader(wire), true)
+	f2, cov2, err = def.ReadT2(enc.NewWireView(wire), true)
 	require.NoError(t, err)
 	require.Equal(t, f.Name.String(), f2.Name.String())
 	require.Equal(t, f.C.Join(), f2.C.Join())
@@ -232,7 +232,7 @@ func TestT2(t *testing.T) {
 		0x3, 0x0, 0x4, 0x1, 0x1,
 	}, wire.Join())
 	require.Equal(t, []byte{0x3, 0x0}, cov.Join())
-	f2, cov2, err = def.ReadT2(enc.NewFastReader(wire), true)
+	f2, cov2, err = def.ReadT2(enc.NewWireView(wire), true)
 	require.NoError(t, err)
 	require.Equal(t,
 		"/params-sha256=6f717dc49d5b27a33a90ae62804545e7f3b82645792cb7d025197e7187b518ef",
@@ -260,7 +260,7 @@ func TestT2(t *testing.T) {
 		0x4, 0x1, 0x1,
 	}, wire.Join())
 	require.Equal(t, 0, len(cov.Join()))
-	f2, cov2, err = def.ReadT2(enc.NewFastReader(wire), true)
+	f2, cov2, err = def.ReadT2(enc.NewWireView(wire), true)
 	require.NoError(t, err)
 	require.Equal(t,
 		"/params-sha256=62ec79d1deeb1ecc444e8e3028ecba63c9651253eb79ae3d7bc7d4ff126a7454",
@@ -277,8 +277,8 @@ func TestT2(t *testing.T) {
 		0x3, 0x6, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6,
 		0x4, 0x3, 0x7, 0x8, 0x9,
 	}
-	_, _, err = def.ReadT2(enc.NewFastBufReader(buf), true)
+	_, _, err = def.ReadT2(enc.NewBufferView(buf), true)
 	require.Error(t, err)
-	_, _, err = def.ReadT2(enc.NewFastBufReader(buf), false)
+	_, _, err = def.ReadT2(enc.NewBufferView(buf), false)
 	require.NoError(t, err)
 }

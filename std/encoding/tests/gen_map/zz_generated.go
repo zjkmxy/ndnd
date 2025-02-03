@@ -123,7 +123,7 @@ func (encoder *StringMapEncoder) Encode(value *StringMap) enc.Wire {
 	return wire
 }
 
-func (context *StringMapParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*StringMap, error) {
+func (context *StringMapParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*StringMap, error) {
 
 	var handled_Params bool = false
 
@@ -233,7 +233,7 @@ func (value *StringMap) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStringMap(reader enc.FastReader, ignoreCritical bool) (*StringMap, error) {
+func ParseStringMap(reader enc.WireView, ignoreCritical bool) (*StringMap, error) {
 	context := StringMapParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -280,7 +280,7 @@ func (encoder *InnerEncoder) Encode(value *Inner) enc.Wire {
 	return wire
 }
 
-func (context *InnerParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Inner, error) {
+func (context *InnerParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Inner, error) {
 
 	var handled_Num bool = false
 
@@ -367,7 +367,7 @@ func (value *Inner) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseInner(reader enc.FastReader, ignoreCritical bool) (*Inner, error) {
+func ParseInner(reader enc.WireView, ignoreCritical bool) (*Inner, error) {
 	context := InnerParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -495,7 +495,7 @@ func (encoder *IntStructMapEncoder) Encode(value *IntStructMap) enc.Wire {
 	return wire
 }
 
-func (context *IntStructMapParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*IntStructMap, error) {
+func (context *IntStructMapParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*IntStructMap, error) {
 
 	var handled_Params bool = false
 
@@ -611,7 +611,7 @@ func (value *IntStructMap) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseIntStructMap(reader enc.FastReader, ignoreCritical bool) (*IntStructMap, error) {
+func ParseIntStructMap(reader enc.WireView, ignoreCritical bool) (*IntStructMap, error) {
 	context := IntStructMapParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

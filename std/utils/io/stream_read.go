@@ -32,7 +32,7 @@ func ReadTlvStream(
 
 		// Determine whether valid packet received
 		for {
-			rdr := enc.NewFastBufReader(recvBuf[tlvOff:recvOff])
+			rdr := enc.NewBufferView(recvBuf[tlvOff:recvOff])
 
 			typ, err := rdr.ReadTLNum()
 			if err != nil {

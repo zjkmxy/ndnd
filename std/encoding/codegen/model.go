@@ -151,7 +151,7 @@ func (m *TlvModel) GenReadFrom(buf *bytes.Buffer) error {
 		{{- else -}}
 			func {{if .Model.PrivMethods -}}parse{{else}}Parse{{end}}{{.Model.Name}}
 		{{- end -}}
-		(reader enc.FastReader, ignoreCritical bool) (*{{.Model.Name}}, error) {
+		(reader enc.WireView, ignoreCritical bool) (*{{.Model.Name}}, error) {
 			{{ range $i, $f := $.Model.Fields}}
 			var handled_{{$f.Name}} bool = false
 			{{- end}}
@@ -270,7 +270,7 @@ func (m *TlvModel) genPublicEncode(buf *bytes.Buffer) error {
 
 func (m *TlvModel) genPublicParse(buf *bytes.Buffer) error {
 	return template.Must(template.New("PublicParse").Parse(`
-		func Parse{{.Name}}(reader enc.FastReader, ignoreCritical bool) (*{{.Name}}, error) {
+		func Parse{{.Name}}(reader enc.WireView, ignoreCritical bool) (*{{.Name}}, error) {
 			context := {{.Name}}ParsingContext{}
 			context.Init()
 			return context.Parse(reader, ignoreCritical)

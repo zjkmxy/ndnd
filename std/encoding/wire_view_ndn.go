@@ -2,7 +2,7 @@ package encoding
 
 import "io"
 
-func (r *FastReader) ReadTLNum() (val TLNum, err error) {
+func (r *WireView) ReadTLNum() (val TLNum, err error) {
 	var x byte
 	if x, err = r.ReadByte(); err != nil {
 		return
@@ -32,7 +32,7 @@ func (r *FastReader) ReadTLNum() (val TLNum, err error) {
 	return
 }
 
-func (r *FastReader) ReadComponent() (Component, error) {
+func (r *WireView) ReadComponent() (Component, error) {
 	typ, err := r.ReadTLNum()
 	if err != nil {
 		return Component{}, err
@@ -54,7 +54,7 @@ func (r *FastReader) ReadComponent() (Component, error) {
 	}, nil
 }
 
-func (r *FastReader) ReadName() (Name, error) {
+func (r *WireView) ReadName() (Name, error) {
 	var err error
 	var c Component
 	ret := make(Name, 0, 8)

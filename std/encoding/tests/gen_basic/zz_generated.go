@@ -70,7 +70,7 @@ func (encoder *FakeMetaInfoEncoder) Encode(value *FakeMetaInfo) enc.Wire {
 	return wire
 }
 
-func (context *FakeMetaInfoParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FakeMetaInfo, error) {
+func (context *FakeMetaInfoParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FakeMetaInfo, error) {
 
 	var handled_Number bool = false
 	var handled_Time bool = false
@@ -195,7 +195,7 @@ func (value *FakeMetaInfo) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFakeMetaInfo(reader enc.FastReader, ignoreCritical bool) (*FakeMetaInfo, error) {
+func ParseFakeMetaInfo(reader enc.WireView, ignoreCritical bool) (*FakeMetaInfo, error) {
 	context := FakeMetaInfoParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -281,7 +281,7 @@ func (encoder *OptFieldEncoder) Encode(value *OptField) enc.Wire {
 	return wire
 }
 
-func (context *OptFieldParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*OptField, error) {
+func (context *OptFieldParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*OptField, error) {
 
 	var handled_Number bool = false
 	var handled_Time bool = false
@@ -421,7 +421,7 @@ func (value *OptField) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseOptField(reader enc.FastReader, ignoreCritical bool) (*OptField, error) {
+func ParseOptField(reader enc.WireView, ignoreCritical bool) (*OptField, error) {
 	context := OptFieldParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -503,7 +503,7 @@ func (encoder *WireNameFieldEncoder) Encode(value *WireNameField) enc.Wire {
 	return wire
 }
 
-func (context *WireNameFieldParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*WireNameField, error) {
+func (context *WireNameFieldParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*WireNameField, error) {
 
 	var handled_Wire bool = false
 	var handled_Name bool = false
@@ -588,7 +588,7 @@ func (value *WireNameField) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseWireNameField(reader enc.FastReader, ignoreCritical bool) (*WireNameField, error) {
+func ParseWireNameField(reader enc.WireView, ignoreCritical bool) (*WireNameField, error) {
 	context := WireNameFieldParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -688,7 +688,7 @@ func (encoder *MarkersEncoder) Encode(value *Markers) enc.Wire {
 	return wire
 }
 
-func (context *MarkersParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Markers, error) {
+func (context *MarkersParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Markers, error) {
 
 	var handled_startMarker bool = false
 	var handled_Wire bool = false
@@ -940,7 +940,7 @@ func (encoder *NoCopyStructEncoder) Encode(value *NoCopyStruct) enc.Wire {
 	return wire
 }
 
-func (context *NoCopyStructParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*NoCopyStruct, error) {
+func (context *NoCopyStructParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NoCopyStruct, error) {
 
 	var handled_Wire1 bool = false
 	var handled_Number bool = false
@@ -1047,7 +1047,7 @@ func (value *NoCopyStruct) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNoCopyStruct(reader enc.FastReader, ignoreCritical bool) (*NoCopyStruct, error) {
+func ParseNoCopyStruct(reader enc.WireView, ignoreCritical bool) (*NoCopyStruct, error) {
 	context := NoCopyStructParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1107,7 +1107,7 @@ func (encoder *StrFieldEncoder) Encode(value *StrField) enc.Wire {
 	return wire
 }
 
-func (context *StrFieldParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*StrField, error) {
+func (context *StrFieldParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*StrField, error) {
 
 	var handled_Str1 bool = false
 	var handled_Str2 bool = false
@@ -1203,7 +1203,7 @@ func (value *StrField) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStrField(reader enc.FastReader, ignoreCritical bool) (*StrField, error) {
+func ParseStrField(reader enc.WireView, ignoreCritical bool) (*StrField, error) {
 	context := StrFieldParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1283,7 +1283,7 @@ func (encoder *FixedUintFieldEncoder) Encode(value *FixedUintField) enc.Wire {
 	return wire
 }
 
-func (context *FixedUintFieldParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*FixedUintField, error) {
+func (context *FixedUintFieldParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FixedUintField, error) {
 
 	var handled_Byte bool = false
 	var handled_U32 bool = false
@@ -1430,7 +1430,7 @@ func (value *FixedUintField) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFixedUintField(reader enc.FastReader, ignoreCritical bool) (*FixedUintField, error) {
+func ParseFixedUintField(reader enc.WireView, ignoreCritical bool) (*FixedUintField, error) {
 	context := FixedUintFieldParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

@@ -77,7 +77,7 @@ func (encoder *KeyLocatorEncoder) Encode(value *KeyLocator) enc.Wire {
 	return wire
 }
 
-func (context *KeyLocatorParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*KeyLocator, error) {
+func (context *KeyLocatorParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*KeyLocator, error) {
 
 	var handled_Name bool = false
 	var handled_KeyDigest bool = false
@@ -163,7 +163,7 @@ func (value *KeyLocator) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseKeyLocator(reader enc.FastReader, ignoreCritical bool) (*KeyLocator, error) {
+func ParseKeyLocator(reader enc.WireView, ignoreCritical bool) (*KeyLocator, error) {
 	context := KeyLocatorParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -278,7 +278,7 @@ func (encoder *LinksEncoder) Encode(value *Links) enc.Wire {
 	return wire
 }
 
-func (context *LinksParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Links, error) {
+func (context *LinksParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Links, error) {
 
 	var handled_Names bool = false
 
@@ -367,7 +367,7 @@ func (value *Links) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseLinks(reader enc.FastReader, ignoreCritical bool) (*Links, error) {
+func ParseLinks(reader enc.WireView, ignoreCritical bool) (*Links, error) {
 	context := LinksParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -443,7 +443,7 @@ func (encoder *MetaInfoEncoder) Encode(value *MetaInfo) enc.Wire {
 	return wire
 }
 
-func (context *MetaInfoParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*MetaInfo, error) {
+func (context *MetaInfoParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*MetaInfo, error) {
 
 	var handled_ContentType bool = false
 	var handled_FreshnessPeriod bool = false
@@ -573,7 +573,7 @@ func (value *MetaInfo) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseMetaInfo(reader enc.FastReader, ignoreCritical bool) (*MetaInfo, error) {
+func ParseMetaInfo(reader enc.WireView, ignoreCritical bool) (*MetaInfo, error) {
 	context := MetaInfoParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -631,7 +631,7 @@ func (encoder *ValidityPeriodEncoder) Encode(value *ValidityPeriod) enc.Wire {
 	return wire
 }
 
-func (context *ValidityPeriodParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*ValidityPeriod, error) {
+func (context *ValidityPeriodParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ValidityPeriod, error) {
 
 	var handled_NotBefore bool = false
 	var handled_NotAfter bool = false
@@ -727,7 +727,7 @@ func (value *ValidityPeriod) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseValidityPeriod(reader enc.FastReader, ignoreCritical bool) (*ValidityPeriod, error) {
+func ParseValidityPeriod(reader enc.WireView, ignoreCritical bool) (*ValidityPeriod, error) {
 	context := ValidityPeriodParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -785,7 +785,7 @@ func (encoder *CertDescriptionEntryEncoder) Encode(value *CertDescriptionEntry) 
 	return wire
 }
 
-func (context *CertDescriptionEntryParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*CertDescriptionEntry, error) {
+func (context *CertDescriptionEntryParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*CertDescriptionEntry, error) {
 
 	var handled_DescriptionKey bool = false
 	var handled_DescriptionValue bool = false
@@ -881,7 +881,7 @@ func (value *CertDescriptionEntry) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseCertDescriptionEntry(reader enc.FastReader, ignoreCritical bool) (*CertDescriptionEntry, error) {
+func ParseCertDescriptionEntry(reader enc.WireView, ignoreCritical bool) (*CertDescriptionEntry, error) {
 	context := CertDescriptionEntryParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -996,7 +996,7 @@ func (encoder *CertAdditionalDescriptionEncoder) Encode(value *CertAdditionalDes
 	return wire
 }
 
-func (context *CertAdditionalDescriptionParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*CertAdditionalDescription, error) {
+func (context *CertAdditionalDescriptionParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*CertAdditionalDescription, error) {
 
 	var handled_DescriptionEntries bool = false
 
@@ -1084,7 +1084,7 @@ func (value *CertAdditionalDescription) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseCertAdditionalDescription(reader enc.FastReader, ignoreCritical bool) (*CertAdditionalDescription, error) {
+func ParseCertAdditionalDescription(reader enc.WireView, ignoreCritical bool) (*CertAdditionalDescription, error) {
 	context := CertAdditionalDescriptionParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1235,7 +1235,7 @@ func (encoder *SignatureInfoEncoder) Encode(value *SignatureInfo) enc.Wire {
 	return wire
 }
 
-func (context *SignatureInfoParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*SignatureInfo, error) {
+func (context *SignatureInfoParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*SignatureInfo, error) {
 
 	var handled_SignatureType bool = false
 	var handled_KeyLocator bool = false
@@ -1418,7 +1418,7 @@ func (value *SignatureInfo) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseSignatureInfo(reader enc.FastReader, ignoreCritical bool) (*SignatureInfo, error) {
+func ParseSignatureInfo(reader enc.WireView, ignoreCritical bool) (*SignatureInfo, error) {
 	context := SignatureInfoParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1466,7 +1466,7 @@ func (encoder *NetworkNackEncoder) Encode(value *NetworkNack) enc.Wire {
 	return wire
 }
 
-func (context *NetworkNackParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*NetworkNack, error) {
+func (context *NetworkNackParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NetworkNack, error) {
 
 	var handled_Reason bool = false
 
@@ -1553,7 +1553,7 @@ func (value *NetworkNack) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNetworkNack(reader enc.FastReader, ignoreCritical bool) (*NetworkNack, error) {
+func ParseNetworkNack(reader enc.WireView, ignoreCritical bool) (*NetworkNack, error) {
 	context := NetworkNackParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1601,7 +1601,7 @@ func (encoder *CachePolicyEncoder) Encode(value *CachePolicy) enc.Wire {
 	return wire
 }
 
-func (context *CachePolicyParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*CachePolicy, error) {
+func (context *CachePolicyParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*CachePolicy, error) {
 
 	var handled_CachePolicyType bool = false
 
@@ -1688,7 +1688,7 @@ func (value *CachePolicy) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseCachePolicy(reader enc.FastReader, ignoreCritical bool) (*CachePolicy, error) {
+func ParseCachePolicy(reader enc.WireView, ignoreCritical bool) (*CachePolicy, error) {
 	context := CachePolicyParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -2054,7 +2054,7 @@ func (encoder *LpPacketEncoder) Encode(value *LpPacket) enc.Wire {
 	return wire
 }
 
-func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*LpPacket, error) {
+func (context *LpPacketParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*LpPacket, error) {
 
 	var handled_Sequence bool = false
 	var handled_FragIndex bool = false
@@ -2747,7 +2747,7 @@ func (encoder *InterestEncoder) Encode(value *Interest) enc.Wire {
 	return wire
 }
 
-func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Interest, error) {
+func (context *InterestParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Interest, error) {
 
 	var handled_sigCovered bool = false
 	var handled_digestCovered bool = false
@@ -3279,7 +3279,7 @@ func (encoder *DataEncoder) Encode(value *Data) enc.Wire {
 	return wire
 }
 
-func (context *DataParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Data, error) {
+func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Data, error) {
 
 	var handled_sigCovered bool = false
 	var handled_sigCoverStart bool = false
@@ -3650,7 +3650,7 @@ func (encoder *PacketEncoder) Encode(value *Packet) enc.Wire {
 	return wire
 }
 
-func (context *PacketParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Packet, error) {
+func (context *PacketParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Packet, error) {
 
 	var handled_Interest bool = false
 	var handled_Data bool = false

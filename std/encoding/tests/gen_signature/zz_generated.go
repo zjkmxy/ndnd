@@ -192,7 +192,7 @@ func (encoder *T1Encoder) Encode(value *T1) enc.Wire {
 	return wire
 }
 
-func (context *T1ParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*T1, error) {
+func (context *T1ParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*T1, error) {
 
 	var handled_H1 bool = false
 	var handled_sigCoverStart bool = false
@@ -576,7 +576,7 @@ func (encoder *T2Encoder) Encode(value *T2) enc.Wire {
 	return wire
 }
 
-func (context *T2ParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*T2, error) {
+func (context *T2ParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*T2, error) {
 
 	var handled_Name bool = false
 	var handled_sigCoverStart bool = false

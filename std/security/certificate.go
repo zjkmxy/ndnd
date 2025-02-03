@@ -85,7 +85,7 @@ func SelfSign(args SignCertArgs) (enc.Wire, error) {
 	if err != nil {
 		return nil, err
 	}
-	args.Data, _, err = spec.Spec{}.ReadData(enc.NewFastReader(keyWire))
+	args.Data, _, err = spec.Spec{}.ReadData(enc.NewWireView(keyWire))
 	if err != nil {
 		return nil, err
 	}

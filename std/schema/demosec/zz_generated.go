@@ -144,7 +144,7 @@ func (encoder *EncryptedContentEncoder) Encode(value *EncryptedContent) enc.Wire
 	return wire
 }
 
-func (context *EncryptedContentParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*EncryptedContent, error) {
+func (context *EncryptedContentParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*EncryptedContent, error) {
 
 	var handled_KeyId bool = false
 	var handled_Iv bool = false
@@ -263,7 +263,7 @@ func (value *EncryptedContent) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseEncryptedContent(reader enc.FastReader, ignoreCritical bool) (*EncryptedContent, error) {
+func ParseEncryptedContent(reader enc.WireView, ignoreCritical bool) (*EncryptedContent, error) {
 	context := EncryptedContentParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

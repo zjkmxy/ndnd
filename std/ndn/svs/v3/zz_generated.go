@@ -61,7 +61,7 @@ func (encoder *SvsDataEncoder) Encode(value *SvsData) enc.Wire {
 	return wire
 }
 
-func (context *SvsDataParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*SvsData, error) {
+func (context *SvsDataParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*SvsData, error) {
 
 	var handled_StateVector bool = false
 
@@ -135,7 +135,7 @@ func (value *SvsData) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseSvsData(reader enc.FastReader, ignoreCritical bool) (*SvsData, error) {
+func ParseSvsData(reader enc.WireView, ignoreCritical bool) (*SvsData, error) {
 	context := SvsDataParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -249,7 +249,7 @@ func (encoder *StateVectorEncoder) Encode(value *StateVector) enc.Wire {
 	return wire
 }
 
-func (context *StateVectorParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*StateVector, error) {
+func (context *StateVectorParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*StateVector, error) {
 
 	var handled_Entries bool = false
 
@@ -337,7 +337,7 @@ func (value *StateVector) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStateVector(reader enc.FastReader, ignoreCritical bool) (*StateVector, error) {
+func ParseStateVector(reader enc.WireView, ignoreCritical bool) (*StateVector, error) {
 	context := StateVectorParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -472,7 +472,7 @@ func (encoder *StateVectorEntryEncoder) Encode(value *StateVectorEntry) enc.Wire
 	return wire
 }
 
-func (context *StateVectorEntryParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*StateVectorEntry, error) {
+func (context *StateVectorEntryParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*StateVectorEntry, error) {
 
 	var handled_Name bool = false
 	var handled_SeqNoEntries bool = false
@@ -571,7 +571,7 @@ func (value *StateVectorEntry) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStateVectorEntry(reader enc.FastReader, ignoreCritical bool) (*StateVectorEntry, error) {
+func ParseStateVectorEntry(reader enc.WireView, ignoreCritical bool) (*StateVectorEntry, error) {
 	context := StateVectorEntryParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -625,7 +625,7 @@ func (encoder *SeqNoEntryEncoder) Encode(value *SeqNoEntry) enc.Wire {
 	return wire
 }
 
-func (context *SeqNoEntryParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*SeqNoEntry, error) {
+func (context *SeqNoEntryParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*SeqNoEntry, error) {
 
 	var handled_BootstrapTime bool = false
 	var handled_SeqNo bool = false
@@ -735,7 +735,7 @@ func (value *SeqNoEntry) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseSeqNoEntry(reader enc.FastReader, ignoreCritical bool) (*SeqNoEntry, error) {
+func ParseSeqNoEntry(reader enc.WireView, ignoreCritical bool) (*SeqNoEntry, error) {
 	context := SeqNoEntryParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

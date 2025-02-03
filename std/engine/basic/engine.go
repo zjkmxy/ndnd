@@ -102,7 +102,7 @@ func (e *Engine) onPacket(frame []byte) error {
 	// Copy received buffer from face so face can reuse it
 	frameCopy := make([]byte, len(frame))
 	copy(frameCopy, frame)
-	reader := enc.NewFastBufReader(frameCopy)
+	reader := enc.NewBufferView(frameCopy)
 
 	var nackReason uint64 = spec.NackReasonNone
 	var pitToken []byte = nil
@@ -134,9 +134,9 @@ func (e *Engine) onPacket(frame []byte) error {
 		// Parse the inner packet.
 		raw = pkt.LpPacket.Fragment
 		if len(raw) == 1 {
-			pkt, ctx, err = spec.ReadPacket(enc.NewFastBufReader(raw[0]))
+			pkt, ctx, err = spec.ReadPacket(enc.NewBufferView(raw[0]))
 		} else {
-			pkt, ctx, err = spec.ReadPacket(enc.NewFastReader(raw))
+			pkt, ctx, err = spec.ReadPacket(enc.NewWireView(raw))
 		}
 
 		// Make sure there is an inner packet.
@@ -533,7 +533,7 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 			if !valid {
 				resp.err = fmt.Errorf("command signature is not valid")
 			} else {
-				ret, err := mgmt.ParseControlResponse(enc.NewFastReader(data.Content()), true)
+				ret, err := mgmt.ParseControlResponse(enc.NewWireView(data.Content()), true)
 				if err != nil {
 					resp.err = err
 				} else {

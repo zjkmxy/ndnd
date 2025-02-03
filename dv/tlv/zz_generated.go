@@ -84,7 +84,7 @@ func (encoder *PacketEncoder) Encode(value *Packet) enc.Wire {
 	return wire
 }
 
-func (context *PacketParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Packet, error) {
+func (context *PacketParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Packet, error) {
 
 	var handled_Advertisement bool = false
 	var handled_PrefixOpList bool = false
@@ -168,7 +168,7 @@ func (value *Packet) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParsePacket(reader enc.FastReader, ignoreCritical bool) (*Packet, error) {
+func ParsePacket(reader enc.WireView, ignoreCritical bool) (*Packet, error) {
 	context := PacketParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -282,7 +282,7 @@ func (encoder *AdvertisementEncoder) Encode(value *Advertisement) enc.Wire {
 	return wire
 }
 
-func (context *AdvertisementParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Advertisement, error) {
+func (context *AdvertisementParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Advertisement, error) {
 
 	var handled_Entries bool = false
 
@@ -370,7 +370,7 @@ func (value *Advertisement) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseAdvertisement(reader enc.FastReader, ignoreCritical bool) (*Advertisement, error) {
+func ParseAdvertisement(reader enc.WireView, ignoreCritical bool) (*Advertisement, error) {
 	context := AdvertisementParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -465,7 +465,7 @@ func (encoder *AdvEntryEncoder) Encode(value *AdvEntry) enc.Wire {
 	return wire
 }
 
-func (context *AdvEntryParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*AdvEntry, error) {
+func (context *AdvEntryParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*AdvEntry, error) {
 
 	var handled_Destination bool = false
 	var handled_NextHop bool = false
@@ -595,7 +595,7 @@ func (value *AdvEntry) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseAdvEntry(reader enc.FastReader, ignoreCritical bool) (*AdvEntry, error) {
+func ParseAdvEntry(reader enc.WireView, ignoreCritical bool) (*AdvEntry, error) {
 	context := AdvEntryParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -656,7 +656,7 @@ func (encoder *DestinationEncoder) Encode(value *Destination) enc.Wire {
 	return wire
 }
 
-func (context *DestinationParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Destination, error) {
+func (context *DestinationParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Destination, error) {
 
 	var handled_Name bool = false
 
@@ -731,7 +731,7 @@ func (value *Destination) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseDestination(reader enc.FastReader, ignoreCritical bool) (*Destination, error) {
+func ParseDestination(reader enc.WireView, ignoreCritical bool) (*Destination, error) {
 	context := DestinationParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -956,7 +956,7 @@ func (encoder *PrefixOpListEncoder) Encode(value *PrefixOpList) enc.Wire {
 	return wire
 }
 
-func (context *PrefixOpListParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*PrefixOpList, error) {
+func (context *PrefixOpListParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*PrefixOpList, error) {
 
 	var handled_ExitRouter bool = false
 	var handled_PrefixOpReset bool = false
@@ -1088,7 +1088,7 @@ func (value *PrefixOpList) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParsePrefixOpList(reader enc.FastReader, ignoreCritical bool) (*PrefixOpList, error) {
+func ParsePrefixOpList(reader enc.WireView, ignoreCritical bool) (*PrefixOpList, error) {
 	context := PrefixOpListParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1156,7 +1156,7 @@ func (encoder *PrefixOpAddEncoder) Encode(value *PrefixOpAdd) enc.Wire {
 	return wire
 }
 
-func (context *PrefixOpAddParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*PrefixOpAdd, error) {
+func (context *PrefixOpAddParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*PrefixOpAdd, error) {
 
 	var handled_Name bool = false
 	var handled_Cost bool = false
@@ -1254,7 +1254,7 @@ func (value *PrefixOpAdd) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParsePrefixOpAdd(reader enc.FastReader, ignoreCritical bool) (*PrefixOpAdd, error) {
+func ParsePrefixOpAdd(reader enc.WireView, ignoreCritical bool) (*PrefixOpAdd, error) {
 	context := PrefixOpAddParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1315,7 +1315,7 @@ func (encoder *PrefixOpRemoveEncoder) Encode(value *PrefixOpRemove) enc.Wire {
 	return wire
 }
 
-func (context *PrefixOpRemoveParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*PrefixOpRemove, error) {
+func (context *PrefixOpRemoveParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*PrefixOpRemove, error) {
 
 	var handled_Name bool = false
 
@@ -1390,7 +1390,7 @@ func (value *PrefixOpRemove) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParsePrefixOpRemove(reader enc.FastReader, ignoreCritical bool) (*PrefixOpRemove, error) {
+func ParsePrefixOpRemove(reader enc.WireView, ignoreCritical bool) (*PrefixOpRemove, error) {
 	context := PrefixOpRemoveParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1508,7 +1508,7 @@ func (encoder *StatusEncoder) Encode(value *Status) enc.Wire {
 	return wire
 }
 
-func (context *StatusParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Status, error) {
+func (context *StatusParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Status, error) {
 
 	var handled_Version bool = false
 	var handled_NetworkName bool = false
@@ -1677,7 +1677,7 @@ func (value *Status) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStatus(reader enc.FastReader, ignoreCritical bool) (*Status, error) {
+func ParseStatus(reader enc.WireView, ignoreCritical bool) (*Status, error) {
 	context := StatusParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

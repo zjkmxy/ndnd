@@ -103,7 +103,7 @@ func (encoder *IntArrayEncoder) Encode(value *IntArray) enc.Wire {
 	return wire
 }
 
-func (context *IntArrayParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*IntArray, error) {
+func (context *IntArrayParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*IntArray, error) {
 
 	var handled_Words bool = false
 
@@ -204,7 +204,7 @@ func (value *IntArray) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseIntArray(reader enc.FastReader, ignoreCritical bool) (*IntArray, error) {
+func ParseIntArray(reader enc.WireView, ignoreCritical bool) (*IntArray, error) {
 	context := IntArrayParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -319,7 +319,7 @@ func (encoder *NameArrayEncoder) Encode(value *NameArray) enc.Wire {
 	return wire
 }
 
-func (context *NameArrayParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*NameArray, error) {
+func (context *NameArrayParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NameArray, error) {
 
 	var handled_Names bool = false
 
@@ -408,7 +408,7 @@ func (value *NameArray) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNameArray(reader enc.FastReader, ignoreCritical bool) (*NameArray, error) {
+func ParseNameArray(reader enc.WireView, ignoreCritical bool) (*NameArray, error) {
 	context := NameArrayParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -455,7 +455,7 @@ func (encoder *InnerEncoder) Encode(value *Inner) enc.Wire {
 	return wire
 }
 
-func (context *InnerParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Inner, error) {
+func (context *InnerParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Inner, error) {
 
 	var handled_Num bool = false
 
@@ -542,7 +542,7 @@ func (value *Inner) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseInner(reader enc.FastReader, ignoreCritical bool) (*Inner, error) {
+func ParseInner(reader enc.WireView, ignoreCritical bool) (*Inner, error) {
 	context := InnerParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -602,7 +602,7 @@ func (encoder *NestedEncoder) Encode(value *Nested) enc.Wire {
 	return wire
 }
 
-func (context *NestedParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*Nested, error) {
+func (context *NestedParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Nested, error) {
 
 	var handled_Val bool = false
 
@@ -676,7 +676,7 @@ func (value *Nested) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNested(reader enc.FastReader, ignoreCritical bool) (*Nested, error) {
+func ParseNested(reader enc.WireView, ignoreCritical bool) (*Nested, error) {
 	context := NestedParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -790,7 +790,7 @@ func (encoder *NestedSeqEncoder) Encode(value *NestedSeq) enc.Wire {
 	return wire
 }
 
-func (context *NestedSeqParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*NestedSeq, error) {
+func (context *NestedSeqParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NestedSeq, error) {
 
 	var handled_Vals bool = false
 
@@ -878,7 +878,7 @@ func (value *NestedSeq) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNestedSeq(reader enc.FastReader, ignoreCritical bool) (*NestedSeq, error) {
+func ParseNestedSeq(reader enc.WireView, ignoreCritical bool) (*NestedSeq, error) {
 	context := NestedSeqParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -993,7 +993,7 @@ func (encoder *InnerWire1Encoder) Encode(value *InnerWire1) enc.Wire {
 	return wire
 }
 
-func (context *InnerWire1ParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*InnerWire1, error) {
+func (context *InnerWire1ParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*InnerWire1, error) {
 
 	var handled_Wire1 bool = false
 	var handled_Num bool = false
@@ -1177,7 +1177,7 @@ func (encoder *InnerWire2Encoder) Encode(value *InnerWire2) enc.Wire {
 	return wire
 }
 
-func (context *InnerWire2ParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*InnerWire2, error) {
+func (context *InnerWire2ParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*InnerWire2, error) {
 
 	var handled_Wire2 bool = false
 
@@ -1424,7 +1424,7 @@ func (encoder *NestedWireEncoder) Encode(value *NestedWire) enc.Wire {
 	return wire
 }
 
-func (context *NestedWireParsingContext) Parse(reader enc.FastReader, ignoreCritical bool) (*NestedWire, error) {
+func (context *NestedWireParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NestedWire, error) {
 
 	var handled_W1 bool = false
 	var handled_N bool = false
@@ -1531,7 +1531,7 @@ func (value *NestedWire) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNestedWire(reader enc.FastReader, ignoreCritical bool) (*NestedWire, error) {
+func ParseNestedWire(reader enc.WireView, ignoreCritical bool) (*NestedWire, error) {
 	context := NestedWireParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

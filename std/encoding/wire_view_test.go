@@ -19,10 +19,10 @@ var FrTestWire = enc.Wire{
 	[]byte{0x0e, 0x0f},
 }
 
-func TestFastReaderReadByte(t *testing.T) {
+func TestWireViewReadByte(t *testing.T) {
 	tu.SetT(t)
 
-	r := enc.NewFastReader(FrTestWire)
+	r := enc.NewWireView(FrTestWire)
 	require.False(t, r.IsEOF())
 	require.Equal(t, 0, r.Pos())
 	require.Equal(t, 15, r.Length())
@@ -34,10 +34,10 @@ func TestFastReaderReadByte(t *testing.T) {
 	require.True(t, r.IsEOF())
 }
 
-func TestFastReaderReadFull(t *testing.T) {
+func TestWireViewReadFull(t *testing.T) {
 	tu.SetT(t)
 
-	r := enc.NewFastReader(FrTestWire)
+	r := enc.NewWireView(FrTestWire)
 
 	// Move 1 byte ahead
 	require.Equal(t, uint8(1), tu.NoErr(r.ReadByte()))
@@ -65,10 +65,10 @@ func TestFastReaderReadFull(t *testing.T) {
 	require.Equal(t, enc.ErrBufferOverflow, err)
 }
 
-func TestFastReaderSkip(t *testing.T) {
+func TestWireViewSkip(t *testing.T) {
 	tu.SetT(t)
 
-	r := enc.NewFastReader(FrTestWire)
+	r := enc.NewWireView(FrTestWire)
 
 	// Skip 1 byte
 	require.NoError(t, r.Skip(1))
@@ -100,10 +100,10 @@ func TestFastReaderSkip(t *testing.T) {
 	require.Error(t, r1.Skip(4))
 }
 
-func TestFastReaderReadWire(t *testing.T) {
+func TestWireViewReadWire(t *testing.T) {
 	tu.SetT(t)
 
-	r := enc.NewFastReader(FrTestWire)
+	r := enc.NewWireView(FrTestWire)
 
 	// Read 3 bytes
 	wire, err := r.ReadWire(2)
@@ -139,10 +139,10 @@ func TestFastReaderReadWire(t *testing.T) {
 	require.Equal(t, enc.ErrBufferOverflow, err)
 }
 
-func TestFastReaderDelegate(t *testing.T) {
+func TestWireViewDelegate(t *testing.T) {
 	tu.SetT(t)
 
-	r := enc.NewFastReader(FrTestWire)
+	r := enc.NewWireView(FrTestWire)
 
 	// Delegate 5 bytes
 	r1 := r.Delegate(5)
@@ -213,10 +213,10 @@ func TestFastReaderDelegate(t *testing.T) {
 	require.Error(t, r4.Skip(1))
 }
 
-func TestFastReaderCopyN(t *testing.T) {
+func TestWireViewCopyN(t *testing.T) {
 	tu.SetT(t)
 
-	r := enc.NewFastReader(FrTestWire)
+	r := enc.NewWireView(FrTestWire)
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
 
@@ -246,10 +246,10 @@ func TestFastReaderCopyN(t *testing.T) {
 	require.Equal(t, enc.ErrBufferOverflow, err)
 }
 
-func TestFastReaderReadBuf(t *testing.T) {
+func TestWireViewReadBuf(t *testing.T) {
 	tu.SetT(t)
 
-	r := enc.NewFastReader(FrTestWire)
+	r := enc.NewWireView(FrTestWire)
 
 	// Read 3 bytes
 	buf, err := r.ReadBuf(2)
@@ -285,10 +285,10 @@ func TestFastReaderReadBuf(t *testing.T) {
 	require.Nil(t, buf)
 }
 
-func TestFastReaderRange(t *testing.T) {
+func TestWireViewRange(t *testing.T) {
 	tu.SetT(t)
 
-	r := enc.NewFastReader(FrTestWire)
+	r := enc.NewWireView(FrTestWire)
 
 	// Range 0-2
 	wire := r.Range(0, 2)

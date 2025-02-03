@@ -24,7 +24,7 @@ type DemoHmacKeyStore struct {
 // AddTrustAnchor simulates the addition of a trust anchor (self-signed certificate)
 func (store *DemoHmacKeyStore) AddTrustAnchor(cert enc.Buffer) error {
 	spec := spec_2022.Spec{}
-	data, sigCovered, err := spec.ReadData(enc.NewFastBufReader(cert))
+	data, sigCovered, err := spec.ReadData(enc.NewBufferView(cert))
 	if err != nil {
 		return fmt.Errorf("unable to parse certificate: %+v", err)
 	}

@@ -207,7 +207,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 		fragCount := (len(wire) + effectiveMtu - 1) / effectiveMtu
 		fragments = make([]*spec.LpPacket, fragCount)
 
-		reader := enc.NewFastBufReader(wire)
+		reader := enc.NewBufferView(wire)
 		for i := range fragments {
 			// Read till effective mtu or end of wire
 			readSize := effectiveMtu
@@ -283,7 +283,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		IncomingFaceID: l.faceID,
 	}
 
-	L2, err := readPacketUnverified(enc.NewFastBufReader(wire))
+	L2, err := readPacketUnverified(enc.NewBufferView(wire))
 	if err != nil {
 		core.Log.Error(l, "Unable to decode incoming frame", "err", err)
 		return
@@ -354,7 +354,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		wire = fragment.Join()
 
 		// Parse inner packet in place
-		L3, err := readPacketUnverified(enc.NewFastBufReader(wire))
+		L3, err := readPacketUnverified(enc.NewBufferView(wire))
 		if err != nil {
 			return
 		}
@@ -465,7 +465,7 @@ func (op *NDNLPLinkServiceOptions) Flags() (ret uint64) {
 }
 
 // Reads a packet without validating the internal fields
-func readPacketUnverified(reader enc.FastReader) (*spec.Packet, error) {
+func readPacketUnverified(reader enc.WireView) (*spec.Packet, error) {
 	context := spec.PacketParsingContext{}
 	context.Init()
 	return context.Parse(reader, false)
