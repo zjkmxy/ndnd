@@ -17,7 +17,7 @@ import (
 type Pkt struct {
 	Name enc.Name
 	L3   *spec.Packet
-	Raw  []byte
+	Raw  enc.Wire
 
 	PitToken       []byte
 	CongestionMark enc.Optional[uint64]

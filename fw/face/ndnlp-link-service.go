@@ -197,22 +197,23 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 	// Fragment packet if necessary
 	var fragments []*spec.LpPacket
-	if len(wire) > effectiveMtu {
+	frameLen := int(wire.Length())
+	if frameLen > effectiveMtu {
 		if !l.options.IsFragmentationEnabled {
 			core.Log.Info(l, "Attempted to send frame over MTU on link without fragmentation - DROP")
 			return
 		}
 
 		// Split up fragment
-		fragCount := (len(wire) + effectiveMtu - 1) / effectiveMtu
+		fragCount := (frameLen + effectiveMtu - 1) / effectiveMtu
 		fragments = make([]*spec.LpPacket, fragCount)
 
-		reader := enc.NewBufferView(wire)
+		reader := enc.NewWireView(wire)
 		for i := range fragments {
 			// Read till effective mtu or end of wire
 			readSize := effectiveMtu
 			if i == fragCount-1 {
-				readSize = len(wire) - effectiveMtu*(fragCount-1)
+				readSize = frameLen - effectiveMtu*(fragCount-1)
 			}
 
 			frag, err := reader.ReadWire(readSize)
@@ -231,7 +232,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 		}
 	} else {
 		// No fragmentation necessary
-		fragments = []*spec.LpPacket{{Fragment: enc.Wire{wire}}}
+		fragments = []*spec.LpPacket{{Fragment: wire}}
 	}
 
 	// Send fragment(s)
@@ -274,8 +275,8 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 	// We have to copy so receive transport buffer can be reused
-	wire := make([]byte, len(frame))
-	copy(wire, frame)
+	frameCopy := make([]byte, len(frame))
+	copy(frameCopy, frame)
 
 	// All incoming frames come through a link service
 	// Attempt to decode buffer into LpPacket
@@ -283,7 +284,8 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		IncomingFaceID: l.faceID,
 	}
 
-	L2, err := readPacketUnverified(enc.NewBufferView(wire))
+	wire := enc.Wire{frameCopy}
+	L2, err := readPacketUnverified(enc.NewWireView(wire))
 	if err != nil {
 		core.Log.Error(l, "Unable to decode incoming frame", "err", err)
 		return
@@ -350,15 +352,12 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 			copy(pkt.PitToken, LP.PitToken)
 		}
 
-		// No allocation if single fragment
-		wire = fragment.Join()
-
 		// Parse inner packet in place
-		L3, err := readPacketUnverified(enc.NewBufferView(wire))
+		L3, err := readPacketUnverified(enc.NewWireView(fragment))
 		if err != nil {
 			return
 		}
-		pkt.Raw = wire
+		pkt.Raw = fragment
 		pkt.L3 = L3
 	}
 
@@ -432,7 +431,7 @@ func (l *NDNLPLinkService) reassemble(
 	return buffer
 }
 
-func (l *NDNLPLinkService) checkCongestion(wire []byte) bool {
+func (l *NDNLPLinkService) checkCongestion(wire enc.Wire) bool {
 	if !CfgCongestionMarking() {
 		return false
 	}
@@ -450,7 +449,7 @@ func (l *NDNLPLinkService) checkCongestion(wire []byte) bool {
 		l.congestionCheck = 0 // reset
 	}
 
-	l.congestionCheck += uint64(len(wire)) // approx
+	l.congestionCheck += wire.Length() // approx
 	return false
 }
 

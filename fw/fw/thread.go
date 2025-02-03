@@ -260,7 +260,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 				if csData != nil && csWire != nil {
 					packet.L3.Data = csData
 					packet.L3.Interest = nil
-					packet.Raw = csWire
+					packet.Raw = enc.Wire{csWire}
 					packet.Name = csData.NameV
 					strategy.AfterContentStoreHit(packet, pitEntry, incomingFace.FaceID())
 					return
@@ -427,7 +427,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 
 	// Add to Content Store
 	if t.pitCS.IsCsAdmitting() {
-		t.pitCS.InsertData(data, packet.Raw)
+		t.pitCS.InsertData(data, packet.Raw.Join())
 	}
 
 	// Check for matching PIT entries
