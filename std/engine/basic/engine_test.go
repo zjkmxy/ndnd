@@ -54,7 +54,7 @@ func TestConsumerBasic(t *testing.T) {
 			hitCnt += 1
 			require.Equal(t, ndn.InterestResultData, args.Result)
 			require.True(t, args.Data.Name().Equal(name))
-			require.Equal(t, 1*time.Second, *args.Data.Freshness())
+			require.Equal(t, 1*time.Second, args.Data.Freshness().Unwrap())
 			require.Equal(t, []byte("Hello, world!"), args.Data.Content().Join())
 		})
 		require.NoError(t, err)

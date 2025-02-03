@@ -113,11 +113,12 @@ func CertIsExpired(cert ndn.Data) bool {
 // getPubKey gets the public key from an NDN data.
 // returns [public key, key name, error].
 func getPubKey(data ndn.Data) ([]byte, enc.Name, error) {
-	if data.ContentType() == nil {
+	contentType, ok := data.ContentType().Get()
+	if !ok {
 		return nil, nil, ndn.ErrInvalidValue{Item: "Data.ContentType", Value: nil}
 	}
 
-	switch *data.ContentType() {
+	switch contentType {
 	case ndn.ContentTypeKey:
 		// Content is public key, return directly
 		pub := data.Content().Join()
@@ -139,6 +140,6 @@ func getPubKey(data ndn.Data) ([]byte, enc.Name, error) {
 		return pub, signer.KeyName(), nil
 	default:
 		// Invalid content type
-		return nil, nil, ndn.ErrInvalidValue{Item: "Data.ContentType", Value: *data.ContentType()}
+		return nil, nil, ndn.ErrInvalidValue{Item: "Data.ContentType", Value: contentType}
 	}
 }

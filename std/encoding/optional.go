@@ -5,7 +5,7 @@ type Optional[T any] struct {
 	isSet bool
 }
 
-func (o *Optional[T]) IsSet() bool {
+func (o Optional[T]) IsSet() bool {
 	return o.isSet
 }
 
@@ -18,18 +18,18 @@ func (o *Optional[T]) Unset() {
 	o.isSet = false
 }
 
-func (o *Optional[T]) Get() (T, bool) {
+func (o Optional[T]) Get() (T, bool) {
 	return o.value, o.isSet
 }
 
-func (o *Optional[T]) GetOr(def T) T {
+func (o Optional[T]) GetOr(def T) T {
 	if o.isSet {
 		return o.value
 	}
 	return def
 }
 
-func (o *Optional[T]) Unwrap() T {
+func (o Optional[T]) Unwrap() T {
 	if o.isSet {
 		return o.value
 	}
@@ -37,7 +37,7 @@ func (o *Optional[T]) Unwrap() T {
 }
 
 // Deprecated: Will be removed in the future.
-func (o *Optional[T]) Ptr() *T {
+func (o Optional[T]) Ptr() *T {
 	if o.isSet {
 		return &o.value
 	}

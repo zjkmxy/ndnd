@@ -52,7 +52,7 @@ func TestSignCertSelf(t *testing.T) {
 	require.Equal(t, ISSUER, name.At(-2))
 
 	// check data content is public key
-	require.Equal(t, ndn.ContentTypeKey, *cert.ContentType())
+	require.Equal(t, ndn.ContentTypeKey, cert.ContentType().Unwrap())
 	alicePub := tu.NoErr(aliceSigner.Public())
 	require.Equal(t, alicePub, cert.Content().Join())
 
@@ -115,7 +115,7 @@ func TestSignCertOther(t *testing.T) {
 	require.Equal(t, ISSUER, name.At(-2))
 
 	// check data content is public key
-	require.Equal(t, ndn.ContentTypeKey, *newCert.ContentType())
+	require.Equal(t, ndn.ContentTypeKey, newCert.ContentType().Unwrap())
 	rootPub := rootCertData.Content().Join()
 	require.Equal(t, rootPub, newCert.Content().Join())
 

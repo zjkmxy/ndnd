@@ -187,7 +187,7 @@ func (n *SegmentedNode) SinglePacketPipeline(
 				break
 			}
 		} else {
-			if succeeded && lastData.FinalBlockID().Compare(newName[nameLen]) == 0 {
+			if succeeded && lastData.FinalBlockID().Unwrap().Compare(newName[nameLen]) == 0 {
 				// In the last segment, finalBlockId equals the last name component
 				break
 			}

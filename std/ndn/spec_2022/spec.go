@@ -98,35 +98,28 @@ func (d *Data) Name() enc.Name {
 	return d.NameV
 }
 
-func (d *Data) ContentType() *ndn.ContentType {
-	if d.MetaInfo != nil && d.MetaInfo.ContentType.IsSet() {
-		ret := ndn.ContentType(d.MetaInfo.ContentType.Unwrap())
-		return &ret
-	} else {
-		return nil
-	}
-}
-
-func (d *Data) Freshness() *time.Duration {
+func (d *Data) ContentType() (val enc.Optional[ndn.ContentType]) {
 	if d.MetaInfo != nil {
-		return d.MetaInfo.FreshnessPeriod.Ptr()
-	} else {
-		return nil
+		return utils.ConvIntOpt[uint64, ndn.ContentType](d.MetaInfo.ContentType)
 	}
+	return val
 }
 
-func (d *Data) FinalBlockID() *enc.Component {
+func (d *Data) Freshness() (val enc.Optional[time.Duration]) {
+	if d.MetaInfo != nil {
+		return d.MetaInfo.FreshnessPeriod
+	}
+	return val
+}
+
+func (d *Data) FinalBlockID() (val enc.Optional[enc.Component]) {
 	if d.MetaInfo != nil && d.MetaInfo.FinalBlockID != nil {
 		reader := enc.NewFastBufReader(d.MetaInfo.FinalBlockID)
-		ret, err := reader.ReadComponent()
-		if err == nil {
-			return &ret
-		} else {
-			return nil
+		if ret, err := reader.ReadComponent(); err == nil {
+			return enc.Some(ret)
 		}
-	} else {
-		return nil
 	}
+	return val
 }
 
 func (d *Data) Content() enc.Wire {

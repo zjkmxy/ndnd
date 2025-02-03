@@ -186,7 +186,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 
 	// Detect if this is a self-signed certificate, and automatically pick the cert
 	// as itself to verify in this case.
-	if args.Data.ContentType() != nil && *args.Data.ContentType() == ndn.ContentTypeKey && keyLocator.IsPrefix(args.Data.Name()) {
+	if ctype, ok := args.Data.ContentType().Get(); ok && ctype == ndn.ContentTypeKey && keyLocator.IsPrefix(args.Data.Name()) {
 		args.cert = args.Data
 		tc.Validate(args)
 		return

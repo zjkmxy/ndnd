@@ -87,7 +87,8 @@ func (kc *KeyChainMem) InsertCert(wire []byte) error {
 		return err
 	}
 
-	if data.ContentType() == nil || *data.ContentType() != ndn.ContentTypeKey {
+	contentType, ok := data.ContentType().Get()
+	if !ok || contentType != ndn.ContentTypeKey {
 		return ndn.ErrInvalidValue{Item: "content type"}
 	}
 

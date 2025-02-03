@@ -27,7 +27,8 @@ func PemEncode(raw []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if data.ContentType() == nil {
+	contentType, ok := data.ContentType().Get()
+	if !ok {
 		return nil, ndn.ErrInvalidValue{Item: "content type"}
 	}
 
@@ -49,13 +50,13 @@ func PemEncode(raw []byte) ([]byte, error) {
 	headers[PEM_HEADER_SIGTYPE] = data.Signature().SigType().String()
 
 	// Add signing key for certificates
-	if k := data.Signature().KeyName(); k != nil && *data.ContentType() == ndn.ContentTypeKey {
+	if k := data.Signature().KeyName(); k != nil && contentType == ndn.ContentTypeKey {
 		headers[PEM_HEADER_KEY] = k.String()
 	}
 
 	// Choose PEM type based on content type
 	var pemType string
-	switch *data.ContentType() {
+	switch contentType {
 	case ndn.ContentTypeKey:
 		pemType = PEM_TYPE_CERT
 	case ndn.ContentTypeSigKey:

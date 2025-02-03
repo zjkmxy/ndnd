@@ -51,7 +51,7 @@ func MarshalSecret(key ndn.Signer) (enc.Wire, error) {
 // UnmarshalSecret decodes a signed NDN Data packet to a key secret.
 func UnmarshalSecret(data ndn.Data) (ndn.Signer, error) {
 	// Check data content type
-	if data.ContentType() == nil || *data.ContentType() != ndn.ContentTypeSigKey {
+	if ctype, ok := data.ContentType().Get(); !ok || ctype != ndn.ContentTypeSigKey {
 		return nil, ndn.ErrInvalidValue{Item: "content type"}
 	}
 

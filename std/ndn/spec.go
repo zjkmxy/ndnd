@@ -77,9 +77,9 @@ type EncodedInterest struct {
 // Data is the abstract of a received Data packet.
 type Data interface {
 	Name() enc.Name
-	ContentType() *ContentType
-	Freshness() *time.Duration
-	FinalBlockID() *enc.Component
+	ContentType() enc.Optional[ContentType]
+	Freshness() enc.Optional[time.Duration]
+	FinalBlockID() enc.Optional[enc.Component]
 	Content() enc.Wire
 	Signature() Signature
 }
