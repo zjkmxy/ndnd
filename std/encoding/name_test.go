@@ -437,3 +437,22 @@ func TestNamePrefix(t *testing.T) {
 	require.Equal(t, "/", n.Prefix(-4).String())
 	require.Equal(t, "/", n.Prefix(-5).String())
 }
+
+func TestNameTlvStr(t *testing.T) {
+	tu.SetT(t)
+	for _, name := range randomNames(1000, 20) {
+		comp2 := tu.NoErr(enc.ComponentFromTlvStr(name[10].TlvStr()))
+		require.Equal(t, name[10], comp2)
+		name2 := tu.NoErr(enc.NameFromTlvStr(name.TlvStr()))
+		require.Equal(t, name, name2)
+	}
+}
+
+func TestNameClone(t *testing.T) {
+	tu.SetT(t)
+	n := tu.NoErr(enc.NameFromStr("/a/b/c/d"))
+	n2 := n.Clone()
+	require.Equal(t, n, n2)
+	require.True(t, unsafe.SliceData(n) != unsafe.SliceData(n2))
+	require.True(t, unsafe.SliceData(n[0].Val) != unsafe.SliceData(n2[0].Val))
+}
