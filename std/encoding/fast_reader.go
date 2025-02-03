@@ -144,9 +144,9 @@ func (r *FastReader) Delegate(size int) FastReader {
 	return ret
 }
 
-func (r *FastReader) CopyN(w io.Writer, size int64) (int, error) {
+func (r *FastReader) CopyN(w io.Writer, size int) (int, error) {
 	written := 0
-	for written < int(size) {
+	for written < size {
 		if r.IsEOF() {
 			return written, r._overflow()
 		}

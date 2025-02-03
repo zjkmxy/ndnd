@@ -210,7 +210,7 @@ func (context *CaProfileParsingContext) Parse(reader enc.FastReader, ignoreCriti
 					handled_CaInfo = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.CaInfo = builder.String()
 						}
@@ -231,7 +231,7 @@ func (context *CaProfileParsingContext) Parse(reader enc.FastReader, ignoreCriti
 							value := &pseudoValue
 							{
 								var builder strings.Builder
-								_, err = reader.CopyN(&builder, int64(l))
+								_, err = reader.CopyN(&builder, int(l))
 								if err == nil {
 									value.ParamKey = builder.String()
 								}
@@ -484,7 +484,7 @@ func (context *ProbeReqParsingContext) Parse(reader enc.FastReader, ignoreCritic
 							value := &pseudoValue
 							{
 								var builder strings.Builder
-								_, err = reader.CopyN(&builder, int64(l))
+								_, err = reader.CopyN(&builder, int(l))
 								if err == nil {
 									value.Params_k = builder.String()
 								}
@@ -1324,7 +1324,7 @@ func (context *NewResParsingContext) Parse(reader enc.FastReader, ignoreCritical
 							value := &pseudoValue
 							{
 								var builder strings.Builder
-								_, err = reader.CopyN(&builder, int64(l))
+								_, err = reader.CopyN(&builder, int(l))
 								if err == nil {
 									value.Challenge = builder.String()
 								}
@@ -1722,7 +1722,7 @@ func (context *ChallengeReqParsingContext) Parse(reader enc.FastReader, ignoreCr
 					handled_Challenge = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.Challenge = builder.String()
 						}
@@ -1744,7 +1744,7 @@ func (context *ChallengeReqParsingContext) Parse(reader enc.FastReader, ignoreCr
 							value := &pseudoValue
 							{
 								var builder strings.Builder
-								_, err = reader.CopyN(&builder, int64(l))
+								_, err = reader.CopyN(&builder, int(l))
 								if err == nil {
 									value.Params_k = builder.String()
 								}
@@ -1866,10 +1866,10 @@ func (encoder *ChallengeResEncoder) Init(value *ChallengeRes) {
 	l := uint(0)
 	l += 1
 	l += uint(1 + enc.Nat(value.Status).EncodingLength())
-	if value.ChalStatus != nil {
+	if optval, ok := value.ChalStatus.Get(); ok {
 		l += 1
-		l += uint(enc.TLNum(len(*value.ChalStatus)).EncodingLength())
-		l += uint(len(*value.ChalStatus))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
 	if optval, ok := value.RemainTries.Get(); ok {
 		l += 1
@@ -1935,12 +1935,12 @@ func (encoder *ChallengeResEncoder) EncodeInto(value *ChallengeRes, buf []byte) 
 
 	buf[pos] = byte(enc.Nat(value.Status).EncodeInto(buf[pos+1:]))
 	pos += uint(1 + buf[pos])
-	if value.ChalStatus != nil {
+	if optval, ok := value.ChalStatus.Get(); ok {
 		buf[pos] = byte(163)
 		pos += 1
-		pos += uint(enc.TLNum(len(*value.ChalStatus)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.ChalStatus)
-		pos += uint(len(*value.ChalStatus))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
 	if optval, ok := value.RemainTries.Get(); ok {
 		buf[pos] = byte(165)
@@ -2078,10 +2078,9 @@ func (context *ChallengeResParsingContext) Parse(reader enc.FastReader, ignoreCr
 					handled_ChalStatus = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.ChalStatus = &tempStr
+							value.ChalStatus.Set(builder.String())
 						}
 					}
 				}
@@ -2159,7 +2158,7 @@ func (context *ChallengeResParsingContext) Parse(reader enc.FastReader, ignoreCr
 							value := &pseudoValue
 							{
 								var builder strings.Builder
-								_, err = reader.CopyN(&builder, int64(l))
+								_, err = reader.CopyN(&builder, int(l))
 								if err == nil {
 									value.Params_k = builder.String()
 								}
@@ -2207,7 +2206,7 @@ func (context *ChallengeResParsingContext) Parse(reader enc.FastReader, ignoreCr
 		err = enc.ErrSkipRequired{Name: "Status", TypeNum: 155}
 	}
 	if !handled_ChalStatus && err == nil {
-		value.ChalStatus = nil
+		value.ChalStatus.Unset()
 	}
 	if !handled_RemainTries && err == nil {
 		value.RemainTries.Unset()
@@ -2352,7 +2351,7 @@ func (context *ErrorResParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled_ErrInfo = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.ErrInfo = builder.String()
 						}

@@ -37,5 +37,5 @@ type MetaData struct {
 	//+field:natural:optional
 	Mtime enc.Optional[uint64] `tlv:"0xf50c"`
 	//+field:string:optional
-	ObjectType *string `tlv:"0xf50e"`
+	ObjectType enc.Optional[string] `tlv:"0xf50e"`
 }

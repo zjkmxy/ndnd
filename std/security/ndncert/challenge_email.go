@@ -2,6 +2,8 @@ package ndncert
 
 import (
 	"errors"
+
+	enc "github.com/named-data/ndnd/std/encoding"
 )
 
 type ChallengeEmail struct {
@@ -15,7 +17,7 @@ func (*ChallengeEmail) Name() string {
 	return KwEmail
 }
 
-func (c *ChallengeEmail) Request(input ParamMap, status *string) (ParamMap, error) {
+func (c *ChallengeEmail) Request(input ParamMap, status enc.Optional[string]) (ParamMap, error) {
 	// Validate challenge configuration
 	if len(c.Email) == 0 || c.CodeCallback == nil {
 		return nil, errors.New("email challenge not configured")
@@ -29,8 +31,8 @@ func (c *ChallengeEmail) Request(input ParamMap, status *string) (ParamMap, erro
 	}
 
 	// Challenge response code
-	if status != nil && (*status == "need-code" || *status == "wrong-code") {
-		code := c.CodeCallback(*status)
+	if s := status.GetOr(""); s == "need-code" || s == "wrong-code" {
+		code := c.CodeCallback(s)
 		if code == "" {
 			return nil, errors.New("no code provided")
 		}

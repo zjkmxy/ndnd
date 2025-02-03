@@ -18,7 +18,6 @@ import (
 	"github.com/named-data/ndnd/fw/face"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 // FaceModule is the module that handles Face Management.
@@ -77,12 +76,12 @@ func (f *FaceModule) create(interest *Interest) {
 		return
 	}
 
-	if params.Uri == nil {
+	if !params.Uri.IsSet() {
 		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
-	URI := defn.DecodeURIString(*params.Uri)
+	URI := defn.DecodeURIString(params.Uri.Unwrap())
 	if URI == nil || URI.Canonize() != nil {
 		f.manager.sendCtrlResp(interest, 400, "URI could not be canonized", nil)
 		return
@@ -406,8 +405,8 @@ func (f *FaceModule) update(interest *Interest) {
 	}
 
 	f.fillFaceProperties(responseParams, selectedFace)
-	responseParams.Uri = nil
-	responseParams.LocalUri = nil
+	responseParams.Uri.Unset()
+	responseParams.LocalUri.Unset()
 	f.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 }
 
@@ -478,8 +477,8 @@ func (f *FaceModule) query(interest *Interest) {
 
 	// canonize URI if present in filter
 	var filterUri *defn.URI
-	if filter.Uri != nil {
-		filterUri = defn.DecodeURIString(*filter.Uri)
+	if furi, ok := filter.Uri.Get(); ok {
+		filterUri = defn.DecodeURIString(furi)
 		if filterUri == nil {
 			core.Log.Warn(f, "Cannot decode URI in FaceQueryFilter", "uri", filterUri)
 			return
@@ -499,9 +498,9 @@ func (f *FaceModule) query(interest *Interest) {
 			continue
 		}
 
-		if filter.UriScheme != nil &&
-			*filter.UriScheme != face.LocalURI().Scheme() &&
-			*filter.UriScheme != face.RemoteURI().Scheme() {
+		if scheme, ok := filter.UriScheme.Get(); ok &&
+			scheme != face.LocalURI().Scheme() &&
+			scheme != face.RemoteURI().Scheme() {
 			continue
 		}
 
@@ -509,7 +508,7 @@ func (f *FaceModule) query(interest *Interest) {
 			continue
 		}
 
-		if filter.LocalUri != nil && *filter.LocalUri != face.LocalURI().String() {
+		if localUri, ok := filter.LocalUri.Get(); ok && localUri != face.LocalURI().String() {
 			continue
 		}
 
@@ -581,8 +580,8 @@ func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStat
 
 func (f *FaceModule) fillFaceProperties(params *mgmt.ControlArgs, selectedFace face.LinkService) {
 	params.FaceId = enc.Some(selectedFace.FaceID())
-	params.Uri = utils.IdPtr(selectedFace.RemoteURI().String())
-	params.LocalUri = utils.IdPtr(selectedFace.LocalURI().String())
+	params.Uri = enc.Some(selectedFace.RemoteURI().String())
+	params.LocalUri = enc.Some(selectedFace.LocalURI().String())
 	params.FacePersistency = enc.Some(uint64(selectedFace.Persistency()))
 	params.Mtu = enc.Some(uint64(selectedFace.MTU()))
 	params.Flags = enc.Some(uint64(0))

@@ -168,7 +168,7 @@ func (context *StringMapParsingContext) Parse(reader enc.FastReader, ignoreCriti
 							value := &pseudoValue
 							{
 								var builder strings.Builder
-								_, err = reader.CopyN(&builder, int64(l))
+								_, err = reader.CopyN(&builder, int(l))
 								if err == nil {
 									value.Params_k = builder.String()
 								}

@@ -195,7 +195,7 @@ func (c *Client) Challenge(
 	prevRes *tlv.ChallengeRes,
 ) (*tlv.ChallengeRes, error) {
 	var prevParams ParamMap = nil
-	var prevStatus *string = nil
+	var prevStatus enc.Optional[string]
 
 	if prevRes != nil {
 		prevStatus = prevRes.ChalStatus

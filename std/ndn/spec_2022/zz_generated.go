@@ -667,7 +667,7 @@ func (context *ValidityPeriodParsingContext) Parse(reader enc.FastReader, ignore
 					handled_NotBefore = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.NotBefore = builder.String()
 						}
@@ -679,7 +679,7 @@ func (context *ValidityPeriodParsingContext) Parse(reader enc.FastReader, ignore
 					handled_NotAfter = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.NotAfter = builder.String()
 						}
@@ -821,7 +821,7 @@ func (context *CertDescriptionEntryParsingContext) Parse(reader enc.FastReader, 
 					handled_DescriptionKey = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.DescriptionKey = builder.String()
 						}
@@ -833,7 +833,7 @@ func (context *CertDescriptionEntryParsingContext) Parse(reader enc.FastReader, 
 					handled_DescriptionValue = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.DescriptionValue = builder.String()
 						}

@@ -59,9 +59,9 @@ type ControlArgs struct {
 	//+field:natural:optional
 	FaceId enc.Optional[uint64] `tlv:"0x69"`
 	//+field:string:optional
-	Uri *string `tlv:"0x72"`
+	Uri enc.Optional[string] `tlv:"0x72"`
 	//+field:string:optional
-	LocalUri *string `tlv:"0x81"`
+	LocalUri enc.Optional[string] `tlv:"0x81"`
 	//+field:natural:optional
 	Origin enc.Optional[uint64] `tlv:"0x6f"`
 	//+field:natural:optional
@@ -238,11 +238,11 @@ type FaceQueryFilterValue struct {
 	//+field:natural:optional
 	FaceId enc.Optional[uint64] `tlv:"0x69"`
 	//+field:string:optional
-	UriScheme *string `tlv:"0x83"`
+	UriScheme enc.Optional[string] `tlv:"0x83"`
 	//+field:string:optional
-	Uri *string `tlv:"0x72"`
+	Uri enc.Optional[string] `tlv:"0x72"`
 	//+field:string:optional
-	LocalUri *string `tlv:"0x81"`
+	LocalUri enc.Optional[string] `tlv:"0x81"`
 	//+field:natural:optional
 	FaceScope enc.Optional[uint64] `tlv:"0x84"`
 	//+field:natural:optional

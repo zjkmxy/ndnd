@@ -90,7 +90,7 @@ type StrField struct {
 	//+field:string
 	Str1 string `tlv:"0x01"`
 	//+field:string:optional
-	Str2 *string `tlv:"0x02"`
+	Str2 enc.Optional[string] `tlv:"0x02"`
 }
 
 type FixedUintField struct {

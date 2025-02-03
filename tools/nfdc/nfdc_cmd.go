@@ -9,7 +9,6 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +67,7 @@ func (n *Tool) preprocessArg(
 			(mod == "rib" && cmd == "unregister") {
 
 			filter := mgmt.FaceQueryFilter{
-				Val: &mgmt.FaceQueryFilterValue{Uri: utils.IdPtr(val)},
+				Val: &mgmt.FaceQueryFilterValue{Uri: enc.Some(val)},
 			}
 
 			dataset, err := n.fetchStatusDataset(enc.Name{
@@ -103,10 +102,10 @@ func (n *Tool) preprocessArg(
 		// only for rib/register, create a new face if it doesn't exist
 		if mod == "rib" && cmd == "register" {
 			// copy over any face arguments that are already set
-			faceArgs := mgmt.ControlArgs{Uri: utils.IdPtr(val)}
-			if ctrlArgs.LocalUri != nil {
+			faceArgs := mgmt.ControlArgs{Uri: enc.Some(val)}
+			if ctrlArgs.LocalUri.IsSet() {
 				faceArgs.LocalUri = ctrlArgs.LocalUri
-				ctrlArgs.LocalUri = nil
+				ctrlArgs.LocalUri.Unset()
 			}
 			if ctrlArgs.Mtu.IsSet() {
 				faceArgs.Mtu = ctrlArgs.Mtu
@@ -169,9 +168,9 @@ func (n *Tool) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 	case "face":
 		ctrlArgs.FaceId = enc.Some(parseUint(val))
 	case "remote":
-		ctrlArgs.Uri = utils.IdPtr(val)
+		ctrlArgs.Uri = enc.Some(val)
 	case "local":
-		ctrlArgs.LocalUri = utils.IdPtr(val)
+		ctrlArgs.LocalUri = enc.Some(val)
 	case "mtu":
 		ctrlArgs.Mtu = enc.Some(parseUint(val))
 	case "persistency":

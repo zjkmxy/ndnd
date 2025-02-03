@@ -205,15 +205,15 @@ func (encoder *ControlArgsEncoder) Init(value *ControlArgs) {
 		l += 1
 		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Uri != nil {
+	if optval, ok := value.Uri.Get(); ok {
 		l += 1
-		l += uint(enc.TLNum(len(*value.Uri)).EncodingLength())
-		l += uint(len(*value.Uri))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
-	if value.LocalUri != nil {
+	if optval, ok := value.LocalUri.Get(); ok {
 		l += 1
-		l += uint(enc.TLNum(len(*value.LocalUri)).EncodingLength())
-		l += uint(len(*value.LocalUri))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
 	if optval, ok := value.Origin.Get(); ok {
 		l += 1
@@ -294,19 +294,19 @@ func (encoder *ControlArgsEncoder) EncodeInto(value *ControlArgs, buf []byte) {
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Uri != nil {
+	if optval, ok := value.Uri.Get(); ok {
 		buf[pos] = byte(114)
 		pos += 1
-		pos += uint(enc.TLNum(len(*value.Uri)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.Uri)
-		pos += uint(len(*value.Uri))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
-	if value.LocalUri != nil {
+	if optval, ok := value.LocalUri.Get(); ok {
 		buf[pos] = byte(129)
 		pos += 1
-		pos += uint(enc.TLNum(len(*value.LocalUri)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.LocalUri)
-		pos += uint(len(*value.LocalUri))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
 	if optval, ok := value.Origin.Get(); ok {
 		buf[pos] = byte(111)
@@ -497,10 +497,9 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled_Uri = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.Uri = &tempStr
+							value.Uri.Set(builder.String())
 						}
 					}
 				}
@@ -510,10 +509,9 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 					handled_LocalUri = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.LocalUri = &tempStr
+							value.LocalUri.Set(builder.String())
 						}
 					}
 				}
@@ -801,10 +799,10 @@ func (context *ControlArgsParsingContext) Parse(reader enc.FastReader, ignoreCri
 		value.FaceId.Unset()
 	}
 	if !handled_Uri && err == nil {
-		value.Uri = nil
+		value.Uri.Unset()
 	}
 	if !handled_LocalUri && err == nil {
-		value.LocalUri = nil
+		value.LocalUri.Unset()
 	}
 	if !handled_Origin && err == nil {
 		value.Origin.Unset()
@@ -874,11 +872,11 @@ func (value *ControlArgs) ToDict() map[string]any {
 	if optval, ok := value.FaceId.Get(); ok {
 		dict["FaceId"] = optval
 	}
-	if value.Uri != nil {
-		dict["Uri"] = *value.Uri
+	if optval, ok := value.Uri.Get(); ok {
+		dict["Uri"] = optval
 	}
-	if value.LocalUri != nil {
-		dict["LocalUri"] = *value.LocalUri
+	if optval, ok := value.LocalUri.Get(); ok {
+		dict["LocalUri"] = optval
 	}
 	if optval, ok := value.Origin.Get(); ok {
 		dict["Origin"] = optval
@@ -948,24 +946,24 @@ func DictToControlArgs(dict map[string]any) (*ControlArgs, error) {
 	}
 	if vv, ok := dict["Uri"]; ok {
 		if v, ok := vv.(string); ok {
-			value.Uri = &v
+			value.Uri.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "Uri", TypeNum: 114, ValType: "string", Value: vv}
 		}
 	} else {
-		value.Uri = nil
+		value.Uri.Unset()
 	}
 	if err != nil {
 		return nil, err
 	}
 	if vv, ok := dict["LocalUri"]; ok {
 		if v, ok := vv.(string); ok {
-			value.LocalUri = &v
+			value.LocalUri.Set(v)
 		} else {
 			err = enc.ErrIncompatibleType{Name: "LocalUri", TypeNum: 129, ValType: "string", Value: vv}
 		}
 	} else {
-		value.LocalUri = nil
+		value.LocalUri.Unset()
 	}
 	if err != nil {
 		return nil, err
@@ -1244,7 +1242,7 @@ func (context *ControlResponseValParsingContext) Parse(reader enc.FastReader, ig
 					handled_StatusText = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.StatusText = builder.String()
 						}
@@ -1799,7 +1797,7 @@ func (context *FaceEventNotificationValueParsingContext) Parse(reader enc.FastRe
 					handled_Uri = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.Uri = builder.String()
 						}
@@ -1811,7 +1809,7 @@ func (context *FaceEventNotificationValueParsingContext) Parse(reader enc.FastRe
 					handled_LocalUri = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.LocalUri = builder.String()
 						}
@@ -2407,7 +2405,7 @@ func (context *GeneralStatusParsingContext) Parse(reader enc.FastReader, ignoreC
 					handled_NfdVersion = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.NfdVersion = builder.String()
 						}
@@ -3291,7 +3289,7 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 					handled_Uri = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.Uri = builder.String()
 						}
@@ -3303,7 +3301,7 @@ func (context *FaceStatusParsingContext) Parse(reader enc.FastReader, ignoreCrit
 					handled_LocalUri = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.LocalUri = builder.String()
 						}
@@ -3944,20 +3942,20 @@ func (encoder *FaceQueryFilterValueEncoder) Init(value *FaceQueryFilterValue) {
 		l += 1
 		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.UriScheme != nil {
+	if optval, ok := value.UriScheme.Get(); ok {
 		l += 1
-		l += uint(enc.TLNum(len(*value.UriScheme)).EncodingLength())
-		l += uint(len(*value.UriScheme))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
-	if value.Uri != nil {
+	if optval, ok := value.Uri.Get(); ok {
 		l += 1
-		l += uint(enc.TLNum(len(*value.Uri)).EncodingLength())
-		l += uint(len(*value.Uri))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
-	if value.LocalUri != nil {
+	if optval, ok := value.LocalUri.Get(); ok {
 		l += 1
-		l += uint(enc.TLNum(len(*value.LocalUri)).EncodingLength())
-		l += uint(len(*value.LocalUri))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
 	if optval, ok := value.FaceScope.Get(); ok {
 		l += 1
@@ -3991,26 +3989,26 @@ func (encoder *FaceQueryFilterValueEncoder) EncodeInto(value *FaceQueryFilterVal
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.UriScheme != nil {
+	if optval, ok := value.UriScheme.Get(); ok {
 		buf[pos] = byte(131)
 		pos += 1
-		pos += uint(enc.TLNum(len(*value.UriScheme)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.UriScheme)
-		pos += uint(len(*value.UriScheme))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
-	if value.Uri != nil {
+	if optval, ok := value.Uri.Get(); ok {
 		buf[pos] = byte(114)
 		pos += 1
-		pos += uint(enc.TLNum(len(*value.Uri)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.Uri)
-		pos += uint(len(*value.Uri))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
-	if value.LocalUri != nil {
+	if optval, ok := value.LocalUri.Get(); ok {
 		buf[pos] = byte(129)
 		pos += 1
-		pos += uint(enc.TLNum(len(*value.LocalUri)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.LocalUri)
-		pos += uint(len(*value.LocalUri))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
 	if optval, ok := value.FaceScope.Get(); ok {
 		buf[pos] = byte(132)
@@ -4112,10 +4110,9 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 					handled_UriScheme = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.UriScheme = &tempStr
+							value.UriScheme.Set(builder.String())
 						}
 					}
 				}
@@ -4125,10 +4122,9 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 					handled_Uri = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.Uri = &tempStr
+							value.Uri.Set(builder.String())
 						}
 					}
 				}
@@ -4138,10 +4134,9 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 					handled_LocalUri = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.LocalUri = &tempStr
+							value.LocalUri.Set(builder.String())
 						}
 					}
 				}
@@ -4236,13 +4231,13 @@ func (context *FaceQueryFilterValueParsingContext) Parse(reader enc.FastReader, 
 		value.FaceId.Unset()
 	}
 	if !handled_UriScheme && err == nil {
-		value.UriScheme = nil
+		value.UriScheme.Unset()
 	}
 	if !handled_Uri && err == nil {
-		value.Uri = nil
+		value.Uri.Unset()
 	}
 	if !handled_LocalUri && err == nil {
-		value.LocalUri = nil
+		value.LocalUri.Unset()
 	}
 	if !handled_FaceScope && err == nil {
 		value.FaceScope.Unset()

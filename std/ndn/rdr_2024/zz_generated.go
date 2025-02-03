@@ -424,10 +424,10 @@ func (encoder *MetaDataEncoder) Init(value *MetaData) {
 		l += 3
 		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.ObjectType != nil {
+	if optval, ok := value.ObjectType.Get(); ok {
 		l += 3
-		l += uint(enc.TLNum(len(*value.ObjectType)).EncodingLength())
-		l += uint(len(*value.ObjectType))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
 	encoder.length = l
 
@@ -519,13 +519,13 @@ func (encoder *MetaDataEncoder) EncodeInto(value *MetaData, buf []byte) {
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.ObjectType != nil {
+	if optval, ok := value.ObjectType.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62734))
 		pos += 3
-		pos += uint(enc.TLNum(len(*value.ObjectType)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.ObjectType)
-		pos += uint(len(*value.ObjectType))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
 }
 
@@ -758,10 +758,9 @@ func (context *MetaDataParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled_ObjectType = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.ObjectType = &tempStr
+							value.ObjectType.Set(builder.String())
 						}
 					}
 				}
@@ -811,7 +810,7 @@ func (context *MetaDataParsingContext) Parse(reader enc.FastReader, ignoreCritic
 		value.Mtime.Unset()
 	}
 	if !handled_ObjectType && err == nil {
-		value.ObjectType = nil
+		value.ObjectType.Unset()
 	}
 
 	if err != nil {

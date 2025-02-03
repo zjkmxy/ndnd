@@ -284,7 +284,7 @@ func (dv *Router) createFaces() {
 		}
 
 		faceId, created, err := dv.nfdc.CreateFace(&mgmt.ControlArgs{
-			Uri:             utils.IdPtr(neighbor.Uri),
+			Uri:             enc.Some(neighbor.Uri),
 			FacePersistency: enc.Some(uint64(mgmt.PersistencyPermanent)),
 			Mtu:             mtu,
 		})

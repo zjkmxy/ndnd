@@ -1066,10 +1066,10 @@ func (encoder *StrFieldEncoder) Init(value *StrField) {
 	l += 1
 	l += uint(enc.TLNum(len(value.Str1)).EncodingLength())
 	l += uint(len(value.Str1))
-	if value.Str2 != nil {
+	if optval, ok := value.Str2.Get(); ok {
 		l += 1
-		l += uint(enc.TLNum(len(*value.Str2)).EncodingLength())
-		l += uint(len(*value.Str2))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
 	encoder.length = l
 
@@ -1088,12 +1088,12 @@ func (encoder *StrFieldEncoder) EncodeInto(value *StrField, buf []byte) {
 	pos += uint(enc.TLNum(len(value.Str1)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.Str1)
 	pos += uint(len(value.Str1))
-	if value.Str2 != nil {
+	if optval, ok := value.Str2.Get(); ok {
 		buf[pos] = byte(2)
 		pos += 1
-		pos += uint(enc.TLNum(len(*value.Str2)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.Str2)
-		pos += uint(len(*value.Str2))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
 }
 
@@ -1143,7 +1143,7 @@ func (context *StrFieldParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled_Str1 = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.Str1 = builder.String()
 						}
@@ -1155,10 +1155,9 @@ func (context *StrFieldParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled_Str2 = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.Str2 = &tempStr
+							value.Str2.Set(builder.String())
 						}
 					}
 				}
@@ -1184,7 +1183,7 @@ func (context *StrFieldParsingContext) Parse(reader enc.FastReader, ignoreCritic
 		err = enc.ErrSkipRequired{Name: "Str1", TypeNum: 1}
 	}
 	if !handled_Str2 && err == nil {
-		value.Str2 = nil
+		value.Str2.Unset()
 	}
 
 	if err != nil {

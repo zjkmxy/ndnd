@@ -212,7 +212,7 @@ func TestStrField(t *testing.T) {
 
 	f := gen_basic.StrField{
 		Str1: "hello",
-		Str2: utils.IdPtr("world"),
+		Str2: enc.Some("world"),
 	}
 	buf := f.Bytes()
 	require.Equal(t, []byte{0x01, 0x05, 'h', 'e', 'l', 'l', 'o', 0x02, 0x05, 'w', 'o', 'r', 'l', 'd'}, buf)
@@ -221,7 +221,7 @@ func TestStrField(t *testing.T) {
 
 	f = gen_basic.StrField{
 		Str1: "",
-		Str2: nil,
+		Str2: enc.None[string](),
 	}
 	buf = f.Bytes()
 	require.Equal(t, []byte{0x01, 0x00}, buf)

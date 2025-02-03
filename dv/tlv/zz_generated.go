@@ -1548,7 +1548,7 @@ func (context *StatusParsingContext) Parse(reader enc.FastReader, ignoreCritical
 					handled_Version = true
 					{
 						var builder strings.Builder
-						_, err = reader.CopyN(&builder, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.Version = builder.String()
 						}

@@ -75,7 +75,7 @@ type ChallengeRes struct {
 	//+field:natural
 	Status uint64 `tlv:"0x9B"`
 	//+field:string:optional
-	ChalStatus *string `tlv:"0xA3"`
+	ChalStatus enc.Optional[string] `tlv:"0xA3"`
 	//+field:natural:optional
 	RemainTries enc.Optional[uint64] `tlv:"0xA5"`
 	//+field:natural:optional
