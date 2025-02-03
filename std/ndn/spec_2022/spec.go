@@ -101,7 +101,7 @@ func (d *Data) Name() enc.Name {
 
 func (d *Data) ContentType() (val optional.Optional[ndn.ContentType]) {
 	if d.MetaInfo != nil {
-		return utils.ConvIntOpt[uint64, ndn.ContentType](d.MetaInfo.ContentType)
+		return optional.CastInt[uint64, ndn.ContentType](d.MetaInfo.ContentType)
 	}
 	return val
 }
@@ -233,7 +233,7 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 	data := &Data{
 		NameV: name,
 		MetaInfo: &MetaInfo{
-			ContentType:     utils.ConvIntOpt[ndn.ContentType, uint64](config.ContentType),
+			ContentType:     optional.CastInt[ndn.ContentType, uint64](config.ContentType),
 			FreshnessPeriod: config.Freshness,
 			FinalBlockID:    finalBlock,
 		},

@@ -26,14 +26,6 @@ func ConvIntPtr[A, B constraints.Integer](a *A) *B {
 	}
 }
 
-// ConvOptional converts an optional value to another type
-func ConvIntOpt[A, B constraints.Integer](a optional.Optional[A]) (out optional.Optional[B]) {
-	if a.IsSet() {
-		out.Set(B(a.Unwrap()))
-	}
-	return out
-}
-
 func MakeTimestamp(t time.Time) uint64 {
 	return uint64(t.UnixNano() / int64(time.Millisecond))
 }
