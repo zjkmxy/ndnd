@@ -416,7 +416,6 @@ func TestInsertOutRecord(t *testing.T) {
 	pitEntry, _ := pitCS.InsertInterest(interest, hint, inFace)
 	outRecord := pitEntry.InsertOutRecord(interest, inFace)
 	assert.Equal(t, outRecord.Face, inFace)
-	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
 	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
 
 	// Update existing outrecord
@@ -425,7 +424,6 @@ func TestInsertOutRecord(t *testing.T) {
 	interest.NonceV.Set(3)
 	outRecord = pitEntry.InsertOutRecord(interest, inFace)
 	assert.Equal(t, outRecord.Face, inFace)
-	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
 	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
 	assert.False(t, outRecord.LatestNonce == oldNonce)
 
@@ -433,7 +431,6 @@ func TestInsertOutRecord(t *testing.T) {
 	inFace2 := uint64(2222)
 	outRecord = pitEntry.InsertOutRecord(interest, inFace2)
 	assert.Equal(t, outRecord.Face, inFace2)
-	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
 	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
 }
 
@@ -453,7 +450,6 @@ func TestGetOutRecords(t *testing.T) {
 	outRecords := pitEntry.GetOutRecords()
 	assert.Equal(t, len(outRecords), 1)
 	assert.Equal(t, outRecords[0].Face, inFace)
-	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
 	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	// Update existing outrecord
@@ -464,7 +460,6 @@ func TestGetOutRecords(t *testing.T) {
 	outRecords = pitEntry.GetOutRecords()
 	assert.Equal(t, len(outRecords), 1)
 	assert.Equal(t, outRecords[0].Face, inFace)
-	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
 	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	// Add new outrecord on a different face
@@ -478,11 +473,9 @@ func TestGetOutRecords(t *testing.T) {
 	assert.Equal(t, len(outRecords), 2)
 
 	assert.Equal(t, outRecords[0].Face, inFace)
-	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
 	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	assert.Equal(t, outRecords[1].Face, inFace2)
-	assert.Equal(t, outRecords[1].LatestInterest, interest.NameV)
 	assert.True(t, outRecords[1].LatestNonce == interest.NonceV.Unwrap())
 }
 

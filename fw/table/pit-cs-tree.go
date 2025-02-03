@@ -275,7 +275,6 @@ func (e *nameTreePitEntry) InsertOutRecord(interest *spec.Interest, face uint64)
 		record.Face = face
 		record.LatestNonce = interest.NonceV.Unwrap()
 		record.LatestTimestamp = time.Now()
-		record.LatestInterest = e.encname
 		record.ExpirationTime = time.Now().Add(lifetime)
 		e.outRecords[face] = record
 		return record
@@ -284,7 +283,6 @@ func (e *nameTreePitEntry) InsertOutRecord(interest *spec.Interest, face uint64)
 	// Existing record
 	record.LatestNonce = interest.NonceV.Unwrap()
 	record.LatestTimestamp = time.Now()
-	record.LatestInterest = e.encname
 	record.ExpirationTime = time.Now().Add(lifetime)
 	return record
 }
