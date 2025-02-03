@@ -71,7 +71,7 @@ func (pc *PingClient) send(seq uint64) {
 	name := pc.name.Append(enc.NewSequenceNumComponent(seq))
 
 	cfg := &ndn.InterestConfig{
-		Lifetime: utils.IdPtr(time.Duration(pc.timeout) * time.Millisecond),
+		Lifetime: enc.Some(time.Duration(pc.timeout) * time.Millisecond),
 		Nonce:    utils.ConvertNonce(pc.app.Timer().Nonce()),
 	}
 

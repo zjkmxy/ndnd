@@ -322,7 +322,7 @@ func (s *SvSync) sendSyncInterest() {
 	}
 
 	dataCfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+		ContentType: enc.Some(ndn.ContentTypeBlob),
 	}
 	data, err := s.o.Client.Engine().Spec().MakeData(syncName, dataCfg, svWire, signer)
 	if err != nil {
@@ -332,7 +332,7 @@ func (s *SvSync) sendSyncInterest() {
 
 	// Make SVS Sync Interest
 	intCfg := &ndn.InterestConfig{
-		Lifetime: utils.IdPtr(1 * time.Second),
+		Lifetime: enc.Some(1 * time.Second),
 		Nonce:    utils.ConvertNonce(s.o.Client.Engine().Timer().Nonce()),
 	}
 	interest, err := s.o.Client.Engine().Spec().MakeInterest(syncName, intCfg, data.Wire, nil)

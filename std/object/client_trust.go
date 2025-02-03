@@ -46,10 +46,7 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 		Callback:     args.Callback,
 		OverrideName: overrideName,
 		Fetch: func(name enc.Name, config *ndn.InterestConfig, callback ndn.ExpressCallbackFunc) {
-			if args.CertNextHop != nil {
-				config.NextHopId = args.CertNextHop
-			}
-
+			config.NextHopId = args.CertNextHop
 			c.ExpressR(ndn.ExpressRArgs{
 				Name:     name,
 				Config:   config,

@@ -21,7 +21,7 @@ func (t *Tool) DvStatus() (*spec_dv.Status, error) {
 	}
 	cfg := &ndn.InterestConfig{
 		MustBeFresh: true,
-		Lifetime:    utils.IdPtr(time.Second),
+		Lifetime:    enc.Some(time.Second),
 		Nonce:       utils.ConvertNonce(t.engine.Timer().Nonce()),
 	}
 

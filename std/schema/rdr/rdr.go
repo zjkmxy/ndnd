@@ -72,9 +72,9 @@ func (n *SegmentedNode) Provide(mNode schema.MatchedNode, content enc.Wire, need
 	copy(newName, mNode.Name)
 
 	dataCfg := &ndn.DataConfig{
-		ContentType:  utils.IdPtr(n.ContentType),
-		Freshness:    utils.IdPtr(n.Freshness),
-		FinalBlockID: utils.IdPtr(enc.NewSegmentComponent(segCnt - 1)),
+		ContentType:  enc.Some(n.ContentType),
+		Freshness:    enc.Some(n.Freshness),
+		FinalBlockID: enc.Some(enc.NewSegmentComponent(segCnt - 1)),
 	}
 
 	for i := uint64(0); i < segCnt; i++ {
@@ -286,9 +286,9 @@ func (n *RdrNode) Provide(mNode schema.MatchedNode, content enc.Wire) uint64 {
 
 	// generate metadata
 	metaDataCfg := &ndn.DataConfig{
-		ContentType:  utils.IdPtr(ndn.ContentTypeBlob),
-		Freshness:    utils.IdPtr(n.MetaFreshness),
-		FinalBlockID: utils.IdPtr(enc.NewSegmentComponent(0)),
+		ContentType:  enc.Some(ndn.ContentTypeBlob),
+		Freshness:    enc.Some(n.MetaFreshness),
+		FinalBlockID: enc.Some(enc.NewSegmentComponent(0)),
 	}
 	metaData := &rtlv.MetaData{
 		Name:         dataName,
@@ -464,8 +464,8 @@ func (n *GeneralObjNode) Provide(mNode schema.MatchedNode, content enc.Wire) uin
 	metaName[nameLen] = enc.NewStringComponent(32, "metadata")
 	metaMNode := mNode.Refine(metaName)
 	metaDataCfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-		Freshness:   utils.IdPtr(n.MetaFreshness),
+		ContentType: enc.Some(ndn.ContentTypeBlob),
+		Freshness:   enc.Some(n.MetaFreshness),
 	}
 	metaData := &rtlv.MetaData{
 		Name:         dataName,
@@ -480,8 +480,8 @@ func (n *GeneralObjNode) Provide(mNode schema.MatchedNode, content enc.Wire) uin
 	manifestName[nameLen] = enc.NewStringComponent(32, "manifest")
 	manifestMNode := mNode.Refine(manifestName)
 	manifestDataCfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-		Freshness:   utils.IdPtr(n.ManifestFreshness),
+		ContentType: enc.Some(ndn.ContentTypeBlob),
+		Freshness:   enc.Some(n.ManifestFreshness),
 	}
 	manifestData := &rtlv.ManifestData{
 		Entries: make([]*rtlv.ManifestDigest, segCnt),

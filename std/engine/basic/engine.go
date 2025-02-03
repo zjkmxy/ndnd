@@ -176,7 +176,7 @@ func (e *Engine) onPacket(frame []byte) error {
 			RawInterest:    raw,
 			SigCovered:     ctx.Interest_context.SigCovered(),
 			PitToken:       pitToken,
-			IncomingFaceId: incomingFaceId.Ptr(),
+			IncomingFaceId: incomingFaceId,
 		})
 	} else if pkt.Data != nil {
 		log.Trace(e, "Data received", "name", pkt.Data.Name())
@@ -448,10 +448,7 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 	}
 
 	// Handle deadline
-	lifetime := DefaultInterestLife
-	if interest.Config.Lifetime != nil {
-		lifetime = *interest.Config.Lifetime
-	}
+	lifetime := interest.Config.Lifetime.GetOr(DefaultInterestLife)
 	deadline := e.timer.Now().Add(lifetime)
 
 	// Inject interest into PIT
@@ -475,11 +472,11 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 
 	// Wrap the interest in link packet if needed
 	wire := interest.Wire
-	if interest.Config.NextHopId != nil {
+	if interest.Config.NextHopId.IsSet() {
 		lpPkt := &spec.Packet{
 			LpPacket: &spec.LpPacket{
 				Fragment:      wire,
-				NextHopFaceId: enc.OptionPtr(interest.Config.NextHopId),
+				NextHopFaceId: interest.Config.NextHopId,
 			},
 		}
 		encoder := spec.PacketEncoder{}
@@ -504,13 +501,13 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 	}
 
 	intCfg := &ndn.InterestConfig{
-		Lifetime:    utils.IdPtr(1 * time.Second),
+		Lifetime:    enc.Some(1 * time.Second),
 		Nonce:       utils.ConvertNonce(e.timer.Nonce()),
 		MustBeFresh: true,
 
 		// Signed interest shenanigans (NFD wants this)
 		SigNonce: e.timer.Nonce(),
-		SigTime:  utils.IdPtr(time.Duration(e.timer.Now().UnixMilli()) * time.Millisecond),
+		SigTime:  enc.Some(time.Duration(e.timer.Now().UnixMilli()) * time.Millisecond),
 	}
 	interest, err := e.mgmtConf.MakeCmd(module, cmd, cmdArgs, intCfg)
 	if err != nil {

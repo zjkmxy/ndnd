@@ -13,7 +13,6 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	sec_pib "github.com/named-data/ndnd/std/security/pib"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 var app ndn.Engine
@@ -33,8 +32,8 @@ func onInterest(args ndn.InterestHandlerArgs) {
 	data, err := app.Spec().MakeData(
 		interest.Name(),
 		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utils.IdPtr(10 * time.Second),
+			ContentType: enc.Some(ndn.ContentTypeBlob),
+			Freshness:   enc.Some(10 * time.Second),
 		},
 		enc.Wire{content},
 		signer)

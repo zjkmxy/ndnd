@@ -48,8 +48,8 @@ func (dv *Router) mgmtOnStatus(args ndn.InterestHandlerArgs) {
 
 	name := args.Interest.Name()
 	cfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-		Freshness:   utils.IdPtr(time.Second),
+		ContentType: enc.Some(ndn.ContentTypeBlob),
+		Freshness:   enc.Some(time.Second),
 	}
 
 	data, err := dv.engine.Spec().MakeData(name, cfg, status.Encode(), nil)
@@ -76,8 +76,8 @@ func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 		data, err := dv.engine.Spec().MakeData(
 			args.Interest.Name(),
 			&ndn.DataConfig{
-				ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-				Freshness:   utils.IdPtr(1 * time.Second),
+				ContentType: enc.Some(ndn.ContentTypeBlob),
+				Freshness:   enc.Some(1 * time.Second),
 			},
 			res.Encode(),
 			signer)

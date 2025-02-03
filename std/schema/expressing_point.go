@@ -177,7 +177,7 @@ func (n *ExpressPoint) NeedCallback(
 		intConfig = &ndn.InterestConfig{
 			CanBePrefix:    n.CanBePrefix,
 			MustBeFresh:    n.MustBeFresh,
-			Lifetime:       utils.IdPtr(n.Lifetime),
+			Lifetime:       enc.Some(n.Lifetime),
 			Nonce:          utils.ConvertNonce(engine.Timer().Nonce()),
 			HopLimit:       nil,
 			ForwardingHint: nil,
@@ -254,8 +254,8 @@ func (n *ExpressPoint) NeedCallback(
 	// Set the deadline
 	// assert(intCfg.Lifetime != nil)
 	var deadline *time.Time
-	if intConfig.Lifetime != nil {
-		deadline = utils.IdPtr(engine.Timer().Now().Add(*intConfig.Lifetime))
+	if intConfig.Lifetime.IsSet() {
+		deadline = utils.IdPtr(engine.Timer().Now().Add(intConfig.Lifetime.Unwrap()))
 	} else {
 		deadline = nil
 	}

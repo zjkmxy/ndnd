@@ -25,7 +25,7 @@ func main() {
 
 	intCfg := &ndn.InterestConfig{
 		MustBeFresh: true,
-		Lifetime:    utils.IdPtr(6 * time.Second),
+		Lifetime:    enc.Some(6 * time.Second),
 		Nonce:       utils.ConvertNonce(app.Timer().Nonce()),
 	}
 	interest, err := app.Spec().MakeInterest(name, intCfg, nil, nil)

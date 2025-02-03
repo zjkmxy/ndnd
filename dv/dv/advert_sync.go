@@ -70,7 +70,7 @@ func (a *advertModule) sendSyncInterestImpl(prefix enc.Name) (err error) {
 
 	// Make Data packet
 	dataCfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+		ContentType: enc.Some(ndn.ContentTypeBlob),
 	}
 	data, err := a.dv.engine.Spec().MakeData(syncName, dataCfg, sv.Encode(), signer)
 	if err != nil {
@@ -80,9 +80,9 @@ func (a *advertModule) sendSyncInterestImpl(prefix enc.Name) (err error) {
 
 	// Make SVS Sync Interest
 	intCfg := &ndn.InterestConfig{
-		Lifetime: utils.IdPtr(1 * time.Second),
+		Lifetime: enc.Some(1 * time.Second),
 		Nonce:    utils.ConvertNonce(a.dv.engine.Timer().Nonce()),
-		HopLimit: utils.IdPtr(uint(2)), // use localhop w/ this
+		HopLimit: utils.IdPtr(byte(2)), // use localhop w/ this
 	}
 	interest, err := a.dv.engine.Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
 	if err != nil {
@@ -100,7 +100,7 @@ func (a *advertModule) sendSyncInterestImpl(prefix enc.Name) (err error) {
 
 func (a *advertModule) OnSyncInterest(args ndn.InterestHandlerArgs, active bool) {
 	// If there is no incoming face ID, we can't use this
-	if args.IncomingFaceId == nil {
+	if !args.IncomingFaceId.IsSet() {
 		log.Warn(a, "Received Sync Interest with no incoming face ID, ignoring")
 		return
 	}
@@ -138,7 +138,7 @@ func (a *advertModule) OnSyncInterest(args ndn.InterestHandlerArgs, active bool)
 			}
 
 			// Process the state vector
-			go a.onStateVector(params.StateVector, *args.IncomingFaceId, active)
+			go a.onStateVector(params.StateVector, args.IncomingFaceId.Unwrap(), active)
 		},
 	})
 }

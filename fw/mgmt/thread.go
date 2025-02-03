@@ -22,7 +22,6 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 var LOCAL_PREFIX = defn.LOCAL_PREFIX
@@ -157,7 +156,7 @@ func (m *Thread) Run() {
 func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
 	config := ndn.InterestConfig{
 		MustBeFresh: true,
-		Nonce:       utils.IdPtr(rand.Uint64()),
+		Nonce:       enc.Some(rand.Uint32()),
 	}
 	interest, err := spec.Spec{}.MakeInterest(name, &config, params, m.signer)
 	if err != nil {
@@ -173,8 +172,8 @@ func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
 func (m *Thread) sendData(interest *Interest, name enc.Name, content enc.Wire) {
 	data, err := spec.Spec{}.MakeData(name,
 		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utils.IdPtr(time.Duration(0)),
+			ContentType: enc.Some(ndn.ContentTypeBlob),
+			Freshness:   enc.Some(time.Duration(0)),
 		},
 		content,
 		m.signer,

@@ -124,5 +124,5 @@ type ValidateExtArgs struct {
 	// Override data name during first validation.
 	OverrideName enc.Name
 	// Next Hop ID to use for fetching certificates.
-	CertNextHop *uint64
+	CertNextHop enc.Optional[uint64]
 }

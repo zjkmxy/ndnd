@@ -98,7 +98,7 @@ type InterestHandlerArgs struct {
 	// PIT token
 	PitToken []byte
 	// Incoming face ID (if available)
-	IncomingFaceId *uint64
+	IncomingFaceId enc.Optional[uint64]
 }
 
 // ReplyFunc represents the callback function to reply for an Interest.

@@ -7,7 +7,6 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 // SignCertArgs are the arguments to SignCert.
@@ -57,10 +56,10 @@ func SignCert(args SignCertArgs) (enc.Wire, error) {
 	// TODO: set description
 	// Create certificate data
 	cfg := &ndn.DataConfig{
-		ContentType:  utils.IdPtr(ndn.ContentTypeKey),
-		Freshness:    utils.IdPtr(time.Hour),
-		SigNotBefore: utils.IdPtr(args.NotBefore),
-		SigNotAfter:  utils.IdPtr(args.NotAfter),
+		ContentType:  enc.Some(ndn.ContentTypeKey),
+		Freshness:    enc.Some(time.Hour),
+		SigNotBefore: enc.Some(args.NotBefore),
+		SigNotAfter:  enc.Some(args.NotAfter),
 	}
 	cert, err := spec.Spec{}.MakeData(certName, cfg, enc.Wire{pk}, args.Signer)
 	if err != nil {

@@ -40,9 +40,8 @@ func (n *LeafNode) Provide(
 	spec := engine.Spec()
 	if dataCfg == nil {
 		dataCfg = &ndn.DataConfig{
-			ContentType:  utils.IdPtr(n.ContentType),
-			Freshness:    utils.IdPtr(n.Freshness),
-			FinalBlockID: nil,
+			ContentType: enc.Some(n.ContentType),
+			Freshness:   enc.Some(n.Freshness),
 		}
 	}
 	validDur := n.ValidDur

@@ -237,14 +237,14 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 		return nil, ndn.ErrInvalidValue{Item: "Data.DataConfig", Value: nil}
 	}
 	finalBlock := []byte(nil)
-	if config.FinalBlockID != nil {
-		finalBlock = config.FinalBlockID.Bytes()
+	if fbid, ok := config.FinalBlockID.Get(); ok {
+		finalBlock = fbid.Bytes()
 	}
 	data := &Data{
 		NameV: name,
 		MetaInfo: &MetaInfo{
-			ContentType:     enc.OptionPtr(utils.ConvIntPtr[ndn.ContentType, uint64](config.ContentType)),
-			FreshnessPeriod: enc.OptionPtr(config.Freshness),
+			ContentType:     utils.ConvIntOpt[ndn.ContentType, uint64](config.ContentType),
+			FreshnessPeriod: config.Freshness,
 			FinalBlockID:    finalBlock,
 		},
 		ContentV:       content,
@@ -268,10 +268,10 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 			data.SignatureInfo.KeyLocator = &KeyLocator{Name: key}
 		}
 
-		if config.SigNotBefore != nil && config.SigNotAfter != nil {
+		if config.SigNotBefore.IsSet() && config.SigNotAfter.IsSet() {
 			data.SignatureInfo.ValidityPeriod = &ValidityPeriod{
-				NotBefore: config.SigNotBefore.UTC().Format(TimeFmt),
-				NotAfter:  config.SigNotAfter.UTC().Format(TimeFmt),
+				NotBefore: config.SigNotBefore.Unwrap().UTC().Format(TimeFmt),
+				NotAfter:  config.SigNotAfter.Unwrap().Format(TimeFmt),
 			}
 		}
 	}
@@ -355,9 +355,9 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 		CanBePrefixV:          config.CanBePrefix,
 		MustBeFreshV:          config.MustBeFresh,
 		ForwardingHintV:       forwardingHint,
-		NonceV:                enc.OptionPtr(utils.ConvIntPtr[uint64, uint32](config.Nonce)),
-		InterestLifetimeV:     enc.OptionPtr(config.Lifetime),
-		HopLimitV:             utils.ConvIntPtr[uint, byte](config.HopLimit),
+		NonceV:                config.Nonce,
+		InterestLifetimeV:     config.Lifetime,
+		HopLimitV:             config.HopLimit,
 		ApplicationParameters: appParam,
 		SignatureInfo:         nil,
 		SignatureValue:        nil,
@@ -380,8 +380,8 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 		interest.SignatureInfo = &SignatureInfo{
 			SignatureType:   uint64(signer.Type()),
 			SignatureNonce:  config.SigNonce,
-			SignatureTime:   enc.OptionPtr(config.SigTime),
-			SignatureSeqNum: enc.OptionPtr(config.SigSeqNo),
+			SignatureTime:   config.SigTime,
+			SignatureSeqNum: config.SigSeqNo,
 		}
 
 		if key := signer.KeyLocator(); key != nil {

@@ -9,7 +9,6 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 type DemoHmacKey struct {
@@ -45,8 +44,8 @@ func (store *DemoHmacKeyStore) EnrollKey(keyName enc.Name, keyBits enc.Buffer, s
 	signer := sig.NewHmacSigner(signKey.KeyBits)
 	spec := spec_2022.Spec{}
 	cert, err := spec.MakeData(keyName, &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeKey),
-		Freshness:   utils.IdPtr(3600 * time.Second),
+		ContentType: enc.Some(ndn.ContentTypeKey),
+		Freshness:   enc.Some(3600 * time.Second),
 	}, enc.Wire{keyBits}, signer)
 	if err != nil {
 		return fmt.Errorf("unable to make certificate: %+v", err)
