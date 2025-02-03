@@ -16,7 +16,6 @@ import (
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/dispatch"
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/utils"
 )
 
 const lpPacketOverhead = 1 + 3 + 1 + 3 // LpPacket+Fragment
@@ -336,16 +335,9 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 			pkt.NextHopFaceID = LP.NextHopFaceId
 		}
 
-		// Local cache policy
-		if l.options.IsLocalCachePolicyEnabled && LP.CachePolicy != nil {
-			pkt.CachePolicy = utils.IdPtr(LP.CachePolicy.CachePolicyType)
-		}
-
-		// PIT Token
-		if len(LP.PitToken) > 0 {
-			pkt.PitToken = make([]byte, len(LP.PitToken))
-			copy(pkt.PitToken, LP.PitToken)
-		}
+		// No need to copy the pit token since it's already in its own buffer
+		// See the generated code for defn.FwLpPacket
+		pkt.PitToken = LP.PitToken
 
 		// Parse inner packet in place
 		L3, err := defn.ParseFwPacket(enc.NewWireView(fragment), false)

@@ -20,7 +20,6 @@ type Pkt struct {
 
 	PitToken       []byte
 	CongestionMark enc.Optional[uint64]
-	CachePolicy    *uint64
 
 	IncomingFaceID uint64
 	NextHopFaceID  enc.Optional[uint64]
