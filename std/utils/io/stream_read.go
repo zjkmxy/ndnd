@@ -13,11 +13,19 @@ func ReadTlvStream(
 	onFrame func([]byte) bool,
 	ignoreError func(error) bool,
 ) error {
-	recvBuf := make([]byte, ndn.MaxNDNPacketSize*32)
+	recvBuf := make([]byte, ndn.MaxNDNPacketSize*8)
 	recvOff := 0
 	tlvOff := 0
 
 	for {
+		// If less than one packet space remains in buffer, shift to beginning
+		if len(recvBuf)-recvOff < ndn.MaxNDNPacketSize {
+			copy(recvBuf, recvBuf[tlvOff:recvOff])
+			recvOff -= tlvOff
+			tlvOff = 0
+		}
+
+		// Read multiple packets at once
 		readSize, err := reader.Read(recvBuf[recvOff:])
 		recvOff += readSize
 		if err != nil {
@@ -62,13 +70,6 @@ func ReadTlvStream(
 				// Incomplete packet (for sure)
 				break
 			}
-		}
-
-		// If less than one packet space remains in buffer, shift to beginning
-		if recvOff-tlvOff < ndn.MaxNDNPacketSize {
-			copy(recvBuf, recvBuf[tlvOff:recvOff])
-			recvOff -= tlvOff
-			tlvOff = 0
 		}
 	}
 }
