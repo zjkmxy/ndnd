@@ -426,11 +426,11 @@ func TestReadIntBasic(t *testing.T) {
 	))
 	require.NoError(t, err)
 	require.Equal(t, "/local/ndn/prefix", interest.Name().String())
-	require.Equal(t, 4*time.Second, *interest.Lifetime())
+	require.Equal(t, 4*time.Second, interest.Lifetime().Unwrap())
 	require.True(t, interest.AppParam() == nil)
 	require.False(t, interest.CanBePrefix())
 	require.False(t, interest.MustBeFresh())
-	require.True(t, interest.Nonce() == nil)
+	require.False(t, interest.Nonce().IsSet())
 	require.True(t, interest.HopLimit() == nil)
 	require.True(t, interest.Signature().SigType() == ndn.SignatureNone)
 
@@ -440,11 +440,11 @@ func TestReadIntBasic(t *testing.T) {
 	))
 	require.NoError(t, err)
 	require.Equal(t, "/local/ndn/prefix", interest.Name().String())
-	require.Equal(t, 10*time.Millisecond, *interest.Lifetime())
+	require.Equal(t, 10*time.Millisecond, interest.Lifetime().Unwrap())
 	require.True(t, interest.AppParam() == nil)
 	require.True(t, interest.CanBePrefix())
 	require.True(t, interest.MustBeFresh())
-	require.Equal(t, uint64(0), *interest.Nonce())
+	require.Equal(t, uint32(0), interest.Nonce().Unwrap())
 	require.Equal(t, uint(1), *interest.HopLimit())
 	require.True(t, interest.Signature().SigType() == ndn.SignatureNone)
 
@@ -458,7 +458,7 @@ func TestReadIntBasic(t *testing.T) {
 	require.Equal(t,
 		"/local/ndn/prefix/params-sha256=47756f21fe0ee265149aa2be3c63c538a72378e9b0a58b39c5916367d35bda10",
 		interest.Name().String())
-	require.Equal(t, 4*time.Second, *interest.Lifetime())
+	require.Equal(t, 4*time.Second, interest.Lifetime().Unwrap())
 	require.False(t, interest.CanBePrefix())
 	require.False(t, interest.MustBeFresh())
 	require.Equal(t, []byte{1, 2, 3, 4}, interest.AppParam().Join())
@@ -488,7 +488,7 @@ func TestReadIntBasic(t *testing.T) {
 	require.Equal(t,
 		"/local/ndn/prefix/params-sha256=8e6e36d7eabcde43756140c90bda09d500d2a577f2f533b569f0441df0a7f9e2",
 		interest.Name().String())
-	require.Equal(t, uint64(0x6c211166), *interest.Nonce())
+	require.Equal(t, uint32(0x6c211166), interest.Nonce().Unwrap())
 	require.Equal(t, []byte{1, 2, 3, 4}, interest.AppParam().Join())
 	require.True(t, interest.Signature().SigType() == ndn.SignatureDigestSha256)
 	h := sha256.New()
@@ -512,7 +512,7 @@ func TestReadIntBasic(t *testing.T) {
 	require.Equal(t,
 		"/local/ndn/prefix/params-sha256=4077a57049d83848b525a423ab978e6480f96d5ca38a80a5e2d6e250a617be4f",
 		interest.Name().String())
-	require.Equal(t, uint64(0x6c211166), *interest.Nonce())
+	require.Equal(t, uint32(0x6c211166), interest.Nonce().Unwrap())
 	require.Equal(t, []byte{}, interest.AppParam().Join())
 	require.True(t, interest.Signature().SigType() == ndn.SignatureDigestSha256)
 	h = sha256.New()

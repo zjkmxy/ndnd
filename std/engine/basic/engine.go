@@ -193,12 +193,8 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 	name := args.Interest.Name()
 
 	// Compute deadline
-	args.Deadline = e.timer.Now()
-	if args.Interest.Lifetime() != nil {
-		args.Deadline = args.Deadline.Add(*args.Interest.Lifetime())
-	} else {
-		args.Deadline = args.Deadline.Add(DefaultInterestLife)
-	}
+	args.Deadline = e.timer.Now().
+		Add(args.Interest.Lifetime().GetOr(DefaultInterestLife))
 
 	// Match node
 	handler := func() ndn.InterestHandler {

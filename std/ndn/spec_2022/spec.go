@@ -197,16 +197,12 @@ func (t *Interest) ForwardingHint() []enc.Name {
 	return t.ForwardingHintV.Names
 }
 
-func (t *Interest) Nonce() *uint64 {
-	if !t.NonceV.IsSet() {
-		return nil
-	} else {
-		return utils.IdPtr(uint64(t.NonceV.Unwrap()))
-	}
+func (t *Interest) Nonce() enc.Optional[uint32] {
+	return t.NonceV
 }
 
-func (t *Interest) Lifetime() *time.Duration {
-	return t.InterestLifetimeV.Ptr()
+func (t *Interest) Lifetime() enc.Optional[time.Duration] {
+	return t.InterestLifetimeV
 }
 
 func (t *Interest) HopLimit() *uint {

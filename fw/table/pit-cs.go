@@ -122,10 +122,7 @@ func (bpe *basePitEntry) InsertInRecord(
 	face uint64,
 	incomingPitToken []byte,
 ) (*PitInRecord, bool, uint32) {
-	lifetime := time.Millisecond * 4000
-	if interest.Lifetime() != nil {
-		lifetime = *interest.Lifetime()
-	}
+	lifetime := interest.Lifetime().GetOr(time.Millisecond * 4000)
 
 	var record *PitInRecord
 	var ok bool

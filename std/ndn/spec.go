@@ -29,9 +29,9 @@ type Interest interface {
 	// ForwardingHint is the list of names to guide the Interest forwarding
 	ForwardingHint() []enc.Name
 	// Number to identify the Interest uniquely
-	Nonce() *uint64
+	Nonce() enc.Optional[uint32]
 	// Lifetime of the Interest
-	Lifetime() *time.Duration
+	Lifetime() enc.Optional[time.Duration]
 	// Max number of hops the Interest can traverse
 	HopLimit() *uint
 	// Application parameters of the Interest (optional)
