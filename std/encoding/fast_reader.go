@@ -168,6 +168,14 @@ func (r *FastReader) ReadBuf(size int) ([]byte, error) {
 		return nil, r._overflow()
 	}
 
+	// skip allocation if the entire buffer is in the current segment
+	if size <= len(r.wire[r.seg])-r.rpos {
+		ret := r.wire[r.seg][r.rpos : r.rpos+size]
+		r.apos += size
+		r.rpos += size
+		return ret, nil
+	}
+
 	ret := make([]byte, size)
 	written := 0
 	for written < size {
