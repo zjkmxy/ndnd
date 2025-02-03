@@ -97,7 +97,9 @@ type FixedUintField struct {
 	//+field:fixedUint:byte
 	Byte byte `tlv:"0x01"`
 	//+field:fixedUint:uint32:optional
-	U32 *uint32 `tlv:"0x02"`
+	U32 enc.Optional[uint32] `tlv:"0x02"`
 	//+field:fixedUint:uint64:optional
-	U64 *uint64 `tlv:"0x03"`
+	U64 enc.Optional[uint64] `tlv:"0x03"`
+	//+field:byte
+	BytePtr *byte `tlv:"0x04"`
 }

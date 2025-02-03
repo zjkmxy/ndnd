@@ -224,7 +224,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 			l.nextSequence++
 			fragments[i] = &spec.LpPacket{
 				Fragment:  frag,
-				Sequence:  utils.IdPtr(l.nextSequence),
+				Sequence:  enc.Some(l.nextSequence),
 				FragIndex: enc.Some(uint64(i)),
 				FragCount: enc.Some(uint64(fragCount)),
 			}
@@ -305,7 +305,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		}
 
 		// Reassembly
-		if l.options.IsReassemblyEnabled && LP.Sequence != nil {
+		if l.options.IsReassemblyEnabled && LP.Sequence.IsSet() {
 			fragIndex := uint64(0)
 			if v, ok := LP.FragIndex.Get(); ok {
 				fragIndex = v
@@ -314,7 +314,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 			if v, ok := LP.FragCount.Get(); ok {
 				fragCount = v
 			}
-			baseSequence := *LP.Sequence - fragIndex
+			baseSequence := LP.Sequence.Unwrap() - fragIndex
 
 			core.Log.Trace(l, "Received fragment", "index", fragIndex, "count", fragCount, "base", baseSequence)
 			if fragIndex == 0 && fragCount == 1 {

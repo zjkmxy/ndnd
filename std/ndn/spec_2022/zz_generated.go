@@ -1737,7 +1737,7 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 	}
 
 	l := uint(0)
-	if value.Sequence != nil {
+	if value.Sequence.IsSet() {
 		l += 1
 		l += 1 + 8
 	}
@@ -1776,11 +1776,11 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 		l += 3
 		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Ack != nil {
+	if value.Ack.IsSet() {
 		l += 3
 		l += 1 + 8
 	}
-	if value.TxSequence != nil {
+	if value.TxSequence.IsSet() {
 		l += 3
 		l += 1 + 8
 	}
@@ -1802,7 +1802,7 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 
 	wirePlan := make([]uint, 0)
 	l = uint(0)
-	if value.Sequence != nil {
+	if value.Sequence.IsSet() {
 		l += 1
 		l += 1 + 8
 	}
@@ -1841,11 +1841,11 @@ func (encoder *LpPacketEncoder) Init(value *LpPacket) {
 		l += 3
 		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Ack != nil {
+	if value.Ack.IsSet() {
 		l += 3
 		l += 1 + 8
 	}
-	if value.TxSequence != nil {
+	if value.TxSequence.IsSet() {
 		l += 3
 		l += 1 + 8
 	}
@@ -1894,11 +1894,11 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 
 	pos := uint(0)
 
-	if value.Sequence != nil {
+	if optval, ok := value.Sequence.Get(); ok {
 		buf[pos] = byte(81)
 		pos += 1
 		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(*value.Sequence))
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(optval))
 		pos += 9
 	}
 	if optval, ok := value.FragIndex.Get(); ok {
@@ -1971,20 +1971,20 @@ func (encoder *LpPacketEncoder) EncodeInto(value *LpPacket, wire enc.Wire) {
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Ack != nil {
+	if optval, ok := value.Ack.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(836))
 		pos += 3
 		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(*value.Ack))
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(optval))
 		pos += 9
 	}
-	if value.TxSequence != nil {
+	if optval, ok := value.TxSequence.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(840))
 		pos += 3
 		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(*value.TxSequence))
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(optval))
 		pos += 9
 	}
 	if value.NonDiscovery {
@@ -2101,8 +2101,8 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_Sequence = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2113,10 +2113,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Sequence = &tempVal
+						value.Sequence.Set(optval)
 					}
 				}
 			case 82:
@@ -2258,8 +2258,8 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_Ack = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2270,10 +2270,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Ack = &tempVal
+						value.Ack.Set(optval)
 					}
 				}
 			case 840:
@@ -2281,8 +2281,8 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_TxSequence = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2293,10 +2293,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.TxSequence = &tempVal
+						value.TxSequence.Set(optval)
 					}
 				}
 			case 844:
@@ -2336,7 +2336,7 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 	err = nil
 
 	if !handled_Sequence && err == nil {
-		value.Sequence = nil
+		value.Sequence.Unset()
 	}
 	if !handled_FragIndex && err == nil {
 		value.FragIndex.Unset()
@@ -2363,10 +2363,10 @@ func (context *LpPacketParsingContext) Parse(reader enc.FastReader, ignoreCritic
 		value.CongestionMark.Unset()
 	}
 	if !handled_Ack && err == nil {
-		value.Ack = nil
+		value.Ack.Unset()
 	}
 	if !handled_TxSequence && err == nil {
-		value.TxSequence = nil
+		value.TxSequence.Unset()
 	}
 	if !handled_NonDiscovery && err == nil {
 		value.NonDiscovery = false
@@ -2484,7 +2484,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 		l += uint(enc.TLNum(encoder.ForwardingHintV_encoder.length).EncodingLength())
 		l += encoder.ForwardingHintV_encoder.length
 	}
-	if value.NonceV != nil {
+	if value.NonceV.IsSet() {
 		l += 1
 		l += 1 + 4
 	}
@@ -2494,7 +2494,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 	}
 	if value.HopLimitV != nil {
 		l += 1
-		l += 1 + 1
+		l += 2
 	}
 	encoder.sigCoverStart = int(l)
 	encoder.digestCoverStart = int(l)
@@ -2537,7 +2537,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 		l += uint(enc.TLNum(encoder.ForwardingHintV_encoder.length).EncodingLength())
 		l += encoder.ForwardingHintV_encoder.length
 	}
-	if value.NonceV != nil {
+	if value.NonceV.IsSet() {
 		l += 1
 		l += 1 + 4
 	}
@@ -2547,7 +2547,7 @@ func (encoder *InterestEncoder) Init(value *Interest) {
 	}
 	if value.HopLimitV != nil {
 		l += 1
-		l += 1 + 1
+		l += 2
 	}
 
 	if value.ApplicationParameters != nil {
@@ -2641,11 +2641,11 @@ func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
 			pos += encoder.ForwardingHintV_encoder.length
 		}
 	}
-	if value.NonceV != nil {
+	if optval, ok := value.NonceV.Get(); ok {
 		buf[pos] = byte(10)
 		pos += 1
 		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(*value.NonceV))
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(optval))
 		pos += 5
 	}
 	if optval, ok := value.InterestLifetimeV.Get(); ok {
@@ -2850,8 +2850,8 @@ func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_NonceV = true
 					{
-						tempVal := uint32(0)
-						tempVal = uint32(0)
+						optval := uint32(0)
+						optval = uint32(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -2862,10 +2862,10 @@ func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritic
 									}
 									break
 								}
-								tempVal = uint32(tempVal<<8) | uint32(x)
+								optval = uint32(optval<<8) | uint32(x)
 							}
 						}
-						value.NonceV = &tempVal
+						value.NonceV.Set(optval)
 					}
 				}
 			case 12:
@@ -2897,11 +2897,11 @@ func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					handled = true
 					handled_HopLimitV = true
 					{
-						err = reader.Skip(1)
+						buf, err := reader.ReadBuf(1)
 						if err == io.EOF {
 							err = io.ErrUnexpectedEOF
 						}
-						value.HopLimitV = &reader.Range(reader.Pos()-1, reader.Pos())[0][0]
+						value.HopLimitV = &buf[0]
 					}
 				}
 			case 36:
@@ -2955,7 +2955,7 @@ func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritic
 					value.ForwardingHintV = nil
 				case 6 - 1:
 					handled_NonceV = true
-					value.NonceV = nil
+					value.NonceV.Unset()
 				case 7 - 1:
 					handled_InterestLifetimeV = true
 					value.InterestLifetimeV.Unset()
@@ -3011,7 +3011,7 @@ func (context *InterestParsingContext) Parse(reader enc.FastReader, ignoreCritic
 		value.ForwardingHintV = nil
 	}
 	if !handled_NonceV && err == nil {
-		value.NonceV = nil
+		value.NonceV.Unset()
 	}
 	if !handled_InterestLifetimeV && err == nil {
 		value.InterestLifetimeV.Unset()

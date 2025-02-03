@@ -205,10 +205,10 @@ func (t *Interest) ForwardingHint() []enc.Name {
 }
 
 func (t *Interest) Nonce() *uint64 {
-	if t.NonceV == nil {
+	if !t.NonceV.IsSet() {
 		return nil
 	} else {
-		return utils.IdPtr(uint64(*t.NonceV))
+		return utils.IdPtr(uint64(t.NonceV.Unwrap()))
 	}
 }
 
@@ -355,7 +355,7 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 		CanBePrefixV:          config.CanBePrefix,
 		MustBeFreshV:          config.MustBeFresh,
 		ForwardingHintV:       forwardingHint,
-		NonceV:                utils.ConvIntPtr[uint64, uint32](config.Nonce),
+		NonceV:                enc.OptionPtr(utils.ConvIntPtr[uint64, uint32](config.Nonce)),
 		InterestLifetimeV:     enc.OptionPtr(config.Lifetime),
 		HopLimitV:             utils.ConvIntPtr[uint, byte](config.HopLimit),
 		ApplicationParameters: appParam,

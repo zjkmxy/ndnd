@@ -84,7 +84,7 @@ type CachePolicy struct {
 // +tlv-model:nocopy,private
 type LpPacket struct {
 	//+field:fixedUint:uint64:optional
-	Sequence *uint64 `tlv:"0x51"`
+	Sequence enc.Optional[uint64] `tlv:"0x51"`
 	//+field:natural:optional
 	FragIndex enc.Optional[uint64] `tlv:"0x52"`
 	//+field:natural:optional
@@ -102,9 +102,9 @@ type LpPacket struct {
 	//+field:natural:optional
 	CongestionMark enc.Optional[uint64] `tlv:"0x0340"`
 	//+field:fixedUint:uint64:optional
-	Ack *uint64 `tlv:"0x0344"`
+	Ack enc.Optional[uint64] `tlv:"0x0344"`
 	//+field:fixedUint:uint64:optional
-	TxSequence *uint64 `tlv:"0x0348"`
+	TxSequence enc.Optional[uint64] `tlv:"0x0348"`
 	//+field:bool
 	NonDiscovery bool `tlv:"0x034C"`
 	//+field:wire
@@ -130,10 +130,10 @@ type Interest struct {
 	//+field:struct:Links
 	ForwardingHintV *Links `tlv:"0x1e"`
 	//+field:fixedUint:uint32:optional
-	NonceV *uint32 `tlv:"0x0a"`
+	NonceV enc.Optional[uint32] `tlv:"0x0a"`
 	//+field:time:optional
 	InterestLifetimeV enc.Optional[time.Duration] `tlv:"0x0c"`
-	//+field:fixedUint:byte:optional
+	//+field:byte
 	HopLimitV *byte `tlv:"0x22"`
 
 	//+field:offsetMarker

@@ -164,7 +164,7 @@ func (p *PitCsTree) InsertInterest(interest *spec.Interest, hint enc.Name, inFac
 	// Only considered a duplicate (loop) if from different face since
 	// is just retransmission and not loop if same face
 	for face, inRecord := range entry.inRecords {
-		if face != inFace && inRecord.LatestNonce == *interest.NonceV {
+		if face != inFace && inRecord.LatestNonce == interest.NonceV.Unwrap() {
 			return entry, true
 		}
 	}
@@ -276,7 +276,7 @@ func (e *nameTreePitEntry) InsertOutRecord(interest *spec.Interest, face uint64)
 	if record, ok = e.outRecords[face]; !ok {
 		record := new(PitOutRecord)
 		record.Face = face
-		record.LatestNonce = *interest.NonceV
+		record.LatestNonce = interest.NonceV.Unwrap()
 		record.LatestTimestamp = time.Now()
 		record.LatestInterest = interest.NameV.Clone()
 		record.ExpirationTime = time.Now().Add(lifetime)
@@ -285,7 +285,7 @@ func (e *nameTreePitEntry) InsertOutRecord(interest *spec.Interest, face uint64)
 	}
 
 	// Existing record
-	record.LatestNonce = *interest.NonceV
+	record.LatestNonce = interest.NonceV.Unwrap()
 	record.LatestTimestamp = time.Now()
 	record.LatestInterest = interest.NameV.Clone()
 	record.ExpirationTime = time.Now().Add(lifetime)

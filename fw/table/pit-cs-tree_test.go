@@ -10,7 +10,6 @@ import (
 	"github.com/named-data/ndnd/fw/core"
 	enc "github.com/named-data/ndnd/std/encoding"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,7 +43,7 @@ func makeData(name enc.Name, content enc.Wire) *spec.Data {
 func makeInterest(name enc.Name) *spec.Interest {
 	return &spec.Interest{
 		NameV:  name,
-		NonceV: utils.IdPtr(rand.Uint32()),
+		NonceV: enc.Some(rand.Uint32()),
 	}
 }
 
@@ -418,25 +417,24 @@ func TestInsertOutRecord(t *testing.T) {
 	outRecord := pitEntry.InsertOutRecord(interest, inFace)
 	assert.Equal(t, outRecord.Face, inFace)
 	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
-	assert.True(t, outRecord.LatestNonce == *interest.NonceV)
+	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
 
 	// Update existing outrecord
-	oldNonce := new(uint32)
-	*oldNonce = 2
-	*interest.NonceV = *oldNonce
-	*interest.NonceV = 3
+	oldNonce := uint32(2)
+	interest.NonceV.Set(oldNonce)
+	interest.NonceV.Set(3)
 	outRecord = pitEntry.InsertOutRecord(interest, inFace)
 	assert.Equal(t, outRecord.Face, inFace)
 	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
-	assert.True(t, outRecord.LatestNonce == *interest.NonceV)
-	assert.False(t, outRecord.LatestNonce == *oldNonce)
+	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
+	assert.False(t, outRecord.LatestNonce == oldNonce)
 
 	// Add new outrecord on a different face
 	inFace2 := uint64(2222)
 	outRecord = pitEntry.InsertOutRecord(interest, inFace2)
 	assert.Equal(t, outRecord.Face, inFace2)
 	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
-	assert.True(t, outRecord.LatestNonce == *interest.NonceV)
+	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
 }
 
 func TestGetOutRecords(t *testing.T) {
@@ -456,19 +454,18 @@ func TestGetOutRecords(t *testing.T) {
 	assert.Equal(t, len(outRecords), 1)
 	assert.Equal(t, outRecords[0].Face, inFace)
 	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
-	assert.True(t, outRecords[0].LatestNonce == *interest.NonceV)
+	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	// Update existing outrecord
-	oldNonce := new(uint32)
-	*oldNonce = 2
-	*interest.NonceV = *oldNonce
-	*interest.NonceV = 3
+	oldNonce := uint32(2)
+	interest.NonceV.Set(oldNonce)
+	interest.NonceV.Set(3)
 	_ = pitEntry.InsertOutRecord(interest, inFace)
 	outRecords = pitEntry.GetOutRecords()
 	assert.Equal(t, len(outRecords), 1)
 	assert.Equal(t, outRecords[0].Face, inFace)
 	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
-	assert.True(t, outRecords[0].LatestNonce == *interest.NonceV)
+	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	// Add new outrecord on a different face
 	inFace2 := uint64(2222)
@@ -482,11 +479,11 @@ func TestGetOutRecords(t *testing.T) {
 
 	assert.Equal(t, outRecords[0].Face, inFace)
 	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
-	assert.True(t, outRecords[0].LatestNonce == *interest.NonceV)
+	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	assert.Equal(t, outRecords[1].Face, inFace2)
 	assert.Equal(t, outRecords[1].LatestInterest, interest.NameV)
-	assert.True(t, outRecords[1].LatestNonce == *interest.NonceV)
+	assert.True(t, outRecords[1].LatestNonce == interest.NonceV.Unwrap())
 }
 
 func FindMatchingDataFromCS(t *testing.T) {

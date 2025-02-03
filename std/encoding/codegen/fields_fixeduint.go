@@ -47,7 +47,7 @@ func NewFixedUintField(name string, typeNum uint64, annotation string, _ *TlvMod
 func (f *FixedUintField) GenEncodingLength() (string, error) {
 	g := strErrBuf{}
 	if f.opt {
-		g.printlnf("if value.%s != nil {", f.name)
+		g.printlnf("if value.%s.IsSet() {", f.name)
 		g.printlne(GenTypeNumLen(f.typeNum))
 		g.printlnf("l += 1 + %d", f.l)
 		g.printlnf("}")
@@ -89,9 +89,9 @@ func (f *FixedUintField) GenEncodeInto() (string, error) {
 	}
 
 	if f.opt {
-		g.printlnf("if value.%s != nil {", f.name)
+		g.printlnf("if optval, ok := value.%s.Get(); ok {", f.name)
 		g.printlne(GenEncodeTypeNum(f.typeNum))
-		g.printlne(gen("*value." + f.name))
+		g.printlne(gen("optval"))
 		g.printlnf("}")
 	} else {
 		g.printlne(GenEncodeTypeNum(f.typeNum))
@@ -150,21 +150,9 @@ func (f *FixedUintField) GenReadFrom() (string, error) {
 
 	if f.opt {
 		g.printlnf("{")
-
-		// Special case for a single byte - directly use wire address
-		// This is useful to modify the TLV in-place (e.g. HopLimit)
-		if f.l == 1 {
-			g.printlnf("err = reader.Skip(1)")
-			g.printlnf("if err == io.EOF {")
-			g.printlnf("err = io.ErrUnexpectedEOF")
-			g.printlnf("}")
-			g.printlnf("value.%s = &reader.Range(reader.Pos()-1, reader.Pos())[0][0]", f.name)
-		} else {
-			g.printlnf("tempVal := %s(0)", digit)
-			gen("tempVal")
-			g.printlnf("value.%s = &tempVal", f.name)
-		}
-
+		g.printlnf("optval := %s(0)", digit)
+		gen("optval")
+		g.printlnf("value.%s.Set(optval)", f.name)
 		g.printlnf("}")
 	} else {
 		gen("value." + f.name)
@@ -174,7 +162,7 @@ func (f *FixedUintField) GenReadFrom() (string, error) {
 
 func (f *FixedUintField) GenSkipProcess() (string, error) {
 	if f.opt {
-		return "value." + f.name + " = nil", nil
+		return fmt.Sprintf("value.%s.Unset()", f.name), nil
 	} else {
 		return fmt.Sprintf("err = enc.ErrSkipRequired{Name: \"%s\", TypeNum: %d}", f.name, f.typeNum), nil
 	}

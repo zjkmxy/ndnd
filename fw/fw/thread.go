@@ -217,14 +217,14 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	}
 
 	// Drop packet if no nonce is found
-	if interest.NonceV == nil {
+	if !interest.NonceV.IsSet() {
 		core.Log.Debug(t, "Interest is missing Nonce", "name", packet.Name)
 		return
 	}
 
 	// Check if packet is in dead nonce list
-	if exists := t.deadNonceList.Find(interest.NameV, *interest.NonceV); exists {
-		core.Log.Debug(t, "Interest is looping (DNL)", "name", packet.Name, "nonce", *interest.NonceV)
+	if exists := t.deadNonceList.Find(interest.NameV, interest.NonceV.Unwrap()); exists {
+		core.Log.Debug(t, "Interest is looping (DNL)", "name", packet.Name, "nonce", interest.NonceV.Unwrap())
 		return
 	}
 

@@ -1221,13 +1221,17 @@ func (encoder *FixedUintFieldEncoder) Init(value *FixedUintField) {
 	l := uint(0)
 	l += 1
 	l += 1 + 1
-	if value.U32 != nil {
+	if value.U32.IsSet() {
 		l += 1
 		l += 1 + 4
 	}
-	if value.U64 != nil {
+	if value.U64.IsSet() {
 		l += 1
 		l += 1 + 8
+	}
+	if value.BytePtr != nil {
+		l += 1
+		l += 2
 	}
 	encoder.length = l
 
@@ -1246,19 +1250,26 @@ func (encoder *FixedUintFieldEncoder) EncodeInto(value *FixedUintField, buf []by
 	buf[pos] = 1
 	buf[pos+1] = byte(value.Byte)
 	pos += 2
-	if value.U32 != nil {
+	if optval, ok := value.U32.Get(); ok {
 		buf[pos] = byte(2)
 		pos += 1
 		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(*value.U32))
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(optval))
 		pos += 5
 	}
-	if value.U64 != nil {
+	if optval, ok := value.U64.Get(); ok {
 		buf[pos] = byte(3)
 		pos += 1
 		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(*value.U64))
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(optval))
 		pos += 9
+	}
+	if value.BytePtr != nil {
+		buf[pos] = byte(4)
+		pos += 1
+		buf[pos] = 1
+		buf[pos+1] = byte(*value.BytePtr)
+		pos += 2
 	}
 }
 
@@ -1277,6 +1288,7 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.FastReader, ignore
 	var handled_Byte bool = false
 	var handled_U32 bool = false
 	var handled_U64 bool = false
+	var handled_BytePtr bool = false
 
 	progress := -1
 	_ = progress
@@ -1317,8 +1329,8 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.FastReader, ignore
 					handled = true
 					handled_U32 = true
 					{
-						tempVal := uint32(0)
-						tempVal = uint32(0)
+						optval := uint32(0)
+						optval = uint32(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1329,10 +1341,10 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.FastReader, ignore
 									}
 									break
 								}
-								tempVal = uint32(tempVal<<8) | uint32(x)
+								optval = uint32(optval<<8) | uint32(x)
 							}
 						}
-						value.U32 = &tempVal
+						value.U32.Set(optval)
 					}
 				}
 			case 3:
@@ -1340,8 +1352,8 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.FastReader, ignore
 					handled = true
 					handled_U64 = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1352,10 +1364,22 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.FastReader, ignore
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.U64 = &tempVal
+						value.U64.Set(optval)
+					}
+				}
+			case 4:
+				if true {
+					handled = true
+					handled_BytePtr = true
+					{
+						buf, err := reader.ReadBuf(1)
+						if err == io.EOF {
+							err = io.ErrUnexpectedEOF
+						}
+						value.BytePtr = &buf[0]
 					}
 				}
 			default:
@@ -1380,10 +1404,13 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.FastReader, ignore
 		err = enc.ErrSkipRequired{Name: "Byte", TypeNum: 1}
 	}
 	if !handled_U32 && err == nil {
-		value.U32 = nil
+		value.U32.Unset()
 	}
 	if !handled_U64 && err == nil {
-		value.U64 = nil
+		value.U64.Unset()
+	}
+	if !handled_BytePtr && err == nil {
+		value.BytePtr = nil
 	}
 
 	if err != nil {

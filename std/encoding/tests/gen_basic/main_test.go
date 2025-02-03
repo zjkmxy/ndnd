@@ -6,7 +6,6 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/encoding/tests/gen_basic"
-	"github.com/named-data/ndnd/std/utils"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -236,9 +235,10 @@ func TestFixedUintField(t *testing.T) {
 	tu.SetT(t)
 
 	f := gen_basic.FixedUintField{
-		Byte: 1,
-		U32:  utils.IdPtr[uint32](2),
-		U64:  utils.IdPtr[uint64](3),
+		Byte:    1,
+		U32:     enc.Some[uint32](2),
+		U64:     enc.Some[uint64](3),
+		BytePtr: nil,
 	}
 	buf := f.Bytes()
 	require.Equal(t, []byte{
@@ -250,9 +250,10 @@ func TestFixedUintField(t *testing.T) {
 	require.Equal(t, f, *f2)
 
 	f = gen_basic.FixedUintField{
-		Byte: 0,
-		U32:  nil,
-		U64:  nil,
+		Byte:    0,
+		U32:     enc.None[uint32](),
+		U64:     enc.None[uint64](),
+		BytePtr: nil,
 	}
 	buf = f.Bytes()
 	require.Equal(t, []byte{
@@ -263,4 +264,23 @@ func TestFixedUintField(t *testing.T) {
 
 	buf = []byte{}
 	tu.Err(gen_basic.ParseFixedUintField(enc.NewFastBufReader(buf), false))
+
+	bytePtr := new(byte)
+	*bytePtr = 5
+	f = gen_basic.FixedUintField{
+		Byte:    7,
+		BytePtr: bytePtr,
+	}
+
+	buf = f.Bytes()
+
+	f2 = tu.NoErr(gen_basic.ParseFixedUintField(enc.NewFastBufReader(buf), false))
+	require.Equal(t, uint8(7), f2.Byte)
+	require.Equal(t, uint8(5), *f2.BytePtr)
+
+	f2.Byte = 8
+	*f2.BytePtr = 9
+	f2 = tu.NoErr(gen_basic.ParseFixedUintField(enc.NewFastBufReader(buf), false))
+	require.Equal(t, uint8(7), f2.Byte)     // unchanged
+	require.Equal(t, uint8(9), *f2.BytePtr) // changed
 }

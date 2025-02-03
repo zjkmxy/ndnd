@@ -132,7 +132,7 @@ func (bpe *basePitEntry) InsertInRecord(
 	if record, ok = bpe.inRecords[face]; !ok {
 		record := new(PitInRecord)
 		record.Face = face
-		record.LatestNonce = *interest.NonceV
+		record.LatestNonce = interest.NonceV.Unwrap()
 		record.LatestTimestamp = time.Now()
 		record.LatestInterest = interest.NameV.Clone()
 		record.ExpirationTime = time.Now().Add(lifetime)
@@ -143,7 +143,7 @@ func (bpe *basePitEntry) InsertInRecord(
 
 	// Existing record
 	previousNonce := record.LatestNonce
-	record.LatestNonce = *interest.NonceV
+	record.LatestNonce = interest.NonceV.Unwrap()
 	record.LatestTimestamp = time.Now()
 	record.LatestInterest = interest.NameV.Clone()
 	record.ExpirationTime = time.Now().Add(lifetime)
