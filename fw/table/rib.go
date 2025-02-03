@@ -56,7 +56,7 @@ func (r *RibEntry) fillTreeToPrefixEnc(name enc.Name) *RibEntry {
 	for depth := entry.depth; depth < len(name); depth++ {
 		component := At(name, depth).Clone()
 		child := &RibEntry{
-			Name:      name[:depth+1].Clone(),
+			Name:      entry.Name.Append(component),
 			depth:     depth + 1,
 			component: component,
 			parent:    entry,

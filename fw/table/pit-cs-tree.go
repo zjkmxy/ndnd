@@ -44,7 +44,8 @@ type nameTreeCsEntry struct {
 
 // pitCsTreeNode represents an entry in a PIT-CS tree.
 type pitCsTreeNode struct {
-	component *enc.Component
+	component enc.Component
+	name      enc.Name
 	depth     int
 
 	parent   *pitCsTreeNode
@@ -59,7 +60,7 @@ type pitCsTreeNode struct {
 func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	pitCs := new(PitCsTree)
 	pitCs.root = new(pitCsTreeNode)
-	pitCs.root.component = nil // Root component will be nil since it represents zero components
+	pitCs.root.component = enc.Component{} // zero component
 	pitCs.root.pitEntries = make([]*nameTreePitEntry, 0)
 	pitCs.root.children = make(map[uint64]*pitCsTreeNode)
 	pitCs.onExpiration = onExpiration
@@ -130,7 +131,7 @@ func (e *nameTreePitEntry) PitCs() PitCsTable {
 // InsertInterest inserts an entry in the PIT upon receipt of an Interest.
 // Returns tuple of PIT entry and whether the Nonce is a duplicate.
 func (p *PitCsTree) InsertInterest(interest *spec.Interest, hint enc.Name, inFace uint64) (PitEntry, bool) {
-	name := interest.NameV.Clone()
+	name := interest.Name()
 
 	node := p.root.fillTreeToPrefixEnc(name)
 	var entry *nameTreePitEntry
@@ -148,7 +149,7 @@ func (p *PitCsTree) InsertInterest(interest *spec.Interest, hint enc.Name, inFac
 		entry = new(nameTreePitEntry)
 		entry.node = node
 		entry.pitCsTable = p
-		entry.encname = name
+		entry.encname = node.name
 		entry.canBePrefix = interest.CanBePrefixV
 		entry.mustBeFresh = interest.MustBeFreshV
 		entry.forwardingHintNew = hint
@@ -274,7 +275,7 @@ func (e *nameTreePitEntry) InsertOutRecord(interest *spec.Interest, face uint64)
 		record.Face = face
 		record.LatestNonce = interest.NonceV.Unwrap()
 		record.LatestTimestamp = time.Now()
-		record.LatestInterest = interest.NameV.Clone()
+		record.LatestInterest = e.encname
 		record.ExpirationTime = time.Now().Add(lifetime)
 		e.outRecords[face] = record
 		return record
@@ -283,7 +284,7 @@ func (e *nameTreePitEntry) InsertOutRecord(interest *spec.Interest, face uint64)
 	// Existing record
 	record.LatestNonce = interest.NonceV.Unwrap()
 	record.LatestTimestamp = time.Now()
-	record.LatestInterest = interest.NameV.Clone()
+	record.LatestInterest = e.encname
 	record.ExpirationTime = time.Now().Add(lifetime)
 	return record
 }
@@ -329,19 +330,22 @@ func (p *pitCsTreeNode) findLongestPrefixEntryEnc(name enc.Name) *pitCsTreeNode 
 }
 
 func (p *pitCsTreeNode) fillTreeToPrefixEnc(name enc.Name) *pitCsTreeNode {
-	curNode := p.findLongestPrefixEntryEnc(name)
-	for depth := curNode.depth + 1; depth <= len(name); depth++ {
-		newNode := new(pitCsTreeNode)
-		var temp = At(name, depth-1)
-		newNode.component = &temp
-		newNode.depth = depth
-		newNode.parent = curNode
-		newNode.children = make(map[uint64]*pitCsTreeNode)
+	entry := p.findLongestPrefixEntryEnc(name)
 
-		curNode.children[newNode.component.Hash()] = newNode
-		curNode = newNode
+	for depth := entry.depth; depth < len(name); depth++ {
+		component := At(name, depth).Clone()
+
+		child := &pitCsTreeNode{}
+		child.name = entry.name.Append(component)
+		child.depth = depth + 1
+		child.component = component
+		child.parent = entry
+		child.children = make(map[uint64]*pitCsTreeNode)
+
+		entry.children[component.Hash()] = child
+		entry = child
 	}
-	return curNode
+	return entry
 }
 
 func (p *pitCsTreeNode) getChildrenCount() int {
