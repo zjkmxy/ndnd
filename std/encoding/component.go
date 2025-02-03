@@ -2,13 +2,9 @@ package encoding
 
 import (
 	"bytes"
-	"hash"
 	"io"
 	"strconv"
 	"strings"
-	"sync"
-
-	"github.com/cespare/xxhash"
 )
 
 const (
@@ -33,10 +29,6 @@ var (
 	HEX_LOWER = []rune("0123456789abcdef")
 	HEX_UPPER = []rune("0123456789ABCDEF")
 )
-
-var hashPool = sync.Pool{
-	New: func() any { return xxhash.New() },
-}
 
 type Component struct {
 	Typ TLNum
@@ -155,11 +147,11 @@ func (c Component) NumberVal() uint64 {
 
 // Hash returns the hash of the component
 func (c Component) Hash() uint64 {
-	h := hashPool.Get().(hash.Hash64)
-	defer hashPool.Put(h)
-	h.Reset()
-	h.Write(c.Bytes())
-	return h.Sum64()
+	xx := xxHashPoolGet(c.EncodingLength())
+	defer xxHashPoolPut(xx)
+	c.EncodeInto(xx.buffer)
+	xx.hash.Write(xx.buffer)
+	return xx.hash.Sum64()
 }
 
 func (c Component) Equal(rhs ComponentPattern) bool {

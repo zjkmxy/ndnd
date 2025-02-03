@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"crypto/sha256"
-	"hash"
 	"io"
 	"strings"
 	"unsafe"
@@ -148,24 +147,24 @@ func (n Name) BytesInner() []byte {
 
 // Hash returns the hash of the name
 func (n Name) Hash() uint64 {
-	h := hashPool.Get().(hash.Hash64)
-	defer hashPool.Put(h)
-	h.Reset()
-	h.Write(n.BytesInner())
-	return h.Sum64()
+	xx := xxHashPoolGet(n.EncodingLength())
+	defer xxHashPoolPut(xx)
+	n.EncodeInto(xx.buffer)
+	xx.hash.Write(xx.buffer)
+	return xx.hash.Sum64()
 }
 
 // PrefixHash returns the hash value of all prefixes of the name
 // ret[n] means the hash of the prefix of length n. ret[0] is the same for all names.
 func (n Name) PrefixHash() []uint64 {
-	h := hashPool.Get().(hash.Hash64)
-	defer hashPool.Put(h)
-	h.Reset()
+	xx := xxHashPoolGet(n.EncodingLength())
+	defer xxHashPoolPut(xx)
 	ret := make([]uint64, len(n)+1)
-	ret[0] = h.Sum64()
+	ret[0] = xx.hash.Sum64()
 	for i := range n {
-		h.Write(n[i].Bytes())
-		ret[i+1] = h.Sum64()
+		size := n[i].EncodeInto(xx.buffer)
+		xx.hash.Write(xx.buffer[:size])
+		ret[i+1] = xx.hash.Sum64()
 	}
 	return ret
 }
