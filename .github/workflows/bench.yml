@@ -25,6 +25,7 @@ jobs:
         run: go test ./... -benchmem -bench ^Benchmark -benchtime=300000x | tee bench.log
 
       - name: Check benchmark result
+        if: github.event_name == 'pull_request'
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Go Benchmark
