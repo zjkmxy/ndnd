@@ -61,7 +61,7 @@ type pitCsTreeNode struct {
 // NewPitCS creates a new combined PIT-CS for a forwarding thread.
 func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	pitCs := new(PitCsTree)
-	pitCs.root = PitCsPools.PitCsTreeNode.Get()
+	pitCs.root = PitCsPools.PitCsTreeNode.New()
 	pitCs.root.component = enc.Component{} // zero component
 	pitCs.onExpiration = onExpiration
 	pitCs.pitTokens = make([]*nameTreePitEntry, pitTokenLookupTableSize)
@@ -168,8 +168,11 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 			entry.node.pruneIfEmpty()
 			p.nPitEntries--
 
-			// leave the entry in the token table, but mark it as invalid
-			// this stops it from being garbage collected and makes pool effective
+			// remove entry from pit token lookup table
+			tokIdx := p.pitTokenIdx(entry.Token())
+			if p.pitTokens[tokIdx] == entry {
+				p.pitTokens[tokIdx] = nil
+			}
 
 			// now it is invalid to use the entry
 			entry.encname = nil // invalidate
@@ -307,8 +310,8 @@ func (p *pitCsTreeNode) getChildrenCount() int {
 func (p *pitCsTreeNode) pruneIfEmpty() {
 	for curNode := p; curNode.parent != nil && curNode.getChildrenCount() == 0 &&
 		len(curNode.pitEntries) == 0 && curNode.csEntry == nil; curNode = curNode.parent {
-		PitCsPools.PitCsTreeNode.Put(curNode)
 		delete(curNode.parent.children, curNode.component.Hash())
+		PitCsPools.PitCsTreeNode.Put(curNode)
 	}
 }
 

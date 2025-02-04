@@ -18,6 +18,13 @@ func New[T any](init func() T, reset func(T)) SyncPool[T] {
 	}
 }
 
+// New creates a new object of type T.
+func (p *SyncPool[T]) New() T {
+	val := p.pool.New().(T)
+	p.reset(val)
+	return val
+}
+
 // Get returns a new T from the pool.
 func (p *SyncPool[T]) Get() T {
 	val := p.pool.Get().(T)
