@@ -178,7 +178,7 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 	// Congestion marking
 	congestionMark := pkt.CongestionMark // from upstream
 	if l.checkCongestion(wire) && !congestionMark.IsSet() {
-		core.Log.Warn(l, "Marking congestion")
+		core.Log.Debug(l, "Marking congestion")
 		congestionMark = optional.Some(uint64(1)) // ours
 	}
 

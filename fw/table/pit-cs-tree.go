@@ -368,9 +368,6 @@ func (p *pitCsTreeNode) pruneIfEmpty() {
 // newPitToken returns a new PIT token.
 func (p *PitCsTree) newPitToken() uint32 {
 	p.nPitToken++
-	if p.nPitToken%10000 == 0 {
-		core.Log.Info(nil, "PIT token count", "count", p.nPitToken)
-	}
 	return uint32(p.nPitToken)
 }
 
