@@ -30,7 +30,7 @@ func (ps *SimplePs[V]) Subscribe(prefix enc.Name, callback func(V)) error {
 		panic("Callback is required for subscription")
 	}
 
-	ps.subs[prefix.String()] = SimplePsSub[V]{
+	ps.subs[prefix.TlvStr()] = SimplePsSub[V]{
 		Prefix:   prefix,
 		Callback: callback,
 	}
@@ -39,7 +39,7 @@ func (ps *SimplePs[V]) Subscribe(prefix enc.Name, callback func(V)) error {
 }
 
 func (ps *SimplePs[V]) Unsubscribe(prefix enc.Name) {
-	delete(ps.subs, prefix.String())
+	delete(ps.subs, prefix.TlvStr())
 }
 
 func (ps *SimplePs[V]) Subs(prefix enc.Name) iter.Seq[func(V)] {

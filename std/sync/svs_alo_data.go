@@ -69,7 +69,7 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 
 	// We don't get notified of changes to our own state.
 	// So we need to update the state vector ourselves.
-	hash := node.String()
+	hash := node.TlvStr()
 	s.state.Set(hash, boot, svsDataState{
 		Known:   seq,
 		Latest:  seq,
@@ -141,7 +141,7 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 		defer s.mutex.Unlock()
 
 		// Get the state vector entry
-		hash := node.String()
+		hash := node.TlvStr()
 		entry := s.state.Get(hash, boot)
 
 		// Always check if we can fetch more
@@ -251,7 +251,7 @@ func (s *SvsALO) snapshotCallback(callback snapshotCallback) {
 	defer func() {
 		for name := range s.state.Iter() {
 			if snapPub.Publisher.IsPrefix(name) {
-				s.consumeCheck(name, name.String())
+				s.consumeCheck(name, name.TlvStr())
 			}
 		}
 	}()

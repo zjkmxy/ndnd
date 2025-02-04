@@ -106,7 +106,7 @@ func (m SvMap[V]) Encode(seq func(V) uint64) *spec_svs.StateVector {
 func (m SvMap[V]) Iter() iter.Seq2[enc.Name, []SvMapVal[V]] {
 	return func(yield func(enc.Name, []SvMapVal[V]) bool) {
 		for hash, val := range m {
-			name, err := enc.NameFromStr(hash)
+			name, err := enc.NameFromTlvStr(hash)
 			if err != nil {
 				log.Error(nil, "[BUG] invalid name in SvMap", "hash", hash)
 				continue

@@ -116,7 +116,7 @@ func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 		}
 
 		s.callback(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
-			hash := node.String()
+			hash := node.TlvStr()
 			pub.Publisher = node
 
 			if err := cstate.Error(); err != nil {

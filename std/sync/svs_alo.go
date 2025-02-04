@@ -102,7 +102,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	// Initialize the state vector with our own state.
 	boot := s.svs.GetBootTime()
 	seq := s.svs.GetSeqNo(s.opts.Name)
-	s.state.Set(s.opts.Name.String(), boot, svsDataState{
+	s.state.Set(s.opts.Name.TlvStr(), boot, svsDataState{
 		Known:   seq,
 		Latest:  seq,
 		Pending: seq,
@@ -171,7 +171,7 @@ func (s *SvsALO) SubscribePublisher(prefix enc.Name, callback func(SvsPub)) erro
 	// Trigger a fetch for all known producers matching this prefix.
 	for node := range s.state.Iter() {
 		if prefix.IsPrefix(node) {
-			s.consumeCheck(node, node.String())
+			s.consumeCheck(node, node.TlvStr())
 		}
 	}
 
@@ -217,7 +217,7 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 	defer s.mutex.Unlock()
 
 	// Update the latest known state.
-	hash := update.Name.String()
+	hash := update.Name.TlvStr()
 	entry := s.state.Get(hash, update.Boot)
 	entry.Latest = update.High
 	s.state.Set(hash, update.Boot, entry)
@@ -235,7 +235,7 @@ func (s *SvsALO) deliver(out svsPubOut) {
 	// Commit the successful delivery
 	if out.snapstate != nil {
 		for _, svEntry := range out.snapstate.Entries {
-			hash := svEntry.Name.String()
+			hash := svEntry.Name.TlvStr()
 			for _, seqEntry := range svEntry.SeqNoEntries {
 				prev := s.delivered.Get(hash, seqEntry.BootstrapTime)
 				if seqEntry.SeqNo > prev {

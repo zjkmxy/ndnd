@@ -3,6 +3,7 @@ package sync_test
 import (
 	"testing"
 
+	enc "github.com/named-data/ndnd/std/encoding"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
@@ -99,13 +100,17 @@ func TestSvMapNewer(t *testing.T) {
 func TestSvMapTLV(t *testing.T) {
 	tu.SetT(t)
 
+	kAlice := tu.NoErr(enc.NameFromStr("/ndn/alice")).TlvStr()
+	kBob := tu.NoErr(enc.NameFromStr("/ndn/bob")).TlvStr()
+	kCathy := tu.NoErr(enc.NameFromStr("/ndn/cathy")).TlvStr()
+
 	// Add entries to test ordering
 	m := ndn_sync.NewSvMap[uint64](0)
-	m.Set("/ndn/alice", 100, 1)
-	m.Set("/ndn/alice", 200, 4)
-	m.Set("/ndn/cathy", 150, 3)
-	m.Set("/ndn/bob", 150, 3)
-	m.Set("/ndn/bob", 50, 5)
+	m.Set(kAlice, 100, 1)
+	m.Set(kAlice, 200, 4)
+	m.Set(kCathy, 150, 3)
+	m.Set(kBob, 150, 3)
+	m.Set(kBob, 50, 5)
 	sv := m.Encode(func(s uint64) uint64 { return s })
 
 	// Name Ordering should be in NDN canonical order.

@@ -145,7 +145,7 @@ func (s *SvSync) GetSeqNo(name enc.Name) uint64 {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	return s.state.Get(name.String(), s.o.BootTime)
+	return s.state.Get(name.TlvStr(), s.o.BootTime)
 }
 
 // SetSeqNo sets the sequence number for a name.
@@ -155,7 +155,7 @@ func (s *SvSync) SetSeqNo(name enc.Name, seqNo uint64) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	hash := name.String()
+	hash := name.TlvStr()
 
 	entry := s.state.Get(hash, s.o.BootTime)
 	if seqNo <= entry {
@@ -176,7 +176,7 @@ func (s *SvSync) IncrSeqNo(name enc.Name) uint64 {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	hash := name.String()
+	hash := name.TlvStr()
 	entry := s.state.Get(hash, s.o.BootTime)
 	entry++
 	s.state.Set(hash, s.o.BootTime, entry)
@@ -201,7 +201,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	recvSv := NewSvMap[uint64](len(sv.Entries))
 
 	for _, node := range sv.Entries {
-		hash := node.Name.String()
+		hash := node.Name.TlvStr()
 
 		// Walk through the state vector entries in reverse order.
 		// The ordering is important so we deliver the newest boot time first.
