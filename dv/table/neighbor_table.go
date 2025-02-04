@@ -9,7 +9,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type NeighborTable struct {
@@ -158,9 +158,9 @@ func (ns *NeighborState) routeRegister(faceId uint64) {
 			Cmd:    "register",
 			Args: &mgmt.ControlArgs{
 				Name:   route,
-				FaceId: utils.IdPtr(faceId),
-				Origin: utils.IdPtr(config.NlsrOrigin),
-				Cost:   utils.IdPtr(uint64(0)),
+				FaceId: optional.Some(faceId),
+				Origin: optional.Some(config.NlsrOrigin),
+				Cost:   optional.Some(uint64(0)),
 			},
 			Retries: 3,
 		})
@@ -188,8 +188,8 @@ func (ns *NeighborState) routeUnregister() {
 			Cmd:    "unregister",
 			Args: &mgmt.ControlArgs{
 				Name:   route,
-				FaceId: utils.IdPtr(ns.faceId),
-				Origin: utils.IdPtr(config.NlsrOrigin),
+				FaceId: optional.Some(ns.faceId),
+				Origin: optional.Some(config.NlsrOrigin),
 			},
 			Retries: 1,
 		})

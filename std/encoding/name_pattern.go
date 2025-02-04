@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"crypto/sha256"
-	"hash"
 	"io"
 	"strings"
 	"unsafe"
@@ -114,12 +113,12 @@ func (n Name) Prefix(i int) Name {
 }
 
 // ReadName reads a Name from a Wire **excluding** the TL prefix.
-func ReadName(r ParseReader) (Name, error) {
+func (r *WireView) ReadName() (Name, error) {
 	var err error
 	var c Component
 	ret := make(Name, 0, 8)
 	// Bad design of Go: it does not allow you use := to create a temp var c and write the error to err.
-	for c, err = ReadComponent(r); err == nil; c, err = ReadComponent(r) {
+	for c, err = r.ReadComponent(); err == nil; c, err = r.ReadComponent() {
 		ret = append(ret, c)
 	}
 	if err != io.EOF {
@@ -148,24 +147,35 @@ func (n Name) BytesInner() []byte {
 
 // Hash returns the hash of the name
 func (n Name) Hash() uint64 {
-	h := hashPool.Get().(hash.Hash64)
-	defer hashPool.Put(h)
-	h.Reset()
-	h.Write(n.BytesInner())
-	return h.Sum64()
+	xx := xxHashPool.Get()
+	defer xxHashPool.Put(xx)
+
+	size := n.EncodingLength()
+	xx.buffer.Grow(size)
+	buf := xx.buffer.AvailableBuffer()[:size]
+	n.EncodeInto(buf)
+
+	xx.hash.Write(buf)
+	return xx.hash.Sum64()
 }
 
 // PrefixHash returns the hash value of all prefixes of the name
 // ret[n] means the hash of the prefix of length n. ret[0] is the same for all names.
 func (n Name) PrefixHash() []uint64 {
-	h := hashPool.Get().(hash.Hash64)
-	defer hashPool.Put(h)
-	h.Reset()
+	xx := xxHashPool.Get()
+	defer xxHashPool.Put(xx)
+
 	ret := make([]uint64, len(n)+1)
-	ret[0] = h.Sum64()
+	ret[0] = xx.hash.Sum64()
 	for i := range n {
-		h.Write(n[i].Bytes())
-		ret[i+1] = h.Sum64()
+		xx.buffer.Reset()
+		size := n[i].EncodingLength()
+		xx.buffer.Grow(size)
+		buf := xx.buffer.AvailableBuffer()[:size]
+		n[i].EncodeInto(buf)
+
+		xx.hash.Write(buf)
+		ret[i+1] = xx.hash.Sum64()
 	}
 	return ret
 }
@@ -213,20 +223,20 @@ func NamePatternFromStr(s string) (NamePattern, error) {
 
 // NameFromBytes parses a URI byte slice into a Name
 func NameFromBytes(buf []byte) (Name, error) {
-	r := NewBufferReader(buf)
-	t, err := ReadTLNum(r)
+	r := NewBufferView(buf)
+	t, err := r.ReadTLNum()
 	if err != nil {
 		return nil, err
 	}
 	if t != TypeName {
 		return nil, ErrFormat{"encoding.NameFromBytes: given bytes is not a Name"}
 	}
-	l, err := ReadTLNum(r)
+	l, err := r.ReadTLNum()
 	if err != nil {
 		return nil, err
 	}
 	start := r.Pos()
-	ret, err := ReadName(r)
+	ret, err := r.ReadName()
 	if err != nil {
 		return nil, err
 	}
@@ -395,10 +405,12 @@ func (n Name) TlvStr() string {
 
 // ComponentFromTlvStr parses the output of TlvStr into a Component.
 func ComponentFromTlvStr(s string) (Component, error) {
-	return ReadComponent(NewBufferReader([]byte(s)))
+	r := NewBufferView([]byte(s))
+	return r.ReadComponent()
 }
 
 // NameFromFStr parses the output of FStr into a Name.
 func NameFromTlvStr(s string) (Name, error) {
-	return ReadName(NewBufferReader([]byte(s)))
+	r := NewBufferView([]byte(s))
+	return r.ReadName()
 }

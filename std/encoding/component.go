@@ -2,13 +2,9 @@ package encoding
 
 import (
 	"bytes"
-	"hash"
 	"io"
 	"strconv"
 	"strings"
-	"sync"
-
-	"github.com/cespare/xxhash"
 )
 
 const (
@@ -33,10 +29,6 @@ var (
 	HEX_LOWER = []rune("0123456789abcdef")
 	HEX_UPPER = []rune("0123456789ABCDEF")
 )
-
-var hashPool = sync.Pool{
-	New: func() any { return xxhash.New() },
-}
 
 type Component struct {
 	Typ TLNum
@@ -155,11 +147,16 @@ func (c Component) NumberVal() uint64 {
 
 // Hash returns the hash of the component
 func (c Component) Hash() uint64 {
-	h := hashPool.Get().(hash.Hash64)
-	defer hashPool.Put(h)
-	h.Reset()
-	h.Write(c.Bytes())
-	return h.Sum64()
+	xx := xxHashPool.Get()
+	defer xxHashPool.Put(xx)
+
+	size := c.EncodingLength()
+	xx.buffer.Grow(size)
+	buf := xx.buffer.AvailableBuffer()[:size]
+	c.EncodeInto(buf)
+
+	xx.hash.Write(buf)
+	return xx.hash.Sum64()
 }
 
 func (c Component) Equal(rhs ComponentPattern) bool {
@@ -201,7 +198,8 @@ func ComponentFromStr(s string) (Component, error) {
 }
 
 func ComponentFromBytes(buf []byte) (Component, error) {
-	return ReadComponent(NewBufferReader(buf))
+	r := NewBufferView(buf)
+	return r.ReadComponent()
 }
 
 func ParseComponent(buf Buffer) (Component, int) {
@@ -215,12 +213,12 @@ func ParseComponent(buf Buffer) (Component, int) {
 	}, end
 }
 
-func ReadComponent(r ParseReader) (Component, error) {
-	typ, err := ReadTLNum(r)
+func (r *WireView) ReadComponent() (Component, error) {
+	typ, err := r.ReadTLNum()
 	if err != nil {
 		return Component{}, err
 	}
-	l, err := ReadTLNum(r)
+	l, err := r.ReadTLNum()
 	if err != nil {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF

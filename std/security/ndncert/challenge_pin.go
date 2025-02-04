@@ -2,6 +2,8 @@ package ndncert
 
 import (
 	"errors"
+
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type ChallengePin struct {
@@ -13,7 +15,7 @@ func (*ChallengePin) Name() string {
 	return KwPin
 }
 
-func (c *ChallengePin) Request(input ParamMap, status *string) (ParamMap, error) {
+func (c *ChallengePin) Request(input ParamMap, status optional.Optional[string]) (ParamMap, error) {
 	// Validate challenge configuration
 	if c.CodeCallback == nil {
 		return nil, errors.New("pin challenge not configured")
@@ -25,8 +27,8 @@ func (c *ChallengePin) Request(input ParamMap, status *string) (ParamMap, error)
 	}
 
 	// Challenge response code
-	if status != nil && (*status == "need-code" || *status == "wrong-code") {
-		code := c.CodeCallback(*status)
+	if s := status.GetOr(""); s == "need-code" || s == "wrong-code" {
+		code := c.CodeCallback(s)
 		if code == "" {
 			return nil, errors.New("no code provided")
 		}

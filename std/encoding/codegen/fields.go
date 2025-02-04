@@ -91,6 +91,7 @@ func (*BaseTlvField) GenFromDict() (string, error) {
 func CreateField(className string, name string, typeNum uint64, annotation string, model *TlvModel) (TlvField, error) {
 	fieldList := map[string]func(string, uint64, string, *TlvModel) (TlvField, error){
 		"natural":           NewNaturalField,
+		"byte":              NewByteField,
 		"fixedUint":         NewFixedUintField,
 		"time":              NewTimeField,
 		"binary":            NewBinaryField,

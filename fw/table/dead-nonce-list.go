@@ -11,7 +11,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
-	"github.com/named-data/ndnd/std/utils/priority_queue"
+	"github.com/named-data/ndnd/std/types/priority_queue"
 )
 
 // DeadNonceList represents the Dead Nonce List for a forwarding thread.

@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -48,8 +49,8 @@ func (dv *Router) mgmtOnStatus(args ndn.InterestHandlerArgs) {
 
 	name := args.Interest.Name()
 	cfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-		Freshness:   utils.IdPtr(time.Second),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
+		Freshness:   optional.Some(time.Second),
 	}
 
 	data, err := dv.engine.Spec().MakeData(name, cfg, status.Encode(), nil)
@@ -76,8 +77,8 @@ func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 		data, err := dv.engine.Spec().MakeData(
 			args.Interest.Name(),
 			&ndn.DataConfig{
-				ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-				Freshness:   utils.IdPtr(1 * time.Second),
+				ContentType: optional.Some(ndn.ContentTypeBlob),
+				Freshness:   optional.Some(1 * time.Second),
 			},
 			res.Encode(),
 			signer)
@@ -102,7 +103,7 @@ func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 		return
 	}
 
-	params, err := mgmt.ParseControlParameters(enc.NewBufferReader(advC.Val), false)
+	params, err := mgmt.ParseControlParameters(enc.NewBufferView(advC.Val), false)
 	if err != nil || params.Val == nil || params.Val.Name == nil {
 		log.Warn(dv, "Failed to parse readvertised name", "err", err)
 		return
@@ -126,9 +127,9 @@ func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 	res.Val.StatusText = "Readvertise command successful"
 	res.Val.Params = &mgmt.ControlArgs{
 		Name:   params.Val.Name,
-		FaceId: utils.IdPtr(uint64(1)), // NFD compatibility
-		Origin: utils.IdPtr(uint64(65)),
-		Cost:   utils.IdPtr(uint64(0)),
-		Flags:  utils.IdPtr(uint64(0)),
+		FaceId: optional.Some(uint64(1)), // NFD compatibility
+		Origin: optional.Some(uint64(65)),
+		Cost:   optional.Some(uint64(0)),
+		Flags:  optional.Some(uint64(0)),
 	}
 }

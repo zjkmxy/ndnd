@@ -62,10 +62,7 @@ func (encoder *ManifestDigestEncoder) Encode(value *ManifestDigest) enc.Wire {
 	return wire
 }
 
-func (context *ManifestDigestParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*ManifestDigest, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *ManifestDigestParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ManifestDigest, error) {
 
 	var handled_SegNo bool = false
 	var handled_Digest bool = false
@@ -83,11 +80,11 @@ func (context *ManifestDigestParsingContext) Parse(reader enc.ParseReader, ignor
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -119,7 +116,7 @@ func (context *ManifestDigestParsingContext) Parse(reader enc.ParseReader, ignor
 					handled = true
 					handled_Digest = true
 					value.Digest = make([]byte, l)
-					_, err = io.ReadFull(reader, value.Digest)
+					_, err = reader.ReadFull(value.Digest)
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -163,7 +160,7 @@ func (value *ManifestDigest) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseManifestDigest(reader enc.ParseReader, ignoreCritical bool) (*ManifestDigest, error) {
+func ParseManifestDigest(reader enc.WireView, ignoreCritical bool) (*ManifestDigest, error) {
 	context := ManifestDigestParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -277,10 +274,7 @@ func (encoder *ManifestDataEncoder) Encode(value *ManifestData) enc.Wire {
 	return wire
 }
 
-func (context *ManifestDataParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*ManifestData, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *ManifestDataParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ManifestData, error) {
 
 	var handled_Entries bool = false
 
@@ -297,11 +291,11 @@ func (context *ManifestDataParsingContext) Parse(reader enc.ParseReader, ignoreC
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -368,7 +362,7 @@ func (value *ManifestData) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseManifestData(reader enc.ParseReader, ignoreCritical bool) (*ManifestData, error) {
+func ParseManifestData(reader enc.WireView, ignoreCritical bool) (*ManifestData, error) {
 	context := ManifestDataParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -402,38 +396,38 @@ func (encoder *MetaDataEncoder) Init(value *MetaData) {
 		l += uint(enc.TLNum(len(value.FinalBlockID)).EncodingLength())
 		l += uint(len(value.FinalBlockID))
 	}
-	if value.SegmentSize != nil {
+	if optval, ok := value.SegmentSize.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.SegmentSize).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Size != nil {
+	if optval, ok := value.Size.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.Size).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Mode != nil {
+	if optval, ok := value.Mode.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.Mode).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Atime != nil {
+	if optval, ok := value.Atime.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.Atime).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Btime != nil {
+	if optval, ok := value.Btime.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.Btime).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Ctime != nil {
+	if optval, ok := value.Ctime.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.Ctime).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Mtime != nil {
+	if optval, ok := value.Mtime.Get(); ok {
 		l += 3
-		l += uint(1 + enc.Nat(*value.Mtime).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.ObjectType != nil {
+	if optval, ok := value.ObjectType.Get(); ok {
 		l += 3
-		l += uint(enc.TLNum(len(*value.ObjectType)).EncodingLength())
-		l += uint(len(*value.ObjectType))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
 	encoder.length = l
 
@@ -462,76 +456,76 @@ func (encoder *MetaDataEncoder) EncodeInto(value *MetaData, buf []byte) {
 		copy(buf[pos:], value.FinalBlockID)
 		pos += uint(len(value.FinalBlockID))
 	}
-	if value.SegmentSize != nil {
+	if optval, ok := value.SegmentSize.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62720))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.SegmentSize).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Size != nil {
+	if optval, ok := value.Size.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62722))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.Size).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Mode != nil {
+	if optval, ok := value.Mode.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62724))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.Mode).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Atime != nil {
+	if optval, ok := value.Atime.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62726))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.Atime).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Btime != nil {
+	if optval, ok := value.Btime.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62728))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.Btime).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Ctime != nil {
+	if optval, ok := value.Ctime.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62730))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.Ctime).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Mtime != nil {
+	if optval, ok := value.Mtime.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62732))
 		pos += 3
 
-		buf[pos] = byte(enc.Nat(*value.Mtime).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.ObjectType != nil {
+	if optval, ok := value.ObjectType.Get(); ok {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(62734))
 		pos += 3
-		pos += uint(enc.TLNum(len(*value.ObjectType)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.ObjectType)
-		pos += uint(len(*value.ObjectType))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
 }
 
@@ -545,10 +539,7 @@ func (encoder *MetaDataEncoder) Encode(value *MetaData) enc.Wire {
 	return wire
 }
 
-func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*MetaData, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *MetaDataParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*MetaData, error) {
 
 	var handled_Name bool = false
 	var handled_FinalBlockID bool = false
@@ -574,11 +565,11 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -590,22 +581,23 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 				if true {
 					handled = true
 					handled_Name = true
-					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
+					delegate := reader.Delegate(int(l))
+					value.Name, err = delegate.ReadName()
 				}
 			case 26:
 				if true {
 					handled = true
 					handled_FinalBlockID = true
 					value.FinalBlockID = make([]byte, l)
-					_, err = io.ReadFull(reader, value.FinalBlockID)
+					_, err = reader.ReadFull(value.FinalBlockID)
 				}
 			case 62720:
 				if true {
 					handled = true
 					handled_SegmentSize = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -616,10 +608,10 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.SegmentSize = &tempVal
+						value.SegmentSize.Set(optval)
 					}
 				}
 			case 62722:
@@ -627,8 +619,8 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled = true
 					handled_Size = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -639,10 +631,10 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Size = &tempVal
+						value.Size.Set(optval)
 					}
 				}
 			case 62724:
@@ -650,8 +642,8 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled = true
 					handled_Mode = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -662,10 +654,10 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Mode = &tempVal
+						value.Mode.Set(optval)
 					}
 				}
 			case 62726:
@@ -673,8 +665,8 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled = true
 					handled_Atime = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -685,10 +677,10 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Atime = &tempVal
+						value.Atime.Set(optval)
 					}
 				}
 			case 62728:
@@ -696,8 +688,8 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled = true
 					handled_Btime = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -708,10 +700,10 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Btime = &tempVal
+						value.Btime.Set(optval)
 					}
 				}
 			case 62730:
@@ -719,8 +711,8 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled = true
 					handled_Ctime = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -731,10 +723,10 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Ctime = &tempVal
+						value.Ctime.Set(optval)
 					}
 				}
 			case 62732:
@@ -742,8 +734,8 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled = true
 					handled_Mtime = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -754,10 +746,10 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Mtime = &tempVal
+						value.Mtime.Set(optval)
 					}
 				}
 			case 62734:
@@ -766,10 +758,9 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled_ObjectType = true
 					{
 						var builder strings.Builder
-						_, err = io.CopyN(&builder, reader, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.ObjectType = &tempStr
+							value.ObjectType.Set(builder.String())
 						}
 					}
 				}
@@ -798,28 +789,28 @@ func (context *MetaDataParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 		value.FinalBlockID = nil
 	}
 	if !handled_SegmentSize && err == nil {
-		value.SegmentSize = nil
+		value.SegmentSize.Unset()
 	}
 	if !handled_Size && err == nil {
-		value.Size = nil
+		value.Size.Unset()
 	}
 	if !handled_Mode && err == nil {
-		value.Mode = nil
+		value.Mode.Unset()
 	}
 	if !handled_Atime && err == nil {
-		value.Atime = nil
+		value.Atime.Unset()
 	}
 	if !handled_Btime && err == nil {
-		value.Btime = nil
+		value.Btime.Unset()
 	}
 	if !handled_Ctime && err == nil {
-		value.Ctime = nil
+		value.Ctime.Unset()
 	}
 	if !handled_Mtime && err == nil {
-		value.Mtime = nil
+		value.Mtime.Unset()
 	}
 	if !handled_ObjectType && err == nil {
-		value.ObjectType = nil
+		value.ObjectType.Unset()
 	}
 
 	if err != nil {
@@ -839,7 +830,7 @@ func (value *MetaData) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseMetaData(reader enc.ParseReader, ignoreCritical bool) (*MetaData, error) {
+func ParseMetaData(reader enc.WireView, ignoreCritical bool) (*MetaData, error) {
 	context := MetaDataParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

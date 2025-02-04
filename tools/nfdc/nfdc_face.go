@@ -27,7 +27,7 @@ func (t *Tool) ExecFaceList(_ *cobra.Command, args []string) {
 		return
 	}
 
-	status, err := mgmt.ParseFaceStatusMsg(enc.NewWireReader(data), true)
+	status, err := mgmt.ParseFaceStatusMsg(enc.NewWireView(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing face status: %+v\n", err)
 		os.Exit(1)
@@ -42,18 +42,18 @@ func (t *Tool) ExecFaceList(_ *cobra.Command, args []string) {
 		info = append(info, fmt.Sprintf("local=%s", entry.LocalUri))
 
 		congestion := []string{}
-		if entry.BaseCongestionMarkInterval != nil {
-			congestion = append(congestion, fmt.Sprintf("base-marking-interval=%s", time.Duration(*entry.BaseCongestionMarkInterval)*time.Nanosecond))
+		if bcmi, ok := entry.BaseCongestionMarkInterval.Get(); ok {
+			congestion = append(congestion, fmt.Sprintf("base-marking-interval=%s", time.Duration(bcmi)*time.Nanosecond))
 		}
-		if entry.DefaultCongestionThreshold != nil {
-			congestion = append(congestion, fmt.Sprintf("default-threshold=%dB", *entry.DefaultCongestionThreshold))
+		if dct, ok := entry.DefaultCongestionThreshold.Get(); ok {
+			congestion = append(congestion, fmt.Sprintf("default-threshold=%dB", dct))
 		}
 		if len(congestion) > 0 {
 			info = append(info, fmt.Sprintf("congestion={%s}", strings.Join(congestion, " ")))
 		}
 
-		if entry.Mtu != nil {
-			info = append(info, fmt.Sprintf("mtu=%dB", *entry.Mtu))
+		if mtu, ok := entry.Mtu.Get(); ok {
+			info = append(info, fmt.Sprintf("mtu=%dB", mtu))
 		}
 
 		info = append(info, fmt.Sprintf("counters={in={%di %dd %dn %dB} out={%di %dd %dn %dB}}",

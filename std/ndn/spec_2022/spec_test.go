@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func TestMakeDataBasic(t *testing.T) {
 	data, err := spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		nil,
 		sig.NewSha256Signer(),
@@ -40,7 +41,7 @@ func TestMakeDataBasic(t *testing.T) {
 	data, err = spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		enc.Wire{[]byte("01020304")},
 		sig.NewSha256Signer(),
@@ -58,7 +59,7 @@ func TestMakeDataBasic(t *testing.T) {
 	data, err = spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		nil,
 		nil,
@@ -72,7 +73,7 @@ func TestMakeDataBasic(t *testing.T) {
 	data, err = spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/E")),
 		&ndn.DataConfig{
-			ContentType: nil,
+			ContentType: optional.None[ndn.ContentType](),
 		},
 		enc.Wire{},
 		sig.NewSha256Signer(),
@@ -92,9 +93,9 @@ func TestMakeDataMetaInfo(t *testing.T) {
 	data, err := spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix/37=%00")),
 		&ndn.DataConfig{
-			ContentType:  utils.IdPtr(ndn.ContentTypeBlob),
-			Freshness:    utils.IdPtr(1000 * time.Millisecond),
-			FinalBlockID: utils.IdPtr(enc.NewSequenceNumComponent(2)),
+			ContentType:  optional.Some(ndn.ContentTypeBlob),
+			Freshness:    optional.Some(1000 * time.Millisecond),
+			FinalBlockID: optional.Some(enc.NewSequenceNumComponent(2)),
 		},
 		nil,
 		sig.NewSha256Signer(),
@@ -142,7 +143,7 @@ func TestMakeDataShrink(t *testing.T) {
 	data, err := spec.MakeData(
 		tu.NoErr(enc.NameFromStr("/test")),
 		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		nil,
 		testSigner{},
@@ -159,7 +160,7 @@ func TestReadDataBasic(t *testing.T) {
 	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
-	data, covered, err := spec.ReadData(enc.NewBufferReader([]byte(
+	data, covered, err := spec.ReadData(enc.NewBufferView([]byte(
 		"\x06\x42\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix" +
 			"\x14\x03\x18\x01\x00" +
 			"\x16\x03\x1b\x01\x00" +
@@ -168,9 +169,9 @@ func TestReadDataBasic(t *testing.T) {
 	))
 	require.NoError(t, err)
 	require.Equal(t, "/local/ndn/prefix", data.Name().String())
-	require.Equal(t, ndn.ContentTypeBlob, *data.ContentType())
-	require.True(t, data.Freshness() == nil)
-	require.True(t, data.FinalBlockID() == nil)
+	require.Equal(t, ndn.ContentTypeBlob, data.ContentType().Unwrap())
+	require.False(t, data.Freshness().IsSet())
+	require.False(t, data.FinalBlockID().IsSet())
 	require.Equal(t, ndn.SignatureDigestSha256, data.Signature().SigType())
 	require.True(t, data.Content() == nil)
 	h := sha256.New()
@@ -180,7 +181,7 @@ func TestReadDataBasic(t *testing.T) {
 	sig := h.Sum(nil)
 	require.Equal(t, sig, data.Signature().SigValue())
 
-	data, covered, err = spec.ReadData(enc.NewBufferReader([]byte(
+	data, covered, err = spec.ReadData(enc.NewBufferView([]byte(
 		"\x06L\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix" +
 			"\x14\x03\x18\x01\x00" +
 			"\x15\x0801020304" +
@@ -190,9 +191,9 @@ func TestReadDataBasic(t *testing.T) {
 	))
 	require.NoError(t, err)
 	require.Equal(t, "/local/ndn/prefix", data.Name().String())
-	require.Equal(t, ndn.ContentTypeBlob, *data.ContentType())
-	require.True(t, data.Freshness() == nil)
-	require.True(t, data.FinalBlockID() == nil)
+	require.Equal(t, ndn.ContentTypeBlob, data.ContentType().Unwrap())
+	require.False(t, data.Freshness().IsSet())
+	require.False(t, data.FinalBlockID().IsSet())
 	require.Equal(t, ndn.SignatureDigestSha256, data.Signature().SigType())
 	require.Equal(t, []byte("01020304"), data.Content().Join())
 	h = sha256.New()
@@ -202,29 +203,29 @@ func TestReadDataBasic(t *testing.T) {
 	sig = h.Sum(nil)
 	require.Equal(t, sig, data.Signature().SigValue())
 
-	data, _, err = spec.ReadData(enc.NewBufferReader([]byte(
+	data, _, err = spec.ReadData(enc.NewBufferView([]byte(
 		"\x06\x1b\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix" +
 			"\x14\x03\x18\x01\x00"),
 	))
 	require.NoError(t, err)
 	require.Equal(t, "/local/ndn/prefix", data.Name().String())
-	require.Equal(t, ndn.ContentTypeBlob, *data.ContentType())
-	require.True(t, data.Freshness() == nil)
-	require.True(t, data.FinalBlockID() == nil)
+	require.Equal(t, ndn.ContentTypeBlob, data.ContentType().Unwrap())
+	require.False(t, data.Freshness().IsSet())
+	require.False(t, data.FinalBlockID().IsSet())
 	require.Equal(t, ndn.SignatureNone, data.Signature().SigType())
 	require.True(t, data.Content() == nil)
 	require.True(t, data.Signature().SigValue() == nil)
 
-	data, covered, err = spec.ReadData(enc.NewBufferReader(tu.NoErr(hex.DecodeString(
+	data, covered, err = spec.ReadData(enc.NewBufferView(tu.NoErr(hex.DecodeString(
 		"06300703080145" +
 			"1400150016031b0100" +
 			"1720f965ee682c6973c3cbaa7b69e4c7063680f83be93a46be2ccc98686134354b66"),
 	)))
 	require.NoError(t, err)
 	require.Equal(t, "/E", data.Name().String())
-	require.True(t, data.ContentType() == nil)
-	require.True(t, data.Freshness() == nil)
-	require.True(t, data.FinalBlockID() == nil)
+	require.False(t, data.ContentType().IsSet())
+	require.False(t, data.Freshness().IsSet())
+	require.False(t, data.FinalBlockID().IsSet())
 	require.Equal(t, ndn.SignatureDigestSha256, data.Signature().SigType())
 	require.Equal(t, 0, len(data.Content().Join()))
 	h = sha256.New()
@@ -239,7 +240,7 @@ func TestReadDataMetaInfo(t *testing.T) {
 	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
-	data, covered, err := spec.ReadData(enc.NewBufferReader([]byte(
+	data, covered, err := spec.ReadData(enc.NewBufferView([]byte(
 		"\x06\x4e\x07\x17\x08\x05local\x08\x03ndn\x08\x06prefix\x25\x01\x00" +
 			"\x14\x0c\x18\x01\x00\x19\x02\x03\xe8\x1a\x03\x3a\x01\x02" +
 			"\x16\x03\x1b\x01\x00" +
@@ -247,9 +248,9 @@ func TestReadDataMetaInfo(t *testing.T) {
 	))
 	require.NoError(t, err)
 	require.Equal(t, "/local/ndn/prefix/37=%00", data.Name().String())
-	require.Equal(t, ndn.ContentTypeBlob, *data.ContentType())
-	require.Equal(t, 1000*time.Millisecond, *data.Freshness())
-	require.Equal(t, enc.NewSequenceNumComponent(2), *data.FinalBlockID())
+	require.Equal(t, ndn.ContentTypeBlob, data.ContentType().Unwrap())
+	require.Equal(t, 1000*time.Millisecond, data.Freshness().Unwrap())
+	require.Equal(t, enc.NewSequenceNumComponent(2), data.FinalBlockID().Unwrap())
 	require.Equal(t, ndn.SignatureDigestSha256, data.Signature().SigType())
 	require.True(t, data.Content() == nil)
 	h := sha256.New()
@@ -267,7 +268,7 @@ func TestMakeIntBasic(t *testing.T) {
 	interest, err := spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: utils.IdPtr(4 * time.Second),
+			Lifetime: optional.Some(4 * time.Second),
 		},
 		nil,
 		nil,
@@ -282,9 +283,9 @@ func TestMakeIntBasic(t *testing.T) {
 		&ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,
-			Lifetime:    utils.IdPtr(10 * time.Millisecond),
-			HopLimit:    utils.IdPtr[uint](1),
-			Nonce:       utils.IdPtr[uint64](0),
+			Lifetime:    optional.Some(10 * time.Millisecond),
+			HopLimit:    utils.IdPtr[byte](1),
+			Nonce:       optional.Some[uint32](0),
 		},
 		nil,
 		nil,
@@ -298,8 +299,8 @@ func TestMakeIntBasic(t *testing.T) {
 	interest, err = spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: utils.IdPtr(4 * time.Second),
-			Nonce:    utils.IdPtr[uint64](0x01020304),
+			Lifetime: optional.Some(4 * time.Second),
+			Nonce:    optional.Some[uint32](0x01020304),
 			ForwardingHint: []enc.Name{
 				tu.NoErr(enc.NameFromStr("/name/A")),
 				tu.NoErr(enc.NameFromStr("/ndn/B")),
@@ -330,14 +331,14 @@ func TestMakeIntLargeAppParam(t *testing.T) {
 	encoded, err := spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/interest/with/large/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: utils.IdPtr(4 * time.Second),
+			Lifetime: optional.Some(4 * time.Second),
 		},
 		enc.Wire{appParam},
 		sig.NewHmacSigner([]byte("temp-hmac-key")),
 	)
 	require.NoError(t, err)
 
-	interest, _, err := spec.ReadInterest(enc.NewWireReader(encoded.Wire))
+	interest, _, err := spec.ReadInterest(enc.NewWireView(encoded.Wire))
 	require.NoError(t, err)
 	require.Equal(t, appParam, interest.AppParam().Join())
 	require.True(t, interest.Name().Equal(encoded.FinalName))
@@ -350,7 +351,7 @@ func TestMakeIntSign(t *testing.T) {
 	interest, err := spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: utils.IdPtr(4 * time.Second),
+			Lifetime: optional.Some(4 * time.Second),
 		},
 		enc.Wire{[]byte{1, 2, 3, 4}},
 		nil,
@@ -371,8 +372,8 @@ func TestMakeIntSign(t *testing.T) {
 	interest, err = spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: utils.IdPtr(4 * time.Second),
-			Nonce:    utils.IdPtr[uint64](0x6c211166),
+			Lifetime: optional.Some(4 * time.Second),
+			Nonce:    optional.Some[uint32](0x6c211166),
 		},
 		enc.Wire{[]byte{1, 2, 3, 4}},
 		sig.NewSha256Signer(),
@@ -395,8 +396,8 @@ func TestMakeIntSign(t *testing.T) {
 	interest, err = spec.MakeInterest(
 		tu.NoErr(enc.NameFromStr("/local/ndn/prefix")),
 		&ndn.InterestConfig{
-			Lifetime: utils.IdPtr(4 * time.Second),
-			Nonce:    utils.IdPtr[uint64](0x6c211166),
+			Lifetime: optional.Some(4 * time.Second),
+			Nonce:    optional.Some[uint32](0x6c211166),
 		},
 		enc.Wire{},
 		sig.NewSha256Signer(),
@@ -421,34 +422,34 @@ func TestReadIntBasic(t *testing.T) {
 	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
-	interest, _, err := spec.ReadInterest(enc.NewBufferReader([]byte(
+	interest, _, err := spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x05\x1a\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix\x0c\x02\x0f\xa0"),
 	))
 	require.NoError(t, err)
 	require.Equal(t, "/local/ndn/prefix", interest.Name().String())
-	require.Equal(t, 4*time.Second, *interest.Lifetime())
+	require.Equal(t, 4*time.Second, interest.Lifetime().Unwrap())
 	require.True(t, interest.AppParam() == nil)
 	require.False(t, interest.CanBePrefix())
 	require.False(t, interest.MustBeFresh())
-	require.True(t, interest.Nonce() == nil)
+	require.False(t, interest.Nonce().IsSet())
 	require.True(t, interest.HopLimit() == nil)
 	require.True(t, interest.Signature().SigType() == ndn.SignatureNone)
 
-	interest, _, err = spec.ReadInterest(enc.NewBufferReader([]byte(
+	interest, _, err = spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x05\x26\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix" +
 			"\x21\x00\x12\x00\x0a\x04\x00\x00\x00\x00\x0c\x01\x0a\x22\x01\x01"),
 	))
 	require.NoError(t, err)
 	require.Equal(t, "/local/ndn/prefix", interest.Name().String())
-	require.Equal(t, 10*time.Millisecond, *interest.Lifetime())
+	require.Equal(t, 10*time.Millisecond, interest.Lifetime().Unwrap())
 	require.True(t, interest.AppParam() == nil)
 	require.True(t, interest.CanBePrefix())
 	require.True(t, interest.MustBeFresh())
-	require.Equal(t, uint64(0), *interest.Nonce())
+	require.Equal(t, uint32(0), interest.Nonce().Unwrap())
 	require.Equal(t, uint(1), *interest.HopLimit())
 	require.True(t, interest.Signature().SigType() == ndn.SignatureNone)
 
-	interest, _, err = spec.ReadInterest(enc.NewBufferReader([]byte(
+	interest, _, err = spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x05\x42\x07\x36\x08\x05local\x08\x03ndn\x08\x06prefix" +
 			"\x02 \x47\x75\x6f\x21\xfe\x0e\xe2\x65\x14\x9a\xa2\xbe\x3c\x63\xc5\x38" +
 			"\xa7\x23\x78\xe9\xb0\xa5\x8b\x39\xc5\x91\x63\x67\xd3\x5b\xda\x10" +
@@ -458,14 +459,14 @@ func TestReadIntBasic(t *testing.T) {
 	require.Equal(t,
 		"/local/ndn/prefix/params-sha256=47756f21fe0ee265149aa2be3c63c538a72378e9b0a58b39c5916367d35bda10",
 		interest.Name().String())
-	require.Equal(t, 4*time.Second, *interest.Lifetime())
+	require.Equal(t, 4*time.Second, interest.Lifetime().Unwrap())
 	require.False(t, interest.CanBePrefix())
 	require.False(t, interest.MustBeFresh())
 	require.Equal(t, []byte{1, 2, 3, 4}, interest.AppParam().Join())
 	require.True(t, interest.Signature().SigType() == ndn.SignatureNone)
 
 	// Reject wrong digest
-	_, _, err = spec.ReadInterest(enc.NewBufferReader([]byte(
+	_, _, err = spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x05\x42\x07\x36\x08\x05local\x08\x03ndn\x08\x06prefix" +
 			"\x02 \x47\x75\x6f\x21\xfe\x0e\xe2\x65\x14\x9a\xa2\xbe\x3c\x63\xc5\x38" +
 			"\xa7\x23\x78\xe9\xb0\xa5\x8b\x39\xc5\x91\x63\x67\xd3\x5b\x00\x00" +
@@ -474,7 +475,7 @@ func TestReadIntBasic(t *testing.T) {
 	require.Error(t, err)
 
 	var covered enc.Wire
-	interest, covered, err = spec.ReadInterest(enc.NewBufferReader([]byte(
+	interest, covered, err = spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x05\x6f\x07\x36\x08\x05local\x08\x03ndn\x08\x06prefix" +
 			"\x02 \x8e\x6e\x36\xd7\xea\xbc\xde\x43\x75\x61\x40\xc9\x0b\xda\x09\xd5" +
 			"\x00\xd2\xa5\x77\xf2\xf5\x33\xb5\x69\xf0\x44\x1d\xf0\xa7\xf9\xe2" +
@@ -488,7 +489,7 @@ func TestReadIntBasic(t *testing.T) {
 	require.Equal(t,
 		"/local/ndn/prefix/params-sha256=8e6e36d7eabcde43756140c90bda09d500d2a577f2f533b569f0441df0a7f9e2",
 		interest.Name().String())
-	require.Equal(t, uint64(0x6c211166), *interest.Nonce())
+	require.Equal(t, uint32(0x6c211166), interest.Nonce().Unwrap())
 	require.Equal(t, []byte{1, 2, 3, 4}, interest.AppParam().Join())
 	require.True(t, interest.Signature().SigType() == ndn.SignatureDigestSha256)
 	h := sha256.New()
@@ -498,7 +499,7 @@ func TestReadIntBasic(t *testing.T) {
 	sig := h.Sum(nil)
 	require.Equal(t, sig, interest.Signature().SigValue())
 
-	interest, covered, err = spec.ReadInterest(enc.NewBufferReader([]byte(
+	interest, covered, err = spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x05\x6b\x07\x36\x08\x05local\x08\x03ndn\x08\x06prefix" +
 			"\x02 \x40\x77\xa5\x70\x49\xd8\x38\x48\xb5\x25\xa4\x23\xab\x97\x8e\x64" +
 			"\x80\xf9\x6d\x5c\xa3\x8a\x80\xa5\xe2\xd6\xe2\x50\xa6\x17\xbe\x4f" +
@@ -512,7 +513,7 @@ func TestReadIntBasic(t *testing.T) {
 	require.Equal(t,
 		"/local/ndn/prefix/params-sha256=4077a57049d83848b525a423ab978e6480f96d5ca38a80a5e2d6e250a617be4f",
 		interest.Name().String())
-	require.Equal(t, uint64(0x6c211166), *interest.Nonce())
+	require.Equal(t, uint32(0x6c211166), interest.Nonce().Unwrap())
 	require.Equal(t, []byte{}, interest.AppParam().Join())
 	require.True(t, interest.Signature().SigType() == ndn.SignatureDigestSha256)
 	h = sha256.New()
@@ -527,22 +528,22 @@ func TestReadIntErrors(t *testing.T) {
 	tu.SetT(t)
 	spec := spec_2022.Spec{}
 
-	_, _, err := spec.ReadInterest(enc.NewBufferReader([]byte(
+	_, _, err := spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x05\x6b\x07\x36\x08\x05local\x08\x03ndn\x08\x06prefix"),
 	))
 	require.Error(t, err)
 
-	_, _, err = spec.ReadInterest(enc.NewBufferReader([]byte(
+	_, _, err = spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x05\x6b\x07\x14\x08\x05local\x08\x03ndn\x08\x06prefix"),
 	))
 	require.Error(t, err)
 
-	_, _, err = spec.ReadInterest(enc.NewBufferReader([]byte(
+	_, _, err = spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x06\x6b\x07\x36\x08\x05local\x08\x03ndn\x08\x06prefix"),
 	))
 	require.Error(t, err)
 
-	_, _, err = spec.ReadInterest(enc.NewBufferReader([]byte(
+	_, _, err = spec.ReadInterest(enc.NewBufferView([]byte(
 		"\x01\x00"),
 	))
 	require.Error(t, err)

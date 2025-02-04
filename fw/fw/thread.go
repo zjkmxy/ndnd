@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"runtime"
+	"time"
 
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/fw/defn"
@@ -59,14 +60,13 @@ func HashNameToAllPrefixFwThreads(name enc.Name) []bool {
 
 // Thread Represents a forwarding thread
 type Thread struct {
-	threadID         int
-	pendingInterests chan *defn.Pkt
-	pendingDatas     chan *defn.Pkt
-	pitCS            table.PitCsTable
-	strategies       map[uint64]Strategy
-	deadNonceList    *table.DeadNonceList
-	shouldQuit       chan interface{}
-	HasQuit          chan interface{}
+	threadID      int
+	pending       chan *defn.Pkt
+	pitCS         table.PitCsTable
+	strategies    map[uint64]Strategy
+	deadNonceList *table.DeadNonceList
+	shouldQuit    chan interface{}
+	HasQuit       chan interface{}
 
 	// Counters
 	NInInterests          uint64
@@ -81,8 +81,7 @@ type Thread struct {
 func NewThread(id int) *Thread {
 	t := new(Thread)
 	t.threadID = id
-	t.pendingInterests = make(chan *defn.Pkt, CfgFwQueueSize())
-	t.pendingDatas = make(chan *defn.Pkt, CfgFwQueueSize())
+	t.pending = make(chan *defn.Pkt, CfgFwQueueSize())
 	t.pitCS = table.NewPitCS(t.finalizeInterest)
 	t.strategies = InstantiateStrategies(t)
 	t.deadNonceList = table.NewDeadNonceList()
@@ -122,16 +121,17 @@ func (t *Thread) Run() {
 		runtime.LockOSThread()
 	}
 
-	pitUpdateTimer := t.pitCS.UpdateTimer()
 	for !core.ShouldQuit {
 		select {
-		case pendingPacket := <-t.pendingInterests:
-			t.processIncomingInterest(pendingPacket)
-		case pendingPacket := <-t.pendingDatas:
-			t.processIncomingData(pendingPacket)
+		case pkt := <-t.pending:
+			if pkt.L3.Interest != nil {
+				t.processIncomingInterest(pkt)
+			} else if pkt.L3.Data != nil {
+				t.processIncomingData(pkt)
+			}
 		case <-t.deadNonceList.Ticker.C:
 			t.deadNonceList.RemoveExpiredEntries()
-		case <-pitUpdateTimer:
+		case <-t.pitCS.UpdateTicker():
 			t.pitCS.Update()
 		case <-t.shouldQuit:
 			continue
@@ -147,7 +147,7 @@ func (t *Thread) Run() {
 // QueueInterest queues an Interest for processing by this forwarding thread.
 func (t *Thread) QueueInterest(interest *defn.Pkt) {
 	select {
-	case t.pendingInterests <- interest:
+	case t.pending <- interest:
 	default:
 		core.Log.Error(t, "Interest dropped due to full queue")
 	}
@@ -156,7 +156,7 @@ func (t *Thread) QueueInterest(interest *defn.Pkt) {
 // QueueData queues a Data packet for processing by this forwarding thread.
 func (t *Thread) QueueData(data *defn.Pkt) {
 	select {
-	case t.pendingDatas <- data:
+	case t.pending <- data:
 	default:
 		core.Log.Error(t, "Data dropped due to full queue")
 	}
@@ -217,14 +217,14 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	}
 
 	// Drop packet if no nonce is found
-	if interest.NonceV == nil {
+	if !interest.NonceV.IsSet() {
 		core.Log.Debug(t, "Interest is missing Nonce", "name", packet.Name)
 		return
 	}
 
 	// Check if packet is in dead nonce list
-	if exists := t.deadNonceList.Find(interest.NameV, *interest.NonceV); exists {
-		core.Log.Debug(t, "Interest is looping (DNL)", "name", packet.Name, "nonce", *interest.NonceV)
+	if exists := t.deadNonceList.Find(interest.NameV, interest.NonceV.Unwrap()); exists {
+		core.Log.Debug(t, "Interest is looping (DNL)", "name", packet.Name, "nonce", interest.NonceV.Unwrap())
 		return
 	}
 
@@ -243,7 +243,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 
 	// Add in-record and determine if already pending
 	// this looks like custom interest again, but again can be changed without much issue?
-	_, isAlreadyPending, prevNonce := pitEntry.InsertInRecord(
+	inRecord, isAlreadyPending, prevNonce := pitEntry.InsertInRecord(
 		interest, incomingFace.FaceID(), packet.PitToken)
 
 	if !isAlreadyPending {
@@ -260,7 +260,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 				if csData != nil && csWire != nil {
 					packet.L3.Data = csData
 					packet.L3.Interest = nil
-					packet.Raw = csWire
+					packet.Raw = enc.Wire{csWire}
 					packet.Name = csData.NameV
 					strategy.AfterContentStoreHit(packet, pitEntry, incomingFace.FaceID())
 					return
@@ -281,16 +281,18 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	}
 
 	// Update PIT entry expiration timer
-	table.UpdateExpirationTimer(pitEntry)
+	if inRecord.ExpirationTime.After(pitEntry.ExpirationTime()) {
+		table.UpdateExpirationTimer(pitEntry, inRecord.ExpirationTime)
+	}
 
 	// If NextHopFaceId set, forward to that face (if it exists) or drop
-	if packet.NextHopFaceID != nil {
-		if face := dispatch.GetFace(*packet.NextHopFaceID); face != nil {
+	if hop, ok := packet.NextHopFaceID.Get(); ok {
+		if face := dispatch.GetFace(hop); face != nil {
 			core.Log.Trace(t, "NextHopFaceId is set for Interest", "name", packet.Name)
-			t.processOutgoingInterest(packet, pitEntry, *packet.NextHopFaceID, incomingFace.FaceID())
+			t.processOutgoingInterest(packet, pitEntry, hop, incomingFace.FaceID())
 		} else {
 			core.Log.Info(t, "Non-existent face specified in NextHopFaceId for Interest",
-				"name", packet.Name, "faceid", *packet.NextHopFaceID)
+				"name", packet.Name, "faceid", hop)
 		}
 		return
 	}
@@ -388,7 +390,7 @@ func (t *Thread) processOutgoingInterest(
 func (t *Thread) finalizeInterest(pitEntry table.PitEntry) {
 	// Check for nonces to insert into dead nonce list
 	for _, outRecord := range pitEntry.OutRecords() {
-		t.deadNonceList.Insert(outRecord.LatestInterest, outRecord.LatestNonce)
+		t.deadNonceList.Insert(pitEntry.EncName(), outRecord.LatestNonce)
 	}
 
 	// Counters
@@ -427,7 +429,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 
 	// Add to Content Store
 	if t.pitCS.IsCsAdmitting() {
-		t.pitCS.InsertData(data, packet.Raw)
+		t.pitCS.InsertData(data, packet.Raw.Join())
 	}
 
 	// Check for matching PIT entries
@@ -448,7 +450,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 		pitEntry := pitEntries[0]
 
 		// Set PIT entry expiration to now
-		table.SetExpirationTimerToNow(pitEntry)
+		table.UpdateExpirationTimer(pitEntry, time.Now())
 
 		// Invoke strategy's AfterReceiveData
 		core.Log.Trace(t, "Sending Data", "name", packet.Name, "strategy", strategyName)
@@ -482,7 +484,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 			}
 
 			// Set PIT entry expiration to now
-			table.SetExpirationTimerToNow(pitEntry)
+			table.UpdateExpirationTimer(pitEntry, time.Now())
 
 			// Invoke strategy's BeforeSatisfyInterest
 			strategy.BeforeSatisfyInterest(pitEntry, packet.IncomingFaceID)
@@ -491,7 +493,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 			pitEntry.SetSatisfied(true)
 
 			// Insert into dead nonce list
-			for _, outRecord := range pitEntries[0].GetOutRecords() {
+			for _, outRecord := range pitEntries[0].OutRecords() {
 				t.deadNonceList.Insert(data.NameV, outRecord.LatestNonce)
 			}
 

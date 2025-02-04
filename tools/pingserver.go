@@ -11,7 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/spf13/cobra"
 )
 
@@ -88,7 +88,7 @@ func (ps *PingServer) onInterest(args ndn.InterestHandlerArgs) {
 	data, err := ps.app.Spec().MakeData(
 		args.Interest.Name(),
 		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
 		},
 		args.Interest.AppParam(),
 		ps.signer)

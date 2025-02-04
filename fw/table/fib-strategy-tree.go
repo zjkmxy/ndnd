@@ -75,7 +75,7 @@ func (f *FibStrategyTree) fillTreeToPrefixEnc(name enc.Name) *fibStrategyTreeEnt
 		component := At(name, depth).Clone()
 
 		child := &fibStrategyTreeEntry{}
-		child.name = name[:depth+1].Clone()
+		child.name = entry.name.Append(component)
 		child.depth = depth + 1
 		child.component = component
 		child.parent = entry

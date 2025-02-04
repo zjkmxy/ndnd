@@ -22,9 +22,9 @@ func NewNaturalField(name string, typeNum uint64, annotation string, _ *TlvModel
 func (f *NaturalField) GenEncodingLength() (string, error) {
 	g := strErrBuf{}
 	if f.opt {
-		g.printlnf("if value.%s != nil {", f.name)
+		g.printlnf("if optval, ok := value.%s.Get(); ok {", f.name)
 		g.printlne(GenTypeNumLen(f.typeNum))
-		g.printlne(GenNaturalNumberLen("*value."+f.name, false))
+		g.printlne(GenNaturalNumberLen("optval", false))
 		g.printlnf("}")
 	} else {
 		g.printlne(GenTypeNumLen(f.typeNum))
@@ -40,9 +40,9 @@ func (f *NaturalField) GenEncodingWirePlan() (string, error) {
 func (f *NaturalField) GenEncodeInto() (string, error) {
 	g := strErrBuf{}
 	if f.opt {
-		g.printlnf("if value.%s != nil {", f.name)
+		g.printlnf("if optval, ok := value.%s.Get(); ok {", f.name)
 		g.printlne(GenEncodeTypeNum(f.typeNum))
-		g.printlne(GenNaturalNumberEncode("*value."+f.name, false))
+		g.printlne(GenNaturalNumberEncode("optval", false))
 		g.printlnf("}")
 	} else {
 		g.printlne(GenEncodeTypeNum(f.typeNum))
@@ -55,9 +55,9 @@ func (f *NaturalField) GenReadFrom() (string, error) {
 	if f.opt {
 		g := strErrBuf{}
 		g.printlnf("{")
-		g.printlnf("tempVal := uint64(0)")
-		g.printlne(GenNaturalNumberDecode("tempVal"))
-		g.printlnf("value.%s = &tempVal", f.name)
+		g.printlnf("optval := uint64(0)")
+		g.printlne(GenNaturalNumberDecode("optval"))
+		g.printlnf("value.%s.Set(optval)", f.name)
 		g.printlnf("}")
 		return g.output()
 	} else {
@@ -67,7 +67,7 @@ func (f *NaturalField) GenReadFrom() (string, error) {
 
 func (f *NaturalField) GenSkipProcess() (string, error) {
 	if f.opt {
-		return "value." + f.name + " = nil", nil
+		return fmt.Sprintf("value.%s.Unset()", f.name), nil
 	} else {
 		return fmt.Sprintf("err = enc.ErrSkipRequired{Name: \"%s\", TypeNum: %d}", f.name, f.typeNum), nil
 	}

@@ -4,7 +4,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // GetSecret gets the key secret bits.
@@ -39,7 +39,7 @@ func MarshalSecret(key ndn.Signer) (enc.Wire, error) {
 
 	// Encode key data packet
 	cfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeSigKey),
+		ContentType: optional.Some(ndn.ContentTypeSigKey),
 	}
 	data, err := spec.Spec{}.MakeData(name, cfg, enc.Wire{sk}, key)
 	if err != nil {
@@ -52,7 +52,7 @@ func MarshalSecret(key ndn.Signer) (enc.Wire, error) {
 // UnmarshalSecret decodes a signed NDN Data packet to a key secret.
 func UnmarshalSecret(data ndn.Data) (ndn.Signer, error) {
 	// Check data content type
-	if data.ContentType() == nil || *data.ContentType() != ndn.ContentTypeSigKey {
+	if ctype, ok := data.ContentType().Get(); !ok || ctype != ndn.ContentTypeSigKey {
 		return nil, ndn.ErrInvalidValue{Item: "content type"}
 	}
 

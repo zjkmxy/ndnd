@@ -10,6 +10,7 @@ import (
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/ndncert/tlv"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // The functions defined in this file implement the client protocol for the NDNCERT protocol.
@@ -32,7 +33,7 @@ func (c *Client) FetchProfile() (*tlv.CaProfile, error) {
 		return nil, err
 	}
 
-	return tlv.ParseCaProfile(enc.NewWireReader(state.Content()), false)
+	return tlv.ParseCaProfile(enc.NewWireView(state.Content()), false)
 }
 
 // FetchProbe sends a PROBE request to the CA (blocking).
@@ -68,7 +69,7 @@ func (c *Client) FetchProbe(params ParamMap) (*tlv.ProbeRes, error) {
 		return nil, err
 	}
 
-	return tlv.ParseProbeRes(enc.NewWireReader(content), false)
+	return tlv.ParseProbeRes(enc.NewWireView(content), false)
 }
 
 // FetchProbeRedirect sends a PROBE request to the CA (blocking).
@@ -168,7 +169,7 @@ func (c *Client) New(challenge Challenge, expiry time.Time) (*tlv.NewRes, error)
 		return nil, fmt.Errorf("failed NEW: %+v", err)
 	}
 
-	newRes, err := tlv.ParseNewRes(enc.NewWireReader(content), false)
+	newRes, err := tlv.ParseNewRes(enc.NewWireView(content), false)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +196,7 @@ func (c *Client) Challenge(
 	prevRes *tlv.ChallengeRes,
 ) (*tlv.ChallengeRes, error) {
 	var prevParams ParamMap = nil
-	var prevStatus *string = nil
+	var prevStatus optional.Optional[string]
 
 	if prevRes != nil {
 		prevStatus = prevRes.ChalStatus
@@ -270,7 +271,7 @@ func (c *Client) Challenge(
 		return nil, fmt.Errorf("failed CHALLENGE: %+v", err)
 	}
 
-	chResEnc, err := tlv.ParseCipherMsg(enc.NewWireReader(content), false)
+	chResEnc, err := tlv.ParseCipherMsg(enc.NewWireView(content), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse CHALLENGE cipher response: %w", err)
 	}
@@ -282,7 +283,7 @@ func (c *Client) Challenge(
 		return nil, fmt.Errorf("failed to decrypt CHALLENGE response: %w", err)
 	}
 
-	chRes, err := tlv.ParseChallengeRes(enc.NewBufferReader(chResBytes), false)
+	chRes, err := tlv.ParseChallengeRes(enc.NewBufferView(chResBytes), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse CHALLENGE response: %w", err)
 	}

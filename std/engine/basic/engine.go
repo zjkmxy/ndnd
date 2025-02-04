@@ -17,6 +17,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -102,11 +103,11 @@ func (e *Engine) onPacket(frame []byte) error {
 	// Copy received buffer from face so face can reuse it
 	frameCopy := make([]byte, len(frame))
 	copy(frameCopy, frame)
-	reader := enc.NewBufferReader(frameCopy)
+	reader := enc.NewBufferView(frameCopy)
 
 	var nackReason uint64 = spec.NackReasonNone
 	var pitToken []byte = nil
-	var incomingFaceId *uint64 = nil
+	var incomingFaceId optional.Optional[uint64]
 	var raw enc.Wire = nil
 
 	if hasLogTrace() {
@@ -126,7 +127,7 @@ func (e *Engine) onPacket(frame []byte) error {
 	// First check LpPacket, and do further parse.
 	if pkt.LpPacket != nil {
 		lpPkt := pkt.LpPacket
-		if lpPkt.FragIndex != nil || lpPkt.FragCount != nil {
+		if lpPkt.FragIndex.IsSet() || lpPkt.FragCount.IsSet() {
 			log.Warn(e, "Fragmented LpPackets are not supported - DROP")
 			return nil
 		}
@@ -134,9 +135,9 @@ func (e *Engine) onPacket(frame []byte) error {
 		// Parse the inner packet.
 		raw = pkt.LpPacket.Fragment
 		if len(raw) == 1 {
-			pkt, ctx, err = spec.ReadPacket(enc.NewBufferReader(raw[0]))
+			pkt, ctx, err = spec.ReadPacket(enc.NewBufferView(raw[0]))
 		} else {
-			pkt, ctx, err = spec.ReadPacket(enc.NewWireReader(raw))
+			pkt, ctx, err = spec.ReadPacket(enc.NewWireView(raw))
 		}
 
 		// Make sure there is an inner packet.
@@ -193,12 +194,8 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 	name := args.Interest.Name()
 
 	// Compute deadline
-	args.Deadline = e.timer.Now()
-	if args.Interest.Lifetime() != nil {
-		args.Deadline = args.Deadline.Add(*args.Interest.Lifetime())
-	} else {
-		args.Deadline = args.Deadline.Add(DefaultInterestLife)
-	}
+	args.Deadline = e.timer.Now().
+		Add(args.Interest.Lifetime().GetOr(DefaultInterestLife))
 
 	// Match node
 	handler := func() ndn.InterestHandler {
@@ -448,10 +445,7 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 	}
 
 	// Handle deadline
-	lifetime := DefaultInterestLife
-	if interest.Config.Lifetime != nil {
-		lifetime = *interest.Config.Lifetime
-	}
+	lifetime := interest.Config.Lifetime.GetOr(DefaultInterestLife)
 	deadline := e.timer.Now().Add(lifetime)
 
 	// Inject interest into PIT
@@ -475,7 +469,7 @@ func (e *Engine) Express(interest *ndn.EncodedInterest, callback ndn.ExpressCall
 
 	// Wrap the interest in link packet if needed
 	wire := interest.Wire
-	if interest.Config.NextHopId != nil {
+	if interest.Config.NextHopId.IsSet() {
 		lpPkt := &spec.Packet{
 			LpPacket: &spec.LpPacket{
 				Fragment:      wire,
@@ -504,13 +498,13 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 	}
 
 	intCfg := &ndn.InterestConfig{
-		Lifetime:    utils.IdPtr(1 * time.Second),
+		Lifetime:    optional.Some(1 * time.Second),
 		Nonce:       utils.ConvertNonce(e.timer.Nonce()),
 		MustBeFresh: true,
 
 		// Signed interest shenanigans (NFD wants this)
 		SigNonce: e.timer.Nonce(),
-		SigTime:  utils.IdPtr(time.Duration(e.timer.Now().UnixMilli()) * time.Millisecond),
+		SigTime:  optional.Some(time.Duration(e.timer.Now().UnixMilli()) * time.Millisecond),
 	}
 	interest, err := e.mgmtConf.MakeCmd(module, cmd, cmdArgs, intCfg)
 	if err != nil {
@@ -540,7 +534,7 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 			if !valid {
 				resp.err = fmt.Errorf("command signature is not valid")
 			} else {
-				ret, err := mgmt.ParseControlResponse(enc.NewWireReader(data.Content()), true)
+				ret, err := mgmt.ParseControlResponse(enc.NewWireView(data.Content()), true)
 				if err != nil {
 					resp.err = err
 				} else {

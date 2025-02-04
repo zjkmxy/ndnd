@@ -7,15 +7,15 @@
 
 package table
 
-import spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+import "github.com/named-data/ndnd/fw/defn"
 
 // CsReplacementPolicy represents a cache replacement policy for the Content Store.
 type CsReplacementPolicy interface {
 	// AfterInsert is called after a new entry is inserted into the Content Store.
-	AfterInsert(index uint64, wire []byte, data *spec.Data)
+	AfterInsert(index uint64, wire []byte, data *defn.FwData)
 
 	// AfterRefresh is called after a new data packet refreshes an existing entry in the Content Store.
-	AfterRefresh(index uint64, wire []byte, data *spec.Data)
+	AfterRefresh(index uint64, wire []byte, data *defn.FwData)
 
 	// BeforeErase is called before an entry is erased from the Content Store through management.
 	BeforeErase(index uint64, wire []byte)

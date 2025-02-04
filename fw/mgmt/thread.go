@@ -22,7 +22,7 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 var LOCAL_PREFIX = defn.LOCAL_PREFIX
@@ -94,12 +94,12 @@ func (m *Thread) Run() {
 			break
 		}
 
-		if lpPkt.IncomingFaceId == nil || len(lpPkt.Fragment) == 0 {
+		if !lpPkt.IncomingFaceId.IsSet() || len(lpPkt.Fragment) == 0 {
 			core.Log.Warn(m, "Received malformed packet on internal face - DROP")
 			continue
 		}
 
-		pkt, _, err := spec.ReadPacket(enc.NewWireReader(lpPkt.Fragment))
+		pkt, _, err := spec.ReadPacket(enc.NewWireView(lpPkt.Fragment))
 		if err != nil {
 			core.Log.Warn(m, "Unable to decode internal packet - DROP", "err", err)
 			continue
@@ -157,7 +157,7 @@ func (m *Thread) Run() {
 func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
 	config := ndn.InterestConfig{
 		MustBeFresh: true,
-		Nonce:       utils.IdPtr(rand.Uint64()),
+		Nonce:       optional.Some(rand.Uint32()),
 	}
 	interest, err := spec.Spec{}.MakeInterest(name, &config, params, m.signer)
 	if err != nil {
@@ -173,8 +173,8 @@ func (m *Thread) sendInterest(name enc.Name, params enc.Wire) {
 func (m *Thread) sendData(interest *Interest, name enc.Name, content enc.Wire) {
 	data, err := spec.Spec{}.MakeData(name,
 		&ndn.DataConfig{
-			ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-			Freshness:   utils.IdPtr(time.Duration(0)),
+			ContentType: optional.Some(ndn.ContentTypeBlob),
+			Freshness:   optional.Some(time.Duration(0)),
 		},
 		content,
 		m.signer,

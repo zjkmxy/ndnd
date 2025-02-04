@@ -36,6 +36,10 @@ func BenchmarkNameHash(b *testing.B) {
 	benchmarkNameEncode(b, 20, func(name enc.Name) { _ = name.Hash() })
 }
 
+func BenchmarkNameHashPrefix(b *testing.B) {
+	benchmarkNameEncode(b, 20, func(name enc.Name) { _ = name.PrefixHash() })
+}
+
 func BenchmarkNameStringEncode(b *testing.B) {
 	benchmarkNameEncode(b, 20, func(name enc.Name) { _ = name.String() })
 }

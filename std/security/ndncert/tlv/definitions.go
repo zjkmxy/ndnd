@@ -3,6 +3,7 @@ package tlv
 
 import (
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type CaProfile struct {
@@ -27,7 +28,7 @@ type ProbeResVals struct {
 	//+field:name
 	Response enc.Name `tlv:"0x07"`
 	//+field:natural:optional
-	MaxSuffixLength *uint64 `tlv:"0x8F"`
+	MaxSuffixLength optional.Optional[uint64] `tlv:"0x8F"`
 }
 
 type ProbeRes struct {
@@ -75,11 +76,11 @@ type ChallengeRes struct {
 	//+field:natural
 	Status uint64 `tlv:"0x9B"`
 	//+field:string:optional
-	ChalStatus *string `tlv:"0xA3"`
+	ChalStatus optional.Optional[string] `tlv:"0xA3"`
 	//+field:natural:optional
-	RemainTries *uint64 `tlv:"0xA5"`
+	RemainTries optional.Optional[uint64] `tlv:"0xA5"`
 	//+field:natural:optional
-	RemainTime *uint64 `tlv:"0xA7"`
+	RemainTime optional.Optional[uint64] `tlv:"0xA7"`
 	//+field:struct:NameContainer
 	CertName *NameContainer `tlv:"0xA9"`
 	//+field:struct:NameContainer

@@ -7,7 +7,10 @@
 
 package mgmt
 
-import spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+import (
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/types/optional"
+)
 
 // Module represents a management module
 type Module interface {
@@ -20,5 +23,5 @@ type Module interface {
 type Interest struct {
 	spec.Interest
 	pitToken []byte
-	inFace   *uint64
+	inFace   optional.Optional[uint64]
 }

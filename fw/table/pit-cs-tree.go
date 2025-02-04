@@ -1,16 +1,16 @@
 package table
 
 import (
-	"math/rand"
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	pq "github.com/named-data/ndnd/std/utils/priority_queue"
+	"github.com/named-data/ndnd/std/types/priority_queue"
 )
 
-const expiredPitTickerInterval = 100 * time.Millisecond
+const expiredPitTickerInterval = 200 * time.Millisecond
+const pitTokenLookupTableSize = 125000 // 1MB
 
 type OnPitExpiration func(PitEntry)
 
@@ -19,22 +19,24 @@ type PitCsTree struct {
 	root *pitCsTreeNode
 
 	nPitEntries int
-	pitTokenMap map[uint32]*nameTreePitEntry
+
+	nPitToken uint64
+	pitTokens []*nameTreePitEntry
 
 	nCsEntries    int
 	csReplacement CsReplacementPolicy
 	csMap         map[uint64]*nameTreeCsEntry
 
-	pitExpiryQueue pq.Queue[*nameTreePitEntry, int64]
-	updateTimer    chan struct{}
+	pitExpiryQueue priority_queue.Queue[*nameTreePitEntry, int64]
+	updateTicker   *time.Ticker
 	onExpiration   OnPitExpiration
 }
 
 type nameTreePitEntry struct {
-	basePitEntry                                    // compose with BasePitEntry
-	pitCsTable   *PitCsTree                         // pointer to tree
-	node         *pitCsTreeNode                     // the tree node associated with this entry
-	pqItem       *pq.Item[*nameTreePitEntry, int64] // entry in the expiring queue
+	basePitEntry                                                // compose with BasePitEntry
+	pitCsTable   *PitCsTree                                     // pointer to tree
+	node         *pitCsTreeNode                                 // the tree node associated with this entry
+	pqItem       *priority_queue.Item[*nameTreePitEntry, int64] // entry in the expiring queue
 }
 
 type nameTreeCsEntry struct {
@@ -44,7 +46,8 @@ type nameTreeCsEntry struct {
 
 // pitCsTreeNode represents an entry in a PIT-CS tree.
 type pitCsTreeNode struct {
-	component *enc.Component
+	component enc.Component
+	name      enc.Name
 	depth     int
 
 	parent   *pitCsTreeNode
@@ -58,14 +61,12 @@ type pitCsTreeNode struct {
 // NewPitCS creates a new combined PIT-CS for a forwarding thread.
 func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	pitCs := new(PitCsTree)
-	pitCs.root = new(pitCsTreeNode)
-	pitCs.root.component = nil // Root component will be nil since it represents zero components
-	pitCs.root.pitEntries = make([]*nameTreePitEntry, 0)
-	pitCs.root.children = make(map[uint64]*pitCsTreeNode)
+	pitCs.root = PitCsPools.PitCsTreeNode.New()
+	pitCs.root.component = enc.Component{} // zero component
 	pitCs.onExpiration = onExpiration
-	pitCs.pitTokenMap = make(map[uint32]*nameTreePitEntry)
-	pitCs.pitExpiryQueue = pq.New[*nameTreePitEntry, int64]()
-	pitCs.updateTimer = make(chan struct{})
+	pitCs.pitTokens = make([]*nameTreePitEntry, pitTokenLookupTableSize)
+	pitCs.pitExpiryQueue = priority_queue.New[*nameTreePitEntry, int64]()
+	pitCs.updateTicker = time.NewTicker(expiredPitTickerInterval)
 
 	// This value has already been validated from loading the configuration,
 	// so we know it will be one of the following (or else fatal)
@@ -77,16 +78,11 @@ func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	}
 	pitCs.csMap = make(map[uint64]*nameTreeCsEntry)
 
-	// Schedule first signal
-	time.AfterFunc(expiredPitTickerInterval, func() {
-		pitCs.updateTimer <- struct{}{}
-	})
-
 	return pitCs
 }
 
-func (p *PitCsTree) UpdateTimer() <-chan struct{} {
-	return p.updateTimer
+func (p *PitCsTree) UpdateTicker() <-chan time.Time {
+	return p.updateTicker.C
 }
 
 func (p *PitCsTree) Update() {
@@ -95,22 +91,6 @@ func (p *PitCsTree) Update() {
 		entry.pqItem = nil
 		p.onExpiration(entry)
 		p.RemoveInterest(entry)
-	}
-	if !core.ShouldQuit {
-		updateDuration := expiredPitTickerInterval
-		if p.pitExpiryQueue.Len() > 0 {
-			sleepTime := time.Duration(p.pitExpiryQueue.PeekPriority()-time.Now().UnixNano()) * time.Nanosecond
-			if sleepTime > 0 {
-				if sleepTime > expiredPitTickerInterval {
-					sleepTime = expiredPitTickerInterval
-				}
-				updateDuration = sleepTime
-			}
-		}
-		// Schedule next signal
-		time.AfterFunc(updateDuration, func() {
-			p.updateTimer <- struct{}{}
-		})
 	}
 }
 
@@ -129,8 +109,8 @@ func (e *nameTreePitEntry) PitCs() PitCsTable {
 
 // InsertInterest inserts an entry in the PIT upon receipt of an Interest.
 // Returns tuple of PIT entry and whether the Nonce is a duplicate.
-func (p *PitCsTree) InsertInterest(interest *spec.Interest, hint enc.Name, inFace uint64) (PitEntry, bool) {
-	name := interest.NameV.Clone()
+func (p *PitCsTree) InsertInterest(interest *defn.FwInterest, hint enc.Name, inFace uint64) (PitEntry, bool) {
+	name := interest.Name()
 
 	node := p.root.fillTreeToPrefixEnc(name)
 	var entry *nameTreePitEntry
@@ -145,26 +125,26 @@ func (p *PitCsTree) InsertInterest(interest *spec.Interest, hint enc.Name, inFac
 
 	if entry == nil {
 		p.nPitEntries++
-		entry = new(nameTreePitEntry)
+		entry = PitCsPools.NameTreePitEntry.Get()
 		entry.node = node
 		entry.pitCsTable = p
-		entry.encname = name
+		entry.encname = node.name
 		entry.canBePrefix = interest.CanBePrefixV
 		entry.mustBeFresh = interest.MustBeFreshV
 		entry.forwardingHintNew = hint
-		entry.inRecords = make(map[uint64]*PitInRecord)
-		entry.outRecords = make(map[uint64]*PitOutRecord)
 		entry.satisfied = false
 		node.pitEntries = append(node.pitEntries, entry)
-		entry.token = p.generateNewPitToken()
+		entry.token = p.newPitToken()
 		entry.pqItem = nil
-		p.pitTokenMap[entry.token] = entry
+
+		tokIdx := p.pitTokenIdx(entry.token)
+		p.pitTokens[tokIdx] = entry
 	}
 
 	// Only considered a duplicate (loop) if from different face since
 	// is just retransmission and not loop if same face
 	for face, inRecord := range entry.inRecords {
-		if face != inFace && inRecord.LatestNonce == *interest.NonceV {
+		if face != inFace && inRecord.LatestNonce == interest.NonceV.Unwrap() {
 			return entry, true
 		}
 	}
@@ -185,11 +165,22 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 				e.node.pitEntries[i] = e.node.pitEntries[len(e.node.pitEntries)-1]
 			}
 			e.node.pitEntries = e.node.pitEntries[:len(e.node.pitEntries)-1]
-			if len(e.node.pitEntries) == 0 {
-				entry.node.pruneIfEmpty()
-			}
+			entry.node.pruneIfEmpty()
 			p.nPitEntries--
-			delete(p.pitTokenMap, e.token)
+
+			// remove entry from pit token lookup table
+			tokIdx := p.pitTokenIdx(entry.Token())
+			if p.pitTokens[tokIdx] == entry {
+				p.pitTokens[tokIdx] = nil
+			}
+
+			// now it is invalid to use the entry
+			entry.encname = nil // invalidate
+			entry.pitCsTable = nil
+			entry.node = nil
+			pitEntry.ClearInRecords()  // pool
+			pitEntry.ClearOutRecords() // pool
+			PitCsPools.NameTreePitEntry.Put(entry)
 			return true
 		}
 	}
@@ -203,7 +194,7 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 // by the given data.
 // Example: If we have interests /a and /a/b, a prefix search for data with name /a/b
 // will return PitEntries for both /a and /a/b
-func (p *PitCsTree) FindInterestExactMatchEnc(interest *spec.Interest) PitEntry {
+func (p *PitCsTree) FindInterestExactMatchEnc(interest *defn.FwInterest) PitEntry {
 	node := p.root.findExactMatchEntryEnc(interest.NameV)
 	if node != nil {
 		for _, curEntry := range node.pitEntries {
@@ -220,12 +211,12 @@ func (p *PitCsTree) FindInterestExactMatchEnc(interest *spec.Interest) PitEntry 
 // by the given data.
 // Example: If we have interests /a and /a/b, a prefix search for data with name /a/b
 // will return PitEntries for both /a and /a/b
-func (p *PitCsTree) FindInterestPrefixMatchByDataEnc(data *spec.Data, token *uint32) []PitEntry {
+func (p *PitCsTree) FindInterestPrefixMatchByDataEnc(data *defn.FwData, token *uint32) []PitEntry {
 	if token != nil {
-		if entry, ok := p.pitTokenMap[*token]; ok && entry.Token() == *token {
+		entry := p.pitTokens[p.pitTokenIdx(*token)]
+		if entry != nil && entry.encname != nil && entry.Token() == *token {
 			return []PitEntry{entry}
 		}
-		return nil
 	}
 	return p.findInterestPrefixMatchByNameEnc(data.NameV)
 }
@@ -263,44 +254,6 @@ func (p *PitCsTree) IsCsServing() bool {
 	return CfgCsServe()
 }
 
-// InsertOutRecord inserts an outrecord for the given interest, updating the
-// preexisting one if it already occcurs.
-func (e *nameTreePitEntry) InsertOutRecord(interest *spec.Interest, face uint64) *PitOutRecord {
-	lifetime := time.Millisecond * 4000
-	if interest.Lifetime() != nil {
-		lifetime = *interest.Lifetime()
-	}
-
-	var record *PitOutRecord
-	var ok bool
-	if record, ok = e.outRecords[face]; !ok {
-		record := new(PitOutRecord)
-		record.Face = face
-		record.LatestNonce = *interest.NonceV
-		record.LatestTimestamp = time.Now()
-		record.LatestInterest = interest.NameV.Clone()
-		record.ExpirationTime = time.Now().Add(lifetime)
-		e.outRecords[face] = record
-		return record
-	}
-
-	// Existing record
-	record.LatestNonce = *interest.NonceV
-	record.LatestTimestamp = time.Now()
-	record.LatestInterest = interest.NameV.Clone()
-	record.ExpirationTime = time.Now().Add(lifetime)
-	return record
-}
-
-// GetOutRecords returns all outrecords for the given PIT entry.
-func (e *nameTreePitEntry) GetOutRecords() []*PitOutRecord {
-	records := make([]*PitOutRecord, 0)
-	for _, value := range e.outRecords {
-		records = append(records, value)
-	}
-	return records
-}
-
 func At(n enc.Name, index int) enc.Component {
 	if index < -len(n) || index >= len(n) {
 		return enc.Component{}
@@ -333,19 +286,21 @@ func (p *pitCsTreeNode) findLongestPrefixEntryEnc(name enc.Name) *pitCsTreeNode 
 }
 
 func (p *pitCsTreeNode) fillTreeToPrefixEnc(name enc.Name) *pitCsTreeNode {
-	curNode := p.findLongestPrefixEntryEnc(name)
-	for depth := curNode.depth + 1; depth <= len(name); depth++ {
-		newNode := new(pitCsTreeNode)
-		var temp = At(name, depth-1)
-		newNode.component = &temp
-		newNode.depth = depth
-		newNode.parent = curNode
-		newNode.children = make(map[uint64]*pitCsTreeNode)
+	entry := p.findLongestPrefixEntryEnc(name)
 
-		curNode.children[newNode.component.Hash()] = newNode
-		curNode = newNode
+	for depth := entry.depth; depth < len(name); depth++ {
+		component := At(name, depth).Clone()
+
+		child := PitCsPools.PitCsTreeNode.Get()
+		child.name = entry.name.Append(component)
+		child.depth = depth + 1
+		child.component = component
+		child.parent = entry
+
+		entry.children[component.Hash()] = child
+		entry = child
 	}
-	return curNode
+	return entry
 }
 
 func (p *pitCsTreeNode) getChildrenCount() int {
@@ -356,22 +311,25 @@ func (p *pitCsTreeNode) pruneIfEmpty() {
 	for curNode := p; curNode.parent != nil && curNode.getChildrenCount() == 0 &&
 		len(curNode.pitEntries) == 0 && curNode.csEntry == nil; curNode = curNode.parent {
 		delete(curNode.parent.children, curNode.component.Hash())
+		PitCsPools.PitCsTreeNode.Put(curNode)
 	}
 }
 
-func (p *PitCsTree) generateNewPitToken() uint32 {
-	for {
-		token := rand.Uint32()
-		if _, ok := p.pitTokenMap[token]; !ok {
-			return token
-		}
-	}
+// newPitToken returns a new PIT token.
+func (p *PitCsTree) newPitToken() uint32 {
+	p.nPitToken++
+	return uint32(p.nPitToken)
+}
+
+// pitTokenIdx returns the index in the pitTokens table.
+func (p *PitCsTree) pitTokenIdx(token uint32) uint32 {
+	return token % uint32(len(p.pitTokens))
 }
 
 // FindMatchingDataFromCS finds the best matching entry in the CS (if any).
 // If MustBeFresh is set to true in the Interest, only non-stale CS entries
 // will be returned.
-func (p *PitCsTree) FindMatchingDataFromCS(interest *spec.Interest) CsEntry {
+func (p *PitCsTree) FindMatchingDataFromCS(interest *defn.FwInterest) CsEntry {
 	node := p.root.findExactMatchEntryEnc(interest.NameV)
 	if node != nil {
 		if !interest.CanBePrefixV {
@@ -390,11 +348,11 @@ func (p *PitCsTree) FindMatchingDataFromCS(interest *spec.Interest) CsEntry {
 }
 
 // InsertData inserts a Data packet into the Content Store.
-func (p *PitCsTree) InsertData(data *spec.Data, wire []byte) {
+func (p *PitCsTree) InsertData(data *defn.FwData, wire []byte) {
 	index := data.NameV.Hash()
 	staleTime := time.Now()
-	if data.MetaInfo != nil && data.MetaInfo.FreshnessPeriod != nil {
-		staleTime = staleTime.Add(*data.MetaInfo.FreshnessPeriod)
+	if data.MetaInfo != nil && data.MetaInfo.FreshnessPeriod.IsSet() {
+		staleTime = staleTime.Add(data.MetaInfo.FreshnessPeriod.Unwrap())
 	}
 
 	store := make([]byte, len(wire))
@@ -442,7 +400,7 @@ func (p *PitCsTree) eraseCsDataFromReplacementStrategy(index uint64) {
 // the interest as far as possible with the nodes components in the PitCSTree.
 // For example, if we have data for /a/b/v=10 and the interest is /a/b,
 // p should be the `b` node, not the root node.
-func (p *pitCsTreeNode) findMatchingDataCSPrefix(interest *spec.Interest) CsEntry {
+func (p *pitCsTreeNode) findMatchingDataCSPrefix(interest *defn.FwInterest) CsEntry {
 	if p.csEntry != nil && (!interest.MustBeFreshV || time.Now().Before(p.csEntry.staleTime)) {
 		// A csEntry exists at this node and is acceptable to satisfy the interest
 		return p.csEntry

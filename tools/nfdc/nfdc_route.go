@@ -26,7 +26,7 @@ func (t *Tool) ExecRouteList(_ *cobra.Command, args []string) {
 		return
 	}
 
-	status, err := mgmt.ParseRibStatus(enc.NewWireReader(data), true)
+	status, err := mgmt.ParseRibStatus(enc.NewWireView(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing RIB status: %+v\n", err)
 		return
@@ -35,8 +35,8 @@ func (t *Tool) ExecRouteList(_ *cobra.Command, args []string) {
 	for _, entry := range status.Entries {
 		for _, route := range entry.Routes {
 			expiry := "never"
-			if route.ExpirationPeriod != nil {
-				expiry = (time.Duration(*route.ExpirationPeriod) * time.Millisecond).String()
+			if rexpiry, ok := route.ExpirationPeriod.Get(); ok {
+				expiry = (time.Duration(rexpiry) * time.Millisecond).String()
 			}
 
 			flagList := make([]string, 0)
@@ -71,7 +71,7 @@ func (t *Tool) ExecFibList(_ *cobra.Command, args []string) {
 		return
 	}
 
-	status, err := mgmt.ParseFibStatus(enc.NewWireReader(data), true)
+	status, err := mgmt.ParseFibStatus(enc.NewWireView(data), true)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing FIB status: %+v\n", err)
 		os.Exit(1)

@@ -10,7 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	rdr "github.com/named-data/ndnd/std/ndn/rdr_2024"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // maximum number of segments in an object (for safety)
@@ -203,7 +203,7 @@ func (c *Client) fetchMetadata(
 		Config: &ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,
-			Lifetime:    utils.IdPtr(time.Millisecond * 1000),
+			Lifetime:    optional.Some(time.Millisecond * 1000),
 		},
 		Retries: 3,
 		Callback: func(args ndn.ExpressCallbackArgs) {
@@ -225,7 +225,7 @@ func (c *Client) fetchMetadata(
 				}
 
 				// parse metadata
-				metadata, err := rdr.ParseMetaData(enc.NewWireReader(args.Data.Content()), false)
+				metadata, err := rdr.ParseMetaData(enc.NewWireView(args.Data.Content()), false)
 				if err != nil {
 					callback(nil, fmt.Errorf("consume: failed to parse object metadata (%v)", err))
 					return
@@ -251,7 +251,7 @@ func (c *Client) fetchDataByPrefix(
 		Config: &ndn.InterestConfig{
 			CanBePrefix: true,
 			MustBeFresh: true,
-			Lifetime:    utils.IdPtr(time.Millisecond * 1000),
+			Lifetime:    optional.Some(time.Millisecond * 1000),
 		},
 		Retries: 3,
 		Callback: func(args ndn.ExpressCallbackArgs) {

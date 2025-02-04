@@ -1,5 +1,7 @@
 package codegen
 
+import "fmt"
+
 // BoolField represents a boolean field.
 type BoolField struct {
 	BaseTlvField
@@ -37,9 +39,12 @@ func (f *BoolField) GenEncodeInto() (string, error) {
 }
 
 func (f *BoolField) GenReadFrom() (string, error) {
-	return "value." + f.name + " = true", nil
+	g := strErrBuf{}
+	g.printlnf("value.%s = true", f.name)
+	g.printlnf("err = reader.Skip(int(l))")
+	return g.output()
 }
 
 func (f *BoolField) GenSkipProcess() (string, error) {
-	return "value." + f.name + " = false", nil
+	return fmt.Sprintf("value.%s = false", f.name), nil
 }

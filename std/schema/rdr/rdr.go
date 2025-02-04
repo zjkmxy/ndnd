@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	rtlv "github.com/named-data/ndnd/std/ndn/rdr_2024"
 	"github.com/named-data/ndnd/std/schema"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -72,9 +73,9 @@ func (n *SegmentedNode) Provide(mNode schema.MatchedNode, content enc.Wire, need
 	copy(newName, mNode.Name)
 
 	dataCfg := &ndn.DataConfig{
-		ContentType:  utils.IdPtr(n.ContentType),
-		Freshness:    utils.IdPtr(n.Freshness),
-		FinalBlockID: utils.IdPtr(enc.NewSegmentComponent(segCnt - 1)),
+		ContentType:  optional.Some(n.ContentType),
+		Freshness:    optional.Some(n.Freshness),
+		FinalBlockID: optional.Some(enc.NewSegmentComponent(segCnt - 1)),
 	}
 
 	for i := uint64(0); i < segCnt; i++ {
@@ -187,7 +188,7 @@ func (n *SegmentedNode) SinglePacketPipeline(
 				break
 			}
 		} else {
-			if succeeded && lastData.FinalBlockID().Compare(newName[nameLen]) == 0 {
+			if succeeded && lastData.FinalBlockID().Unwrap().Compare(newName[nameLen]) == 0 {
 				// In the last segment, finalBlockId equals the last name component
 				break
 			}
@@ -286,14 +287,14 @@ func (n *RdrNode) Provide(mNode schema.MatchedNode, content enc.Wire) uint64 {
 
 	// generate metadata
 	metaDataCfg := &ndn.DataConfig{
-		ContentType:  utils.IdPtr(ndn.ContentTypeBlob),
-		Freshness:    utils.IdPtr(n.MetaFreshness),
-		FinalBlockID: utils.IdPtr(enc.NewSegmentComponent(0)),
+		ContentType:  optional.Some(ndn.ContentTypeBlob),
+		Freshness:    optional.Some(n.MetaFreshness),
+		FinalBlockID: optional.Some(enc.NewSegmentComponent(0)),
 	}
 	metaData := &rtlv.MetaData{
 		Name:         dataName,
 		FinalBlockID: enc.NewSegmentComponent(segCnt - 1).Bytes(),
-		Size:         utils.IdPtr(content.Length()),
+		Size:         optional.Some(content.Length()),
 	}
 	metaMNode.Call("Provide", metaData.Encode(), metaDataCfg)
 
@@ -326,7 +327,7 @@ func (n *RdrNode) NeedCallback(mNode schema.MatchedNode, callback schema.Callbac
 				switch lastResult.Status {
 				case ndn.InterestResultData:
 					succeeded = true
-					metadata, err = rtlv.ParseMetaData(enc.NewWireReader(lastResult.Content), true)
+					metadata, err = rtlv.ParseMetaData(enc.NewWireView(lastResult.Content), true)
 					if err != nil {
 						log.Error(n, "Unable to parse and extract name from the metadata packet", "err", err)
 						lastResult.Status = ndn.InterestResultError
@@ -464,13 +465,13 @@ func (n *GeneralObjNode) Provide(mNode schema.MatchedNode, content enc.Wire) uin
 	metaName[nameLen] = enc.NewStringComponent(32, "metadata")
 	metaMNode := mNode.Refine(metaName)
 	metaDataCfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-		Freshness:   utils.IdPtr(n.MetaFreshness),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
+		Freshness:   optional.Some(n.MetaFreshness),
 	}
 	metaData := &rtlv.MetaData{
 		Name:         dataName,
 		FinalBlockID: enc.NewSegmentComponent(segCnt - 1).Bytes(),
-		Size:         utils.IdPtr(content.Length()),
+		Size:         optional.Some(content.Length()),
 	}
 	metaMNode.Call("Provide", metaData.Encode(), metaDataCfg)
 
@@ -480,8 +481,8 @@ func (n *GeneralObjNode) Provide(mNode schema.MatchedNode, content enc.Wire) uin
 	manifestName[nameLen] = enc.NewStringComponent(32, "manifest")
 	manifestMNode := mNode.Refine(manifestName)
 	manifestDataCfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
-		Freshness:   utils.IdPtr(n.ManifestFreshness),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
+		Freshness:   optional.Some(n.ManifestFreshness),
 	}
 	manifestData := &rtlv.ManifestData{
 		Entries: make([]*rtlv.ManifestDigest, segCnt),
@@ -521,7 +522,7 @@ func (n *GeneralObjNode) NeedCallback(mNode schema.MatchedNode, callback schema.
 			switch lastResult.Status {
 			case ndn.InterestResultData:
 				succeeded = true
-				manifest, err = rtlv.ParseManifestData(enc.NewWireReader(lastResult.Content), true)
+				manifest, err = rtlv.ParseManifestData(enc.NewWireView(lastResult.Content), true)
 				if err != nil {
 					log.Error(n, "Unable to parse the manifest packet", "err", err)
 					lastResult.Status = ndn.InterestResultError

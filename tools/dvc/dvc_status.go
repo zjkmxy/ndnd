@@ -8,6 +8,7 @@ import (
 	spec_dv "github.com/named-data/ndnd/dv/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 	"github.com/named-data/ndnd/std/utils/toolutils"
 	"github.com/spf13/cobra"
@@ -21,7 +22,7 @@ func (t *Tool) DvStatus() (*spec_dv.Status, error) {
 	}
 	cfg := &ndn.InterestConfig{
 		MustBeFresh: true,
-		Lifetime:    utils.IdPtr(time.Second),
+		Lifetime:    optional.Some(time.Second),
 		Nonce:       utils.ConvertNonce(t.engine.Timer().Nonce()),
 	}
 
@@ -41,7 +42,7 @@ func (t *Tool) DvStatus() (*spec_dv.Status, error) {
 		return nil, fmt.Errorf("interest failed: %s", eargs.Result)
 	}
 
-	status, err := spec_dv.ParseStatus(enc.NewWireReader(eargs.Data.Content()), false)
+	status, err := spec_dv.ParseStatus(enc.NewWireView(eargs.Data.Content()), false)
 	if err != nil {
 		return nil, err
 	}
