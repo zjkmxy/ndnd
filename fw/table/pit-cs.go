@@ -46,12 +46,16 @@ type PitEntry interface {
 	EncName() enc.Name
 	CanBePrefix() bool
 	MustBeFresh() bool
-	ForwardingHintNew() enc.Name
+
 	// Interests must match in terms of Forwarding Hint to be aggregated in PIT.
+	ForwardingHintNew() enc.Name
+
 	InRecords() map[uint64]*PitInRecord   // Key is face ID
 	OutRecords() map[uint64]*PitOutRecord // Key is face ID
+
 	ExpirationTime() time.Time
-	SetExpirationTime(t time.Time)
+	setExpirationTime(t time.Time) // use table.UpdateExpirationTimer()
+
 	Satisfied() bool
 	SetSatisfied(isSatisfied bool)
 
@@ -143,29 +147,9 @@ func (bpe *basePitEntry) InsertInRecord(
 	return record, true, previousNonce
 }
 
-// SetExpirationTimerToNow updates the expiration timer to the current time.
-func SetExpirationTimerToNow(e PitEntry) {
-	e.SetExpirationTime(time.Now())
-	e.PitCs().updatePitExpiry(e)
-}
-
-// UpdateExpirationTimer updates the expiration timer to the latest expiration
-// time of any in or out record in the entry.
-func UpdateExpirationTimer(e PitEntry) {
-	e.SetExpirationTime(time.Now())
-
-	for _, record := range e.InRecords() {
-		if record.ExpirationTime.After(e.ExpirationTime()) {
-			e.SetExpirationTime(record.ExpirationTime)
-		}
-	}
-
-	for _, record := range e.OutRecords() {
-		if record.ExpirationTime.After(e.ExpirationTime()) {
-			e.SetExpirationTime(record.ExpirationTime)
-		}
-	}
-
+// UpdateExpirationTimer sets the expiration time of the PIT entry.
+func UpdateExpirationTimer(e PitEntry, t time.Time) {
+	e.setExpirationTime(t)
 	e.PitCs().updatePitExpiry(e)
 }
 
@@ -207,7 +191,7 @@ func (bpe *basePitEntry) ExpirationTime() time.Time {
 	return bpe.expirationTime
 }
 
-func (bpe *basePitEntry) SetExpirationTime(t time.Time) {
+func (bpe *basePitEntry) setExpirationTime(t time.Time) {
 	bpe.expirationTime = t
 }
 

@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"runtime"
+	"time"
 
 	"github.com/named-data/ndnd/fw/core"
 	"github.com/named-data/ndnd/fw/defn"
@@ -243,7 +244,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 
 	// Add in-record and determine if already pending
 	// this looks like custom interest again, but again can be changed without much issue?
-	_, isAlreadyPending, prevNonce := pitEntry.InsertInRecord(
+	inRecord, isAlreadyPending, prevNonce := pitEntry.InsertInRecord(
 		interest, incomingFace.FaceID(), packet.PitToken)
 
 	if !isAlreadyPending {
@@ -281,7 +282,9 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 	}
 
 	// Update PIT entry expiration timer
-	table.UpdateExpirationTimer(pitEntry)
+	if inRecord.ExpirationTime.After(pitEntry.ExpirationTime()) {
+		table.UpdateExpirationTimer(pitEntry, inRecord.ExpirationTime)
+	}
 
 	// If NextHopFaceId set, forward to that face (if it exists) or drop
 	if hop, ok := packet.NextHopFaceID.Get(); ok {
@@ -448,7 +451,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 		pitEntry := pitEntries[0]
 
 		// Set PIT entry expiration to now
-		table.SetExpirationTimerToNow(pitEntry)
+		table.UpdateExpirationTimer(pitEntry, time.Now())
 
 		// Invoke strategy's AfterReceiveData
 		core.Log.Trace(t, "Sending Data", "name", packet.Name, "strategy", strategyName)
@@ -482,7 +485,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 			}
 
 			// Set PIT entry expiration to now
-			table.SetExpirationTimerToNow(pitEntry)
+			table.UpdateExpirationTimer(pitEntry, time.Now())
 
 			// Invoke strategy's BeforeSatisfyInterest
 			strategy.BeforeSatisfyInterest(pitEntry, packet.IncomingFaceID)

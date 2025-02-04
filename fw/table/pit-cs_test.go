@@ -49,7 +49,7 @@ func TestBasePitEntrySetters(t *testing.T) {
 	}
 
 	newTime := time.Now()
-	bpe.SetExpirationTime(newTime)
+	bpe.setExpirationTime(newTime)
 	assert.Equal(t, bpe.ExpirationTime(), newTime)
 
 	bpe.SetSatisfied(false)
