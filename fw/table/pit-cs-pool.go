@@ -48,7 +48,7 @@ var PitCsPools = &PitCsPoolsT{
 		},
 		func(obj *pitCsTreeNode) {
 			clear(obj.children)
-			obj.name = obj.name[:0]
+			obj.name = nil
 			obj.pitEntries = obj.pitEntries[:0]
 			obj.csEntry = nil
 		},

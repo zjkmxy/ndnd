@@ -307,6 +307,7 @@ func (p *pitCsTreeNode) getChildrenCount() int {
 func (p *pitCsTreeNode) pruneIfEmpty() {
 	for curNode := p; curNode.parent != nil && curNode.getChildrenCount() == 0 &&
 		len(curNode.pitEntries) == 0 && curNode.csEntry == nil; curNode = curNode.parent {
+		PitCsPools.PitCsTreeNode.Put(curNode)
 		delete(curNode.parent.children, curNode.component.Hash())
 	}
 }
