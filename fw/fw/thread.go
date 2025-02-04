@@ -59,14 +59,13 @@ func HashNameToAllPrefixFwThreads(name enc.Name) []bool {
 
 // Thread Represents a forwarding thread
 type Thread struct {
-	threadID         int
-	pendingInterests chan *defn.Pkt
-	pendingDatas     chan *defn.Pkt
-	pitCS            table.PitCsTable
-	strategies       map[uint64]Strategy
-	deadNonceList    *table.DeadNonceList
-	shouldQuit       chan interface{}
-	HasQuit          chan interface{}
+	threadID      int
+	pending       chan *defn.Pkt
+	pitCS         table.PitCsTable
+	strategies    map[uint64]Strategy
+	deadNonceList *table.DeadNonceList
+	shouldQuit    chan interface{}
+	HasQuit       chan interface{}
 
 	// Counters
 	NInInterests          uint64
@@ -81,8 +80,7 @@ type Thread struct {
 func NewThread(id int) *Thread {
 	t := new(Thread)
 	t.threadID = id
-	t.pendingInterests = make(chan *defn.Pkt, CfgFwQueueSize())
-	t.pendingDatas = make(chan *defn.Pkt, CfgFwQueueSize())
+	t.pending = make(chan *defn.Pkt, CfgFwQueueSize())
 	t.pitCS = table.NewPitCS(t.finalizeInterest)
 	t.strategies = InstantiateStrategies(t)
 	t.deadNonceList = table.NewDeadNonceList()
@@ -125,10 +123,12 @@ func (t *Thread) Run() {
 	pitUpdateTimer := t.pitCS.UpdateTimer()
 	for !core.ShouldQuit {
 		select {
-		case pendingPacket := <-t.pendingInterests:
-			t.processIncomingInterest(pendingPacket)
-		case pendingPacket := <-t.pendingDatas:
-			t.processIncomingData(pendingPacket)
+		case pkt := <-t.pending:
+			if pkt.L3.Interest != nil {
+				t.processIncomingInterest(pkt)
+			} else if pkt.L3.Data != nil {
+				t.processIncomingData(pkt)
+			}
 		case <-t.deadNonceList.Ticker.C:
 			t.deadNonceList.RemoveExpiredEntries()
 		case <-pitUpdateTimer:
@@ -147,7 +147,7 @@ func (t *Thread) Run() {
 // QueueInterest queues an Interest for processing by this forwarding thread.
 func (t *Thread) QueueInterest(interest *defn.Pkt) {
 	select {
-	case t.pendingInterests <- interest:
+	case t.pending <- interest:
 	default:
 		core.Log.Error(t, "Interest dropped due to full queue")
 	}
@@ -156,7 +156,7 @@ func (t *Thread) QueueInterest(interest *defn.Pkt) {
 // QueueData queues a Data packet for processing by this forwarding thread.
 func (t *Thread) QueueData(data *defn.Pkt) {
 	select {
-	case t.pendingDatas <- data:
+	case t.pending <- data:
 	default:
 		core.Log.Error(t, "Data dropped due to full queue")
 	}
