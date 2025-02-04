@@ -13,13 +13,11 @@ type PitCsPoolsT struct {
 
 var PitCsPools = &PitCsPoolsT{
 	PitInRecord: sync_pool.New(
-		func() *PitInRecord {
-			return &PitInRecord{
-				PitToken: make([]byte, 0, 8),
-			}
-		},
+		func() *PitInRecord { return &PitInRecord{} },
 		func(obj *PitInRecord) {
-			obj.PitToken = obj.PitToken[:0]
+			// Do not reuse the PitToken array since it is passed
+			// to the outgoing pipeline without copying.
+			obj.PitToken = make([]byte, 0, 8)
 		},
 	),
 
