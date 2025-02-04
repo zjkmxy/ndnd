@@ -32,11 +32,9 @@ type PitCsTable interface {
 	eraseCsDataFromReplacementStrategy(index uint64)
 	updatePitExpiry(pitEntry PitEntry)
 
-	// UpdateTimer returns the channel used to signal regular Update() calls in the forwarding thread.
-	// <- UpdateTimer() and Update() must be called in pairs.
-	UpdateTimer() <-chan struct{}
+	// UpdateTicker returns the channel used to signal regular Update() calls in the forwarding thread.
+	UpdateTicker() <-chan time.Time
 	// Update() does whatever the PIT table needs to do regularly.
-	// It may schedule the next UpdateTimer().
 	Update()
 }
 

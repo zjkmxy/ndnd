@@ -121,7 +121,6 @@ func (t *Thread) Run() {
 		runtime.LockOSThread()
 	}
 
-	pitUpdateTimer := t.pitCS.UpdateTimer()
 	for !core.ShouldQuit {
 		select {
 		case pkt := <-t.pending:
@@ -132,7 +131,7 @@ func (t *Thread) Run() {
 			}
 		case <-t.deadNonceList.Ticker.C:
 			t.deadNonceList.RemoveExpiredEntries()
-		case <-pitUpdateTimer:
+		case <-t.pitCS.UpdateTicker():
 			t.pitCS.Update()
 		case <-t.shouldQuit:
 			continue

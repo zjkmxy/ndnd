@@ -9,7 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/types/priority_queue"
 )
 
-const expiredPitTickerInterval = 100 * time.Millisecond
+const expiredPitTickerInterval = 200 * time.Millisecond
 const pitTokenLookupTableSize = 125000 // 1MB
 
 type OnPitExpiration func(PitEntry)
@@ -28,7 +28,7 @@ type PitCsTree struct {
 	csMap         map[uint64]*nameTreeCsEntry
 
 	pitExpiryQueue priority_queue.Queue[*nameTreePitEntry, int64]
-	updateTimer    chan struct{}
+	updateTicker   *time.Ticker
 	onExpiration   OnPitExpiration
 }
 
@@ -68,7 +68,7 @@ func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	pitCs.onExpiration = onExpiration
 	pitCs.pitTokens = make([]*nameTreePitEntry, pitTokenLookupTableSize)
 	pitCs.pitExpiryQueue = priority_queue.New[*nameTreePitEntry, int64]()
-	pitCs.updateTimer = make(chan struct{})
+	pitCs.updateTicker = time.NewTicker(expiredPitTickerInterval)
 
 	// This value has already been validated from loading the configuration,
 	// so we know it will be one of the following (or else fatal)
@@ -80,16 +80,11 @@ func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	}
 	pitCs.csMap = make(map[uint64]*nameTreeCsEntry)
 
-	// Schedule first signal
-	time.AfterFunc(expiredPitTickerInterval, func() {
-		pitCs.updateTimer <- struct{}{}
-	})
-
 	return pitCs
 }
 
-func (p *PitCsTree) UpdateTimer() <-chan struct{} {
-	return p.updateTimer
+func (p *PitCsTree) UpdateTicker() <-chan time.Time {
+	return p.updateTicker.C
 }
 
 func (p *PitCsTree) Update() {
@@ -98,22 +93,6 @@ func (p *PitCsTree) Update() {
 		entry.pqItem = nil
 		p.onExpiration(entry)
 		p.RemoveInterest(entry)
-	}
-	if !core.ShouldQuit {
-		updateDuration := expiredPitTickerInterval
-		if p.pitExpiryQueue.Len() > 0 {
-			sleepTime := time.Duration(p.pitExpiryQueue.PeekPriority()-time.Now().UnixNano()) * time.Nanosecond
-			if sleepTime > 0 {
-				if sleepTime > expiredPitTickerInterval {
-					sleepTime = expiredPitTickerInterval
-				}
-				updateDuration = sleepTime
-			}
-		}
-		// Schedule next signal
-		time.AfterFunc(updateDuration, func() {
-			p.updateTimer <- struct{}{}
-		})
 	}
 }
 
