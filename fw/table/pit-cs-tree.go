@@ -10,7 +10,7 @@ import (
 )
 
 const expiredPitTickerInterval = 100 * time.Millisecond
-const pitTokenLookupTableSize = 250000 // 2MB
+const pitTokenLookupTableSize = 125000 // 1MB
 
 type OnPitExpiration func(PitEntry)
 
