@@ -61,10 +61,8 @@ type pitCsTreeNode struct {
 // NewPitCS creates a new combined PIT-CS for a forwarding thread.
 func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	pitCs := new(PitCsTree)
-	pitCs.root = new(pitCsTreeNode)
+	pitCs.root = PitCsPools.PitCsTreeNode.Get()
 	pitCs.root.component = enc.Component{} // zero component
-	pitCs.root.pitEntries = make([]*nameTreePitEntry, 0)
-	pitCs.root.children = make(map[uint64]*pitCsTreeNode)
 	pitCs.onExpiration = onExpiration
 	pitCs.pitTokens = make([]*nameTreePitEntry, pitTokenLookupTableSize)
 	pitCs.pitExpiryQueue = priority_queue.New[*nameTreePitEntry, int64]()
@@ -127,15 +125,13 @@ func (p *PitCsTree) InsertInterest(interest *defn.FwInterest, hint enc.Name, inF
 
 	if entry == nil {
 		p.nPitEntries++
-		entry = new(nameTreePitEntry)
+		entry = PitCsPools.NameTreePitEntry.Get()
 		entry.node = node
 		entry.pitCsTable = p
 		entry.encname = node.name
 		entry.canBePrefix = interest.CanBePrefixV
 		entry.mustBeFresh = interest.MustBeFreshV
 		entry.forwardingHintNew = hint
-		entry.inRecords = make(map[uint64]*PitInRecord)
-		entry.outRecords = make(map[uint64]*PitOutRecord)
 		entry.satisfied = false
 		node.pitEntries = append(node.pitEntries, entry)
 		entry.token = p.newPitToken()
@@ -169,15 +165,19 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 				e.node.pitEntries[i] = e.node.pitEntries[len(e.node.pitEntries)-1]
 			}
 			e.node.pitEntries = e.node.pitEntries[:len(e.node.pitEntries)-1]
-			if len(e.node.pitEntries) == 0 {
-				entry.node.pruneIfEmpty()
-			}
+			entry.node.pruneIfEmpty()
 			p.nPitEntries--
 
-			tokIdx := p.pitTokenIdx(e.token)
-			if p.pitTokens[tokIdx] == entry {
-				p.pitTokens[tokIdx] = nil
-			}
+			// leave the entry in the token table, but mark it as invalid
+			// this stops it from being garbage collected and makes pool effective
+
+			// now it is invalid to use the entry
+			entry.encname = nil // invalidate
+			entry.pitCsTable = nil
+			entry.node = nil
+			pitEntry.ClearInRecords()  // pool
+			pitEntry.ClearOutRecords() // pool
+			PitCsPools.NameTreePitEntry.Put(entry)
 			return true
 		}
 	}
@@ -211,7 +211,7 @@ func (p *PitCsTree) FindInterestExactMatchEnc(interest *defn.FwInterest) PitEntr
 func (p *PitCsTree) FindInterestPrefixMatchByDataEnc(data *defn.FwData, token *uint32) []PitEntry {
 	if token != nil {
 		entry := p.pitTokens[p.pitTokenIdx(*token)]
-		if entry != nil && entry.Token() == *token {
+		if entry != nil && entry.encname != nil && entry.Token() == *token {
 			return []PitEntry{entry}
 		}
 	}
@@ -251,38 +251,6 @@ func (p *PitCsTree) IsCsServing() bool {
 	return CfgCsServe()
 }
 
-// InsertOutRecord inserts an outrecord for the given interest, updating the
-// preexisting one if it already occcurs.
-func (e *nameTreePitEntry) InsertOutRecord(interest *defn.FwInterest, face uint64) *PitOutRecord {
-	lifetime := interest.Lifetime().GetOr(time.Millisecond * 4000)
-	var record *PitOutRecord
-	var ok bool
-	if record, ok = e.outRecords[face]; !ok {
-		record := new(PitOutRecord)
-		record.Face = face
-		record.LatestNonce = interest.NonceV.Unwrap()
-		record.LatestTimestamp = time.Now()
-		record.ExpirationTime = time.Now().Add(lifetime)
-		e.outRecords[face] = record
-		return record
-	}
-
-	// Existing record
-	record.LatestNonce = interest.NonceV.Unwrap()
-	record.LatestTimestamp = time.Now()
-	record.ExpirationTime = time.Now().Add(lifetime)
-	return record
-}
-
-// GetOutRecords returns all outrecords for the given PIT entry.
-func (e *nameTreePitEntry) GetOutRecords() []*PitOutRecord {
-	records := make([]*PitOutRecord, 0)
-	for _, value := range e.outRecords {
-		records = append(records, value)
-	}
-	return records
-}
-
 func At(n enc.Name, index int) enc.Component {
 	if index < -len(n) || index >= len(n) {
 		return enc.Component{}
@@ -320,12 +288,11 @@ func (p *pitCsTreeNode) fillTreeToPrefixEnc(name enc.Name) *pitCsTreeNode {
 	for depth := entry.depth; depth < len(name); depth++ {
 		component := At(name, depth).Clone()
 
-		child := &pitCsTreeNode{}
+		child := PitCsPools.PitCsTreeNode.Get()
 		child.name = entry.name.Append(component)
 		child.depth = depth + 1
 		child.component = component
 		child.parent = entry
-		child.children = make(map[uint64]*pitCsTreeNode)
 
 		entry.children[component.Hash()] = child
 		entry = child

@@ -17,25 +17,37 @@ import (
 // PitCsTable dictates what functionality a Pit-Cs table should implement
 // Warning: All functions must be called in the same forwarding goroutine as the creation of the table.
 type PitCsTable interface {
+	// InsertInterest inserts an Interest into the PIT.
 	InsertInterest(interest *defn.FwInterest, hint enc.Name, inFace uint64) (PitEntry, bool)
+	// RemoveInterest removes an Interest from the PIT.
 	RemoveInterest(pitEntry PitEntry) bool
+	// FindInterestExactMatch finds an exact match for an Interest in the PIT.
 	FindInterestExactMatchEnc(interest *defn.FwInterest) PitEntry
+	// FindInterestPrefixMatchByDataEnc finds a prefix match for a Data in the PIT.
 	FindInterestPrefixMatchByDataEnc(data *defn.FwData, token *uint32) []PitEntry
+	// PitSize returns the number of entries in the PIT.
 	PitSize() int
 
+	// InsertData inserts a Data into the CS.
 	InsertData(data *defn.FwData, wire []byte)
+	// FindMatchingDataFromCS finds a matching Data in the CS.
 	FindMatchingDataFromCS(interest *defn.FwInterest) CsEntry
+	// CsSize returns the number of entries in the CS.
 	CsSize() int
+	// IsCsAdmitting returns whether the CS is admitting new entries.
 	IsCsAdmitting() bool
+	// IsCsServing returns whether the CS is serving entries.
 	IsCsServing() bool
-
-	eraseCsDataFromReplacementStrategy(index uint64)
-	updatePitExpiry(pitEntry PitEntry)
 
 	// UpdateTicker returns the channel used to signal regular Update() calls in the forwarding thread.
 	UpdateTicker() <-chan time.Time
 	// Update() does whatever the PIT table needs to do regularly.
 	Update()
+
+	// eraseCsDataFromReplacementStrategy removes a Data from the replacement strategy.
+	eraseCsDataFromReplacementStrategy(index uint64)
+	// updatePitExpiry updates the PIT entry's expiration time.
+	updatePitExpiry(pitEntry PitEntry)
 }
 
 // PitEntry dictates what entries in a PIT-CS table should implement
@@ -62,7 +74,8 @@ type PitEntry interface {
 	InsertInRecord(interest *defn.FwInterest, face uint64, incomingPitToken []byte) (*PitInRecord, bool, uint32)
 	InsertOutRecord(interest *defn.FwInterest, face uint64) *PitOutRecord
 
-	GetOutRecords() []*PitOutRecord
+	RemoveInRecord(face uint64)
+	RemoveOutRecord(face uint64)
 	ClearOutRecords()
 	ClearInRecords()
 }
@@ -127,12 +140,12 @@ func (bpe *basePitEntry) InsertInRecord(
 	var record *PitInRecord
 	var ok bool
 	if record, ok = bpe.inRecords[face]; !ok {
-		record := new(PitInRecord)
+		record := PitCsPools.PitInRecord.Get()
 		record.Face = face
 		record.LatestNonce = interest.NonceV.Unwrap()
 		record.LatestTimestamp = time.Now()
 		record.ExpirationTime = time.Now().Add(lifetime)
-		record.PitToken = append([]byte{}, incomingPitToken...)
+		record.PitToken = append(record.PitToken, incomingPitToken...)
 		bpe.inRecords[face] = record
 		return record, false, 0
 	}
@@ -143,6 +156,29 @@ func (bpe *basePitEntry) InsertInRecord(
 	record.LatestTimestamp = time.Now()
 	record.ExpirationTime = time.Now().Add(lifetime)
 	return record, true, previousNonce
+}
+
+// InsertOutRecord inserts an outrecord for the given interest, updating the
+// preexisting one if it already occcurs.
+func (bpe *basePitEntry) InsertOutRecord(interest *defn.FwInterest, face uint64) *PitOutRecord {
+	lifetime := interest.Lifetime().GetOr(time.Millisecond * 4000)
+	var record *PitOutRecord
+	var ok bool
+	if record, ok = bpe.outRecords[face]; !ok {
+		record := PitCsPools.PitOutRecord.Get()
+		record.Face = face
+		record.LatestNonce = interest.NonceV.Unwrap()
+		record.LatestTimestamp = time.Now()
+		record.ExpirationTime = time.Now().Add(lifetime)
+		bpe.outRecords[face] = record
+		return record
+	}
+
+	// Existing record
+	record.LatestNonce = interest.NonceV.Unwrap()
+	record.LatestTimestamp = time.Now()
+	record.ExpirationTime = time.Now().Add(lifetime)
+	return record
 }
 
 // UpdateExpirationTimer sets the expiration time of the PIT entry.
@@ -175,14 +211,34 @@ func (bpe *basePitEntry) OutRecords() map[uint64]*PitOutRecord {
 	return bpe.outRecords
 }
 
+func (bpe *basePitEntry) RemoveInRecord(face uint64) {
+	if record, ok := bpe.inRecords[face]; ok {
+		PitCsPools.PitInRecord.Put(record)
+		delete(bpe.inRecords, face)
+	}
+}
+
+func (bpe *basePitEntry) RemoveOutRecord(face uint64) {
+	if record, ok := bpe.outRecords[face]; ok {
+		PitCsPools.PitOutRecord.Put(record)
+		delete(bpe.outRecords, face)
+	}
+}
+
 // ClearInRecords removes all in-records from the PIT entry.
 func (bpe *basePitEntry) ClearInRecords() {
-	bpe.inRecords = make(map[uint64]*PitInRecord)
+	for _, record := range bpe.inRecords {
+		PitCsPools.PitInRecord.Put(record)
+	}
+	clear(bpe.inRecords)
 }
 
 // ClearOutRecords removes all out-records from the PIT entry.
 func (bpe *basePitEntry) ClearOutRecords() {
-	bpe.outRecords = make(map[uint64]*PitOutRecord)
+	for _, record := range bpe.outRecords {
+		PitCsPools.PitOutRecord.Put(record)
+	}
+	clear(bpe.outRecords)
 }
 
 func (bpe *basePitEntry) ExpirationTime() time.Time {

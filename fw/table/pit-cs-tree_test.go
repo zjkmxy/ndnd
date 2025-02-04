@@ -269,14 +269,11 @@ func TestRemoveInterest(t *testing.T) {
 	assert.True(t, removedInterest)
 	assert.Equal(t, pitCS.PitSize(), 0)
 
-	// Remove a nonexistent pit entry
+	// Remove a new pit entry
 	name2, _ := enc.NameFromStr("/interest2")
 	interest2 := makeInterest(name2)
 	pitEntry2, _ := pitCS.InsertInterest(interest2, hint, inFace)
 
-	removedInterest = pitCS.RemoveInterest(pitEntry)
-	assert.False(t, removedInterest)
-	assert.Equal(t, pitCS.PitSize(), 1)
 	removedInterest = pitCS.RemoveInterest(pitEntry2)
 	assert.True(t, removedInterest)
 	assert.Equal(t, pitCS.PitSize(), 0)
@@ -435,6 +432,14 @@ func TestInsertOutRecord(t *testing.T) {
 func TestGetOutRecords(t *testing.T) {
 	setReplacementPolicy("lru")
 
+	getOutRecords := func(pitEntry PitEntry) []*PitOutRecord {
+		records := []*PitOutRecord{}
+		for _, record := range pitEntry.OutRecords() {
+			records = append(records, record)
+		}
+		return records
+	}
+
 	pitCS := NewPitCS(func(PitEntry) {})
 	name, _ := enc.NameFromStr("/interest1")
 	hint, _ := enc.NameFromStr("/")
@@ -445,7 +450,7 @@ func TestGetOutRecords(t *testing.T) {
 	// New outrecord
 	pitEntry, _ := pitCS.InsertInterest(interest, hint, inFace)
 	_ = pitEntry.InsertOutRecord(interest, inFace)
-	outRecords := pitEntry.GetOutRecords()
+	outRecords := getOutRecords(pitEntry)
 	assert.Equal(t, len(outRecords), 1)
 	assert.Equal(t, outRecords[0].Face, inFace)
 	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
@@ -455,7 +460,7 @@ func TestGetOutRecords(t *testing.T) {
 	interest.NonceV.Set(oldNonce)
 	interest.NonceV.Set(3)
 	_ = pitEntry.InsertOutRecord(interest, inFace)
-	outRecords = pitEntry.GetOutRecords()
+	outRecords = getOutRecords(pitEntry)
 	assert.Equal(t, len(outRecords), 1)
 	assert.Equal(t, outRecords[0].Face, inFace)
 	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
@@ -463,7 +468,7 @@ func TestGetOutRecords(t *testing.T) {
 	// Add new outrecord on a different face
 	inFace2 := uint64(2222)
 	_ = pitEntry.InsertOutRecord(interest, inFace2)
-	outRecords = pitEntry.GetOutRecords()
+	outRecords = getOutRecords(pitEntry)
 	sort.Slice(outRecords, func(i, j int) bool {
 		// Sort by face ID
 		return outRecords[i].Face < outRecords[j].Face

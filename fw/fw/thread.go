@@ -493,7 +493,7 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 			pitEntry.SetSatisfied(true)
 
 			// Insert into dead nonce list
-			for _, outRecord := range pitEntries[0].GetOutRecords() {
+			for _, outRecord := range pitEntries[0].OutRecords() {
 				t.deadNonceList.Insert(data.NameV, outRecord.LatestNonce)
 			}
 
