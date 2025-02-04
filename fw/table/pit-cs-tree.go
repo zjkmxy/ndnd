@@ -1,7 +1,6 @@
 package table
 
 import (
-	"math/rand"
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
@@ -11,6 +10,7 @@ import (
 )
 
 const expiredPitTickerInterval = 100 * time.Millisecond
+const pitTokenLookupTableSize = 250000 // 2MB
 
 type OnPitExpiration func(PitEntry)
 
@@ -19,7 +19,9 @@ type PitCsTree struct {
 	root *pitCsTreeNode
 
 	nPitEntries int
-	pitTokenMap map[uint32]*nameTreePitEntry
+
+	nPitToken uint64
+	pitTokens []*nameTreePitEntry
 
 	nCsEntries    int
 	csReplacement CsReplacementPolicy
@@ -64,7 +66,7 @@ func NewPitCS(onExpiration OnPitExpiration) *PitCsTree {
 	pitCs.root.pitEntries = make([]*nameTreePitEntry, 0)
 	pitCs.root.children = make(map[uint64]*pitCsTreeNode)
 	pitCs.onExpiration = onExpiration
-	pitCs.pitTokenMap = make(map[uint32]*nameTreePitEntry)
+	pitCs.pitTokens = make([]*nameTreePitEntry, pitTokenLookupTableSize)
 	pitCs.pitExpiryQueue = priority_queue.New[*nameTreePitEntry, int64]()
 	pitCs.updateTimer = make(chan struct{})
 
@@ -157,9 +159,11 @@ func (p *PitCsTree) InsertInterest(interest *defn.FwInterest, hint enc.Name, inF
 		entry.outRecords = make(map[uint64]*PitOutRecord)
 		entry.satisfied = false
 		node.pitEntries = append(node.pitEntries, entry)
-		entry.token = p.generateNewPitToken()
+		entry.token = p.newPitToken()
 		entry.pqItem = nil
-		p.pitTokenMap[entry.token] = entry
+
+		tokIdx := p.pitTokenIdx(entry.token)
+		p.pitTokens[tokIdx] = entry
 	}
 
 	// Only considered a duplicate (loop) if from different face since
@@ -190,7 +194,11 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 				entry.node.pruneIfEmpty()
 			}
 			p.nPitEntries--
-			delete(p.pitTokenMap, e.token)
+
+			tokIdx := p.pitTokenIdx(e.token)
+			if p.pitTokens[tokIdx] == entry {
+				p.pitTokens[tokIdx] = nil
+			}
 			return true
 		}
 	}
@@ -223,10 +231,10 @@ func (p *PitCsTree) FindInterestExactMatchEnc(interest *defn.FwInterest) PitEntr
 // will return PitEntries for both /a and /a/b
 func (p *PitCsTree) FindInterestPrefixMatchByDataEnc(data *defn.FwData, token *uint32) []PitEntry {
 	if token != nil {
-		if entry, ok := p.pitTokenMap[*token]; ok && entry.Token() == *token {
+		entry := p.pitTokens[p.pitTokenIdx(*token)]
+		if entry != nil && entry.Token() == *token {
 			return []PitEntry{entry}
 		}
-		return nil
 	}
 	return p.findInterestPrefixMatchByNameEnc(data.NameV)
 }
@@ -357,13 +365,18 @@ func (p *pitCsTreeNode) pruneIfEmpty() {
 	}
 }
 
-func (p *PitCsTree) generateNewPitToken() uint32 {
-	for {
-		token := rand.Uint32()
-		if _, ok := p.pitTokenMap[token]; !ok {
-			return token
-		}
+// newPitToken returns a new PIT token.
+func (p *PitCsTree) newPitToken() uint32 {
+	p.nPitToken++
+	if p.nPitToken%10000 == 0 {
+		core.Log.Info(nil, "PIT token count", "count", p.nPitToken)
 	}
+	return uint32(p.nPitToken)
+}
+
+// pitTokenIdx returns the index in the pitTokens table.
+func (p *PitCsTree) pitTokenIdx(token uint32) uint32 {
+	return token % uint32(len(p.pitTokens))
 }
 
 // FindMatchingDataFromCS finds the best matching entry in the CS (if any).
