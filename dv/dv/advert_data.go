@@ -52,10 +52,6 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 		WithVersion(seqNo)
 
 	a.dv.client.Consume(advName, func(state ndn.ConsumeState) {
-		if !state.IsComplete() {
-			return
-		}
-
 		go func() {
 			fetchErr := state.Error()
 			if fetchErr != nil {

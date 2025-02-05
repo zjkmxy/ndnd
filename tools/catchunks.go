@@ -61,38 +61,34 @@ func (cc *CatChunks) run(_ *cobra.Command, args []string) {
 
 	done := make(chan ndn.ConsumeState)
 	t1, t2 := time.Now(), time.Now()
-	byteCount := 0
-
-	// calling Content() on a status object clears the buffer
-	// and returns the new data the next time it is called
-	write := func(status ndn.ConsumeState) {
-		for _, chunk := range status.Content() {
-			os.Stdout.Write(chunk)
-			byteCount += len(chunk)
-		}
-	}
 
 	// fetch object
 	progress := 0
-	cli.Consume(name, func(status ndn.ConsumeState) {
-		if status.IsComplete() {
+	cli.ConsumeExt(ndn.ConsumeExtArgs{
+		Name: name,
+		Callback: func(state ndn.ConsumeState) {
 			t2 = time.Now()
-			write(status)
-			done <- status
-			return
-		}
-
-		if status.Progress()-progress >= 1000 {
-			progress = status.Progress()
-			log.Debug(cc, "Consume progress", "progress", float64(status.Progress())/float64(status.ProgressMax())*100)
-			write(status)
-		}
+			done <- state
+		},
+		OnProgress: func(state ndn.ConsumeState) {
+			if state.Progress()-progress >= 1000 {
+				progress = state.Progress()
+				log.Debug(cc, "Consume progress", "progress", float64(state.Progress())/float64(state.ProgressMax())*100)
+			}
+		},
 	})
 	state := <-done
 
 	if state.Error() != nil {
 		log.Fatal(cc, "Error fetching object", "err", state.Error())
 		return
+	}
+
+	// write object to stdout
+	byteCount := 0
+	for _, chunk := range state.Content() {
+		os.Stdout.Write(chunk)
+		byteCount += len(chunk)
 	}
 
 	// statistics

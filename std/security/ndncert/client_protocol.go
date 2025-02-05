@@ -22,11 +22,7 @@ func (c *Client) FetchProfile() (*tlv.CaProfile, error) {
 	name := c.caPrefix.
 		Append(enc.NewGenericComponent("CA")).
 		Append(enc.NewGenericComponent("INFO"))
-	c.client.Consume(name, func(status ndn.ConsumeState) {
-		if status.IsComplete() {
-			ch <- status
-		}
-	})
+	c.client.Consume(name, func(status ndn.ConsumeState) { ch <- status })
 	state := <-ch
 	if err := state.Error(); err != nil {
 		return nil, err

@@ -133,10 +133,6 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 	name := s.objectName(node, boot, seq)
 	s.client.Consume(name, func(status ndn.ConsumeState) {
-		if !status.IsComplete() {
-			return
-		}
-
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
 

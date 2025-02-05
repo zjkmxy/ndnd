@@ -111,10 +111,6 @@ func (s *SnapshotNodeLatest) snapName(node enc.Name, boot uint64) enc.Name {
 func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 	// Discover the latest snapshot
 	s.Client.Consume(s.snapName(node, boot), func(cstate ndn.ConsumeState) {
-		if !cstate.IsComplete() {
-			return
-		}
-
 		s.callback(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
 			hash := node.TlvStr()
 			pub.Publisher = node

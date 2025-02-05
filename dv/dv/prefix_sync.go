@@ -66,10 +66,6 @@ func (dv *Router) prefixDataFetch(nName enc.Name) {
 
 	// Fetch the object
 	dv.client.Consume(name, func(state ndn.ConsumeState) {
-		if !state.IsComplete() {
-			return
-		}
-
 		go func() {
 			fetchErr := state.Error()
 			if fetchErr != nil {

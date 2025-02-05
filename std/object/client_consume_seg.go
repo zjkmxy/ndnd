@@ -254,8 +254,8 @@ func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *
 			return
 		}
 
-		if !state.IsComplete() {
-			state.args.Callback(state) // progress
+		if state.args.OnProgress != nil && !state.IsComplete() {
+			state.args.OnProgress(state)
 		}
 	}
 

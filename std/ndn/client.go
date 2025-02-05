@@ -93,6 +93,9 @@ type ConsumeExtArgs struct {
 	// Callback is called when data is available.
 	// True should be returned to continue fetching the object.
 	Callback func(status ConsumeState)
+	// OnProgress is called when progress is made (advanced usage).
+	// [Caution] Any data returned by Content() may not be validated.
+	OnProgress func(status ConsumeState)
 	// NoMetadata disables fetching RDR metadata (advanced usage).
 	NoMetadata bool
 }
