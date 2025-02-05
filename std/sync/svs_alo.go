@@ -74,8 +74,8 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		nodePs:    NewSimplePs[SvsPub](),
 
 		outpipe:  make(chan svsPubOut, 256),
-		errpipe:  make(chan error, 256),
-		publpipe: make(chan enc.Name, 256),
+		errpipe:  make(chan error, 16),
+		publpipe: make(chan enc.Name, 16),
 		stop:     make(chan struct{}),
 
 		onError:     func(err error) { log.Error(nil, err.Error()) },
