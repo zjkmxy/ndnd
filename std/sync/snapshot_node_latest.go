@@ -104,7 +104,7 @@ func (s *SnapshotNodeLatest) snapName(node enc.Name, boot uint64) enc.Name {
 	return node.
 		Append(s.groupPrefix...).
 		Append(enc.NewTimestampComponent(boot)).
-		Append(enc.NewKeywordComponent("snap"))
+		Append(enc.NewKeywordComponent("SNAP"))
 }
 
 // fetch fetches the latest snapshot.
