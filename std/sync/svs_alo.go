@@ -79,7 +79,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		stop:     make(chan struct{}),
 
 		onError:     func(err error) { log.Error(nil, err.Error()) },
-		onPublisher: nil,
+		onPublisher: func(n enc.Name) {},
 	}
 
 	// Default options

@@ -262,10 +262,9 @@ func (s *SvsALO) snapshotCallback(callback snapshotCallback) {
 
 	// Update delivered vector after the snapshot is delivered
 	// (this is the reason it needs to go out on the outpipe)
-	out := svsPubOut{
+	s.outpipe <- svsPubOut{
 		pub:       snapPub,
 		subs:      slices.Collect(s.nodePs.Subs(snapPub.Publisher)), // suspicious
 		snapstate: s.state.Encode(func(state svsDataState) uint64 { return state.Known }),
 	}
-	s.outpipe <- out
 }
