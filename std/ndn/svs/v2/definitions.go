@@ -1,5 +1,5 @@
 //go:generate gondn_tlv_gen
-package sync
+package svs
 
 import (
 	enc "github.com/named-data/ndnd/std/encoding"
