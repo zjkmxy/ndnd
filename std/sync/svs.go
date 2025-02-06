@@ -193,6 +193,17 @@ func (s *SvSync) GetBootTime() uint64 {
 }
 
 func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
+	// Deliver the updates after this call is done
+	// This ensures the mutex is not held during the callback
+	// This function, in turn, runs on our main goroutine, so
+	// that ensures the updates are delivered in order.
+	var updates []SvSyncUpdate
+	defer func() {
+		for _, update := range updates {
+			s.o.OnUpdate(update)
+		}
+	}()
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -228,7 +239,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 				s.mtime[hash] = time.Now()
 
 				// Notify the application of the update
-				s.o.OnUpdate(SvSyncUpdate{
+				updates = append(updates, SvSyncUpdate{
 					Name: node.Name,
 					Boot: entry.BootstrapTime,
 					High: entry.SeqNo,
