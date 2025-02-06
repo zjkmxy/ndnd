@@ -9,11 +9,18 @@ type Snapshot interface {
 	// initialize the strategy, and set up ps state.
 	initialize(snapPsState)
 
-	// check is called when the state vector is updated.
+	// checkFetch is called when the state vector is updated for a different node.
 	// The strategy can decide to block fetching for the snapshot.
+	// This function may also be called for this node name with a different boot time.
 	//
 	// This function call MUST NOT make the onReceive callback.
-	check(snapCheckArgs)
+	checkFetch(snapCheckArgs)
+
+	// checkSelf is called when the state for this node is updated (for this boot).
+	// The strategy can decide to take a snapshot.
+	// This function is called from the delivery thread, so the delivery state
+	// is provided. The strategy should not block or depend on fetch state.
+	checkSelf(SvMap[uint64])
 }
 
 // snapPsState is the shared data struct between snapshot strategy

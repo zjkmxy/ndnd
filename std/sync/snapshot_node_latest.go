@@ -53,32 +53,22 @@ func (s *SnapshotNodeLatest) initialize(comm snapPsState) {
 	s.pss = comm
 }
 
-// check determines if a snapshot should be taken or fetched.
-func (s *SnapshotNodeLatest) check(args snapCheckArgs) {
+// checkFetch determines if a snapshot should be fetched.
+func (s *SnapshotNodeLatest) checkFetch(args snapCheckArgs) {
 	// We only care about the latest boot.
 	// For all other states, make sure the fetch is skipped.
 	entries := args.state[args.hash]
 	for i := range entries {
 		if i == len(entries)-1 { // if is last entry
-			last := entries[i]  // note: copy
-			lastV := last.Value // note: copy
+			boot, value := entries[i].Boot, entries[i].Value
 
-			if args.node.Equal(s.pss.nodePrefix) {
-				// This is me - check if I should snapshot
-				// 1. I have reached the threshold
-				// 2. I have not taken any snapshot yet
-				if lastV.Latest-s.prevSeq >= s.Threshold || (s.prevSeq == 0 && lastV.Latest > 0) {
-					s.snap(last.Boot, lastV.Latest)
-				}
-			} else {
-				// This is not me - check if I should fetch
-				// 1. Pending gap is more than 2*threshold
-				// 2. I have not fetched anything yet
-				// And, I'm not already blocked by a fetch
-				if lastV.SnapBlock == 0 && (lastV.Latest-lastV.Pending >= s.Threshold*2 || lastV.Pending == 0) {
-					entries[i].Value.SnapBlock = 1 // released by fetch callback
-					s.fetch(args.node, entries[i].Boot)
-				}
+			// Check if we should fetch a snapshot
+			// 1. Pending gap is more than 2*threshold
+			// 2. I have not fetched anything yet
+			// And, I'm not already blocked by a fetch
+			if value.SnapBlock == 0 && (value.Latest-value.Pending >= s.Threshold*2 || value.Pending == 0) {
+				entries[i].Value.SnapBlock = 1 // released by fetch callback
+				s.fetch(args.node, boot)
 			}
 			return
 		}
@@ -89,6 +79,21 @@ func (s *SnapshotNodeLatest) check(args snapCheckArgs) {
 			entries[i].Value.Known = entries[i].Value.Latest
 			entries[i].Value.Pending = entries[i].Value.Latest
 		}
+	}
+}
+
+// checkSelf is called when the state for this node is updated.
+func (s *SnapshotNodeLatest) checkSelf(delivered SvMap[uint64]) {
+	// This strategy only cares about the latest boot.
+	boots := delivered[s.pss.nodePrefix.TlvStr()]
+	entry := boots[len(boots)-1]
+
+	// Check if I should take a snapshot
+	// 1. I have reached the threshold
+	// 2. I have not taken any snapshot yet
+	if entry.Value-s.prevSeq >= s.Threshold || (s.prevSeq == 0 && entry.Value > 0) {
+		s.prevSeq = entry.Value
+		s.takeSnap(entry.Boot, entry.Value)
 	}
 }
 
@@ -151,8 +156,8 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 	})
 }
 
-// snap takes a snapshot of the application state.
-func (s *SnapshotNodeLatest) snap(boot uint64, seq uint64) {
+// takeSnap takes a snapshot of the application state.
+func (s *SnapshotNodeLatest) takeSnap(boot uint64, seq uint64) {
 	name := s.snapName(s.pss.nodePrefix, boot).WithVersion(seq)
 
 	// Request snapshot from application
@@ -171,7 +176,4 @@ func (s *SnapshotNodeLatest) snap(boot uint64, seq uint64) {
 		log.Error(nil, "Failed to publish snapshot", "err", err, "name", name)
 		return
 	}
-
-	// TODO: FIFO directory
-	s.prevSeq = seq
 }

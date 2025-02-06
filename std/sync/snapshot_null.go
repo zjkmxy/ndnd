@@ -11,5 +11,8 @@ func (s *SnapshotNull) Snapshot() Snapshot {
 func (s *SnapshotNull) initialize(snapPsState) {
 }
 
-func (s *SnapshotNull) check(snapCheckArgs) {
+func (s *SnapshotNull) checkFetch(snapCheckArgs) {
+}
+
+func (s *SnapshotNull) checkSelf(SvMap[uint64]) {
 }

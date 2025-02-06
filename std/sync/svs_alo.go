@@ -94,7 +94,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		s.opts.Snapshot.initialize(snapPsState{
 			nodePrefix:  s.opts.Name,
 			groupPrefix: s.opts.Svs.GroupPrefix,
-			onReceive:   s.snapshotCallback,
+			onReceive:   s.snapRecvCallback,
 		})
 	}
 
@@ -251,5 +251,13 @@ func (s *SvsALO) deliver(out svsPubOut) {
 		if out.pub.SeqNum > prev {
 			s.delivered.Set(out.hash, out.pub.BootTime, out.pub.SeqNum)
 		}
+	}
+
+	// If this is a publication from self, alert the snapshot strategy.
+	// It may decide to take a snapshot.
+	if !out.pub.IsSnapshot &&
+		out.pub.Publisher.Equal(s.opts.Name) &&
+		out.pub.BootTime == s.svs.GetBootTime() {
+		s.opts.Snapshot.checkSelf(s.delivered)
 	}
 }

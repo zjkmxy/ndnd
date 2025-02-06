@@ -76,8 +76,27 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 		Pending: seq,
 	})
 
-	// Inform the snapshot strategy
-	s.opts.Snapshot.check(snapCheckArgs{s.state, node, hash})
+	// This is never sent out to the application (duh) since subs is null.
+	// But we still need to update the delivered vector, and inform the
+	// snapshot strategy *after* making that update.
+	//
+	// This is especially important because the snapshot may depend on the
+	// entire delivered state, which is what the application will return.
+	//
+	// Unfortunately since this happens on a different goroutine, the initial
+	// snapshot will be taken only after the sequence number is already incremented.
+	// But this problem is more generalized anyway (what if the app dies at this point?)
+	s.outpipe <- svsPubOut{
+		hash: hash,
+		pub: SvsPub{
+			Publisher: node,
+			Content:   content,
+			DataName:  name,
+			BootTime:  boot,
+			SeqNum:    seq,
+		},
+		subs: nil,
+	}
 
 	// Update the state vector
 	if got := s.svs.IncrSeqNo(node); got != seq {
@@ -94,7 +113,7 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 	}
 
 	// Check with the snapshot strategy
-	s.opts.Snapshot.check(snapCheckArgs{s.state, node, hash})
+	s.opts.Snapshot.checkFetch(snapCheckArgs{s.state, node, hash})
 
 	totalPending := uint64(0)
 
@@ -226,15 +245,19 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			// we WILL deliver it, update known state
 			s.state.Set(hash, boot, entry)
 			for _, pub := range deliver {
-				s.outpipe <- svsPubOut{hash: hash, pub: pub, subs: subs}
+				s.outpipe <- svsPubOut{
+					hash: hash,
+					pub:  pub,
+					subs: subs,
+				}
 			}
 		}
 	})
 }
 
-// snapshotCallback is called by the snapshot strategy to indicate
+// snapRecvCallback is called by the snapshot strategy to indicate
 // that a snapshot has been fetched.
-func (s *SvsALO) snapshotCallback(callback snapRecvCallback) {
+func (s *SvsALO) snapRecvCallback(callback snapRecvCallback) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
