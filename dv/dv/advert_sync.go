@@ -199,6 +199,6 @@ func (a *advertModule) onStateVector(sv *spec_svs.StateVector, faceId uint64, ac
 
 	// Update FIB if needed
 	if fibDirty {
-		go a.dv.fibUpdate()
+		go a.dv.updateFib()
 	}
 }

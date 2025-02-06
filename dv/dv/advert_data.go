@@ -90,5 +90,5 @@ func (a *advertModule) dataHandler(nName enc.Name, seqNo uint64, data enc.Wire) 
 
 	// Update the local advertisement list
 	ns.Advert = advert
-	go a.dv.ribUpdate(ns)
+	go a.dv.updateRib(ns)
 }

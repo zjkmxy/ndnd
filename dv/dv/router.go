@@ -43,24 +43,24 @@ type Router struct {
 	// deadcheck for neighbors
 	deadcheck *time.Ticker
 
-	// neighbor table
-	neighbors *table.NeighborTable
-	// routing information base
-	rib *table.Rib
-	// prefix table
-	pfx *table.PrefixTable
-	// forwarding table
-	fib *table.Fib
-
 	// advertisement module
 	advert advertModule
 
+	// prefix table
+	pfx *table.PrefixTable
 	// prefix table svs instance
 	pfxSvs *ndn_sync.SvsALO
 	// prefix table svs subscriptions
 	pfxSubs map[uint64]enc.Name
 	// prefix table fifo
 	pfxFifo *object.MemoryFifoDir
+
+	// neighbor table
+	neighbors *table.NeighborTable
+	// routing information base
+	rib *table.Rib
+	// forwarding table
+	fib *table.Fib
 }
 
 // Create a new DV router.
@@ -112,37 +112,12 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		objDir:   object.NewMemoryFifoDir(32), // keep last few advertisements
 	}
 
-	// Join prefix table sync group
-	dv.pfxFifo = object.NewMemoryFifoDir(PrefixSnapThreshold * 3)
-	dv.pfxSvs = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
-		Name: config.RouterDataPrefix(),
-		Svs: ndn_sync.SvSyncOpts{
-			Client:      dv.client,
-			GroupPrefix: config.PrefixTableSyncPrefix(),
-			BootTime:    dv.advert.bootTime,
-		},
-		Snapshot: &ndn_sync.SnapshotNodeLatest{
-			Client: dv.client,
-			SnapMe: func(name enc.Name) (enc.Wire, error) {
-				dv.pfxFifo.Push(name)
-				dv.pfxFifo.Evict(dv.client)
-				return dv.pfx.Snap(), nil
-			},
-			Threshold: PrefixSnapThreshold,
-		},
-	})
-	dv.pfxSubs = make(map[uint64]enc.Name)
+	// Create prefix table
+	dv.createPrefixTable()
 
-	// Create tables
+	// Create DV tables
 	dv.neighbors = table.NewNeighborTable(config, dv.nfdc)
 	dv.rib = table.NewRib(config)
-	dv.pfx = table.NewPrefixTable(config, func(w enc.Wire) {
-		if name, err := dv.pfxSvs.Publish(w); err != nil {
-			log.Error(dv, "Failed to publish prefix table update", "err", err)
-		} else {
-			dv.pfxFifo.Push(name)
-		}
-	})
 	dv.fib = table.NewFib(config, dv.nfdc)
 
 	return dv, nil
@@ -363,4 +338,38 @@ func (dv *Router) destroyFaces() {
 			})
 		}
 	}
+}
+
+func (dv *Router) createPrefixTable() {
+	// Memory FIFO and subscription list
+	dv.pfxFifo = object.NewMemoryFifoDir(PrefixSnapThreshold * 3)
+	dv.pfxSubs = make(map[uint64]enc.Name)
+
+	// SVS delivery agent
+	dv.pfxSvs = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+		Name: dv.config.RouterDataPrefix(),
+		Svs: ndn_sync.SvSyncOpts{
+			Client:      dv.client,
+			GroupPrefix: dv.config.PrefixTableSyncPrefix(),
+			BootTime:    dv.advert.bootTime,
+		},
+		Snapshot: &ndn_sync.SnapshotNodeLatest{
+			Client: dv.client,
+			SnapMe: func(name enc.Name) (enc.Wire, error) {
+				dv.pfxFifo.Push(name)
+				dv.pfxFifo.Evict(dv.client)
+				return dv.pfx.Snap(), nil
+			},
+			Threshold: PrefixSnapThreshold,
+		},
+	})
+
+	// Local prefix table
+	dv.pfx = table.NewPrefixTable(dv.config, func(w enc.Wire) {
+		if name, err := dv.pfxSvs.Publish(w); err != nil {
+			log.Error(dv, "Failed to publish prefix table update", "err", err)
+		} else {
+			dv.pfxFifo.Push(name)
+		}
+	})
 }

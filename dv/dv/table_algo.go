@@ -8,8 +8,17 @@ import (
 	"github.com/named-data/ndnd/std/sync"
 )
 
-// Compute the RIB chnages for this neighbor
-func (dv *Router) ribUpdate(ns *table.NeighborState) {
+// postUpdateRib should be called after the RIB has been updated.
+// It triggers a corresponding fib update and advert generation.
+// Run it in a separate goroutine to avoid deadlocks.
+func (dv *Router) postUpdateRib() {
+	dv.updateFib()
+	dv.advert.generate()
+	dv.updatePrefixSubs()
+}
+
+// updateRib computes the RIB chnages for this neighbor
+func (dv *Router) updateRib(ns *table.NeighborState) {
 	dv.mutex.Lock()
 	defer dv.mutex.Unlock()
 
@@ -53,11 +62,7 @@ func (dv *Router) ribUpdate(ns *table.NeighborState) {
 
 	// If advert changed, increment sequence number
 	if dirty {
-		go func() {
-			dv.fibUpdate()
-			dv.advert.generate()
-			dv.prefixSubsUpdate()
-		}()
+		go dv.postUpdateRib()
 	}
 }
 
@@ -82,15 +87,12 @@ func (dv *Router) checkDeadNeighbors() {
 	}
 
 	if dirty {
-		go func() {
-			dv.fibUpdate()
-			dv.advert.generate()
-		}()
+		go dv.postUpdateRib()
 	}
 }
 
-// Update the FIB
-func (dv *Router) fibUpdate() {
+// updateFib synchronizes the FIB with the RIB.
+func (dv *Router) updateFib() {
 	log.Debug(dv, "Sychronizing updates to forwarding table")
 
 	dv.mutex.Lock()
@@ -139,8 +141,8 @@ func (dv *Router) fibUpdate() {
 	dv.fib.RemoveUnmarked()
 }
 
-// prefixSubsUpdate updates the prefix table subscriptions
-func (dv *Router) prefixSubsUpdate() {
+// updatePrefixSubs updates the prefix table subscriptions
+func (dv *Router) updatePrefixSubs() {
 	dv.mutex.Lock()
 	defer dv.mutex.Unlock()
 
@@ -161,7 +163,7 @@ func (dv *Router) prefixSubsUpdate() {
 				// Both snapshots and normal data are handled the same way
 				if dirty := dv.pfx.Apply(sp.Content); dirty {
 					// Update the local fib if prefix table changed
-					go dv.fibUpdate() // expensive
+					go dv.updateFib() // expensive
 				}
 			})
 		}
