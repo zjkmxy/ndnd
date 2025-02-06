@@ -8,6 +8,7 @@ import (
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -25,7 +26,7 @@ func main() {
 
 	intCfg := &ndn.InterestConfig{
 		MustBeFresh: true,
-		Lifetime:    utils.IdPtr(6 * time.Second),
+		Lifetime:    optional.Some(6 * time.Second),
 		Nonce:       utils.ConvertNonce(app.Timer().Nonce()),
 	}
 	interest, err := app.Spec().MakeInterest(name, intCfg, nil, nil)

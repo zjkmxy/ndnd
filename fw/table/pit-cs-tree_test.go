@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
+	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,17 +34,14 @@ var VALID_DATA_2 = []byte{
 	0x7d, 0xa9, 0x20, 0xea, 0x8b, 0xda, 0xf6, 0x13, 0xed,
 }
 
-func makeData(name enc.Name, content enc.Wire) *spec.Data {
-	return &spec.Data{
-		NameV:    name,
-		ContentV: content,
-	}
+func makeData(name enc.Name) *defn.FwData {
+	return &defn.FwData{NameV: name}
 }
 
-func makeInterest(name enc.Name) *spec.Interest {
-	return &spec.Interest{
+func makeInterest(name enc.Name) *defn.FwInterest {
+	return &defn.FwInterest{
 		NameV:  name,
-		NonceV: utils.IdPtr(rand.Uint32()),
+		NonceV: optional.Some(rand.Uint32()),
 	}
 }
 
@@ -66,7 +63,7 @@ func TestNewPitCSTree(t *testing.T) {
 	interest := makeInterest(name)
 	pitEntry := pitCS.FindInterestExactMatchEnc(interest)
 	assert.Nil(t, pitEntry)
-	data := makeData(name, enc.Wire{})
+	data := makeData(name)
 	pitEntries := pitCS.FindInterestPrefixMatchByDataEnc(data, nil)
 	assert.Equal(t, len(pitEntries), 0)
 
@@ -80,7 +77,7 @@ func TestNewPitCSTree(t *testing.T) {
 	pitEntry = pitCS.FindInterestExactMatchEnc(interest2)
 	assert.Nil(t, pitEntry)
 
-	data2 := makeData(name, enc.Wire{})
+	data2 := makeData(name)
 	pitEntries = pitCS.FindInterestPrefixMatchByDataEnc(data2, nil)
 	assert.Equal(t, len(pitEntries), 0)
 
@@ -272,14 +269,11 @@ func TestRemoveInterest(t *testing.T) {
 	assert.True(t, removedInterest)
 	assert.Equal(t, pitCS.PitSize(), 0)
 
-	// Remove a nonexistent pit entry
+	// Remove a new pit entry
 	name2, _ := enc.NameFromStr("/interest2")
 	interest2 := makeInterest(name2)
 	pitEntry2, _ := pitCS.InsertInterest(interest2, hint, inFace)
 
-	removedInterest = pitCS.RemoveInterest(pitEntry)
-	assert.False(t, removedInterest)
-	assert.Equal(t, pitCS.PitSize(), 1)
 	removedInterest = pitCS.RemoveInterest(pitEntry2)
 	assert.True(t, removedInterest)
 	assert.Equal(t, pitCS.PitSize(), 0)
@@ -363,7 +357,7 @@ func TestFindInterestPrefixMatchByData(t *testing.T) {
 	// Basically the same as FindInterestPrefixMatch, but with data instead
 	pitCS := NewPitCS(func(PitEntry) {})
 	name, _ := enc.NameFromStr("/interest1")
-	data := makeData(name, enc.Wire{})
+	data := makeData(name)
 	hint, _ := enc.NameFromStr("/")
 	inFace := uint64(1111)
 	interest := makeInterest(name)
@@ -384,14 +378,14 @@ func TestFindInterestPrefixMatchByData(t *testing.T) {
 
 	// Look for nonexistent name
 	name2, _ := enc.NameFromStr("/nonexistent")
-	data2 := makeData(name2, enc.Wire{})
+	data2 := makeData(name2)
 	pitEntriesEmpty := pitCS.FindInterestPrefixMatchByDataEnc(data2, nil)
 	assert.Equal(t, len(pitEntriesEmpty), 0)
 
 	// /a exists but we're looking for /a/b, return just /a
 	longername, _ := enc.NameFromStr("/interest1/more_name_content")
 	interest3 := makeInterest(longername)
-	data3 := makeData(longername, enc.Wire{})
+	data3 := makeData(longername)
 
 	pitEntriesEmpty = pitCS.FindInterestPrefixMatchByDataEnc(data3, nil)
 	assert.Equal(t, len(pitEntriesEmpty), 1)
@@ -417,30 +411,34 @@ func TestInsertOutRecord(t *testing.T) {
 	pitEntry, _ := pitCS.InsertInterest(interest, hint, inFace)
 	outRecord := pitEntry.InsertOutRecord(interest, inFace)
 	assert.Equal(t, outRecord.Face, inFace)
-	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
-	assert.True(t, outRecord.LatestNonce == *interest.NonceV)
+	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
 
 	// Update existing outrecord
-	oldNonce := new(uint32)
-	*oldNonce = 2
-	*interest.NonceV = *oldNonce
-	*interest.NonceV = 3
+	oldNonce := uint32(2)
+	interest.NonceV.Set(oldNonce)
+	interest.NonceV.Set(3)
 	outRecord = pitEntry.InsertOutRecord(interest, inFace)
 	assert.Equal(t, outRecord.Face, inFace)
-	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
-	assert.True(t, outRecord.LatestNonce == *interest.NonceV)
-	assert.False(t, outRecord.LatestNonce == *oldNonce)
+	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
+	assert.False(t, outRecord.LatestNonce == oldNonce)
 
 	// Add new outrecord on a different face
 	inFace2 := uint64(2222)
 	outRecord = pitEntry.InsertOutRecord(interest, inFace2)
 	assert.Equal(t, outRecord.Face, inFace2)
-	assert.Equal(t, outRecord.LatestInterest, interest.NameV)
-	assert.True(t, outRecord.LatestNonce == *interest.NonceV)
+	assert.True(t, outRecord.LatestNonce == interest.NonceV.Unwrap())
 }
 
 func TestGetOutRecords(t *testing.T) {
 	setReplacementPolicy("lru")
+
+	getOutRecords := func(pitEntry PitEntry) []*PitOutRecord {
+		records := []*PitOutRecord{}
+		for _, record := range pitEntry.OutRecords() {
+			records = append(records, record)
+		}
+		return records
+	}
 
 	pitCS := NewPitCS(func(PitEntry) {})
 	name, _ := enc.NameFromStr("/interest1")
@@ -452,28 +450,25 @@ func TestGetOutRecords(t *testing.T) {
 	// New outrecord
 	pitEntry, _ := pitCS.InsertInterest(interest, hint, inFace)
 	_ = pitEntry.InsertOutRecord(interest, inFace)
-	outRecords := pitEntry.GetOutRecords()
+	outRecords := getOutRecords(pitEntry)
 	assert.Equal(t, len(outRecords), 1)
 	assert.Equal(t, outRecords[0].Face, inFace)
-	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
-	assert.True(t, outRecords[0].LatestNonce == *interest.NonceV)
+	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	// Update existing outrecord
-	oldNonce := new(uint32)
-	*oldNonce = 2
-	*interest.NonceV = *oldNonce
-	*interest.NonceV = 3
+	oldNonce := uint32(2)
+	interest.NonceV.Set(oldNonce)
+	interest.NonceV.Set(3)
 	_ = pitEntry.InsertOutRecord(interest, inFace)
-	outRecords = pitEntry.GetOutRecords()
+	outRecords = getOutRecords(pitEntry)
 	assert.Equal(t, len(outRecords), 1)
 	assert.Equal(t, outRecords[0].Face, inFace)
-	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
-	assert.True(t, outRecords[0].LatestNonce == *interest.NonceV)
+	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	// Add new outrecord on a different face
 	inFace2 := uint64(2222)
 	_ = pitEntry.InsertOutRecord(interest, inFace2)
-	outRecords = pitEntry.GetOutRecords()
+	outRecords = getOutRecords(pitEntry)
 	sort.Slice(outRecords, func(i, j int) bool {
 		// Sort by face ID
 		return outRecords[i].Face < outRecords[j].Face
@@ -481,12 +476,10 @@ func TestGetOutRecords(t *testing.T) {
 	assert.Equal(t, len(outRecords), 2)
 
 	assert.Equal(t, outRecords[0].Face, inFace)
-	assert.Equal(t, outRecords[0].LatestInterest, interest.NameV)
-	assert.True(t, outRecords[0].LatestNonce == *interest.NonceV)
+	assert.True(t, outRecords[0].LatestNonce == interest.NonceV.Unwrap())
 
 	assert.Equal(t, outRecords[1].Face, inFace2)
-	assert.Equal(t, outRecords[1].LatestInterest, interest.NameV)
-	assert.True(t, outRecords[1].LatestNonce == *interest.NonceV)
+	assert.True(t, outRecords[1].LatestNonce == interest.NonceV.Unwrap())
 }
 
 func FindMatchingDataFromCS(t *testing.T) {
@@ -500,7 +493,7 @@ func FindMatchingDataFromCS(t *testing.T) {
 	interest1 := makeInterest(name1)
 	interest1.CanBePrefixV = false
 
-	pkt, _, _ := spec.ReadPacket(enc.NewBufferReader(VALID_DATA_1))
+	pkt, _ := defn.ParseFwPacket(enc.NewBufferView(VALID_DATA_1), false)
 	data1 := pkt.Data
 
 	pitCS.InsertData(data1, VALID_DATA_1)
@@ -522,7 +515,7 @@ func FindMatchingDataFromCS(t *testing.T) {
 	interest2 := makeInterest(name2)
 	interest2.CanBePrefixV = false
 
-	pkt, _, _ = spec.ReadPacket(enc.NewBufferReader(VALID_DATA_2))
+	pkt, _ = defn.ParseFwPacket(enc.NewBufferView(VALID_DATA_2), false)
 	data2 := pkt.Data
 
 	pitCS.InsertData(data2, VALID_DATA_2)

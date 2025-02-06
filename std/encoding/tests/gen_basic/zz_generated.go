@@ -70,10 +70,7 @@ func (encoder *FakeMetaInfoEncoder) Encode(value *FakeMetaInfo) enc.Wire {
 	return wire
 }
 
-func (context *FakeMetaInfoParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*FakeMetaInfo, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *FakeMetaInfoParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FakeMetaInfo, error) {
 
 	var handled_Number bool = false
 	var handled_Time bool = false
@@ -92,11 +89,11 @@ func (context *FakeMetaInfoParsingContext) Parse(reader enc.ParseReader, ignoreC
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -151,7 +148,7 @@ func (context *FakeMetaInfoParsingContext) Parse(reader enc.ParseReader, ignoreC
 					handled = true
 					handled_Binary = true
 					value.Binary = make([]byte, l)
-					_, err = io.ReadFull(reader, value.Binary)
+					_, err = reader.ReadFull(value.Binary)
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -198,7 +195,7 @@ func (value *FakeMetaInfo) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFakeMetaInfo(reader enc.ParseReader, ignoreCritical bool) (*FakeMetaInfo, error) {
+func ParseFakeMetaInfo(reader enc.WireView, ignoreCritical bool) (*FakeMetaInfo, error) {
 	context := FakeMetaInfoParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -214,13 +211,13 @@ type OptFieldParsingContext struct {
 func (encoder *OptFieldEncoder) Init(value *OptField) {
 
 	l := uint(0)
-	if value.Number != nil {
+	if optval, ok := value.Number.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Number).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	if value.Time != nil {
+	if optval, ok := value.Time.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(uint64(*value.Time/time.Millisecond)).EncodingLength())
+		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
 	}
 	if value.Binary != nil {
 		l += 1
@@ -243,19 +240,19 @@ func (encoder *OptFieldEncoder) EncodeInto(value *OptField, buf []byte) {
 
 	pos := uint(0)
 
-	if value.Number != nil {
+	if optval, ok := value.Number.Get(); ok {
 		buf[pos] = byte(24)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Number).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if value.Time != nil {
+	if optval, ok := value.Time.Get(); ok {
 		buf[pos] = byte(25)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(uint64(*value.Time / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(uint64(optval / time.Millisecond)).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -284,10 +281,7 @@ func (encoder *OptFieldEncoder) Encode(value *OptField) enc.Wire {
 	return wire
 }
 
-func (context *OptFieldParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*OptField, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *OptFieldParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*OptField, error) {
 
 	var handled_Number bool = false
 	var handled_Time bool = false
@@ -307,11 +301,11 @@ func (context *OptFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -324,8 +318,8 @@ func (context *OptFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled = true
 					handled_Number = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -336,10 +330,10 @@ func (context *OptFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Number = &tempVal
+						value.Number.Set(optval)
 					}
 				}
 			case 25:
@@ -362,8 +356,8 @@ func (context *OptFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 								timeInt = uint64(timeInt<<8) | uint64(x)
 							}
 						}
-						tempVal := time.Duration(timeInt) * time.Millisecond
-						value.Time = &tempVal
+						optval := time.Duration(timeInt) * time.Millisecond
+						value.Time.Set(optval)
 					}
 				}
 			case 26:
@@ -371,13 +365,14 @@ func (context *OptFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled = true
 					handled_Binary = true
 					value.Binary = make([]byte, l)
-					_, err = io.ReadFull(reader, value.Binary)
+					_, err = reader.ReadFull(value.Binary)
 				}
 			case 48:
 				if true {
 					handled = true
 					handled_Bool = true
 					value.Bool = true
+					err = reader.Skip(int(l))
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -398,10 +393,10 @@ func (context *OptFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 	err = nil
 
 	if !handled_Number && err == nil {
-		value.Number = nil
+		value.Number.Unset()
 	}
 	if !handled_Time && err == nil {
-		value.Time = nil
+		value.Time.Unset()
 	}
 	if !handled_Binary && err == nil {
 		value.Binary = nil
@@ -427,7 +422,7 @@ func (value *OptField) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseOptField(reader enc.ParseReader, ignoreCritical bool) (*OptField, error) {
+func ParseOptField(reader enc.WireView, ignoreCritical bool) (*OptField, error) {
 	context := OptFieldParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -509,10 +504,7 @@ func (encoder *WireNameFieldEncoder) Encode(value *WireNameField) enc.Wire {
 	return wire
 }
 
-func (context *WireNameFieldParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*WireNameField, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *WireNameFieldParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*WireNameField, error) {
 
 	var handled_Wire bool = false
 	var handled_Name bool = false
@@ -530,11 +522,11 @@ func (context *WireNameFieldParsingContext) Parse(reader enc.ParseReader, ignore
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -552,7 +544,8 @@ func (context *WireNameFieldParsingContext) Parse(reader enc.ParseReader, ignore
 				if true {
 					handled = true
 					handled_Name = true
-					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
+					delegate := reader.Delegate(int(l))
+					value.Name, err = delegate.ReadName()
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -596,7 +589,7 @@ func (value *WireNameField) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseWireNameField(reader enc.ParseReader, ignoreCritical bool) (*WireNameField, error) {
+func ParseWireNameField(reader enc.WireView, ignoreCritical bool) (*WireNameField, error) {
 	context := WireNameFieldParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -696,10 +689,7 @@ func (encoder *MarkersEncoder) Encode(value *Markers) enc.Wire {
 	return wire
 }
 
-func (context *MarkersParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*Markers, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *MarkersParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Markers, error) {
 
 	var handled_startMarker bool = false
 	var handled_Wire bool = false
@@ -720,11 +710,11 @@ func (context *MarkersParsingContext) Parse(reader enc.ParseReader, ignoreCritic
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -742,7 +732,8 @@ func (context *MarkersParsingContext) Parse(reader enc.ParseReader, ignoreCritic
 				if progress+1 == 3 {
 					handled = true
 					handled_Name = true
-					value.Name, err = enc.ReadName(reader.Delegate(int(l)))
+					delegate := reader.Delegate(int(l))
+					value.Name, err = delegate.ReadName()
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -845,7 +836,7 @@ func (encoder *NoCopyStructEncoder) Init(value *NoCopyStruct) {
 	}
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	if value.Wire1 != nil {
 		l += 1
@@ -938,11 +929,17 @@ func (encoder *NoCopyStructEncoder) EncodeInto(value *NoCopyStruct, wire enc.Wir
 }
 
 func (encoder *NoCopyStructEncoder) Encode(value *NoCopyStruct) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)
@@ -950,10 +947,7 @@ func (encoder *NoCopyStructEncoder) Encode(value *NoCopyStruct) enc.Wire {
 	return wire
 }
 
-func (context *NoCopyStructParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*NoCopyStruct, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *NoCopyStructParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NoCopyStruct, error) {
 
 	var handled_Wire1 bool = false
 	var handled_Number bool = false
@@ -972,11 +966,11 @@ func (context *NoCopyStructParsingContext) Parse(reader enc.ParseReader, ignoreC
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -1060,7 +1054,7 @@ func (value *NoCopyStruct) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNoCopyStruct(reader enc.ParseReader, ignoreCritical bool) (*NoCopyStruct, error) {
+func ParseNoCopyStruct(reader enc.WireView, ignoreCritical bool) (*NoCopyStruct, error) {
 	context := NoCopyStructParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1079,10 +1073,10 @@ func (encoder *StrFieldEncoder) Init(value *StrField) {
 	l += 1
 	l += uint(enc.TLNum(len(value.Str1)).EncodingLength())
 	l += uint(len(value.Str1))
-	if value.Str2 != nil {
+	if optval, ok := value.Str2.Get(); ok {
 		l += 1
-		l += uint(enc.TLNum(len(*value.Str2)).EncodingLength())
-		l += uint(len(*value.Str2))
+		l += uint(enc.TLNum(len(optval)).EncodingLength())
+		l += uint(len(optval))
 	}
 	encoder.length = l
 
@@ -1101,12 +1095,12 @@ func (encoder *StrFieldEncoder) EncodeInto(value *StrField, buf []byte) {
 	pos += uint(enc.TLNum(len(value.Str1)).EncodeInto(buf[pos:]))
 	copy(buf[pos:], value.Str1)
 	pos += uint(len(value.Str1))
-	if value.Str2 != nil {
+	if optval, ok := value.Str2.Get(); ok {
 		buf[pos] = byte(2)
 		pos += 1
-		pos += uint(enc.TLNum(len(*value.Str2)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], *value.Str2)
-		pos += uint(len(*value.Str2))
+		pos += uint(enc.TLNum(len(optval)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], optval)
+		pos += uint(len(optval))
 	}
 }
 
@@ -1120,10 +1114,7 @@ func (encoder *StrFieldEncoder) Encode(value *StrField) enc.Wire {
 	return wire
 }
 
-func (context *StrFieldParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*StrField, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *StrFieldParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*StrField, error) {
 
 	var handled_Str1 bool = false
 	var handled_Str2 bool = false
@@ -1141,11 +1132,11 @@ func (context *StrFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -1159,7 +1150,7 @@ func (context *StrFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled_Str1 = true
 					{
 						var builder strings.Builder
-						_, err = io.CopyN(&builder, reader, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
 							value.Str1 = builder.String()
 						}
@@ -1171,10 +1162,9 @@ func (context *StrFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 					handled_Str2 = true
 					{
 						var builder strings.Builder
-						_, err = io.CopyN(&builder, reader, int64(l))
+						_, err = reader.CopyN(&builder, int(l))
 						if err == nil {
-							tempStr := builder.String()
-							value.Str2 = &tempStr
+							value.Str2.Set(builder.String())
 						}
 					}
 				}
@@ -1200,7 +1190,7 @@ func (context *StrFieldParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 		err = enc.ErrSkipRequired{Name: "Str1", TypeNum: 1}
 	}
 	if !handled_Str2 && err == nil {
-		value.Str2 = nil
+		value.Str2.Unset()
 	}
 
 	if err != nil {
@@ -1220,7 +1210,7 @@ func (value *StrField) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseStrField(reader enc.ParseReader, ignoreCritical bool) (*StrField, error) {
+func ParseStrField(reader enc.WireView, ignoreCritical bool) (*StrField, error) {
 	context := StrFieldParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -1238,13 +1228,17 @@ func (encoder *FixedUintFieldEncoder) Init(value *FixedUintField) {
 	l := uint(0)
 	l += 1
 	l += 1 + 1
-	if value.U32 != nil {
+	if value.U32.IsSet() {
 		l += 1
 		l += 1 + 4
 	}
-	if value.U64 != nil {
+	if value.U64.IsSet() {
 		l += 1
 		l += 1 + 8
+	}
+	if value.BytePtr != nil {
+		l += 1
+		l += 2
 	}
 	encoder.length = l
 
@@ -1263,19 +1257,26 @@ func (encoder *FixedUintFieldEncoder) EncodeInto(value *FixedUintField, buf []by
 	buf[pos] = 1
 	buf[pos+1] = byte(value.Byte)
 	pos += 2
-	if value.U32 != nil {
+	if optval, ok := value.U32.Get(); ok {
 		buf[pos] = byte(2)
 		pos += 1
 		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(*value.U32))
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(optval))
 		pos += 5
 	}
-	if value.U64 != nil {
+	if optval, ok := value.U64.Get(); ok {
 		buf[pos] = byte(3)
 		pos += 1
 		buf[pos] = 8
-		binary.BigEndian.PutUint64(buf[pos+1:], uint64(*value.U64))
+		binary.BigEndian.PutUint64(buf[pos+1:], uint64(optval))
 		pos += 9
+	}
+	if value.BytePtr != nil {
+		buf[pos] = byte(4)
+		pos += 1
+		buf[pos] = 1
+		buf[pos+1] = byte(*value.BytePtr)
+		pos += 2
 	}
 }
 
@@ -1289,14 +1290,12 @@ func (encoder *FixedUintFieldEncoder) Encode(value *FixedUintField) enc.Wire {
 	return wire
 }
 
-func (context *FixedUintFieldParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*FixedUintField, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *FixedUintFieldParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*FixedUintField, error) {
 
 	var handled_Byte bool = false
 	var handled_U32 bool = false
 	var handled_U64 bool = false
+	var handled_BytePtr bool = false
 
 	progress := -1
 	_ = progress
@@ -1311,11 +1310,11 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.ParseReader, ignor
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -1337,8 +1336,8 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.ParseReader, ignor
 					handled = true
 					handled_U32 = true
 					{
-						tempVal := uint32(0)
-						tempVal = uint32(0)
+						optval := uint32(0)
+						optval = uint32(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1349,10 +1348,10 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.ParseReader, ignor
 									}
 									break
 								}
-								tempVal = uint32(tempVal<<8) | uint32(x)
+								optval = uint32(optval<<8) | uint32(x)
 							}
 						}
-						value.U32 = &tempVal
+						value.U32.Set(optval)
 					}
 				}
 			case 3:
@@ -1360,8 +1359,8 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.ParseReader, ignor
 					handled = true
 					handled_U64 = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1372,10 +1371,22 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.ParseReader, ignor
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.U64 = &tempVal
+						value.U64.Set(optval)
+					}
+				}
+			case 4:
+				if true {
+					handled = true
+					handled_BytePtr = true
+					{
+						buf, err := reader.ReadBuf(1)
+						if err == io.EOF {
+							err = io.ErrUnexpectedEOF
+						}
+						value.BytePtr = &buf[0]
 					}
 				}
 			default:
@@ -1400,10 +1411,13 @@ func (context *FixedUintFieldParsingContext) Parse(reader enc.ParseReader, ignor
 		err = enc.ErrSkipRequired{Name: "Byte", TypeNum: 1}
 	}
 	if !handled_U32 && err == nil {
-		value.U32 = nil
+		value.U32.Unset()
 	}
 	if !handled_U64 && err == nil {
-		value.U64 = nil
+		value.U64.Unset()
+	}
+	if !handled_BytePtr && err == nil {
+		value.BytePtr = nil
 	}
 
 	if err != nil {
@@ -1423,7 +1437,7 @@ func (value *FixedUintField) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseFixedUintField(reader enc.ParseReader, ignoreCritical bool) (*FixedUintField, error) {
+func ParseFixedUintField(reader enc.WireView, ignoreCritical bool) (*FixedUintField, error) {
 	context := FixedUintFieldParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

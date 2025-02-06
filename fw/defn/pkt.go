@@ -9,20 +9,19 @@ package defn
 
 import (
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // Pkt represents a pending packet to be sent or recently
 // received on the link, plus any associated metadata.
 type Pkt struct {
 	Name enc.Name
-	L3   *spec.Packet
-	Raw  []byte
+	L3   *FwPacket
+	Raw  enc.Wire
 
 	PitToken       []byte
-	CongestionMark *uint64
-	CachePolicy    *uint64
+	CongestionMark optional.Optional[uint64]
 
 	IncomingFaceID uint64
-	NextHopFaceID  *uint64
+	NextHopFaceID  optional.Optional[uint64]
 }

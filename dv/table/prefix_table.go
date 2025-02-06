@@ -104,7 +104,7 @@ func (pt *PrefixTable) Withdraw(name enc.Name) {
 
 // Applies ops from a list. Returns if dirty.
 func (pt *PrefixTable) Apply(wire enc.Wire) (dirty bool) {
-	ops, err := tlv.ParsePrefixOpList(enc.NewWireReader(wire), true)
+	ops, err := tlv.ParsePrefixOpList(enc.NewWireView(wire), true)
 	if err != nil {
 		log.Warn(pt, "Failed to parse PrefixOpList", "err", err)
 		return false

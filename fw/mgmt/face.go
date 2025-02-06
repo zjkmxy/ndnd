@@ -18,7 +18,7 @@ import (
 	"github.com/named-data/ndnd/fw/face"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // FaceModule is the module that handles Face Management.
@@ -77,18 +77,18 @@ func (f *FaceModule) create(interest *Interest) {
 		return
 	}
 
-	if params.Uri == nil {
+	if !params.Uri.IsSet() {
 		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect", nil)
 		return
 	}
 
-	URI := defn.DecodeURIString(*params.Uri)
+	URI := defn.DecodeURIString(params.Uri.Unwrap())
 	if URI == nil || URI.Canonize() != nil {
 		f.manager.sendCtrlResp(interest, 400, "URI could not be canonized", nil)
 		return
 	}
 
-	if (params.Flags != nil && params.Mask == nil) || (params.Flags == nil && params.Mask != nil) {
+	if (params.Flags.IsSet() && !params.Mask.IsSet()) || (!params.Flags.IsSet() && params.Mask.IsSet()) {
 		f.manager.sendCtrlResp(interest, 409, "Incomplete Flags/Mask combination", nil)
 		return
 	}
@@ -122,23 +122,22 @@ func (f *FaceModule) create(interest *Interest) {
 
 		// Check face persistency
 		persistency := mgmt.PersistencyPersistent
-		if params.FacePersistency != nil && (*params.FacePersistency == uint64(mgmt.PersistencyPersistent) ||
-			*params.FacePersistency == uint64(mgmt.PersistencyPermanent)) {
-			persistency = mgmt.Persistency(*params.FacePersistency)
-		} else if params.FacePersistency != nil {
+		if pers, ok := params.FacePersistency.Get(); ok && (pers == uint64(mgmt.PersistencyPersistent) || pers == uint64(mgmt.PersistencyPermanent)) {
+			persistency = mgmt.Persistency(pers)
+		} else if params.FacePersistency.IsSet() {
 			f.manager.sendCtrlResp(interest, 406, "Unacceptable persistency", nil)
 			return
 		}
 
 		// Check congestion control
 		baseCongestionMarkingInterval := 100 * time.Millisecond
-		if params.BaseCongestionMarkInterval != nil {
-			baseCongestionMarkingInterval = time.Duration(*params.BaseCongestionMarkInterval) * time.Nanosecond
+		if bcmi, ok := params.BaseCongestionMarkInterval.Get(); ok {
+			baseCongestionMarkingInterval = time.Duration(bcmi) * time.Nanosecond
 		}
 
 		defaultCongestionThresholdBytes := uint64(math.Pow(2, 16))
-		if params.DefaultCongestionThreshold != nil {
-			defaultCongestionThresholdBytes = *params.DefaultCongestionThreshold
+		if dct, ok := params.DefaultCongestionThreshold.Get(); ok {
+			defaultCongestionThresholdBytes = dct
 		}
 
 		// Create new UDP face
@@ -149,20 +148,16 @@ func (f *FaceModule) create(interest *Interest) {
 			return
 		}
 
-		if params.Mtu != nil {
-			mtu := int(*params.Mtu)
-			if *params.Mtu > defn.MaxNDNPacketSize {
-				mtu = defn.MaxNDNPacketSize
-			}
-			transport.SetMTU(mtu)
+		if mtu, ok := params.Mtu.Get(); ok {
+			transport.SetMTU(min(int(mtu), defn.MaxNDNPacketSize))
 		}
 
 		// NDNLP link service parameters
 		options := face.MakeNDNLPLinkServiceOptions()
-		if params.Flags != nil {
+		if params.Flags.IsSet() && params.Mask.IsSet() {
 			// Mask already guaranteed to be present if Flags is above
-			flags := *params.Flags
-			mask := *params.Mask
+			flags := params.Flags.Unwrap()
+			mask := params.Mask.Unwrap()
 
 			if mask&face.FaceFlagLocalFields > 0 {
 				// LocalFieldsEnabled
@@ -204,23 +199,22 @@ func (f *FaceModule) create(interest *Interest) {
 
 		// Check face persistency
 		persistency := mgmt.PersistencyPersistent
-		if params.FacePersistency != nil && (*params.FacePersistency == uint64(mgmt.PersistencyPersistent) ||
-			*params.FacePersistency == uint64(mgmt.PersistencyPermanent)) {
-			persistency = mgmt.Persistency(*params.FacePersistency)
-		} else if params.FacePersistency != nil {
+		if pers, ok := params.FacePersistency.Get(); ok && (pers == uint64(mgmt.PersistencyPersistent) || pers == uint64(mgmt.PersistencyPermanent)) {
+			persistency = mgmt.Persistency(pers)
+		} else if params.FacePersistency.IsSet() {
 			f.manager.sendCtrlResp(interest, 406, "Unacceptable persistency", nil)
 			return
 		}
 
 		// Check congestion control
 		baseCongestionMarkingInterval := 100 * time.Millisecond
-		if params.BaseCongestionMarkInterval != nil {
-			baseCongestionMarkingInterval = time.Duration(*params.BaseCongestionMarkInterval) * time.Nanosecond
+		if bcmi, ok := params.BaseCongestionMarkInterval.Get(); ok {
+			baseCongestionMarkingInterval = time.Duration(bcmi) * time.Nanosecond
 		}
 
 		defaultCongestionThresholdBytes := uint64(math.Pow(2, 16))
-		if params.DefaultCongestionThreshold != nil {
-			defaultCongestionThresholdBytes = *params.DefaultCongestionThreshold
+		if dct, ok := params.DefaultCongestionThreshold.Get(); ok {
+			defaultCongestionThresholdBytes = dct
 		}
 
 		// Create new TCP face
@@ -231,21 +225,17 @@ func (f *FaceModule) create(interest *Interest) {
 			return
 		}
 
-		if params.Mtu != nil {
-			mtu := int(*params.Mtu)
-			if *params.Mtu > defn.MaxNDNPacketSize {
-				mtu = defn.MaxNDNPacketSize
-			}
-			transport.SetMTU(mtu)
+		if mtu, ok := params.Mtu.Get(); ok {
+			transport.SetMTU(min(int(mtu), defn.MaxNDNPacketSize))
 		}
 
 		// NDNLP link service parameters
 		options := face.MakeNDNLPLinkServiceOptions()
 		options.IsFragmentationEnabled = false // reliable stream
-		if params.Flags != nil {
+		if params.Flags.IsSet() && params.Mask.IsSet() {
 			// Mask already guaranteed to be present if Flags is above
-			flags := *params.Flags
-			mask := *params.Mask
+			flags := params.Flags.Unwrap()
+			mask := params.Mask.Unwrap()
 
 			if mask&face.FaceFlagLocalFields > 0 {
 				// LocalFieldsEnabled
@@ -301,9 +291,9 @@ func (f *FaceModule) update(interest *Interest) {
 		return
 	}
 
-	faceID := *interest.inFace
-	if params.FaceId != nil && *params.FaceId != 0 {
-		faceID = *params.FaceId
+	faceID := interest.inFace.Unwrap()
+	if fid, ok := params.FaceId.Get(); ok && fid != 0 {
+		faceID = fid
 	}
 
 	// Validate parameters
@@ -313,38 +303,36 @@ func (f *FaceModule) update(interest *Interest) {
 	selectedFace := face.FaceTable.Get(faceID)
 	if selectedFace == nil {
 		core.Log.Warn(f, "Cannot update specified (or implicit) face because it does not exist", "faceid", faceID)
-		f.manager.sendCtrlResp(interest, 404, "Face does not exist", &mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
+		f.manager.sendCtrlResp(interest, 404, "Face does not exist", &mgmt.ControlArgs{FaceId: optional.Some(faceID)})
 		return
 	}
 
 	// Can't update null (or internal) faces via management
 	if selectedFace.RemoteURI().Scheme() == "null" || selectedFace.RemoteURI().Scheme() == "internal" {
-		f.manager.sendCtrlResp(interest, 401, "Face cannot be updated via management", &mgmt.ControlArgs{FaceId: utils.IdPtr(faceID)})
+		f.manager.sendCtrlResp(interest, 401, "Face cannot be updated via management", &mgmt.ControlArgs{FaceId: optional.Some(faceID)})
 		return
 	}
 
-	if params.FacePersistency != nil {
-		if selectedFace.RemoteURI().Scheme() == "ether" && *params.FacePersistency != uint64(mgmt.PersistencyPermanent) {
+	if pers, ok := params.FacePersistency.Get(); ok {
+		if selectedFace.RemoteURI().Scheme() == "ether" && pers != uint64(mgmt.PersistencyPermanent) {
 			responseParams.FacePersistency = params.FacePersistency
 			areParamsValid = false
 		} else if (selectedFace.RemoteURI().Scheme() == "udp4" || selectedFace.RemoteURI().Scheme() == "udp6") &&
-			*params.FacePersistency != uint64(mgmt.PersistencyPersistent) &&
-			*params.FacePersistency != uint64(mgmt.PersistencyPermanent) {
+			pers != uint64(mgmt.PersistencyPersistent) && pers != uint64(mgmt.PersistencyPermanent) {
 			responseParams.FacePersistency = params.FacePersistency
 			areParamsValid = false
-		} else if selectedFace.LocalURI().Scheme() == "unix" &&
-			*params.FacePersistency != uint64(mgmt.PersistencyPersistent) {
+		} else if selectedFace.LocalURI().Scheme() == "unix" && pers != uint64(mgmt.PersistencyPersistent) {
 			responseParams.FacePersistency = params.FacePersistency
 			areParamsValid = false
 		}
 	}
 
-	if (params.Flags != nil && params.Mask == nil) || (params.Flags == nil && params.Mask != nil) {
-		if params.Flags != nil {
-			responseParams.Flags = params.Flags
+	if (params.Flags.IsSet() && !params.Mask.IsSet()) || (!params.Flags.IsSet() && params.Mask.IsSet()) {
+		if params.Flags.IsSet() {
+			responseParams.Flags.Set(params.Flags.Unwrap())
 		}
-		if params.Mask != nil {
-			responseParams.Mask = params.Mask
+		if params.Mask.IsSet() {
+			responseParams.Mask.Set(params.Mask.Unwrap())
 		}
 		areParamsValid = false
 	}
@@ -357,9 +345,9 @@ func (f *FaceModule) update(interest *Interest) {
 	// Actually perform face updates
 
 	// Persistency
-	if params.FacePersistency != nil {
+	if pers, ok := params.FacePersistency.Get(); ok {
 		// Correctness of FacePersistency already validated
-		selectedFace.SetPersistency(mgmt.Persistency(*params.FacePersistency))
+		selectedFace.SetPersistency(mgmt.Persistency(pers))
 	}
 
 	// Set NDNLP link service options
@@ -367,30 +355,28 @@ func (f *FaceModule) update(interest *Interest) {
 		options := lpLinkService.Options()
 
 		// Congestion
-		if params.BaseCongestionMarkInterval != nil &&
-			time.Duration(*params.BaseCongestionMarkInterval)*time.Nanosecond != options.BaseCongestionMarkingInterval {
-			options.BaseCongestionMarkingInterval = time.Duration(*params.BaseCongestionMarkInterval) * time.Nanosecond
+		if bcmi, ok := params.BaseCongestionMarkInterval.Get(); ok && time.Duration(bcmi)*time.Nanosecond != options.BaseCongestionMarkingInterval {
+			options.BaseCongestionMarkingInterval = time.Duration(bcmi) * time.Nanosecond
 			core.Log.Info(f, "Set BaseCongestionMarkingInterval", "faceid", faceID, "value", options.BaseCongestionMarkingInterval)
 		}
 
-		if params.DefaultCongestionThreshold != nil &&
-			*params.DefaultCongestionThreshold != options.DefaultCongestionThresholdBytes {
-			options.DefaultCongestionThresholdBytes = *params.DefaultCongestionThreshold
+		if dct, ok := params.DefaultCongestionThreshold.Get(); ok && dct != options.DefaultCongestionThresholdBytes {
+			options.DefaultCongestionThresholdBytes = dct
 			core.Log.Info(f, "Set DefaultCongestionThreshold", "faceid", faceID, "value", options.DefaultCongestionThresholdBytes)
 		}
 
 		// MTU
-		if params.Mtu != nil {
+		if mtu, ok := params.Mtu.Get(); ok {
 			oldMTU := selectedFace.MTU()
-			newMTU := min(int(*params.Mtu), defn.MaxNDNPacketSize)
+			newMTU := min(int(mtu), defn.MaxNDNPacketSize)
 			selectedFace.SetMTU(newMTU)
 			core.Log.Info(f, "Set MTU", "faceid", faceID, "value", newMTU, "old", oldMTU)
 		}
 
 		// Flags
-		if params.Mask != nil && params.Flags != nil {
-			flags := *params.Flags
-			mask := *params.Mask
+		if params.Flags.IsSet() && params.Mask.IsSet() {
+			flags := params.Flags.Unwrap()
+			mask := params.Mask.Unwrap()
 
 			if mask&face.FaceFlagLocalFields > 0 {
 				if flags&face.FaceFlagLocalFields > 0 {
@@ -420,8 +406,8 @@ func (f *FaceModule) update(interest *Interest) {
 	}
 
 	f.fillFaceProperties(responseParams, selectedFace)
-	responseParams.Uri = nil
-	responseParams.LocalUri = nil
+	responseParams.Uri.Unset()
+	responseParams.LocalUri.Unset()
 	f.manager.sendCtrlResp(interest, 200, "OK", responseParams)
 }
 
@@ -437,16 +423,16 @@ func (f *FaceModule) destroy(interest *Interest) {
 		return
 	}
 
-	if params.FaceId == nil {
+	if !params.FaceId.IsSet() {
 		f.manager.sendCtrlResp(interest, 400, "ControlParameters is incorrect (missing FaceId)", nil)
 		return
 	}
 
-	if link := face.FaceTable.Get(*params.FaceId); link != nil {
+	if link := face.FaceTable.Get(params.FaceId.Unwrap()); link != nil {
 		link.Close()
-		core.Log.Info(f, "Destroyed face", "faceid", *params.FaceId)
+		core.Log.Info(f, "Destroyed face", "faceid", params.FaceId.Unwrap())
 	} else {
-		core.Log.Info(f, "Ignoring attempt to delete non-existent face", "faceid", *params.FaceId)
+		core.Log.Info(f, "Ignoring attempt to delete non-existent face", "faceid", params.FaceId.Unwrap())
 	}
 
 	f.manager.sendCtrlResp(interest, 200, "OK", params)
@@ -484,7 +470,7 @@ func (f *FaceModule) query(interest *Interest) {
 		core.Log.Warn(f, "Missing FaceQueryFilter", "name", interest.Name())
 		return
 	}
-	filterV, err := mgmt.ParseFaceQueryFilter(enc.NewBufferReader(interest.Name()[len(LOCAL_PREFIX)+2].Val), true)
+	filterV, err := mgmt.ParseFaceQueryFilter(enc.NewBufferView(interest.Name()[len(LOCAL_PREFIX)+2].Val), true)
 	if err != nil || filterV == nil || filterV.Val == nil {
 		return
 	}
@@ -492,8 +478,8 @@ func (f *FaceModule) query(interest *Interest) {
 
 	// canonize URI if present in filter
 	var filterUri *defn.URI
-	if filter.Uri != nil {
-		filterUri = defn.DecodeURIString(*filter.Uri)
+	if furi, ok := filter.Uri.Get(); ok {
+		filterUri = defn.DecodeURIString(furi)
 		if filterUri == nil {
 			core.Log.Warn(f, "Cannot decode URI in FaceQueryFilter", "uri", filterUri)
 			return
@@ -509,13 +495,13 @@ func (f *FaceModule) query(interest *Interest) {
 	faces := face.FaceTable.GetAll()
 	matchingFaces := make([]int, 0)
 	for pos, face := range faces {
-		if filter.FaceId != nil && *filter.FaceId != face.FaceID() {
+		if fid, ok := filter.FaceId.Get(); ok && fid != face.FaceID() {
 			continue
 		}
 
-		if filter.UriScheme != nil &&
-			*filter.UriScheme != face.LocalURI().Scheme() &&
-			*filter.UriScheme != face.RemoteURI().Scheme() {
+		if scheme, ok := filter.UriScheme.Get(); ok &&
+			scheme != face.LocalURI().Scheme() &&
+			scheme != face.RemoteURI().Scheme() {
 			continue
 		}
 
@@ -523,19 +509,19 @@ func (f *FaceModule) query(interest *Interest) {
 			continue
 		}
 
-		if filter.LocalUri != nil && *filter.LocalUri != face.LocalURI().String() {
+		if localUri, ok := filter.LocalUri.Get(); ok && localUri != face.LocalURI().String() {
 			continue
 		}
 
-		if filter.FaceScope != nil && *filter.FaceScope != uint64(face.Scope()) {
+		if scope, ok := filter.FaceScope.Get(); ok && scope != uint64(face.Scope()) {
 			continue
 		}
 
-		if filter.FacePersistency != nil && *filter.FacePersistency != uint64(face.Persistency()) {
+		if pers, ok := filter.FacePersistency.Get(); ok && pers != uint64(face.Persistency()) {
 			continue
 		}
 
-		if filter.LinkType != nil && *filter.LinkType != uint64(face.LinkType()) {
+		if lt, ok := filter.LinkType.Get(); ok && lt != uint64(face.LinkType()) {
 			continue
 		}
 
@@ -561,7 +547,7 @@ func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStat
 		FaceScope:       uint64(selectedFace.Scope()),
 		FacePersistency: uint64(selectedFace.Persistency()),
 		LinkType:        uint64(selectedFace.LinkType()),
-		Mtu:             utils.IdPtr(uint64(selectedFace.MTU())),
+		Mtu:             optional.Some(uint64(selectedFace.MTU())),
 		NInInterests:    selectedFace.NInInterests(),
 		NInData:         selectedFace.NInData(),
 		NInNacks:        0,
@@ -572,14 +558,14 @@ func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStat
 		NOutBytes:       selectedFace.NInBytes(),
 	}
 	if selectedFace.ExpirationPeriod() != 0 {
-		faceDataset.ExpirationPeriod = utils.IdPtr(uint64(selectedFace.ExpirationPeriod().Milliseconds()))
+		faceDataset.ExpirationPeriod = optional.Some(uint64(selectedFace.ExpirationPeriod().Milliseconds()))
 	}
 	linkService, ok := selectedFace.(*face.NDNLPLinkService)
 	if ok {
 		options := linkService.Options()
 
-		faceDataset.BaseCongestionMarkInterval = utils.IdPtr(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
-		faceDataset.DefaultCongestionThreshold = utils.IdPtr(options.DefaultCongestionThresholdBytes)
+		faceDataset.BaseCongestionMarkInterval = optional.Some(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
+		faceDataset.DefaultCongestionThreshold = optional.Some(options.DefaultCongestionThresholdBytes)
 		faceDataset.Flags = options.Flags()
 		if options.IsConsumerControlledForwardingEnabled {
 			// This one will only be enabled if the other two local fields are enabled (and vice versa)
@@ -594,17 +580,17 @@ func (f *FaceModule) createDataset(selectedFace face.LinkService) *mgmt.FaceStat
 }
 
 func (f *FaceModule) fillFaceProperties(params *mgmt.ControlArgs, selectedFace face.LinkService) {
-	params.FaceId = utils.IdPtr(selectedFace.FaceID())
-	params.Uri = utils.IdPtr(selectedFace.RemoteURI().String())
-	params.LocalUri = utils.IdPtr(selectedFace.LocalURI().String())
-	params.FacePersistency = utils.IdPtr(uint64(selectedFace.Persistency()))
-	params.Mtu = utils.IdPtr(uint64(selectedFace.MTU()))
-	params.Flags = utils.IdPtr(uint64(0))
+	params.FaceId = optional.Some(selectedFace.FaceID())
+	params.Uri = optional.Some(selectedFace.RemoteURI().String())
+	params.LocalUri = optional.Some(selectedFace.LocalURI().String())
+	params.FacePersistency = optional.Some(uint64(selectedFace.Persistency()))
+	params.Mtu = optional.Some(uint64(selectedFace.MTU()))
+	params.Flags = optional.Some(uint64(0))
 
 	if linkService, ok := selectedFace.(*face.NDNLPLinkService); ok {
 		options := linkService.Options()
-		params.BaseCongestionMarkInterval = utils.IdPtr(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
-		params.DefaultCongestionThreshold = utils.IdPtr(options.DefaultCongestionThresholdBytes)
-		params.Flags = utils.IdPtr(uint64(options.Flags()))
+		params.BaseCongestionMarkInterval = optional.Some(uint64(options.BaseCongestionMarkingInterval.Nanoseconds()))
+		params.DefaultCongestionThreshold = optional.Some(options.DefaultCongestionThresholdBytes)
+		params.Flags = optional.Some(uint64(options.Flags()))
 	}
 }

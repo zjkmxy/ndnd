@@ -8,6 +8,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -177,7 +178,7 @@ func (n *ExpressPoint) NeedCallback(
 		intConfig = &ndn.InterestConfig{
 			CanBePrefix:    n.CanBePrefix,
 			MustBeFresh:    n.MustBeFresh,
-			Lifetime:       utils.IdPtr(n.Lifetime),
+			Lifetime:       optional.Some(n.Lifetime),
 			Nonce:          utils.ConvertNonce(engine.Timer().Nonce()),
 			HopLimit:       nil,
 			ForwardingHint: nil,
@@ -201,7 +202,7 @@ func (n *ExpressPoint) NeedCallback(
 	if (!ok || signer == nil) && appParam == nil {
 		cachedData := n.SearchCache(event)
 		if cachedData != nil {
-			data, sigCovered, err := spec.ReadData(enc.NewWireReader(cachedData))
+			data, sigCovered, err := spec.ReadData(enc.NewWireView(cachedData))
 			if err == nil {
 				dataMatch := mNode.Refine(data.Name())
 				cbEvt := &Event{
@@ -254,8 +255,8 @@ func (n *ExpressPoint) NeedCallback(
 	// Set the deadline
 	// assert(intCfg.Lifetime != nil)
 	var deadline *time.Time
-	if intConfig.Lifetime != nil {
-		deadline = utils.IdPtr(engine.Timer().Now().Add(*intConfig.Lifetime))
+	if intConfig.Lifetime.IsSet() {
+		deadline = utils.IdPtr(engine.Timer().Now().Add(intConfig.Lifetime.Unwrap()))
 	} else {
 		deadline = nil
 	}
@@ -319,7 +320,10 @@ func (n *ExpressPoint) NeedCallback(
 			cbEvt.NeedStatus = utils.IdPtr(ndn.InterestResultData)
 
 			// Save (cache) the data in the storage
-			cbEvt.ValidDuration = data.Freshness()
+			cbEvt.ValidDuration = nil
+			if freshness, ok := data.Freshness().Get(); ok {
+				cbEvt.ValidDuration = utils.IdPtr(freshness)
+			}
 			n.OnSaveStorage.Dispatch(cbEvt)
 
 			// Return the result

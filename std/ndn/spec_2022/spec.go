@@ -8,6 +8,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -55,9 +56,9 @@ func (d *Data) SetSigTime(t *time.Time) error {
 		d.SignatureInfo = &SignatureInfo{}
 	}
 	if t == nil {
-		d.SignatureInfo.SignatureTime = nil
+		d.SignatureInfo.SignatureTime.Unset()
 	} else {
-		d.SignatureInfo.SignatureTime = utils.IdPtr(time.Duration(t.UnixMilli()) * time.Millisecond)
+		d.SignatureInfo.SignatureTime = optional.Some(time.Duration(t.UnixMilli()) * time.Millisecond)
 	}
 	return nil
 }
@@ -98,34 +99,28 @@ func (d *Data) Name() enc.Name {
 	return d.NameV
 }
 
-func (d *Data) ContentType() *ndn.ContentType {
-	if d.MetaInfo != nil && d.MetaInfo.ContentType != nil {
-		ret := ndn.ContentType(*d.MetaInfo.ContentType)
-		return &ret
-	} else {
-		return nil
+func (d *Data) ContentType() (val optional.Optional[ndn.ContentType]) {
+	if d.MetaInfo != nil {
+		return optional.CastInt[uint64, ndn.ContentType](d.MetaInfo.ContentType)
 	}
+	return val
 }
 
-func (d *Data) Freshness() *time.Duration {
+func (d *Data) Freshness() (val optional.Optional[time.Duration]) {
 	if d.MetaInfo != nil {
 		return d.MetaInfo.FreshnessPeriod
-	} else {
-		return nil
 	}
+	return val
 }
 
-func (d *Data) FinalBlockID() *enc.Component {
+func (d *Data) FinalBlockID() (val optional.Optional[enc.Component]) {
 	if d.MetaInfo != nil && d.MetaInfo.FinalBlockID != nil {
-		ret, err := enc.ReadComponent(enc.NewBufferReader(d.MetaInfo.FinalBlockID))
-		if err == nil {
-			return &ret
-		} else {
-			return nil
+		reader := enc.NewBufferView(d.MetaInfo.FinalBlockID)
+		if ret, err := reader.ReadComponent(); err == nil {
+			return optional.Some(ret)
 		}
-	} else {
-		return nil
 	}
+	return val
 }
 
 func (d *Data) Content() enc.Wire {
@@ -157,16 +152,16 @@ func (t *Interest) SigNonce() []byte {
 }
 
 func (t *Interest) SigTime() *time.Time {
-	if t.SignatureInfo != nil && t.SignatureInfo.SignatureTime != nil {
-		return utils.IdPtr(time.UnixMilli(t.SignatureInfo.SignatureTime.Milliseconds()))
+	if t.SignatureInfo != nil && t.SignatureInfo.SignatureTime.IsSet() {
+		return utils.IdPtr(time.UnixMilli(t.SignatureInfo.SignatureTime.Unwrap().Milliseconds()))
 	} else {
 		return nil
 	}
 }
 
 func (t *Interest) SigSeqNum() *uint64 {
-	if t.SignatureInfo != nil {
-		return t.SignatureInfo.SignatureSeqNum
+	if t.SignatureInfo != nil && t.SignatureInfo.SignatureSeqNum.IsSet() {
+		return utils.IdPtr(t.SignatureInfo.SignatureSeqNum.Unwrap())
 	} else {
 		return nil
 	}
@@ -203,15 +198,11 @@ func (t *Interest) ForwardingHint() []enc.Name {
 	return t.ForwardingHintV.Names
 }
 
-func (t *Interest) Nonce() *uint64 {
-	if t.NonceV == nil {
-		return nil
-	} else {
-		return utils.IdPtr(uint64(*t.NonceV))
-	}
+func (t *Interest) Nonce() optional.Optional[uint32] {
+	return t.NonceV
 }
 
-func (t *Interest) Lifetime() *time.Duration {
+func (t *Interest) Lifetime() optional.Optional[time.Duration] {
 	return t.InterestLifetimeV
 }
 
@@ -236,13 +227,13 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 		return nil, ndn.ErrInvalidValue{Item: "Data.DataConfig", Value: nil}
 	}
 	finalBlock := []byte(nil)
-	if config.FinalBlockID != nil {
-		finalBlock = config.FinalBlockID.Bytes()
+	if fbid, ok := config.FinalBlockID.Get(); ok {
+		finalBlock = fbid.Bytes()
 	}
 	data := &Data{
 		NameV: name,
 		MetaInfo: &MetaInfo{
-			ContentType:     utils.ConvIntPtr[ndn.ContentType, uint64](config.ContentType),
+			ContentType:     optional.CastInt[ndn.ContentType, uint64](config.ContentType),
 			FreshnessPeriod: config.Freshness,
 			FinalBlockID:    finalBlock,
 		},
@@ -267,10 +258,10 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 			data.SignatureInfo.KeyLocator = &KeyLocator{Name: key}
 		}
 
-		if config.SigNotBefore != nil && config.SigNotAfter != nil {
+		if config.SigNotBefore.IsSet() && config.SigNotAfter.IsSet() {
 			data.SignatureInfo.ValidityPeriod = &ValidityPeriod{
-				NotBefore: config.SigNotBefore.UTC().Format(TimeFmt),
-				NotAfter:  config.SigNotAfter.UTC().Format(TimeFmt),
+				NotBefore: config.SigNotBefore.Unwrap().UTC().Format(TimeFmt),
+				NotAfter:  config.SigNotAfter.Unwrap().Format(TimeFmt),
 			}
 		}
 	}
@@ -319,7 +310,7 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 	}, nil
 }
 
-func (Spec) ReadData(reader enc.ParseReader) (ndn.Data, enc.Wire, error) {
+func (Spec) ReadData(reader enc.WireView) (ndn.Data, enc.Wire, error) {
 	context := PacketParsingContext{}
 	context.Init()
 	ret, err := context.Parse(reader, false)
@@ -354,9 +345,9 @@ func (Spec) MakeInterest(name enc.Name, config *ndn.InterestConfig, appParam enc
 		CanBePrefixV:          config.CanBePrefix,
 		MustBeFreshV:          config.MustBeFresh,
 		ForwardingHintV:       forwardingHint,
-		NonceV:                utils.ConvIntPtr[uint64, uint32](config.Nonce),
+		NonceV:                config.Nonce,
 		InterestLifetimeV:     config.Lifetime,
-		HopLimitV:             utils.ConvIntPtr[uint, byte](config.HopLimit),
+		HopLimitV:             config.HopLimit,
 		ApplicationParameters: appParam,
 		SignatureInfo:         nil,
 		SignatureValue:        nil,
@@ -500,7 +491,7 @@ func checkInterest(val *Interest, context *InterestParsingContext) error {
 	return nil
 }
 
-func (Spec) ReadInterest(reader enc.ParseReader) (ndn.Interest, enc.Wire, error) {
+func (Spec) ReadInterest(reader enc.WireView) (ndn.Interest, enc.Wire, error) {
 	context := PacketParsingContext{}
 	context.Init()
 	pkt, err := context.Parse(reader, false)
@@ -525,31 +516,33 @@ func (Spec) ReadInterest(reader enc.ParseReader) (ndn.Interest, enc.Wire, error)
 //	Postcondition: exactly one of Interest, Data, or LpPacket is returned.
 //
 // If precondition is not met, then postcondition is not required to hold. But the call won't crash.
-func ReadPacket(reader enc.ParseReader) (*Packet, *PacketParsingContext, error) {
-	context := &PacketParsingContext{}
+func ReadPacket(reader enc.WireView) (ret *Packet, context PacketParsingContext, err error) {
 	context.Init()
-	ret, err := context.Parse(reader, false)
+	ret, err = context.Parse(reader, false)
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 	if ret.Data != nil {
 		if ret.Data.NameV == nil {
-			return nil, nil, ndn.ErrInvalidValue{Item: "Data.Name", Value: nil}
+			err = ndn.ErrInvalidValue{Item: "Data.Name", Value: nil}
+			return
 		}
 	} else if ret.Interest != nil {
 		err = checkInterest(ret.Interest, &context.Interest_context)
 		if err != nil {
-			return nil, nil, err
+			return
 		}
 	} else if ret.LpPacket != nil {
 		// As a client we shouldn't receive IDLE packets
 		if ret.LpPacket.Fragment == nil {
-			return nil, nil, ndn.ErrInvalidValue{Item: "LpPacket.Fragment", Value: nil}
+			err = ndn.ErrInvalidValue{Item: "LpPacket.Fragment", Value: nil}
+			return
 		}
 	} else {
-		return nil, nil, ndn.ErrWrongType
+		err = ndn.ErrWrongType
+		return
 	}
-	return ret, context, nil
+	return
 }
 
 func (c InterestParsingContext) SigCovered() enc.Wire {

@@ -32,18 +32,19 @@ func DecodeFile(content []byte) (signers []ndn.Signer, certs [][]byte, err error
 	}
 
 	for _, wire := range wires {
-		data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(wire))
+		data, _, err := spec.Spec{}.ReadData(enc.NewBufferView(wire))
 		if err != nil {
 			log.Warn(nil, "Failed to read keychain entry", "err", err)
 			continue
 		}
 
-		if data.ContentType() == nil {
+		contentType, ok := data.ContentType().Get()
+		if !ok {
 			log.Warn(nil, "No content type found", "name", data.Name())
 			continue
 		}
 
-		switch *data.ContentType() {
+		switch contentType {
 		case ndn.ContentTypeKey: // cert
 			certs = append(certs, wire)
 		case ndn.ContentTypeSigKey: // key
@@ -54,7 +55,7 @@ func DecodeFile(content []byte) (signers []ndn.Signer, certs [][]byte, err error
 			}
 			signers = append(signers, key)
 		default:
-			log.Warn(nil, "Unknown content type", "name", data.Name(), "type", *data.ContentType())
+			log.Warn(nil, "Unknown content type", "name", data.Name(), "type", contentType)
 		}
 	}
 

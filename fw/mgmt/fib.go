@@ -13,7 +13,7 @@ import (
 	"github.com/named-data/ndnd/fw/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // FIBModule is the module that handles FIB Management.
@@ -72,27 +72,24 @@ func (f *FIBModule) add(interest *Interest) {
 		return
 	}
 
-	faceID := *interest.inFace
-	if params.FaceId != nil && *params.FaceId != 0 {
-		faceID = *params.FaceId
+	faceID := interest.inFace.Unwrap()
+	if fid, ok := params.FaceId.Get(); ok && fid != 0 {
+		faceID = fid
 		if face.FaceTable.Get(faceID) == nil {
 			f.manager.sendCtrlResp(interest, 410, "Face does not exist", nil)
 			return
 		}
 	}
 
-	cost := uint64(0)
-	if params.Cost != nil {
-		cost = *params.Cost
-	}
+	cost := params.Cost.GetOr(0)
 	table.FibStrategyTable.InsertNextHopEnc(params.Name, faceID, cost)
 
 	core.Log.Info(f, "Created nexthop", "name", params.Name, "faceid", faceID, "cost", cost)
 
 	f.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,
-		FaceId: utils.IdPtr(faceID),
-		Cost:   utils.IdPtr(cost),
+		FaceId: optional.Some(faceID),
+		Cost:   optional.Some(cost),
 	})
 }
 
@@ -113,9 +110,9 @@ func (f *FIBModule) remove(interest *Interest) {
 		return
 	}
 
-	faceID := *interest.inFace
-	if params.FaceId != nil && *params.FaceId != 0 {
-		faceID = *params.FaceId
+	faceID := interest.inFace.Unwrap()
+	if fid, ok := params.FaceId.Get(); ok && fid != 0 {
+		faceID = fid
 	}
 	table.FibStrategyTable.RemoveNextHopEnc(params.Name, faceID)
 
@@ -123,7 +120,7 @@ func (f *FIBModule) remove(interest *Interest) {
 
 	f.manager.sendCtrlResp(interest, 200, "OK", &mgmt.ControlArgs{
 		Name:   params.Name,
-		FaceId: utils.IdPtr(faceID),
+		FaceId: optional.Some(faceID),
 	})
 }
 

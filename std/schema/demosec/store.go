@@ -9,7 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type DemoHmacKey struct {
@@ -25,7 +25,7 @@ type DemoHmacKeyStore struct {
 // AddTrustAnchor simulates the addition of a trust anchor (self-signed certificate)
 func (store *DemoHmacKeyStore) AddTrustAnchor(cert enc.Buffer) error {
 	spec := spec_2022.Spec{}
-	data, sigCovered, err := spec.ReadData(enc.NewBufferReader(cert))
+	data, sigCovered, err := spec.ReadData(enc.NewBufferView(cert))
 	if err != nil {
 		return fmt.Errorf("unable to parse certificate: %+v", err)
 	}
@@ -45,8 +45,8 @@ func (store *DemoHmacKeyStore) EnrollKey(keyName enc.Name, keyBits enc.Buffer, s
 	signer := sig.NewHmacSigner(signKey.KeyBits)
 	spec := spec_2022.Spec{}
 	cert, err := spec.MakeData(keyName, &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeKey),
-		Freshness:   utils.IdPtr(3600 * time.Second),
+		ContentType: optional.Some(ndn.ContentTypeKey),
+		Freshness:   optional.Some(3600 * time.Second),
 	}, enc.Wire{keyBits}, signer)
 	if err != nil {
 		return fmt.Errorf("unable to make certificate: %+v", err)

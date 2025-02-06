@@ -28,7 +28,7 @@ func TestSignCertSelf(t *testing.T) {
 	tu.SetT(t)
 
 	aliceKey, _ := base64.StdEncoding.DecodeString(KEY_ALICE)
-	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferReader(aliceKey))
+	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferView(aliceKey))
 	aliceSigner := tu.NoErr(signer.UnmarshalSecret(aliceKeyData))
 
 	// self-sign alice's key
@@ -40,7 +40,7 @@ func TestSignCertSelf(t *testing.T) {
 		NotAfter:  T2,
 	})
 	require.NoError(t, err)
-	cert, certSigCov, err := spec_2022.Spec{}.ReadData(enc.NewWireReader(aliceCert))
+	cert, certSigCov, err := spec_2022.Spec{}.ReadData(enc.NewWireView(aliceCert))
 	require.NoError(t, err)
 
 	// check certificate name
@@ -52,7 +52,7 @@ func TestSignCertSelf(t *testing.T) {
 	require.Equal(t, ISSUER, name.At(-2))
 
 	// check data content is public key
-	require.Equal(t, ndn.ContentTypeKey, *cert.ContentType())
+	require.Equal(t, ndn.ContentTypeKey, cert.ContentType().Unwrap())
 	alicePub := tu.NoErr(aliceSigner.Public())
 	require.Equal(t, alicePub, cert.Content().Join())
 
@@ -75,7 +75,7 @@ func TestSignCertOther(t *testing.T) {
 	tu.SetT(t)
 
 	aliceKey, _ := base64.StdEncoding.DecodeString(KEY_ALICE)
-	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferReader(aliceKey))
+	aliceKeyData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferView(aliceKey))
 	aliceSigner := tu.NoErr(signer.UnmarshalSecret(aliceKeyData))
 
 	// self signed alice's key
@@ -87,12 +87,12 @@ func TestSignCertOther(t *testing.T) {
 		NotAfter:  T2,
 	})
 	require.NoError(t, err)
-	aliceCertData, _, err := spec_2022.Spec{}.ReadData(enc.NewWireReader(aliceCert))
+	aliceCertData, _, err := spec_2022.Spec{}.ReadData(enc.NewWireView(aliceCert))
 	require.NoError(t, err)
 
 	// parse existing certificate
 	rootCert, _ := base64.StdEncoding.DecodeString(CERT_ROOT)
-	rootCertData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferReader(rootCert))
+	rootCertData, _, _ := spec_2022.Spec{}.ReadData(enc.NewBufferView(rootCert))
 
 	// sign root cert with alice's key
 	newCertB, err := sec.SignCert(sec.SignCertArgs{
@@ -103,7 +103,7 @@ func TestSignCertOther(t *testing.T) {
 		NotAfter:  T2,
 	})
 	require.NoError(t, err)
-	newCert, newSigCov, err := spec_2022.Spec{}.ReadData(enc.NewWireReader(newCertB))
+	newCert, newSigCov, err := spec_2022.Spec{}.ReadData(enc.NewWireView(newCertB))
 	require.NoError(t, err)
 
 	// check certificate name
@@ -115,7 +115,7 @@ func TestSignCertOther(t *testing.T) {
 	require.Equal(t, ISSUER, name.At(-2))
 
 	// check data content is public key
-	require.Equal(t, ndn.ContentTypeKey, *newCert.ContentType())
+	require.Equal(t, ndn.ContentTypeKey, newCert.ContentType().Unwrap())
 	rootPub := rootCertData.Content().Join()
 	require.Equal(t, rootPub, newCert.Content().Join())
 

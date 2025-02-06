@@ -26,9 +26,11 @@ func TestMakeTimestamp(t *testing.T) {
 func TestConvertNonce(t *testing.T) {
 	tu.SetT(t)
 
-	nonce := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06}
-	require.Equal(t, uint64(0x010203040506), *utils.ConvertNonce(nonce))
+	nonce := []byte{0x01, 0x02, 0x03, 0x04}
+	val := utils.ConvertNonce(nonce)
+	require.Equal(t, uint32(0x01020304), val.Unwrap())
 
-	nonce = []byte{0x42, 0x1C, 0xE1, 0x4B, 0x99, 0xFA, 0xA3}
-	require.Equal(t, uint64(0x421ce14b99faa3), *utils.ConvertNonce(nonce))
+	nonce = []byte{0x42, 0x1C, 0xE1, 0x4B}
+	val = utils.ConvertNonce(nonce)
+	require.Equal(t, uint32(0x421ce14b), val.Unwrap())
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -343,7 +344,7 @@ func (s *SvSync) sendSyncInterest() {
 	}
 
 	dataCfg := &ndn.DataConfig{
-		ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+		ContentType: optional.Some(ndn.ContentTypeBlob),
 	}
 	data, err := s.o.Client.Engine().Spec().MakeData(syncName, dataCfg, svWire, signer)
 	if err != nil {
@@ -353,7 +354,7 @@ func (s *SvSync) sendSyncInterest() {
 
 	// Make SVS Sync Interest
 	intCfg := &ndn.InterestConfig{
-		Lifetime: utils.IdPtr(1 * time.Second),
+		Lifetime: optional.Some(1 * time.Second),
 		Nonce:    utils.ConvertNonce(s.o.Client.Engine().Timer().Nonce()),
 	}
 	interest, err := s.o.Client.Engine().Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
@@ -381,7 +382,7 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 	}
 
 	// Decode Sync Data
-	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireReader(interest.AppParam()))
+	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireView(interest.AppParam()))
 	if err != nil {
 		log.Warn(s, "onSyncInterest failed to parse SyncData", "err", err)
 		return
@@ -396,7 +397,7 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 
 		// Decode state vector
 		svWire := data.Content().Join()
-		params, err := spec_svs.ParseSvsData(enc.NewBufferReader(svWire), false)
+		params, err := spec_svs.ParseSvsData(enc.NewBufferView(svWire), false)
 		if err != nil || params.StateVector == nil {
 			log.Warn(s, "onSyncInterest failed to parse StateVec", "err", err)
 			return

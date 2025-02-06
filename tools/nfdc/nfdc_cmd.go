@@ -9,7 +9,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +68,7 @@ func (n *Tool) preprocessArg(
 			(mod == "rib" && cmd == "unregister") {
 
 			filter := mgmt.FaceQueryFilter{
-				Val: &mgmt.FaceQueryFilterValue{Uri: utils.IdPtr(val)},
+				Val: &mgmt.FaceQueryFilterValue{Uri: optional.Some(val)},
 			}
 
 			dataset, err := n.fetchStatusDataset(enc.Name{
@@ -81,7 +81,7 @@ func (n *Tool) preprocessArg(
 				os.Exit(1)
 			}
 
-			status, err := mgmt.ParseFaceStatusMsg(enc.NewWireReader(dataset), true)
+			status, err := mgmt.ParseFaceStatusMsg(enc.NewWireView(dataset), true)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error parsing face status: %+v\n", err)
 				os.Exit(1)
@@ -103,18 +103,18 @@ func (n *Tool) preprocessArg(
 		// only for rib/register, create a new face if it doesn't exist
 		if mod == "rib" && cmd == "register" {
 			// copy over any face arguments that are already set
-			faceArgs := mgmt.ControlArgs{Uri: utils.IdPtr(val)}
-			if ctrlArgs.LocalUri != nil {
+			faceArgs := mgmt.ControlArgs{Uri: optional.Some(val)}
+			if ctrlArgs.LocalUri.IsSet() {
 				faceArgs.LocalUri = ctrlArgs.LocalUri
-				ctrlArgs.LocalUri = nil
+				ctrlArgs.LocalUri.Unset()
 			}
-			if ctrlArgs.Mtu != nil {
+			if ctrlArgs.Mtu.IsSet() {
 				faceArgs.Mtu = ctrlArgs.Mtu
-				ctrlArgs.Mtu = nil
+				ctrlArgs.Mtu.Unset()
 			}
-			if ctrlArgs.FacePersistency != nil {
+			if ctrlArgs.FacePersistency.IsSet() {
 				faceArgs.FacePersistency = ctrlArgs.FacePersistency
-				ctrlArgs.FacePersistency = nil
+				ctrlArgs.FacePersistency.Unset()
 			}
 
 			// create or use existing face
@@ -130,12 +130,12 @@ func (n *Tool) preprocessArg(
 				os.Exit(1)
 			}
 			n.printCtrlResponse(res)
-			if res.Val == nil || res.Val.Params == nil || res.Val.Params.FaceId == nil {
+			if res.Val == nil || res.Val.Params == nil || !res.Val.Params.FaceId.IsSet() {
 				fmt.Fprintf(os.Stderr, "Failed to create face for route\n")
 				os.Exit(1)
 			}
 
-			return key, fmt.Sprintf("%d", *res.Val.Params.FaceId)
+			return key, fmt.Sprintf("%d", res.Val.Params.FaceId.Unwrap())
 		}
 	}
 
@@ -167,30 +167,30 @@ func (n *Tool) convCmdArg(ctrlArgs *mgmt.ControlArgs, key string, val string) {
 	switch key {
 	// face arguments
 	case "face":
-		ctrlArgs.FaceId = utils.IdPtr(parseUint(val))
+		ctrlArgs.FaceId = optional.Some(parseUint(val))
 	case "remote":
-		ctrlArgs.Uri = utils.IdPtr(val)
+		ctrlArgs.Uri = optional.Some(val)
 	case "local":
-		ctrlArgs.LocalUri = utils.IdPtr(val)
+		ctrlArgs.LocalUri = optional.Some(val)
 	case "mtu":
-		ctrlArgs.Mtu = utils.IdPtr(parseUint(val))
+		ctrlArgs.Mtu = optional.Some(parseUint(val))
 	case "persistency":
 		persistency, err := mgmt.ParsePersistency(val)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Invalid persistency: %s\n", val)
 			os.Exit(9)
 		}
-		ctrlArgs.FacePersistency = utils.IdPtr(uint64(persistency))
+		ctrlArgs.FacePersistency = optional.Some(uint64(persistency))
 
 	// route arguments
 	case "prefix":
 		ctrlArgs.Name = parseName(val)
 	case "cost":
-		ctrlArgs.Cost = utils.IdPtr(parseUint(val))
+		ctrlArgs.Cost = optional.Some(parseUint(val))
 	case "origin":
-		ctrlArgs.Origin = utils.IdPtr(parseUint(val))
+		ctrlArgs.Origin = optional.Some(parseUint(val))
 	case "expires":
-		ctrlArgs.ExpirationPeriod = utils.IdPtr(parseUint(val))
+		ctrlArgs.ExpirationPeriod = optional.Some(parseUint(val))
 
 	// strategy arguments
 	case "strategy":

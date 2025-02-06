@@ -4,7 +4,7 @@ package ndn
 const MaxNDNPacketSize = 8800
 
 // ContentType represents the type of Data content in MetaInfo.
-type ContentType uint
+type ContentType uint64
 
 const (
 	ContentTypeBlob   ContentType = 0

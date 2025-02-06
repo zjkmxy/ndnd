@@ -92,7 +92,7 @@ func (s *StrategyBase) SendData(
 	var pitToken []byte
 	if inRecord, ok := pitEntry.InRecords()[nexthop]; ok {
 		pitToken = inRecord.PitToken
-		delete(pitEntry.InRecords(), nexthop)
+		pitEntry.RemoveInRecord(nexthop)
 	}
 	s.thread.processOutgoingData(packet, nexthop, pitToken, inFace)
 }

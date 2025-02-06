@@ -68,7 +68,7 @@ func (s *Multicast) AfterReceiveInterest(
 	// retransmission to suppress it (only if the nonce is different)
 	now := time.Now()
 	for _, outRecord := range pitEntry.OutRecords() {
-		if outRecord.LatestNonce != *packet.L3.Interest.NonceV &&
+		if outRecord.LatestNonce != packet.L3.Interest.NonceV.Unwrap() &&
 			outRecord.LatestTimestamp.Add(MulticastSuppressionTime).After(now) {
 			core.Log.Debug(s, "Suppressed Interest", "name", packet.Name)
 			return

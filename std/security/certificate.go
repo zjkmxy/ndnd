@@ -7,7 +7,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // SignCertArgs are the arguments to SignCert.
@@ -57,10 +57,10 @@ func SignCert(args SignCertArgs) (enc.Wire, error) {
 	// TODO: set description
 	// Create certificate data
 	cfg := &ndn.DataConfig{
-		ContentType:  utils.IdPtr(ndn.ContentTypeKey),
-		Freshness:    utils.IdPtr(time.Hour),
-		SigNotBefore: utils.IdPtr(args.NotBefore),
-		SigNotAfter:  utils.IdPtr(args.NotAfter),
+		ContentType:  optional.Some(ndn.ContentTypeKey),
+		Freshness:    optional.Some(time.Hour),
+		SigNotBefore: optional.Some(args.NotBefore),
+		SigNotAfter:  optional.Some(args.NotAfter),
 	}
 	cert, err := spec.Spec{}.MakeData(certName, cfg, enc.Wire{pk}, args.Signer)
 	if err != nil {
@@ -86,7 +86,7 @@ func SelfSign(args SignCertArgs) (enc.Wire, error) {
 	if err != nil {
 		return nil, err
 	}
-	args.Data, _, err = spec.Spec{}.ReadData(enc.NewWireReader(keyWire))
+	args.Data, _, err = spec.Spec{}.ReadData(enc.NewWireView(keyWire))
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +114,12 @@ func CertIsExpired(cert ndn.Data) bool {
 // getPubKey gets the public key from an NDN data.
 // returns [public key, key name, error].
 func getPubKey(data ndn.Data) ([]byte, enc.Name, error) {
-	if data.ContentType() == nil {
+	contentType, ok := data.ContentType().Get()
+	if !ok {
 		return nil, nil, ndn.ErrInvalidValue{Item: "Data.ContentType", Value: nil}
 	}
 
-	switch *data.ContentType() {
+	switch contentType {
 	case ndn.ContentTypeKey:
 		// Content is public key, return directly
 		pub := data.Content().Join()
@@ -140,6 +141,6 @@ func getPubKey(data ndn.Data) ([]byte, enc.Name, error) {
 		return pub, signer.KeyName(), nil
 	default:
 		// Invalid content type
-		return nil, nil, ndn.ErrInvalidValue{Item: "Data.ContentType", Value: *data.ContentType()}
+		return nil, nil, ndn.ErrInvalidValue{Item: "Data.ContentType", Value: contentType}
 	}
 }

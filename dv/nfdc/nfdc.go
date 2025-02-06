@@ -75,11 +75,11 @@ func (m *NfdMgmtThread) CreateFace(args *mgmt.ControlArgs) (uint64, bool, error)
 	// don't check error here, as the face may already exist (409)
 
 	res, ok := raw.(*mgmt.ControlResponse)
-	if !ok || res == nil || res.Val == nil || res.Val.Params == nil || res.Val.Params.FaceId == nil {
+	if !ok || res == nil || res.Val == nil || res.Val.Params == nil || !res.Val.Params.FaceId.IsSet() {
 		return 0, false, fmt.Errorf("failed to create face: %+v", err)
 	}
 
-	faceId := *res.Val.Params.FaceId
+	faceId := res.Val.Params.FaceId.Unwrap()
 	created := res.Val.StatusCode == 200
 
 	return faceId, created, nil

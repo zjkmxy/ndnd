@@ -10,7 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -47,7 +47,7 @@ func TestConsumerBasic(t *testing.T) {
 		config := &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: false,
-			Lifetime:    utils.IdPtr(6 * time.Second),
+			Lifetime:    optional.Some(6 * time.Second),
 		}
 		interest, err := spec.MakeInterest(name, config, nil, nil)
 		require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestConsumerBasic(t *testing.T) {
 			hitCnt += 1
 			require.Equal(t, ndn.InterestResultData, args.Result)
 			require.True(t, args.Data.Name().Equal(name))
-			require.Equal(t, 1*time.Second, *args.Data.Freshness())
+			require.Equal(t, 1*time.Second, args.Data.Freshness().Unwrap())
 			require.Equal(t, []byte("Hello, world!"), args.Data.Content().Join())
 		})
 		require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestInterestNack(t *testing.T) {
 		config := &ndn.InterestConfig{
 			MustBeFresh: true,
 			CanBePrefix: true,
-			Lifetime:    utils.IdPtr(1 * time.Second),
+			Lifetime:    optional.Some(1 * time.Second),
 		}
 		interest, err := spec.MakeInterest(name, config, nil, nil)
 		require.NoError(t, err)
@@ -119,7 +119,7 @@ func TestInterestTimeout(t *testing.T) {
 		spec := engine.Spec()
 		name := tu.NoErr(enc.NameFromStr("not important"))
 		config := &ndn.InterestConfig{
-			Lifetime: utils.IdPtr(10 * time.Millisecond),
+			Lifetime: optional.Some(10 * time.Millisecond),
 		}
 		interest, err := spec.MakeInterest(name, config, nil, nil)
 		require.NoError(t, err)
@@ -148,11 +148,11 @@ func TestInterestCanBePrefix(t *testing.T) {
 		name1 := tu.NoErr(enc.NameFromStr("/not"))
 		name2 := tu.NoErr(enc.NameFromStr("/not/important"))
 		config1 := &ndn.InterestConfig{
-			Lifetime:    utils.IdPtr(5 * time.Millisecond),
+			Lifetime:    optional.Some(5 * time.Millisecond),
 			CanBePrefix: false,
 		}
 		config2 := &ndn.InterestConfig{
-			Lifetime:    utils.IdPtr(5 * time.Millisecond),
+			Lifetime:    optional.Some(5 * time.Millisecond),
 			CanBePrefix: true,
 		}
 		interest1, err := spec.MakeInterest(name1, config1, nil, nil)
@@ -213,7 +213,7 @@ func TestImplicitSha256(t *testing.T) {
 		name2 := tu.NoErr(enc.NameFromStr(
 			"/test/sha256digest=5488f2c11b566d49e9904fb52aa6f6f9e66a954168109ce156eea2c92c57e4c2"))
 		config := &ndn.InterestConfig{
-			Lifetime: utils.IdPtr(5 * time.Millisecond),
+			Lifetime: optional.Some(5 * time.Millisecond),
 		}
 		interest1, err := spec.MakeInterest(name1, config, nil, nil)
 		require.NoError(t, err)
@@ -274,10 +274,10 @@ func TestRoute(t *testing.T) {
 			data, err := spec.MakeData(
 				args.Interest.Name(),
 				&ndn.DataConfig{
-					ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+					ContentType: optional.Some(ndn.ContentTypeBlob),
 				},
 				enc.Wire{[]byte("test")},
-				sig.NewEmptySigner())
+				sig.NewTestSigner(enc.Name{}, 0))
 			require.NoError(t, err)
 			args.Reply(data.Wire)
 		}
@@ -304,10 +304,10 @@ func TestPitToken(t *testing.T) {
 			data, err := spec.MakeData(
 				args.Interest.Name(),
 				&ndn.DataConfig{
-					ContentType: utils.IdPtr(ndn.ContentTypeBlob),
+					ContentType: optional.Some(ndn.ContentTypeBlob),
 				},
 				enc.Wire{[]byte("test")},
-				sig.NewEmptySigner())
+				sig.NewTestSigner(enc.Name{}, 0))
 			require.NoError(t, err)
 			args.Reply(data.Wire)
 		}

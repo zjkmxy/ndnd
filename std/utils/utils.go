@@ -3,6 +3,7 @@ package utils
 import (
 	"time"
 
+	"github.com/named-data/ndnd/std/types/optional"
 	"golang.org/x/exp/constraints"
 )
 
@@ -29,10 +30,11 @@ func MakeTimestamp(t time.Time) uint64 {
 	return uint64(t.UnixNano() / int64(time.Millisecond))
 }
 
-func ConvertNonce(nonce []byte) *uint64 {
-	x := uint64(0)
+func ConvertNonce(nonce []byte) (ret optional.Optional[uint32]) {
+	x := uint32(0)
 	for _, b := range nonce {
-		x = (x << 8) | uint64(b)
+		x = (x << 8) | uint32(b)
 	}
-	return &x
+	ret.Set(x)
+	return ret
 }

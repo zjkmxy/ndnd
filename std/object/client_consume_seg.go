@@ -191,8 +191,8 @@ func (s *rrSegFetcher) handleData(args ndn.ExpressCallbackArgs, state *ConsumeSt
 func (s *rrSegFetcher) handleValidatedData(args ndn.ExpressCallbackArgs, state *ConsumeState) {
 	// get the final block id if we don't know the segment count
 	if state.segCnt == -1 { // TODO: can change?
-		fbId := args.Data.FinalBlockID()
-		if fbId == nil {
+		fbId, ok := args.Data.FinalBlockID().Get()
+		if !ok {
 			state.finalizeError(fmt.Errorf("%w: no FinalBlockId in object", ndn.ErrProtocol))
 			return
 		}

@@ -42,9 +42,9 @@ func (encoder *T1Encoder) Init(value *T1) {
 	l += 1
 	l += uint(1 + enc.Nat(value.H1).EncodingLength())
 	encoder.sigCoverStart = int(l)
-	if value.H2 != nil {
+	if optval, ok := value.H2.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.H2).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.C != nil {
 		l += 1
@@ -59,14 +59,14 @@ func (encoder *T1Encoder) Init(value *T1) {
 
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	l += 1
 	l += uint(1 + enc.Nat(value.H1).EncodingLength())
 
-	if value.H2 != nil {
+	if optval, ok := value.H2.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.H2).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if value.C != nil {
 		l += 1
@@ -114,11 +114,11 @@ func (encoder *T1Encoder) EncodeInto(value *T1, wire enc.Wire) {
 	pos += uint(1 + buf[pos])
 	encoder.sigCoverStart_wireIdx = int(wireIdx)
 	encoder.sigCoverStart_pos = int(pos)
-	if value.H2 != nil {
+	if optval, ok := value.H2.Get(); ok {
 		buf[pos] = byte(2)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.H2).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
@@ -180,11 +180,17 @@ func (encoder *T1Encoder) EncodeInto(value *T1, wire enc.Wire) {
 }
 
 func (encoder *T1Encoder) Encode(value *T1) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)
@@ -192,10 +198,7 @@ func (encoder *T1Encoder) Encode(value *T1) enc.Wire {
 	return wire
 }
 
-func (context *T1ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*T1, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *T1ParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*T1, error) {
 
 	var handled_H1 bool = false
 	var handled_sigCoverStart bool = false
@@ -217,11 +220,11 @@ func (context *T1ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bo
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -253,8 +256,8 @@ func (context *T1ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bo
 					handled = true
 					handled_H2 = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -265,10 +268,10 @@ func (context *T1ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bo
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.H2 = &tempVal
+						value.H2.Set(optval)
 					}
 				}
 			case 3:
@@ -304,7 +307,7 @@ func (context *T1ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bo
 					context.sigCoverStart = int(startPos)
 				case 2 - 1:
 					handled_H2 = true
-					value.H2 = nil
+					value.H2.Unset()
 				case 3 - 1:
 					handled_C = true
 					value.C = nil
@@ -332,7 +335,7 @@ func (context *T1ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bo
 		context.sigCoverStart = int(startPos)
 	}
 	if !handled_H2 && err == nil {
-		value.H2 = nil
+		value.H2.Unset()
 	}
 	if !handled_C && err == nil {
 		value.C = nil
@@ -433,7 +436,7 @@ func (encoder *T2Encoder) Init(value *T2) {
 
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	if value.Name != nil {
 		l += 1
@@ -567,11 +570,17 @@ func (encoder *T2Encoder) EncodeInto(value *T2, wire enc.Wire) {
 }
 
 func (encoder *T2Encoder) Encode(value *T2) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)
@@ -579,10 +588,7 @@ func (encoder *T2Encoder) Encode(value *T2) enc.Wire {
 	return wire
 }
 
-func (context *T2ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*T2, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *T2ParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*T2, error) {
 
 	var handled_Name bool = false
 	var handled_sigCoverStart bool = false
@@ -605,11 +611,11 @@ func (context *T2ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bo
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -634,8 +640,8 @@ func (context *T2ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bo
 								value.Name = value.Name[:j]
 								break
 							}
-							value.Name[j].Typ, err1 = enc.ReadTLNum(reader)
-							l, err2 := enc.ReadTLNum(reader)
+							value.Name[j].Typ, err1 = reader.ReadTLNum()
+							l, err2 := reader.ReadTLNum()
 							value.Name[j].Val, err3 = reader.ReadBuf(int(l))
 							if err1 != nil || err2 != nil || err3 != nil {
 								err = io.ErrUnexpectedEOF

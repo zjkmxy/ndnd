@@ -3,7 +3,7 @@ package basic
 import enc "github.com/named-data/ndnd/std/encoding"
 
 // NameTrie is a simple implementation of a Name trie (node/subtree) used for PIT and FIB.
-// It is slow due to the usage of String(). Subject to change when it explicitly affects performance.
+// It is slow due to the usage of TlvStr(). Subject to change when it explicitly affects performance.
 type NameTrie[V any] struct {
 	val V
 	key string
@@ -27,7 +27,7 @@ func (n *NameTrie[V]) ExactMatch(name enc.Name) *NameTrie[V] {
 	if len(name) <= n.dep {
 		return n
 	}
-	c := name[n.dep].String()
+	c := name[n.dep].TlvStr()
 	if ch, ok := n.chd[c]; ok {
 		return ch.ExactMatch(name)
 	} else {
@@ -41,7 +41,7 @@ func (n *NameTrie[V]) PrefixMatch(name enc.Name) *NameTrie[V] {
 	if len(name) <= n.dep {
 		return n
 	}
-	c := name[n.dep].String()
+	c := name[n.dep].TlvStr()
 	if ch, ok := n.chd[c]; ok {
 		return ch.PrefixMatch(name)
 	} else {
@@ -68,7 +68,7 @@ func (n *NameTrie[V]) MatchAlways(name enc.Name) *NameTrie[V] {
 	if len(name) <= n.dep {
 		return n
 	}
-	c := name[n.dep].String()
+	c := name[n.dep].TlvStr()
 	ch, ok := n.chd[c]
 	if !ok {
 		ch = newTrieNode(c, n)
@@ -82,7 +82,7 @@ func (n *NameTrie[V]) FirstSatisfyOrNew(name enc.Name, pred func(V) bool) *NameT
 	if len(name) <= n.dep || pred(n.val) {
 		return n
 	}
-	c := name[n.dep].String()
+	c := name[n.dep].TlvStr()
 	ch, ok := n.chd[c]
 	if !ok {
 		ch = newTrieNode(c, n)

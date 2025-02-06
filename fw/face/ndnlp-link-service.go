@@ -16,8 +16,7 @@ import (
 	defn "github.com/named-data/ndnd/fw/defn"
 	"github.com/named-data/ndnd/fw/dispatch"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/utils"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 const lpPacketOverhead = 1 + 3 + 1 + 3 // LpPacket+Fragment
@@ -178,9 +177,9 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 	// Congestion marking
 	congestionMark := pkt.CongestionMark // from upstream
-	if l.checkCongestion(wire) && congestionMark == nil {
-		core.Log.Warn(l, "Marking congestion")
-		congestionMark = utils.IdPtr(uint64(1)) // ours
+	if l.checkCongestion(wire) && !congestionMark.IsSet() {
+		core.Log.Debug(l, "Marking congestion")
+		congestionMark = optional.Some(uint64(1)) // ours
 	}
 
 	// Calculate effective MTU after accounting for packet-specific overhead
@@ -191,29 +190,29 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 		}
 		effectiveMtu -= pitTokenOverhead
 	}
-	if congestionMark != nil {
+	if congestionMark.IsSet() {
 		effectiveMtu -= congestionMarkOverhead
 	}
 
 	// Fragment packet if necessary
-	var fragments []*spec.LpPacket
-	if len(wire) > effectiveMtu {
+	var fragments []*defn.FwLpPacket
+	frameLen := int(wire.Length())
+	if frameLen > effectiveMtu {
 		if !l.options.IsFragmentationEnabled {
 			core.Log.Info(l, "Attempted to send frame over MTU on link without fragmentation - DROP")
 			return
 		}
 
 		// Split up fragment
-		fragCount := (len(wire) + effectiveMtu - 1) / effectiveMtu
-		fragCountPtr := utils.IdPtr(uint64(fragCount))
-		fragments = make([]*spec.LpPacket, fragCount)
+		fragCount := (frameLen + effectiveMtu - 1) / effectiveMtu
+		fragments = make([]*defn.FwLpPacket, fragCount)
 
-		reader := enc.NewBufferReader(wire)
+		reader := enc.NewWireView(wire)
 		for i := range fragments {
 			// Read till effective mtu or end of wire
 			readSize := effectiveMtu
 			if i == fragCount-1 {
-				readSize = len(wire) - effectiveMtu*(fragCount-1)
+				readSize = frameLen - effectiveMtu*(fragCount-1)
 			}
 
 			frag, err := reader.ReadWire(readSize)
@@ -223,16 +222,16 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 			// Create fragment with sequence and index
 			l.nextSequence++
-			fragments[i] = &spec.LpPacket{
+			fragments[i] = &defn.FwLpPacket{
 				Fragment:  frag,
-				Sequence:  utils.IdPtr(l.nextSequence),
-				FragIndex: utils.IdPtr(uint64(i)),
-				FragCount: fragCountPtr,
+				Sequence:  optional.Some(l.nextSequence),
+				FragIndex: optional.Some(uint64(i)),
+				FragCount: optional.Some(uint64(fragCount)),
 			}
 		}
 	} else {
 		// No fragmentation necessary
-		fragments = []*spec.LpPacket{{Fragment: enc.Wire{wire}}}
+		fragments = []*defn.FwLpPacket{{Fragment: wire}}
 	}
 
 	// Send fragment(s)
@@ -244,21 +243,17 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 		// Incoming face indication
 		if l.options.IsIncomingFaceIndicationEnabled {
-			fragment.IncomingFaceId = utils.IdPtr(out.InFace)
+			fragment.IncomingFaceId = optional.Some(out.InFace)
 		}
 
 		// Congestion marking
-		if congestionMark != nil {
+		if congestionMark.IsSet() {
 			fragment.CongestionMark = congestionMark
 		}
 
 		// Encode final LP frame
-		pkt := &spec.Packet{
-			LpPacket: fragment,
-		}
-		encoder := spec.PacketEncoder{}
-		encoder.Init(pkt)
-		frameWire := encoder.Encode(pkt)
+		pkt := defn.FwPacket{LpPacket: fragment}
+		frameWire := pkt.Encode()
 		if frameWire == nil {
 			core.Log.Error(l, "Unable to encode fragment - DROP")
 			break
@@ -275,8 +270,8 @@ func sendPacket(l *NDNLPLinkService, out dispatch.OutPkt) {
 
 func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 	// We have to copy so receive transport buffer can be reused
-	wire := make([]byte, len(frame))
-	copy(wire, frame)
+	frameCopy := make([]byte, len(frame))
+	copy(frameCopy, frame)
 
 	// All incoming frames come through a link service
 	// Attempt to decode buffer into LpPacket
@@ -284,7 +279,8 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		IncomingFaceID: l.faceID,
 	}
 
-	L2, err := readPacketUnverified(enc.NewBufferReader(wire))
+	wire := enc.Wire{frameCopy}
+	L2, err := defn.ParseFwPacket(enc.NewWireView(wire), false)
 	if err != nil {
 		core.Log.Error(l, "Unable to decode incoming frame", "err", err)
 		return
@@ -306,16 +302,16 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		}
 
 		// Reassembly
-		if l.options.IsReassemblyEnabled && LP.Sequence != nil {
+		if l.options.IsReassemblyEnabled && LP.Sequence.IsSet() {
 			fragIndex := uint64(0)
-			if LP.FragIndex != nil {
-				fragIndex = *LP.FragIndex
+			if v, ok := LP.FragIndex.Get(); ok {
+				fragIndex = v
 			}
 			fragCount := uint64(1)
-			if LP.FragCount != nil {
-				fragCount = *LP.FragCount
+			if v, ok := LP.FragCount.Get(); ok {
+				fragCount = v
 			}
-			baseSequence := *LP.Sequence - fragIndex
+			baseSequence := LP.Sequence.Unwrap() - fragIndex
 
 			core.Log.Trace(l, "Received fragment", "index", fragIndex, "count", fragCount, "base", baseSequence)
 			if fragIndex == 0 && fragCount == 1 {
@@ -327,7 +323,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 					return
 				}
 			}
-		} else if LP.FragCount != nil || LP.FragIndex != nil {
+		} else if LP.FragCount.IsSet() || LP.FragIndex.IsSet() {
 			core.Log.Warn(l, "Received NDNLPv2 frame with fragmentation fields but reassembly disabled - DROP")
 			return
 		}
@@ -336,30 +332,20 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 		pkt.CongestionMark = LP.CongestionMark
 
 		// Consumer-controlled forwarding (NextHopFaceId)
-		if l.options.IsConsumerControlledForwardingEnabled && LP.NextHopFaceId != nil {
+		if l.options.IsConsumerControlledForwardingEnabled {
 			pkt.NextHopFaceID = LP.NextHopFaceId
 		}
 
-		// Local cache policy
-		if l.options.IsLocalCachePolicyEnabled && LP.CachePolicy != nil {
-			pkt.CachePolicy = utils.IdPtr(LP.CachePolicy.CachePolicyType)
-		}
-
-		// PIT Token
-		if len(LP.PitToken) > 0 {
-			pkt.PitToken = make([]byte, len(LP.PitToken))
-			copy(pkt.PitToken, LP.PitToken)
-		}
-
-		// No allocation if single fragment
-		wire = fragment.Join()
+		// No need to copy the pit token since it's already in its own buffer
+		// See the generated code for defn.FwLpPacket
+		pkt.PitToken = LP.PitToken
 
 		// Parse inner packet in place
-		L3, err := readPacketUnverified(enc.NewBufferReader(wire))
+		L3, err := defn.ParseFwPacket(enc.NewWireView(fragment), false)
 		if err != nil {
 			return
 		}
-		pkt.Raw = wire
+		pkt.Raw = fragment
 		pkt.L3 = L3
 	}
 
@@ -376,7 +362,7 @@ func (l *NDNLPLinkService) handleIncomingFrame(frame []byte) {
 }
 
 func (l *NDNLPLinkService) reassemble(
-	frame *spec.LpPacket,
+	frame *defn.FwLpPacket,
 	baseSequence uint64,
 	fragIndex uint64,
 	fragCount uint64,
@@ -433,7 +419,7 @@ func (l *NDNLPLinkService) reassemble(
 	return buffer
 }
 
-func (l *NDNLPLinkService) checkCongestion(wire []byte) bool {
+func (l *NDNLPLinkService) checkCongestion(wire enc.Wire) bool {
 	if !CfgCongestionMarking() {
 		return false
 	}
@@ -451,7 +437,7 @@ func (l *NDNLPLinkService) checkCongestion(wire []byte) bool {
 		l.congestionCheck = 0 // reset
 	}
 
-	l.congestionCheck += uint64(len(wire)) // approx
+	l.congestionCheck += wire.Length() // approx
 	return false
 }
 
@@ -463,11 +449,4 @@ func (op *NDNLPLinkServiceOptions) Flags() (ret uint64) {
 		ret |= FaceFlagCongestionMarking
 	}
 	return
-}
-
-// Reads a packet without validating the internal fields
-func readPacketUnverified(reader enc.ParseReader) (*spec.Packet, error) {
-	context := spec.PacketParsingContext{}
-	context.Init()
-	return context.Parse(reader, false)
 }

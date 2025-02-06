@@ -48,9 +48,9 @@ func TestMarshalSecret(t *testing.T) {
 	wire := tu.NoErr(sig.MarshalSecret(signer))
 
 	// check output data
-	data, _, err := spec.Spec{}.ReadData(enc.NewWireReader(wire))
+	data, _, err := spec.Spec{}.ReadData(enc.NewWireView(wire))
 	require.NoError(t, err)
-	require.Equal(t, ndn.ContentTypeSigKey, *data.ContentType())
+	require.Equal(t, ndn.ContentTypeSigKey, data.ContentType().Unwrap())
 	require.Equal(t, RSA_KEY_NAME, data.Name())
 	require.Equal(t, secret, data.Content().Join())
 }
@@ -60,7 +60,7 @@ func TestUnmarshalSecret(t *testing.T) {
 
 	// get static secret data
 	dataRaw := tu.NoErr(base64.StdEncoding.DecodeString(RSA_KEY_DATA))
-	data, _, err := spec.Spec{}.ReadData(enc.NewBufferReader(dataRaw))
+	data, _, err := spec.Spec{}.ReadData(enc.NewBufferView(dataRaw))
 	require.NoError(t, err)
 
 	signer, err := sig.UnmarshalSecret(data)

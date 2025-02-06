@@ -5,6 +5,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type FakeMetaInfo struct {
@@ -18,9 +19,9 @@ type FakeMetaInfo struct {
 
 type OptField struct {
 	//+field:natural:optional
-	Number *uint64 `tlv:"0x18"`
+	Number optional.Optional[uint64] `tlv:"0x18"`
 	//+field:time:optional
-	Time *time.Duration `tlv:"0x19"`
+	Time optional.Optional[time.Duration] `tlv:"0x19"`
 	//+field:binary
 	Binary []byte `tlv:"0x1a"`
 	//+field:bool
@@ -68,7 +69,7 @@ func ParseMarkers(buf []byte, arg int) *Markers {
 		argument: arg,
 	}
 	cont.Init()
-	ret, err := cont.Parse(enc.NewBufferReader(buf), true)
+	ret, err := cont.Parse(enc.NewBufferView(buf), true)
 	if err == nil && cont.startMarker == 0 && cont.endMarker == len(buf) {
 		return ret
 	} else {
@@ -90,14 +91,16 @@ type StrField struct {
 	//+field:string
 	Str1 string `tlv:"0x01"`
 	//+field:string:optional
-	Str2 *string `tlv:"0x02"`
+	Str2 optional.Optional[string] `tlv:"0x02"`
 }
 
 type FixedUintField struct {
 	//+field:fixedUint:byte
 	Byte byte `tlv:"0x01"`
 	//+field:fixedUint:uint32:optional
-	U32 *uint32 `tlv:"0x02"`
+	U32 optional.Optional[uint32] `tlv:"0x02"`
 	//+field:fixedUint:uint64:optional
-	U64 *uint64 `tlv:"0x03"`
+	U64 optional.Optional[uint64] `tlv:"0x03"`
+	//+field:byte
+	BytePtr *byte `tlv:"0x04"`
 }

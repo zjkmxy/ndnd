@@ -74,7 +74,7 @@ func (m *TlvModel) GenInitEncoder(buf *bytes.Buffer) error {
 			encoder.length = l
 
 			{{if .NoCopy}}
-				wirePlan := make([]uint, 0)
+				wirePlan := make([]uint, 0, 8)
 				l = uint(0)
 				{{- range $f := .Fields}}
 					{{$f.GenEncodingWirePlan}}
@@ -105,11 +105,18 @@ func (m *TlvModel) GenEncodeInto(buf *bytes.Buffer) error {
 		}
 
 		func (encoder *{{.Name}}Encoder) Encode(value *{{.Name}}) enc.Wire {
-			{{if .NoCopy}}
+			{{if .NoCopy -}}
+				total := uint(0)
+				for _, l := range encoder.wirePlan {
+					total += l
+				}
+				content := make([]byte, total)
+
 				wire := make(enc.Wire, len(encoder.wirePlan))
 				for i, l := range encoder.wirePlan {
 					if l > 0 {
-						wire[i] = make([]byte, l)
+						wire[i] = content[:l]
+						content = content[l:]
 					}
 				}
 				encoder.EncodeInto(value, wire)
@@ -151,11 +158,7 @@ func (m *TlvModel) GenReadFrom(buf *bytes.Buffer) error {
 		{{- else -}}
 			func {{if .Model.PrivMethods -}}parse{{else}}Parse{{end}}{{.Model.Name}}
 		{{- end -}}
-		(reader enc.ParseReader, ignoreCritical bool) (*{{.Model.Name}}, error) {
-			if reader == nil {
-				return nil, enc.ErrBufferOverflow
-			}
-
+		(reader enc.WireView, ignoreCritical bool) (*{{.Model.Name}}, error) {
 			{{ range $i, $f := $.Model.Fields}}
 			var handled_{{$f.Name}} bool = false
 			{{- end}}
@@ -274,7 +277,7 @@ func (m *TlvModel) genPublicEncode(buf *bytes.Buffer) error {
 
 func (m *TlvModel) genPublicParse(buf *bytes.Buffer) error {
 	return template.Must(template.New("PublicParse").Parse(`
-		func Parse{{.Name}}(reader enc.ParseReader, ignoreCritical bool) (*{{.Name}}, error) {
+		func Parse{{.Name}}(reader enc.WireView, ignoreCritical bool) (*{{.Name}}, error) {
 			context := {{.Name}}ParsingContext{}
 			context.Init()
 			return context.Parse(reader, ignoreCritical)

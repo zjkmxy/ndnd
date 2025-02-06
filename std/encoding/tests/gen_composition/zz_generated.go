@@ -103,10 +103,7 @@ func (encoder *IntArrayEncoder) Encode(value *IntArray) enc.Wire {
 	return wire
 }
 
-func (context *IntArrayParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*IntArray, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *IntArrayParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*IntArray, error) {
 
 	var handled_Words bool = false
 
@@ -123,11 +120,11 @@ func (context *IntArrayParsingContext) Parse(reader enc.ParseReader, ignoreCriti
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -207,7 +204,7 @@ func (value *IntArray) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseIntArray(reader enc.ParseReader, ignoreCritical bool) (*IntArray, error) {
+func ParseIntArray(reader enc.WireView, ignoreCritical bool) (*IntArray, error) {
 	context := IntArrayParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -322,10 +319,7 @@ func (encoder *NameArrayEncoder) Encode(value *NameArray) enc.Wire {
 	return wire
 }
 
-func (context *NameArrayParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*NameArray, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *NameArrayParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NameArray, error) {
 
 	var handled_Names bool = false
 
@@ -342,11 +336,11 @@ func (context *NameArrayParsingContext) Parse(reader enc.ParseReader, ignoreCrit
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -367,7 +361,8 @@ func (context *NameArrayParsingContext) Parse(reader enc.ParseReader, ignoreCrit
 						}{}
 						{
 							value := &pseudoValue
-							value.Names, err = enc.ReadName(reader.Delegate(int(l)))
+							delegate := reader.Delegate(int(l))
+							value.Names, err = delegate.ReadName()
 							_ = value
 						}
 						value.Names = append(value.Names, pseudoValue.Names)
@@ -413,7 +408,7 @@ func (value *NameArray) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNameArray(reader enc.ParseReader, ignoreCritical bool) (*NameArray, error) {
+func ParseNameArray(reader enc.WireView, ignoreCritical bool) (*NameArray, error) {
 	context := NameArrayParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -460,10 +455,7 @@ func (encoder *InnerEncoder) Encode(value *Inner) enc.Wire {
 	return wire
 }
 
-func (context *InnerParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*Inner, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *InnerParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Inner, error) {
 
 	var handled_Num bool = false
 
@@ -480,11 +472,11 @@ func (context *InnerParsingContext) Parse(reader enc.ParseReader, ignoreCritical
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -550,7 +542,7 @@ func (value *Inner) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseInner(reader enc.ParseReader, ignoreCritical bool) (*Inner, error) {
+func ParseInner(reader enc.WireView, ignoreCritical bool) (*Inner, error) {
 	context := InnerParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -610,10 +602,7 @@ func (encoder *NestedEncoder) Encode(value *Nested) enc.Wire {
 	return wire
 }
 
-func (context *NestedParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*Nested, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *NestedParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Nested, error) {
 
 	var handled_Val bool = false
 
@@ -630,11 +619,11 @@ func (context *NestedParsingContext) Parse(reader enc.ParseReader, ignoreCritica
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -687,7 +676,7 @@ func (value *Nested) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNested(reader enc.ParseReader, ignoreCritical bool) (*Nested, error) {
+func ParseNested(reader enc.WireView, ignoreCritical bool) (*Nested, error) {
 	context := NestedParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -801,10 +790,7 @@ func (encoder *NestedSeqEncoder) Encode(value *NestedSeq) enc.Wire {
 	return wire
 }
 
-func (context *NestedSeqParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*NestedSeq, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *NestedSeqParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NestedSeq, error) {
 
 	var handled_Vals bool = false
 
@@ -821,11 +807,11 @@ func (context *NestedSeqParsingContext) Parse(reader enc.ParseReader, ignoreCrit
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -892,7 +878,7 @@ func (value *NestedSeq) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNestedSeq(reader enc.ParseReader, ignoreCritical bool) (*NestedSeq, error) {
+func ParseNestedSeq(reader enc.WireView, ignoreCritical bool) (*NestedSeq, error) {
 	context := NestedSeqParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
@@ -923,13 +909,13 @@ func (encoder *InnerWire1Encoder) Init(value *InnerWire1) {
 		l += uint(enc.TLNum(encoder.Wire1_length).EncodingLength())
 		l += encoder.Wire1_length
 	}
-	if value.Num != nil {
+	if optval, ok := value.Num.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Num).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	if value.Wire1 != nil {
 		l += 1
@@ -941,9 +927,9 @@ func (encoder *InnerWire1Encoder) Init(value *InnerWire1) {
 			l = 0
 		}
 	}
-	if value.Num != nil {
+	if optval, ok := value.Num.Get(); ok {
 		l += 1
-		l += uint(1 + enc.Nat(*value.Num).EncodingLength())
+		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
 	if l > 0 {
 		wirePlan = append(wirePlan, l)
@@ -984,22 +970,28 @@ func (encoder *InnerWire1Encoder) EncodeInto(value *InnerWire1, wire enc.Wire) {
 			}
 		}
 	}
-	if value.Num != nil {
+	if optval, ok := value.Num.Get(); ok {
 		buf[pos] = byte(2)
 		pos += 1
 
-		buf[pos] = byte(enc.Nat(*value.Num).EncodeInto(buf[pos+1:]))
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
 }
 
 func (encoder *InnerWire1Encoder) Encode(value *InnerWire1) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)
@@ -1007,10 +999,7 @@ func (encoder *InnerWire1Encoder) Encode(value *InnerWire1) enc.Wire {
 	return wire
 }
 
-func (context *InnerWire1ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*InnerWire1, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *InnerWire1ParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*InnerWire1, error) {
 
 	var handled_Wire1 bool = false
 	var handled_Num bool = false
@@ -1028,11 +1017,11 @@ func (context *InnerWire1ParsingContext) Parse(reader enc.ParseReader, ignoreCri
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -1051,8 +1040,8 @@ func (context *InnerWire1ParsingContext) Parse(reader enc.ParseReader, ignoreCri
 					handled = true
 					handled_Num = true
 					{
-						tempVal := uint64(0)
-						tempVal = uint64(0)
+						optval := uint64(0)
+						optval = uint64(0)
 						{
 							for i := 0; i < int(l); i++ {
 								x := byte(0)
@@ -1063,10 +1052,10 @@ func (context *InnerWire1ParsingContext) Parse(reader enc.ParseReader, ignoreCri
 									}
 									break
 								}
-								tempVal = uint64(tempVal<<8) | uint64(x)
+								optval = uint64(optval<<8) | uint64(x)
 							}
 						}
-						value.Num = &tempVal
+						value.Num.Set(optval)
 					}
 				}
 			default:
@@ -1091,7 +1080,7 @@ func (context *InnerWire1ParsingContext) Parse(reader enc.ParseReader, ignoreCri
 		value.Wire1 = nil
 	}
 	if !handled_Num && err == nil {
-		value.Num = nil
+		value.Num.Unset()
 	}
 
 	if err != nil {
@@ -1128,7 +1117,7 @@ func (encoder *InnerWire2Encoder) Init(value *InnerWire2) {
 	}
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	if value.Wire2 != nil {
 		l += 1
@@ -1182,11 +1171,17 @@ func (encoder *InnerWire2Encoder) EncodeInto(value *InnerWire2, wire enc.Wire) {
 }
 
 func (encoder *InnerWire2Encoder) Encode(value *InnerWire2) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)
@@ -1194,10 +1189,7 @@ func (encoder *InnerWire2Encoder) Encode(value *InnerWire2) enc.Wire {
 	return wire
 }
 
-func (context *InnerWire2ParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*InnerWire2, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *InnerWire2ParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*InnerWire2, error) {
 
 	var handled_Wire2 bool = false
 
@@ -1214,11 +1206,11 @@ func (context *InnerWire2ParsingContext) Parse(reader enc.ParseReader, ignoreCri
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -1301,7 +1293,7 @@ func (encoder *NestedWireEncoder) Init(value *NestedWire) {
 	}
 	encoder.length = l
 
-	wirePlan := make([]uint, 0)
+	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
 	if value.W1 != nil {
 		l += 1
@@ -1432,11 +1424,17 @@ func (encoder *NestedWireEncoder) EncodeInto(value *NestedWire, wire enc.Wire) {
 }
 
 func (encoder *NestedWireEncoder) Encode(value *NestedWire) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
 	wire := make(enc.Wire, len(encoder.wirePlan))
 	for i, l := range encoder.wirePlan {
 		if l > 0 {
-			wire[i] = make([]byte, l)
+			wire[i] = content[:l]
+			content = content[l:]
 		}
 	}
 	encoder.EncodeInto(value, wire)
@@ -1444,10 +1442,7 @@ func (encoder *NestedWireEncoder) Encode(value *NestedWire) enc.Wire {
 	return wire
 }
 
-func (context *NestedWireParsingContext) Parse(reader enc.ParseReader, ignoreCritical bool) (*NestedWire, error) {
-	if reader == nil {
-		return nil, enc.ErrBufferOverflow
-	}
+func (context *NestedWireParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NestedWire, error) {
 
 	var handled_W1 bool = false
 	var handled_N bool = false
@@ -1466,11 +1461,11 @@ func (context *NestedWireParsingContext) Parse(reader enc.ParseReader, ignoreCri
 		}
 		typ := enc.TLNum(0)
 		l := enc.TLNum(0)
-		typ, err = enc.ReadTLNum(reader)
+		typ, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
-		l, err = enc.ReadTLNum(reader)
+		l, err = reader.ReadTLNum()
 		if err != nil {
 			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
 		}
@@ -1554,7 +1549,7 @@ func (value *NestedWire) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseNestedWire(reader enc.ParseReader, ignoreCritical bool) (*NestedWire, error) {
+func ParseNestedWire(reader enc.WireView, ignoreCritical bool) (*NestedWire, error) {
 	context := NestedWireParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)

@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/named-data/ndnd/fw/defn"
 	enc "github.com/named-data/ndnd/std/encoding"
-	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,7 +49,7 @@ func TestBasePitEntrySetters(t *testing.T) {
 	}
 
 	newTime := time.Now()
-	bpe.SetExpirationTime(newTime)
+	bpe.setExpirationTime(newTime)
 	assert.Equal(t, bpe.ExpirationTime(), newTime)
 
 	bpe.SetSatisfied(false)
@@ -88,11 +89,10 @@ func TestClearOutRecords(t *testing.T) {
 func TestInsertInRecord(t *testing.T) {
 	// Case 1: interest does not already exist in basePitEntry.inRecords
 	name, _ := enc.NameFromStr("/something")
-	val := new(uint32)
-	*val = 1
-	interest := &spec.Interest{
+	val := uint32(1)
+	interest := &defn.FwInterest{
 		NameV:  name,
-		NonceV: val,
+		NonceV: optional.Some(val),
 	}
 	pitToken := []byte("abc")
 	bpe := basePitEntry{
@@ -102,8 +102,7 @@ func TestInsertInRecord(t *testing.T) {
 	inRecord, alreadyExists, _ := bpe.InsertInRecord(interest, faceID, pitToken)
 	assert.False(t, alreadyExists)
 	assert.Equal(t, inRecord.Face, faceID)
-	assert.Equal(t, inRecord.LatestNonce == *interest.NonceV, true)
-	assert.Equal(t, inRecord.LatestInterest, interest.NameV)
+	assert.Equal(t, inRecord.LatestNonce == interest.NonceV.Unwrap(), true)
 	assert.Equal(t, bytes.Compare(inRecord.PitToken, pitToken), 0)
 	assert.Equal(t, len(bpe.InRecords()), 1)
 
@@ -112,13 +111,12 @@ func TestInsertInRecord(t *testing.T) {
 	assert.Equal(t, record, inRecord)
 
 	// Case 2: interest already exists in basePitEntry.inRecords
-	*interest.NonceV = 2 // get a "new" interest by resetting its nonce
+	interest.NonceV.Set(2) // get a "new" interest by resetting its nonce
 	inRecord, alreadyExists, prevNonce := bpe.InsertInRecord(interest, faceID, pitToken)
 	assert.True(t, alreadyExists)
 	assert.Equal(t, prevNonce, uint32(1))
 	assert.Equal(t, inRecord.Face, faceID)
-	assert.Equal(t, inRecord.LatestNonce == *interest.NonceV, true)
-	assert.Equal(t, inRecord.LatestInterest, interest.NameV)
+	assert.Equal(t, inRecord.LatestNonce == interest.NonceV.Unwrap(), true)
 	assert.Equal(t, bytes.Compare(inRecord.PitToken, pitToken), 0)
 	assert.Equal(t, len(bpe.InRecords()), 1) // should update the original record in place
 	record, ok = bpe.InRecords()[faceID]
@@ -127,19 +125,17 @@ func TestInsertInRecord(t *testing.T) {
 
 	// Add another inRecord
 	name2, _ := enc.NameFromStr("/another_something")
-	val2 := new(uint32)
-	*val2 = 1
-	interest2 := &spec.Interest{
+	val2 := uint32(1)
+	interest2 := &defn.FwInterest{
 		NameV:  name2,
-		NonceV: val,
+		NonceV: optional.Some(val2),
 	}
 	pitToken2 := []byte("xyz")
 	faceID2 := uint64(6789)
 	inRecord, alreadyExists, _ = bpe.InsertInRecord(interest2, faceID2, pitToken2)
 	assert.False(t, alreadyExists)
 	assert.Equal(t, inRecord.Face, faceID2)
-	assert.Equal(t, inRecord.LatestNonce == *interest2.NonceV, true)
-	assert.Equal(t, inRecord.LatestInterest, interest2.NameV)
+	assert.Equal(t, inRecord.LatestNonce == interest2.NonceV.Unwrap(), true)
 	assert.Equal(t, bytes.Compare(inRecord.PitToken, pitToken2), 0)
 	assert.Equal(t, len(bpe.InRecords()), 2) // should be a new inRecord
 	record, ok = bpe.InRecords()[faceID2]
@@ -163,7 +159,8 @@ func TestBaseCsEntryGetters(t *testing.T) {
 	assert.Equal(t, bpe.Index(), uint64(1234))
 	assert.Equal(t, bpe.StaleTime(), currTime)
 
-	csData, csWire, _ := bpe.Copy()
+	csData, csWire, err := bpe.Copy()
+	assert.Nil(t, err)
 	assert.Equal(t, csData.NameV, name)
 	assert.Equal(t, csWire, VALID_DATA_1)
 }

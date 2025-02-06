@@ -2,6 +2,7 @@ package trust_schema
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"iter"
 
@@ -19,7 +20,7 @@ type LvsSchema struct {
 type LvsCtx = map[uint64]enc.Component
 
 func NewLvsSchema(buf []byte) (*LvsSchema, error) {
-	model, err := ParseLvsModel(enc.NewBufferReader(buf), false)
+	model, err := ParseLvsModel(enc.NewBufferView(buf), false)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +47,8 @@ func NewLvsSchema(buf []byte) (*LvsSchema, error) {
 			// Sanity: Every edge's destination sets parent to the source of the edge.
 			// This guarantees all nodes reachable from the root is a tree.
 			parent := model.Nodes[edge.Dest].Parent
-			if parent == nil || *parent != node.Id {
-				return nil, fmt.Errorf("invalid edge parent")
+			if pval, ok := parent.Get(); !ok || pval != node.Id {
+				return nil, errors.New("invalid edge parent")
 			}
 		}
 
@@ -66,7 +67,7 @@ func NewLvsSchema(buf []byte) (*LvsSchema, error) {
 					if opt.Value != nil {
 						count++
 					}
-					if opt.Tag != nil {
+					if opt.Tag.IsSet() {
 						count++
 					}
 					if opt.Fn != nil {
@@ -193,8 +194,8 @@ func (s *LvsSchema) Match(name enc.Name, startCtx LvsCtx) iter.Seq2[*LvsNode, Lv
 					}
 				}
 
-				if cur.Parent != nil {
-					cur = s.m.Nodes[*cur.Parent]
+				if pval, ok := cur.Parent.Get(); ok {
+					cur = s.m.Nodes[pval]
 				} else {
 					cur = nil
 				}
@@ -248,8 +249,8 @@ func (s *LvsSchema) checkCons(
 					satisfied = true
 					break
 				}
-			} else if op.Tag != nil {
-				if value.Equal(context[*op.Tag]) {
+			} else if tag, ok := op.Tag.Get(); ok {
+				if value.Equal(context[tag]) {
 					satisfied = true
 					break
 				}

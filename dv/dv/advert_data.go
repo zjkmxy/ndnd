@@ -82,7 +82,7 @@ func (a *advertModule) dataHandler(nName enc.Name, seqNo uint64, data enc.Wire) 
 	}
 
 	// Parse the advertisement
-	advert, err := tlv.ParseAdvertisement(enc.NewWireReader(data), false)
+	advert, err := tlv.ParseAdvertisement(enc.NewWireView(data), false)
 	if err != nil {
 		log.Error(a, "Failed to parse advertisement", "err", err)
 		return

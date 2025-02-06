@@ -456,3 +456,17 @@ func TestNameClone(t *testing.T) {
 	require.True(t, unsafe.SliceData(n) != unsafe.SliceData(n2))
 	require.True(t, unsafe.SliceData(n[0].Val) != unsafe.SliceData(n2[0].Val))
 }
+
+func TestNameHash(t *testing.T) {
+	tu.SetT(t)
+
+	// Just test if it panics / behavior changes
+	n := tu.NoErr(enc.NameFromStr("/a/b/c/d"))
+	require.Equal(t, uint64(0xa9893a09c0db96c8), n.Hash())
+	require.Equal(t, []uint64{
+		0xef46db3751d8e999, 0x4c0fd87ef6387cbc,
+		0xcbf6b2420b268cbf, 0xd853f58cf3654027,
+		0xa9893a09c0db96c8,
+	}, n.PrefixHash())
+	require.Equal(t, uint64(0x4c0fd87ef6387cbc), n[0].Hash())
+}

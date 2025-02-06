@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // +tlv-model:nocopy,private,ordered
@@ -15,7 +16,7 @@ type T1 struct {
 	//+field:offsetMarker
 	sigCoverStart enc.PlaceHolder
 	//+field:natural:optional
-	H2 *uint64 `tlv:"0x02"`
+	H2 optional.Optional[uint64] `tlv:"0x02"`
 	//+field:wire
 	C enc.Wire `tlv:"0x03"`
 	//+field:signature:sigCoverStart:sigCovered
@@ -42,7 +43,7 @@ func (v *T1) Encode(estLen uint, value []byte) (enc.Wire, enc.Wire) {
 	return wire, encoder.sigCovered
 }
 
-func ReadT1(reader enc.ParseReader) (*T1, enc.Wire, error) {
+func ReadT1(reader enc.WireView) (*T1, enc.Wire, error) {
 	context := T1ParsingContext{}
 	context.Init()
 	ret, err := context.Parse(reader, false)
@@ -124,7 +125,7 @@ func (v *T2) Encode(estLen uint, value []byte, needDigest bool) (enc.Wire, enc.W
 	return wire, encoder.sigCovered
 }
 
-func ReadT2(reader enc.ParseReader, digestRequired bool) (*T2, enc.Wire, error) {
+func ReadT2(reader enc.WireView, digestRequired bool) (*T2, enc.Wire, error) {
 	context := T2ParsingContext{}
 	context.Init()
 	ret, err := context.Parse(reader, false)
