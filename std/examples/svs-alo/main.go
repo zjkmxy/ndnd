@@ -83,7 +83,7 @@ func main() {
 		// in this case should contain the entire state of the node.
 		Snapshot: &ndn_sync.SnapshotNodeLatest{
 			Client: client,
-			SnapMe: func() (enc.Wire, error) {
+			SnapMe: func(enc.Name) (enc.Wire, error) {
 				// In this example, we will ignore the old messages
 				// and only send a message with the total number of messages.
 				//

@@ -24,12 +24,14 @@ type SnapshotNodeLatest struct {
 
 	// SnapMe is the callback to get a snapshot of the application state.
 	//
-	// The state should encode the entire state of the node,
-	// and should replace any previous publications completely.
+	// The state should encode the entire state of the node, and should replace
+	// any previous publications completely. If this snapshot is delivered to a
+	// node, previous publications will be ignored by the receiving node.
 	//
-	// If this snapshot is delivered to a node, previous publications will
-	// be ignored by the receiving node.
-	SnapMe func() (enc.Wire, error)
+	// The callback is passed the name of the snapshot that will be created.
+	// The application may insert this name in a FIFO directory to manage storage
+	// and remove old publications and snapshots.
+	SnapMe func(enc.Name) (enc.Wire, error)
 	// Threshold is the number of updates before a snapshot is taken.
 	Threshold uint64
 
@@ -161,13 +163,16 @@ func (s *SnapshotNodeLatest) handleSnapshot(node enc.Name, boot uint64, cstate n
 
 // snap takes a snapshot of the application state.
 func (s *SnapshotNodeLatest) snap(boot uint64, seq uint64) {
-	wire, err := s.SnapMe()
+	name := s.snapName(s.nodePrefix, boot).WithVersion(seq)
+
+	// Request snapshot from application
+	wire, err := s.SnapMe(name)
 	if err != nil {
 		log.Error(nil, "Failed to get snapshot", "err", err)
 		return
 	}
 
-	name := s.snapName(s.nodePrefix, boot).WithVersion(seq)
+	// Publish snapshot into our store
 	name, err = s.Client.Produce(ndn.ProduceArgs{
 		Name:    name,
 		Content: wire,

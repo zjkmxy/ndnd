@@ -1,6 +1,8 @@
 package object
 
 import (
+	"sync"
+
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 )
@@ -8,20 +10,25 @@ import (
 // MemoryFifoDir is a simple object directory that evicts the oldest name
 // when it reaches its size size.
 type MemoryFifoDir struct {
-	list []enc.Name
-	size int
+	mutex sync.Mutex
+	list  []enc.Name
+	size  int
 }
 
 // NewMemoryFifoDir creates a new directory.
 func NewMemoryFifoDir(size int) *MemoryFifoDir {
 	return &MemoryFifoDir{
-		list: make([]enc.Name, 0),
-		size: size,
+		mutex: sync.Mutex{},
+		list:  make([]enc.Name, 0),
+		size:  size,
 	}
 }
 
 // Push adds a name to the directory.
 func (d *MemoryFifoDir) Push(name enc.Name) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	d.list = append(d.list, name.Clone())
 }
 
@@ -29,6 +36,9 @@ func (d *MemoryFifoDir) Push(name enc.Name) {
 // If the directory has not reached its size, it returns nil.
 // It is recommended to use Evict() instead to remove objects from a client.
 func (d *MemoryFifoDir) Pop() enc.Name {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	if len(d.list) < d.size {
 		return nil
 	}
@@ -54,5 +64,8 @@ func (d *MemoryFifoDir) Evict(client ndn.Client) error {
 
 // Count returns the number of names in the directory.
 func (d *MemoryFifoDir) Count() int {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
 	return len(d.list)
 }

@@ -19,6 +19,8 @@ import (
 	"github.com/named-data/ndnd/std/utils"
 )
 
+const PrefixSnapThreshold = 50
+
 type Router struct {
 	// go-ndn app that this router is attached to
 	engine ndn.Engine
@@ -51,10 +53,13 @@ type Router struct {
 
 	// advertisement module
 	advert advertModule
+
 	// prefix table svs instance
 	pfxSvs *ndn_sync.SvsALO
 	// prefix table svs subscriptions
 	pfxSubs map[uint64]enc.Name
+	// prefix table fifo
+	pfxFifo *object.MemoryFifoDir
 }
 
 // Create a new DV router.
@@ -107,6 +112,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 	}
 
 	// Join prefix table sync group
+	dv.pfxFifo = object.NewMemoryFifoDir(PrefixSnapThreshold * 3)
 	dv.pfxSvs = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
 		Name: config.RouterDataPrefix(),
 		Svs: ndn_sync.SvSyncOpts{
@@ -116,10 +122,12 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		},
 		Snapshot: &ndn_sync.SnapshotNodeLatest{
 			Client: dv.client,
-			SnapMe: func() (enc.Wire, error) {
+			SnapMe: func(name enc.Name) (enc.Wire, error) {
+				dv.pfxFifo.Push(name)
+				dv.pfxFifo.Evict(dv.client)
 				return dv.pfx.Snap(), nil
 			},
-			Threshold: 50,
+			Threshold: PrefixSnapThreshold,
 		},
 	})
 	dv.pfxSubs = make(map[uint64]enc.Name)
@@ -128,8 +136,10 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 	dv.neighbors = table.NewNeighborTable(config, dv.nfdc)
 	dv.rib = table.NewRib(config)
 	dv.pfx = table.NewPrefixTable(config, func(w enc.Wire) {
-		if _, err := dv.pfxSvs.Publish(w); err != nil {
+		if name, err := dv.pfxSvs.Publish(w); err != nil {
 			log.Error(dv, "Failed to publish prefix table update", "err", err)
+		} else {
+			dv.pfxFifo.Push(name)
 		}
 	})
 	dv.fib = table.NewFib(config, dv.nfdc)
