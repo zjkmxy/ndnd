@@ -306,7 +306,7 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 
 	// If the first component is /localhop, we do not forward interests received
 	// on non-local faces to non-local faces
-	localFacesOnly := incomingFace.Scope() != defn.Local && len(packet.Name) > 0 && packet.Name[0].Equal(enc.LOCALHOP)
+	localFacesOnly := incomingFace.Scope() != defn.Local && packet.Name.At(0).Equal(enc.LOCALHOP)
 
 	// Filter the nexthops that are allowed for this Interest
 	allowedNexthops := make([]*table.FibNextHopEntry, 0, len(nexthops))
