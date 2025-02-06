@@ -115,17 +115,17 @@ func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 	// Discover the latest snapshot
 	s.Client.Consume(s.snapName(node, boot), func(cstate ndn.ConsumeState) {
 		if cstate.Error() != nil {
+			// Do not try too fast in case NFD returns NACK
 			time.AfterFunc(2*time.Second, func() {
-				s.handleSnapshot(node, boot, cstate)
+				s.handleSnap(node, boot, cstate)
 			})
-			return
 		} else {
-			s.handleSnapshot(node, boot, cstate)
+			s.handleSnap(node, boot, cstate)
 		}
 	})
 }
 
-func (s *SnapshotNodeLatest) handleSnapshot(node enc.Name, boot uint64, cstate ndn.ConsumeState) {
+func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.ConsumeState) {
 	s.callback(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
 		hash := node.TlvStr()
 		pub.Publisher = node
