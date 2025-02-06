@@ -2,6 +2,7 @@ package sync
 
 import (
 	"fmt"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -111,39 +112,50 @@ func (s *SnapshotNodeLatest) snapName(node enc.Name, boot uint64) enc.Name {
 func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 	// Discover the latest snapshot
 	s.Client.Consume(s.snapName(node, boot), func(cstate ndn.ConsumeState) {
-		s.callback(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
-			hash := node.TlvStr()
-			pub.Publisher = node
+		if cstate.Error() != nil {
+			time.AfterFunc(2*time.Second, func() {
+				s.handleSnapshot(node, boot, cstate)
+			})
+			return
+		} else {
+			s.handleSnapshot(node, boot, cstate)
+		}
+	})
+}
 
-			if err := cstate.Error(); err != nil {
-				// Unblock the state - will lead back to us
-				entry := state.Get(hash, boot)
-				if entry.SnapBlock == 1 {
-					entry.SnapBlock = 0
-					state.Set(hash, boot, entry)
-				}
-				return pub, err
-			}
+func (s *SnapshotNodeLatest) handleSnapshot(node enc.Name, boot uint64, cstate ndn.ConsumeState) {
+	s.callback(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
+		hash := node.TlvStr()
+		pub.Publisher = node
 
+		if err := cstate.Error(); err != nil {
+			// Unblock the state - will lead back to us
 			entry := state.Get(hash, boot)
-			if entry.SnapBlock != 1 || entry.Known >= cstate.Version() {
-				return pub, fmt.Errorf("fetched invalid snapshot")
+			if entry.SnapBlock == 1 {
+				entry.SnapBlock = 0
+				state.Set(hash, boot, entry)
 			}
+			return pub, err
+		}
 
-			entry.SnapBlock = 0
-			entry.Known = cstate.Version()
-			entry.Pending = max(entry.Pending, entry.Known)
-			state.Set(hash, boot, entry)
+		entry := state.Get(hash, boot)
+		if entry.SnapBlock != 1 || entry.Known >= cstate.Version() {
+			return pub, fmt.Errorf("fetched invalid snapshot")
+		}
 
-			return SvsPub{
-				Publisher:  node,
-				Content:    cstate.Content(),
-				DataName:   cstate.Name(),
-				BootTime:   boot,
-				SeqNum:     cstate.Version(),
-				IsSnapshot: true,
-			}, nil
-		})
+		entry.SnapBlock = 0
+		entry.Known = cstate.Version()
+		entry.Pending = max(entry.Pending, entry.Known)
+		state.Set(hash, boot, entry)
+
+		return SvsPub{
+			Publisher:  node,
+			Content:    cstate.Content(),
+			DataName:   cstate.Name(),
+			BootTime:   boot,
+			SeqNum:     cstate.Version(),
+			IsSnapshot: true,
+		}, nil
 	})
 }
 
