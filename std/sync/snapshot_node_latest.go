@@ -35,13 +35,8 @@ type SnapshotNodeLatest struct {
 	// Threshold is the number of updates before a snapshot is taken.
 	Threshold uint64
 
-	// nodePrefix is the name of this instance.
-	nodePrefix enc.Name
-	// groupPrefix is the groupPrefix name.
-	groupPrefix enc.Name
-	// callback is the snapshot callback.
-	callback snapshotCallbackWrap
-
+	// pss is the struct from the svs layer.
+	pss snapPsState
 	// prevSeq is my last snapshot sequence number.
 	prevSeq uint64
 }
@@ -50,21 +45,16 @@ func (s *SnapshotNodeLatest) Snapshot() Snapshot {
 	return s
 }
 
-func (s *SnapshotNodeLatest) initialize(node enc.Name, group enc.Name) {
+func (s *SnapshotNodeLatest) initialize(comm snapPsState) {
 	if s.Client == nil || s.SnapMe == nil || s.Threshold == 0 {
 		panic("SnapshotNodeLatest: not initialized")
 	}
 
-	s.nodePrefix = node
-	s.groupPrefix = group
-}
-
-func (s *SnapshotNodeLatest) setCallback(callback snapshotCallbackWrap) {
-	s.callback = callback
+	s.pss = comm
 }
 
 // check determines if a snapshot should be taken or fetched.
-func (s *SnapshotNodeLatest) check(args snapshotOnUpdateArgs) {
+func (s *SnapshotNodeLatest) check(args snapCheckArgs) {
 	// We only care about the latest boot.
 	// For all other states, make sure the fetch is skipped.
 	entries := args.state[args.hash]
@@ -73,7 +63,7 @@ func (s *SnapshotNodeLatest) check(args snapshotOnUpdateArgs) {
 			last := entries[i]  // note: copy
 			lastV := last.Value // note: copy
 
-			if args.node.Equal(s.nodePrefix) {
+			if args.node.Equal(s.pss.nodePrefix) {
 				// This is me - check if I should snapshot
 				// 1. I have reached the threshold
 				// 2. I have not taken any snapshot yet
@@ -105,7 +95,7 @@ func (s *SnapshotNodeLatest) check(args snapshotOnUpdateArgs) {
 // snapName is the naming convention for snapshots.
 func (s *SnapshotNodeLatest) snapName(node enc.Name, boot uint64) enc.Name {
 	return node.
-		Append(s.groupPrefix...).
+		Append(s.pss.groupPrefix...).
 		Append(enc.NewTimestampComponent(boot)).
 		Append(enc.NewKeywordComponent("SNAP"))
 }
@@ -126,7 +116,7 @@ func (s *SnapshotNodeLatest) fetch(node enc.Name, boot uint64) {
 }
 
 func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.ConsumeState) {
-	s.callback(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
+	s.pss.onReceive(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
 		hash := node.TlvStr()
 		pub.Publisher = node
 
@@ -163,7 +153,7 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 
 // snap takes a snapshot of the application state.
 func (s *SnapshotNodeLatest) snap(boot uint64, seq uint64) {
-	name := s.snapName(s.nodePrefix, boot).WithVersion(seq)
+	name := s.snapName(s.pss.nodePrefix, boot).WithVersion(seq)
 
 	// Request snapshot from application
 	wire, err := s.SnapMe(name)

@@ -91,8 +91,11 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	if s.opts.Snapshot == nil {
 		s.opts.Snapshot = &SnapshotNull{}
 	} else {
-		s.opts.Snapshot.initialize(s.opts.Name, s.opts.Svs.GroupPrefix)
-		s.opts.Snapshot.setCallback(s.snapshotCallback)
+		s.opts.Snapshot.initialize(snapPsState{
+			nodePrefix:  s.opts.Name,
+			groupPrefix: s.opts.Svs.GroupPrefix,
+			onReceive:   s.snapshotCallback,
+		})
 	}
 
 	// Initialize the SVS instance.

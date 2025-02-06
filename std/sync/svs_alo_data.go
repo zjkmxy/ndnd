@@ -77,7 +77,7 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 	})
 
 	// Inform the snapshot strategy
-	s.opts.Snapshot.check(snapshotOnUpdateArgs{s.state, node, hash})
+	s.opts.Snapshot.check(snapCheckArgs{s.state, node, hash})
 
 	// Update the state vector
 	if got := s.svs.IncrSeqNo(node); got != seq {
@@ -94,7 +94,7 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 	}
 
 	// Check with the snapshot strategy
-	s.opts.Snapshot.check(snapshotOnUpdateArgs{s.state, node, hash})
+	s.opts.Snapshot.check(snapCheckArgs{s.state, node, hash})
 
 	totalPending := uint64(0)
 
@@ -234,7 +234,7 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 
 // snapshotCallback is called by the snapshot strategy to indicate
 // that a snapshot has been fetched.
-func (s *SvsALO) snapshotCallback(callback snapshotCallback) {
+func (s *SvsALO) snapshotCallback(callback snapRecvCallback) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
