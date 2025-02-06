@@ -52,7 +52,9 @@ type Router struct {
 	// advertisement module
 	advert advertModule
 	// prefix table svs instance
-	pfxSvs *ndn_sync.SvSync
+	pfxSvs *ndn_sync.SvsALO
+	// prefix table svs subscriptions
+	pfxSubs map[uint64]enc.Name
 }
 
 // Create a new DV router.
@@ -104,18 +106,32 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		objDir:   object.NewMemoryFifoDir(32), // keep last few advertisements
 	}
 
-	// Create sync groups
-	dv.pfxSvs = ndn_sync.NewSvSync(ndn_sync.SvSyncOpts{
-		Client:      dv.client,
-		GroupPrefix: config.PrefixTableSyncPrefix(),
-		OnUpdate:    func(ssu ndn_sync.SvSyncUpdate) { go dv.onPfxSyncUpdate(ssu) },
-		BootTime:    dv.advert.bootTime,
+	// Join prefix table sync group
+	dv.pfxSvs = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+		Name: config.RouterDataPrefix(),
+		Svs: ndn_sync.SvSyncOpts{
+			Client:      dv.client,
+			GroupPrefix: config.PrefixTableSyncPrefix(),
+			BootTime:    dv.advert.bootTime,
+		},
+		Snapshot: &ndn_sync.SnapshotNodeLatest{
+			Client: dv.client,
+			SnapMe: func() (enc.Wire, error) {
+				return dv.pfx.Snap(), nil
+			},
+			Threshold: 50,
+		},
 	})
+	dv.pfxSubs = make(map[uint64]enc.Name)
 
 	// Create tables
 	dv.neighbors = table.NewNeighborTable(config, dv.nfdc)
 	dv.rib = table.NewRib(config)
-	dv.pfx = table.NewPrefixTable(config, dv.client, dv.pfxSvs)
+	dv.pfx = table.NewPrefixTable(config, func(w enc.Wire) {
+		if _, err := dv.pfxSvs.Publish(w); err != nil {
+			log.Error(dv, "Failed to publish prefix table update", "err", err)
+		}
+	})
 	dv.fib = table.NewFib(config, dv.nfdc)
 
 	return dv, nil
@@ -169,6 +185,9 @@ func (dv *Router) Start() (err error) {
 	// Add self to the RIB and make initial advertisement
 	dv.rib.Set(dv.config.RouterName(), dv.config.RouterName(), 0)
 	dv.advert.generate()
+
+	// Initialize prefix table
+	dv.pfx.Reset()
 
 	for {
 		select {

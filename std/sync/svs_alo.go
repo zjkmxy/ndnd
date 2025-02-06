@@ -78,7 +78,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		publpipe: make(chan enc.Name, 16),
 		stop:     make(chan struct{}),
 
-		onError:     func(err error) { log.Error(nil, err.Error()) },
+		onError:     func(err error) { log.Warn(nil, err.Error()) },
 		onPublisher: nil,
 	}
 

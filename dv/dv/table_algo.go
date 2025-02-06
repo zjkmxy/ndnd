@@ -5,6 +5,7 @@ import (
 	"github.com/named-data/ndnd/dv/table"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
+	"github.com/named-data/ndnd/std/sync"
 )
 
 // Compute the RIB chnages for this neighbor
@@ -55,7 +56,7 @@ func (dv *Router) ribUpdate(ns *table.NeighborState) {
 		go func() {
 			dv.fibUpdate()
 			dv.advert.generate()
-			dv.prefixDataFetchAll()
+			dv.prefixSubsUpdate()
 		}()
 	}
 }
@@ -107,14 +108,14 @@ func (dv *Router) fibUpdate() {
 	}
 
 	// Update paths to all routers from RIB
-	for _, router := range dv.rib.Entries() {
+	for hash, router := range dv.rib.Entries() {
 		// Skip if this is us
 		if router.Name().Equal(dv.config.RouterName()) {
 			continue
 		}
 
 		// Get FIB entry to reach this router
-		fes := dv.rib.GetFibEntries(dv.neighbors, router.Name().Hash())
+		fes := dv.rib.GetFibEntries(dv.neighbors, hash)
 
 		// Add entry to the router itself
 		routerPrefix := router.Name().Append(enc.NewKeywordComponent("DV"))
@@ -136,4 +137,42 @@ func (dv *Router) fibUpdate() {
 		}
 	}
 	dv.fib.RemoveUnmarked()
+}
+
+// prefixSubsUpdate updates the prefix table subscriptions
+func (dv *Router) prefixSubsUpdate() {
+	dv.mutex.Lock()
+	defer dv.mutex.Unlock()
+
+	// Get all prefixes from the RIB
+	for hash, router := range dv.rib.Entries() {
+		if router.Name().Equal(dv.config.RouterName()) {
+			continue
+		}
+
+		if _, ok := dv.pfxSubs[hash]; !ok {
+			log.Info(dv, "Router is now reachable", "name", router.Name())
+			dv.pfxSubs[hash] = router.Name()
+
+			dv.pfxSvs.SubscribePublisher(router.Name(), func(sp sync.SvsPub) {
+				dv.mutex.Lock()
+				defer dv.mutex.Unlock()
+
+				// Both snapshots and normal data are handled the same way
+				if dirty := dv.pfx.Apply(sp.Content); dirty {
+					// Update the local fib if prefix table changed
+					go dv.fibUpdate() // expensive
+				}
+			})
+		}
+	}
+
+	// Remove dead subscriptions
+	for hash, name := range dv.pfxSubs {
+		if !dv.rib.Has(name) {
+			log.Info(dv, "Router is now unreachable", "name", name)
+			dv.pfxSvs.UnsubscribePublisher(name)
+			delete(dv.pfxSubs, hash)
+		}
+	}
 }

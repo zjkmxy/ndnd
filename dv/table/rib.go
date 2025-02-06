@@ -2,6 +2,7 @@ package table
 
 import (
 	"fmt"
+	"iter"
 
 	"github.com/named-data/ndnd/dv/config"
 	"github.com/named-data/ndnd/dv/tlv"
@@ -102,14 +103,16 @@ func (r *Rib) Has(destName enc.Name) bool {
 }
 
 // Get all destinations reachable in the RIB.
-func (r *Rib) Entries() []*RibEntry {
-	entries := make([]*RibEntry, 0, len(r.entries))
-	for _, entry := range r.entries {
-		if entry.lowest1 < config.CostInfinity {
-			entries = append(entries, entry)
+func (r *Rib) Entries() iter.Seq2[uint64, *RibEntry] {
+	return func(yield func(uint64, *RibEntry) bool) {
+		for hash, entry := range r.entries {
+			if entry.lowest1 < config.CostInfinity {
+				if !yield(hash, entry) {
+					return
+				}
+			}
 		}
 	}
-	return entries
 }
 
 // Remove all entries with a given next hop.

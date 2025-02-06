@@ -36,9 +36,9 @@ func (a *advertModule) generate() {
 }
 
 func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) {
-	// debounce; wait before fetching, then check if this is still the latest
-	// sequence number known for this neighbor
-	time.Sleep(10 * time.Millisecond)
+	a.dv.mutex.Lock()
+	defer a.dv.mutex.Unlock()
+
 	if ns := a.dv.neighbors.Get(nName); ns == nil || ns.AdvertBoot != bootTime || ns.AdvertSeq != seqNo {
 		return
 	}
@@ -52,24 +52,21 @@ func (a *advertModule) dataFetch(nName enc.Name, bootTime uint64, seqNo uint64) 
 		WithVersion(seqNo)
 
 	a.dv.client.Consume(advName, func(state ndn.ConsumeState) {
-		go func() {
-			fetchErr := state.Error()
-			if fetchErr != nil {
-				log.Warn(a, "Failed to fetch advertisement", "name", state.Name(), "err", fetchErr)
-				time.Sleep(1 * time.Second) // wait on error
+		if err := state.Error(); err != nil {
+			log.Warn(a, "Failed to fetch advertisement", "name", state.Name(), "err", err)
+			time.AfterFunc(1*time.Second, func() {
 				a.dataFetch(nName, bootTime, seqNo)
-				return
-			}
+			})
+			return
+		}
 
-			// Process the advertisement
-			a.dataHandler(nName, seqNo, state.Content())
-		}()
+		// Process the advertisement
+		go a.dataHandler(nName, seqNo, state.Content())
 	})
 }
 
 // Received advertisement Data
 func (a *advertModule) dataHandler(nName enc.Name, seqNo uint64, data enc.Wire) {
-	// Lock DV state
 	a.dv.mutex.Lock()
 	defer a.dv.mutex.Unlock()
 

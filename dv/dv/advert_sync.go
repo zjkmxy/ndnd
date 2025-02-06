@@ -191,7 +191,9 @@ func (a *advertModule) onStateVector(sv *spec_svs.StateVector, faceId uint64, ac
 		ns.AdvertBoot = entry.BootstrapTime
 		ns.AdvertSeq = entry.SeqNo
 
-		go a.dataFetch(node.Name, entry.BootstrapTime, entry.SeqNo)
+		time.AfterFunc(10*time.Millisecond, func() { // debounce
+			a.dataFetch(node.Name, entry.BootstrapTime, entry.SeqNo)
+		})
 	}
 
 	// Update FIB if needed

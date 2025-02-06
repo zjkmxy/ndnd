@@ -13,9 +13,7 @@
 // Prefix table Sync
 #pfx_svs: #network/"32=DV"/"32=PFS" <= #router_cert
 // Prefix table data
-#pfx_data: #router/"32=DV"/"32=PFX"/_/_ <= #router_cert
-// Prefix table snapshot
-#pfx_snap: #router/"32=DV"/"32=PFX"/_/"32=SNAP" <= #router_cert
+#pfx_data: #router/#pfx_svs/_/_ <= #router_cert
 
 // Certificate definitions
 #network_cert: #network/#KEY
