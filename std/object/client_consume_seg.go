@@ -33,7 +33,7 @@ func newRrSegFetcher(client *Client) rrSegFetcher {
 		mutex:       sync.RWMutex{},
 		client:      client,
 		streams:     make([]*ConsumeState, 0),
-		window:      10,
+		window:      100,
 		outstanding: 0,
 	}
 }
