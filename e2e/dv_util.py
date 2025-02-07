@@ -15,25 +15,27 @@ def setup(ndn: Minindn, network=DEFAULT_NETWORK) -> None:
     info('Starting ndn-dv on nodes\n')
     AppManager(ndn, ndn.net.hosts, NDNd_DV, network=network)
 
-def converge(nodes: list[Node], deadline=60, network=DEFAULT_NETWORK) -> int:
+def converge(nodes: list[Node], deadline=30, network=DEFAULT_NETWORK) -> int:
     info('Waiting for routing to converge\n')
     start = time.time()
     while time.time() - start < deadline:
         time.sleep(1)
-
-        converged = True
-        for node in nodes:
-            routes = node.cmd('ndnd fw route-list')
-            for other in nodes:
-                if f'{network}/{other.name}/32=DV' not in routes:
-                    info(f'Routing not converged on {node.name}\n')
-                    converged = False
-                    break # break out of inner loop
-            if not converged:
-                break # break out of outer loop
-        if converged:
+        if is_converged(nodes, network=network):
             total = round(time.time() - start)
             info(f'Routing converged in {total} seconds\n')
             return total
 
     raise Exception('Routing did not converge')
+
+def is_converged(nodes: list[Node], network=DEFAULT_NETWORK) -> bool:
+    converged = True
+    for node in nodes:
+        routes = node.cmd('ndnd fw route-list')
+        for other in nodes:
+            if f'{network}/{other.name}/32=DV' not in routes:
+                info(f'Routing not converged on {node.name}\n')
+                converged = False
+                break # break out of inner loop
+        if not converged:
+            return False
+    return converged

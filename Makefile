@@ -23,7 +23,7 @@ clean-gen:
 	rm -f gondn_tlv_gen
 
 test:
-	go test ./... -coverprofile=coverage.out
+	CGO_ENABLED=0 go test ./... -coverprofile=coverage.out
 
 coverage:
 	go tool cover -html=coverage.out

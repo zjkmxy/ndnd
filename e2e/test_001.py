@@ -17,6 +17,12 @@ def scenario_nfd(ndn: Minindn):
     scenario(ndn, fw=Nfd)
 
 def scenario(ndn: Minindn, fw=None, network='/minindn'):
+    """
+    Simple file transfer scenario with NDNd and NFD forwarders.
+    This tests routing convergence and cat/put operations.
+    Also tests routing compatibility for both NDNd and NFD.
+    """
+
     info('Starting forwarder on nodes\n')
     AppManager(ndn, ndn.net.hosts, fw)
 
