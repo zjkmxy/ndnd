@@ -4,7 +4,7 @@ import time
 
 from types import FunctionType
 
-from mininet.log import setLogLevel
+from mininet.log import setLogLevel, info
 from minindn.minindn import Minindn
 
 import test_001
@@ -16,7 +16,7 @@ def run(scenario: FunctionType, **kwargs) -> None:
 
         start = time.time()
         scenario(ndn, **kwargs)
-        print(f'Scenario completed in: {time.time()-start:.2f}s')
+        info(f'Scenario completed in: {time.time()-start:.2f}s\n')
 
         # Call all cleanups without stopping the network
         # This ensures we don't recreate the network for each test

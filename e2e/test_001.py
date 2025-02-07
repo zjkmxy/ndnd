@@ -47,8 +47,9 @@ def scenario(ndn: Minindn, fw=None, network='/minindn'):
 
     for node in cat_nodes:
         put_node = random.choice(put_nodes)
-        cmd = f'ndnd cat "{network}/{put_node.name}/test" > recv.test.bin'
+        cmd = f'ndnd cat "{network}/{put_node.name}/test" > recv.test.bin 2> cat.log'
         info(f'{node.name} {cmd}\n')
         node.cmd(cmd)
         if node.cmd(f'diff {test_file} recv.test.bin').strip():
+            info(node.cmd(f'cat cat.log'))
             raise Exception(f'Test file contents do not match on {node.name}')
