@@ -14,9 +14,11 @@ def run(scenario: FunctionType, **kwargs) -> None:
     try:
         random.seed(0)
 
+        info(f"===================================================\n")
         start = time.time()
         scenario(ndn, **kwargs)
         info(f'Scenario completed in: {time.time()-start:.2f}s\n')
+        info(f"===================================================\n\n")
 
         # Call all cleanups without stopping the network
         # This ensures we don't recreate the network for each test
