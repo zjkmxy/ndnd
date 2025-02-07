@@ -47,7 +47,7 @@ func DecodeFile(content []byte) (signers []ndn.Signer, certs [][]byte, err error
 		switch contentType {
 		case ndn.ContentTypeKey: // cert
 			certs = append(certs, wire)
-		case ndn.ContentTypeSigKey: // key
+		case ndn.ContentTypeSigningKey: // key
 			key, err := sig.UnmarshalSecret(data)
 			if err != nil || key == nil {
 				log.Warn(nil, "Failed to decode key", "name", data.Name(), "err", err)

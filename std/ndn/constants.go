@@ -7,11 +7,14 @@ const MaxNDNPacketSize = 8800
 type ContentType uint64
 
 const (
-	ContentTypeBlob   ContentType = 0
-	ContentTypeLink   ContentType = 1
-	ContentTypeKey    ContentType = 2
-	ContentTypeNack   ContentType = 3
-	ContentTypeSigKey ContentType = 9
+	ContentTypeBlob               ContentType = 0
+	ContentTypeLink               ContentType = 1
+	ContentTypeKey                ContentType = 2
+	ContentTypeNack               ContentType = 3
+	ContentTypeManifest           ContentType = 4
+	ContentTypePrefixAnnouncement ContentType = 5
+	ContentTypeEncapsulatedData   ContentType = 6
+	ContentTypeSigningKey         ContentType = 9
 )
 
 // SigType represents the type of signature.

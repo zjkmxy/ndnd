@@ -50,7 +50,7 @@ func TestMarshalSecret(t *testing.T) {
 	// check output data
 	data, _, err := spec.Spec{}.ReadData(enc.NewWireView(wire))
 	require.NoError(t, err)
-	require.Equal(t, ndn.ContentTypeSigKey, data.ContentType().Unwrap())
+	require.Equal(t, ndn.ContentTypeSigningKey, data.ContentType().Unwrap())
 	require.Equal(t, RSA_KEY_NAME, data.Name())
 	require.Equal(t, secret, data.Content().Join())
 }

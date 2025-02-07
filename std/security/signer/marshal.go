@@ -39,7 +39,7 @@ func MarshalSecret(key ndn.Signer) (enc.Wire, error) {
 
 	// Encode key data packet
 	cfg := &ndn.DataConfig{
-		ContentType: optional.Some(ndn.ContentTypeSigKey),
+		ContentType: optional.Some(ndn.ContentTypeSigningKey),
 	}
 	data, err := spec.Spec{}.MakeData(name, cfg, enc.Wire{sk}, key)
 	if err != nil {
@@ -52,7 +52,7 @@ func MarshalSecret(key ndn.Signer) (enc.Wire, error) {
 // UnmarshalSecret decodes a signed NDN Data packet to a key secret.
 func UnmarshalSecret(data ndn.Data) (ndn.Signer, error) {
 	// Check data content type
-	if ctype, ok := data.ContentType().Get(); !ok || ctype != ndn.ContentTypeSigKey {
+	if ctype, ok := data.ContentType().Get(); !ok || ctype != ndn.ContentTypeSigningKey {
 		return nil, ndn.ErrInvalidValue{Item: "content type"}
 	}
 
