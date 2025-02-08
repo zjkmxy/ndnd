@@ -29,8 +29,6 @@ type SnapshotNodeLatest struct {
 	// node, previous publications will be ignored by the receiving node.
 	//
 	// The callback is passed the name of the snapshot that will be created.
-	// The application may insert this name in a FIFO directory to manage storage
-	// and remove old publications and snapshots.
 	SnapMe func(enc.Name) (enc.Wire, error)
 	// Threshold is the number of updates before a snapshot is taken.
 	Threshold uint64
@@ -39,6 +37,10 @@ type SnapshotNodeLatest struct {
 	pss snapPsState
 	// prevSeq is my last snapshot sequence number.
 	prevSeq uint64
+}
+
+func (s *SnapshotNodeLatest) String() string {
+	return "snapshot-node-latest"
 }
 
 func (s *SnapshotNodeLatest) Snapshot() Snapshot {
@@ -130,21 +132,25 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 	s.pss.onSnap(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
 		hash := node.TlvStr()
 		pub.Publisher = node
+		entry := state.Get(hash, boot)
 
-		// Unblock the state on error. This will trigger a re-fetch.
-		if err := cstate.Error(); err != nil {
-			entry := state.Get(hash, boot)
-			if entry.SnapBlock == 1 {
-				entry.SnapBlock = 0
-				state.Set(hash, boot, entry)
-			}
-			return pub, err
+		// SnapBlock could change if a new boot is detected
+		if entry.SnapBlock != 1 {
+			return pub, fmt.Errorf("fetched blocked snapshot - ignoring")
 		}
 
+		// Check for fetching errors
+		err = cstate.Error()
+
 		// Check if the snapshot is still current
-		entry := state.Get(hash, boot)
-		if entry.SnapBlock != 1 || entry.Known >= cstate.Version() {
-			return pub, fmt.Errorf("fetched old snapshot - ignoring")
+		if err == nil && entry.Known >= cstate.Version() {
+			err = fmt.Errorf("fetched old snapshot - ignoring")
+		}
+
+		if err != nil {
+			entry.SnapBlock = 0
+			state.Set(hash, boot, entry)
+			return pub, err
 		}
 
 		// Update the state vector
@@ -166,25 +172,54 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 
 // takeSnap takes a snapshot of the application state for the current node.
 func (s *SnapshotNodeLatest) takeSnap(boot uint64, seqNo uint64) {
-	name := s.snapName(s.pss.nodePrefix, boot).WithVersion(seqNo)
+	basename := s.snapName(s.pss.nodePrefix, boot)
+	name := basename.WithVersion(seqNo)
 
 	// Request snapshot from application
 	wire, err := s.SnapMe(name)
 	if err != nil {
-		log.Error(nil, "Failed to get snapshot", "err", err)
+		log.Error(s, "Failed to get snapshot", "err", err)
 		return
 	}
 
+	// Get previous snapshot name to evict later
+	prevName, err := s.Client.LatestLocal(basename)
+	if err != nil {
+		log.Warn(s, "Failed to get previous snapshot", "err", err)
+	}
+
 	// Publish snapshot into our store
-	name, err = s.Client.Produce(ndn.ProduceArgs{
+	_, err = s.Client.Produce(ndn.ProduceArgs{
 		Name:    name,
 		Content: wire,
 	})
 	if err != nil {
-		log.Error(nil, "Failed to publish snapshot", "err", err, "name", name)
+		log.Error(s, "Failed to publish snapshot", "err", err, "name", name)
 		return
 	}
 
 	// Update the sequence number
 	s.prevSeq = seqNo
+
+	// Evict previous snapshot
+	if prevName != nil {
+		if err := s.Client.Remove(prevName); err != nil {
+			log.Warn(s, "Failed to remove previous snapshot", "err", err)
+		}
+	}
+
+	// Evict covered publications from seqNo-4*threshold to seqNo-3*threshold
+	pubBaseName := s.pss.nodePrefix.
+		Append(s.pss.groupPrefix...).
+		Append(enc.NewTimestampComponent(boot))
+	if seqNo > 4*s.Threshold {
+		for i := seqNo - 4*s.Threshold; i < seqNo-3*s.Threshold; i++ {
+			pubName := pubBaseName.
+				Append(enc.NewSequenceNumComponent(i)).
+				WithVersion(enc.VersionImmutable)
+			if err := s.Client.Remove(pubName); err != nil {
+				log.Warn(s, "Failed to remove old publication", "err", err, "name", pubName)
+			}
+		}
+	}
 }

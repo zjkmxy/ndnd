@@ -26,6 +26,9 @@ type Client interface {
 	Produce(args ProduceArgs) (enc.Name, error)
 	// Remove removes an object from the client's store by name.
 	Remove(name enc.Name) error
+	// LatestLocal returns the latest version name of an object in the store.
+	LatestLocal(name enc.Name) (enc.Name, error)
+
 	// Consume fetches an object with a given name.
 	// By default, Consume will attemt to discover the latest version of the object.
 	// To specify a particular version, use Name.WithVersion()

@@ -52,8 +52,6 @@ type Router struct {
 	pfxSvs *ndn_sync.SvsALO
 	// prefix table svs subscriptions
 	pfxSubs map[uint64]enc.Name
-	// prefix table fifo
-	pfxFifo *object.MemoryFifoDir
 
 	// neighbor table
 	neighbors *table.NeighborTable
@@ -341,8 +339,7 @@ func (dv *Router) destroyFaces() {
 }
 
 func (dv *Router) createPrefixTable() {
-	// Memory FIFO and subscription list
-	dv.pfxFifo = object.NewMemoryFifoDir(PrefixSnapThreshold * 3)
+	// Subscription list
 	dv.pfxSubs = make(map[uint64]enc.Name)
 
 	// SVS delivery agent
@@ -356,8 +353,6 @@ func (dv *Router) createPrefixTable() {
 		Snapshot: &ndn_sync.SnapshotNodeLatest{
 			Client: dv.client,
 			SnapMe: func(name enc.Name) (enc.Wire, error) {
-				dv.pfxFifo.Push(name)
-				dv.pfxFifo.Evict(dv.client)
 				return dv.pfx.Snap(), nil
 			},
 			Threshold: PrefixSnapThreshold,
@@ -366,10 +361,8 @@ func (dv *Router) createPrefixTable() {
 
 	// Local prefix table
 	dv.pfx = table.NewPrefixTable(dv.config, func(w enc.Wire) {
-		if name, err := dv.pfxSvs.Publish(w); err != nil {
+		if _, err := dv.pfxSvs.Publish(w); err != nil {
 			log.Error(dv, "Failed to publish prefix table update", "err", err)
-		} else {
-			dv.pfxFifo.Push(name)
 		}
 	})
 }
