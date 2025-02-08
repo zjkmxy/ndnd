@@ -12,15 +12,11 @@ type Snapshot interface {
 	// checkFetch is called when the state vector is updated for a different node.
 	// The strategy can decide to block fetching for the snapshot.
 	// This function may also be called for this node name with a different boot time.
-	//
-	// This function call MUST NOT make the onReceive callback.
-	checkFetch(snapCheckArgs)
+	checkFetch(state SvMap[svsDataState], node enc.Name)
 
 	// checkSelf is called when the state for this node is updated (for this boot).
 	// The strategy can decide to take a snapshot.
-	// This function is called from the delivery thread, so the delivery state
-	// is provided. The strategy should not block or depend on fetch state.
-	checkSelf(SvMap[uint64])
+	checkSelf(state SvMap[svsDataState])
 }
 
 // snapPsState is the shared data struct between snapshot strategy
@@ -60,13 +56,3 @@ type snapPsState struct {
 // snapRecvCallback is the callback function passed to the onReceive callback.
 // This callback should update the state if needed (lock is held by the caller).
 type snapRecvCallback = func(state SvMap[svsDataState]) (SvsPub, error)
-
-// snapCheckArgs is the arguments passed to the check function.
-type snapCheckArgs struct {
-	// state is the current state vector.
-	state SvMap[svsDataState]
-	// node is the node that is updated.
-	node enc.Name
-	// hash is the hash of the node name (optimization).
-	hash string
-}

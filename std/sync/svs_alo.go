@@ -22,14 +22,11 @@ type SvsALO struct {
 
 	// state is the current state.
 	state SvMap[svsDataState]
-	// delivered is the delivered state vector.
-	// owned by the run() thread (no-lock)
-	delivered SvMap[uint64]
 	// nodePs is the Pub/Sub coordinator for publisher prefixes
 	nodePs SimplePs[SvsPub]
 
 	// outpipe is the channel for delivering data.
-	outpipe chan svsPubOut
+	outpipe chan SvsPub
 	// errpipe is the channel for delivering errors.
 	errpipe chan error
 	// publpipe is the channel for delivering new publishers.
@@ -69,11 +66,10 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 
 		mutex: gosync.Mutex{},
 
-		state:     NewSvMap[svsDataState](0),
-		delivered: NewSvMap[uint64](0),
-		nodePs:    NewSimplePs[SvsPub](),
+		state:  NewSvMap[svsDataState](0),
+		nodePs: NewSimplePs[SvsPub](),
 
-		outpipe:  make(chan svsPubOut, 256),
+		outpipe:  make(chan SvsPub, 256),
 		errpipe:  make(chan error, 16),
 		publpipe: make(chan enc.Name, 16),
 		stop:     make(chan struct{}),
@@ -156,6 +152,9 @@ func (s *SvsALO) SetOnPublisher(callback func(enc.Name)) {
 
 // Publish sends a message to the group
 func (s *SvsALO) Publish(content enc.Wire) (enc.Name, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	return s.produceObject(content)
 }
 
@@ -174,7 +173,7 @@ func (s *SvsALO) SubscribePublisher(prefix enc.Name, callback func(SvsPub)) erro
 	// Trigger a fetch for all known producers matching this prefix.
 	for node := range s.state.Iter() {
 		if prefix.IsPrefix(node) {
-			s.consumeCheck(node, node.TlvStr())
+			s.consumeCheck(node)
 		}
 	}
 
@@ -199,8 +198,10 @@ func (s *SvsALO) run() {
 		select {
 		case <-s.stop:
 			return
-		case out := <-s.outpipe:
-			s.deliver(out)
+		case pub := <-s.outpipe:
+			for _, subscription := range pub.subcribers {
+				subscription(pub)
+			}
 		case err := <-s.errpipe:
 			s.onError(err)
 		case publ := <-s.publpipe:
@@ -211,10 +212,11 @@ func (s *SvsALO) run() {
 
 // onSvsUpdate is the handler for new sequence numbers.
 func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
-	// App callback for new publishers
-	if s.onPublisher != nil {
-		s.publpipe <- update.Name
-	}
+	defer func() {
+		if s.onPublisher != nil {
+			s.publpipe <- update.Name
+		}
+	}()
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -226,38 +228,5 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 	s.state.Set(hash, update.Boot, entry)
 
 	// Check if we want to queue new fetch for this update.
-	s.consumeCheck(update.Name, hash)
-}
-
-// deliver is the outgoing pipeline handler on the run() thread.
-func (s *SvsALO) deliver(out svsPubOut) {
-	for _, sub := range out.subs {
-		sub(out.pub)
-	}
-
-	// Commit the successful delivery
-	if out.snapstate != nil {
-		for _, svEntry := range out.snapstate.Entries {
-			hash := svEntry.Name.TlvStr()
-			for _, seqEntry := range svEntry.SeqNoEntries {
-				prev := s.delivered.Get(hash, seqEntry.BootstrapTime)
-				if seqEntry.SeqNo > prev {
-					s.delivered.Set(hash, seqEntry.BootstrapTime, seqEntry.SeqNo)
-				}
-			}
-		}
-	} else {
-		prev := s.delivered.Get(out.hash, out.pub.BootTime)
-		if out.pub.SeqNum > prev {
-			s.delivered.Set(out.hash, out.pub.BootTime, out.pub.SeqNum)
-		}
-	}
-
-	// If this is a publication from self, alert the snapshot strategy.
-	// It may decide to take a snapshot.
-	if !out.pub.IsSnapshot &&
-		out.pub.Publisher.Equal(s.opts.Name) &&
-		out.pub.BootTime == s.svs.GetBootTime() {
-		s.opts.Snapshot.checkSelf(s.delivered)
-	}
+	s.consumeCheck(update.Name)
 }

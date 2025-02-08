@@ -7,7 +7,6 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
-	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 )
 
 type svsDataState struct {
@@ -20,24 +19,11 @@ type svsDataState struct {
 	// Pending is the pending sequence number.
 	// (Pending-Known) has outstanding Interests.
 	Pending uint64
-	// PendingData is the fetched data not yet delivered.
-	PendingData map[uint64]SvsPub
+	// PendingPubs is the fetched data not yet delivered.
+	PendingPubs map[uint64]SvsPub
 	// SnapBlock is the snapshot block flag.
 	// If non-zero, fetching is blocked.
 	SnapBlock int
-}
-
-// svsPubOut is the pipe struct. It is necessary to bundle together differet
-// kinds of output here because go does not support union types.
-type svsPubOut struct {
-	// Fields below are set for a normal pub
-	hash string
-	pub  SvsPub
-	subs []func(SvsPub)
-
-	// Fields below are set if it is a snapshot
-	// Only pub will be set for a snapshot
-	snapstate *spec_svs.StateVector
 }
 
 func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
@@ -49,9 +35,6 @@ func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
 }
 
 func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
 	// This instance owns the underlying SVS instance.
 	// So we can be sure that the sequence number does not
 	// change while we hold the lock on this instance.
@@ -69,34 +52,14 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 
 	// We don't get notified of changes to our own state.
 	// So we need to update the state vector ourselves.
-	hash := node.TlvStr()
-	s.state.Set(hash, boot, svsDataState{
+	s.state.Set(node.TlvStr(), boot, svsDataState{
 		Known:   seq,
 		Latest:  seq,
 		Pending: seq,
 	})
 
-	// This is never sent out to the application (duh) since subs is null.
-	// But we still need to update the delivered vector, and inform the
-	// snapshot strategy *after* making that update.
-	//
-	// This is especially important because the snapshot may depend on the
-	// entire delivered state, which is what the application will return.
-	//
-	// Unfortunately since this happens on a different goroutine, the initial
-	// snapshot will be taken only after the sequence number is already incremented.
-	// But this problem is more generalized anyway (what if the app dies at this point?)
-	s.outpipe <- svsPubOut{
-		hash: hash,
-		pub: SvsPub{
-			Publisher: node,
-			Content:   content,
-			DataName:  name,
-			BootTime:  boot,
-			SeqNum:    seq,
-		},
-		subs: nil,
-	}
+	// Notify the snapshot strategy
+	s.opts.Snapshot.checkSelf(s.state)
 
 	// Update the state vector
 	if got := s.svs.IncrSeqNo(node); got != seq {
@@ -107,14 +70,15 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 }
 
 // consumeCheck looks for new objects to fetch and queues them.
-func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
+func (s *SvsALO) consumeCheck(node enc.Name) {
 	if !s.nodePs.HasSub(node) {
 		return
 	}
 
 	// Check with the snapshot strategy
-	s.opts.Snapshot.checkFetch(snapCheckArgs{s.state, node, hash})
+	s.opts.Snapshot.checkFetch(s.state, node)
 
+	hash := node.TlvStr()
 	totalPending := uint64(0)
 
 	for _, entry := range s.state[hash] {
@@ -150,45 +114,37 @@ func (s *SvsALO) consumeCheck(node enc.Name, hash string) {
 // The callback puts data on the outgoing pipeline and re-calls
 // check to fetch more objects if necessary.
 func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
-	name := s.objectName(node, boot, seq)
-	s.client.Consume(name, func(status ndn.ConsumeState) {
+	fetchName := s.objectName(node, boot, seq)
+	s.client.Consume(fetchName, func(status ndn.ConsumeState) {
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
+
+		// Always check if we can fetch more
+		defer s.consumeCheck(node)
 
 		// Get the state vector entry
 		hash := node.TlvStr()
 		entry := s.state.Get(hash, boot)
-
-		// Always check if we can fetch more
-		defer s.consumeCheck(node, hash)
 
 		// Check if this is already delivered
 		if seq <= entry.Known {
 			return
 		}
 
-		// Reset pending if we cancel the fetch
-		resetPending := func() {
+		// Get the list of subscribers
+		subscribers := slices.Collect(s.nodePs.Subs(node))
+
+		// Check if we have to deliver this data
+		if entry.SnapBlock != 0 || len(subscribers) == 0 {
 			entry.Pending = min(entry.Pending, seq-1)
 			s.state.Set(hash, boot, entry)
-		}
-
-		// Check snapshot block
-		if entry.SnapBlock != 0 {
-			resetPending()
 			return
 		}
 
 		// Check for errors
 		if err := status.Error(); err != nil {
-			// Check if we are still subscribed
-			if !s.nodePs.HasSub(node) {
-				resetPending()
-				return
-			}
-
 			// Propagate the error to application
-			s.errpipe <- &ErrSync{node, err}
+			s.queueError(&ErrSync{node, err})
 
 			// TODO: exponential backoff
 			time.AfterFunc(2*time.Second, func() {
@@ -197,60 +153,38 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 			return
 		}
 
-		if entry.PendingData == nil {
-			entry.PendingData = make(map[uint64]SvsPub)
+		// Initialize the pending map
+		if entry.PendingPubs == nil {
+			entry.PendingPubs = make(map[uint64]SvsPub)
 			s.state.Set(hash, boot, entry)
 		}
 
 		// Store the content for in-order delivery
 		// The size of this map is upper bounded
-		entry.PendingData[seq] = SvsPub{
+		entry.PendingPubs[seq] = SvsPub{
 			Publisher: node,
 			Content:   status.Content(),
-			DataName:  name,
+			DataName:  status.Name(),
 			BootTime:  boot,
 			SeqNum:    seq,
 		}
 
-		// Collect all data to deliver
-		var deliver []SvsPub = nil
 		for {
 			// Check if the next seq is available
 			nextSeq := entry.Known + 1
-			pub, ok := entry.PendingData[nextSeq]
+			pub, ok := entry.PendingPubs[nextSeq]
 			if !ok {
 				break
 			}
 
-			// Even if we are no longer subscribed,
-			// it's okay to delete all the pending data.
-			delete(entry.PendingData, nextSeq)
-			deliver = append(deliver, pub)
-
-			// Only updating the local copy of the state
-			// The state will be updated only after finding some subs.
+			// Update known state
 			entry.Known = nextSeq
-		}
-
-		// Deliver the data with unlocked mutex
-		if len(deliver) > 0 {
-			// We got these subs when trying to deliver. It doesn't matter
-			// if they were unsubscribed after this function exits. The application
-			// needs to handle the callbacks correctly.
-			subs := slices.Collect(s.nodePs.Subs(node))
-			if len(subs) == 0 {
-				return // no longer subscribed
-			}
-
-			// we WILL deliver it, update known state
+			delete(entry.PendingPubs, nextSeq)
 			s.state.Set(hash, boot, entry)
-			for _, pub := range deliver {
-				s.outpipe <- svsPubOut{
-					hash: hash,
-					pub:  pub,
-					subs: subs,
-				}
-			}
+
+			// Deliver the data to application
+			pub.subcribers = subscribers // use most current list
+			s.queuePub(pub)
 		}
 	})
 }
@@ -261,33 +195,42 @@ func (s *SvsALO) snapRecvCallback(callback snapRecvCallback) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	// Get the snapshot under the lock, and let the strategy
-	// mutate the state safely.
-	snapPub, err := callback(s.state)
-
-	// Trigger fetch for all affected publishers even if
-	// the callback has failed
+	// Trigger fetch for all publishers even if the callback fails
 	defer func() {
 		for name := range s.state.Iter() {
-			if snapPub.Publisher.IsPrefix(name) {
-				s.consumeCheck(name, name.TlvStr())
-			}
+			s.consumeCheck(name)
 		}
 	}()
 
+	// Get the snapshot under the lock, and let the strategy
+	// mutate the state safely.
+	pub, err := callback(s.state)
 	if err != nil {
-		s.errpipe <- &ErrSync{
-			name: snapPub.Publisher,
-			err:  fmt.Errorf("%w: %w", ErrSnapshot, err),
-		}
+		s.queueError(&ErrSync{pub.Publisher, fmt.Errorf("%w: %w", ErrSnapshot, err)})
 		return
 	}
 
-	// Update delivered vector after the snapshot is delivered
-	// (this is the reason it needs to go out on the outpipe)
-	s.outpipe <- svsPubOut{
-		pub:       snapPub,
-		subs:      slices.Collect(s.nodePs.Subs(snapPub.Publisher)), // suspicious
-		snapstate: s.state.Encode(func(state svsDataState) uint64 { return state.Known }),
+	// Send the snapshot to the application
+	s.queuePub(pub)
+}
+
+// queuePub queues a publication to the application.
+func (s *SvsALO) queuePub(pub SvsPub) {
+	if pub.subcribers == nil {
+		pub.subcribers = slices.Collect(s.nodePs.Subs(pub.Publisher))
+	}
+
+	pub.State = s.state.Encode(func(state svsDataState) uint64 {
+		return state.Known
+	})
+
+	s.outpipe <- pub
+}
+
+// queueError queues an error to the application.
+func (s *SvsALO) queueError(err error) {
+	select {
+	case s.errpipe <- err:
+	default:
 	}
 }

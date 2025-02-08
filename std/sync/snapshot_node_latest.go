@@ -45,19 +45,19 @@ func (s *SnapshotNodeLatest) Snapshot() Snapshot {
 	return s
 }
 
-func (s *SnapshotNodeLatest) initialize(comm snapPsState) {
+func (s *SnapshotNodeLatest) initialize(pss snapPsState) {
 	if s.Client == nil || s.SnapMe == nil || s.Threshold == 0 {
 		panic("SnapshotNodeLatest: not initialized")
 	}
-
-	s.pss = comm
+	s.pss = pss
 }
 
 // checkFetch determines if a snapshot should be fetched.
-func (s *SnapshotNodeLatest) checkFetch(args snapCheckArgs) {
+func (s *SnapshotNodeLatest) checkFetch(state SvMap[svsDataState], node enc.Name) {
 	// We only care about the latest boot.
 	// For all other states, make sure the fetch is skipped.
-	entries := args.state[args.hash]
+	entries := state[node.TlvStr()]
+
 	for i := range entries {
 		if i == len(entries)-1 { // if is last entry
 			boot, value := entries[i].Boot, entries[i].Value
@@ -66,9 +66,12 @@ func (s *SnapshotNodeLatest) checkFetch(args snapCheckArgs) {
 			// 1. Pending gap is more than 2*threshold
 			// 2. I have not fetched anything yet
 			// And, I'm not already blocked by a fetch
-			if value.SnapBlock == 0 && (value.Latest-value.Pending >= s.Threshold*2 || value.Pending == 0) {
+			//
+			// TODO: prevent fetching snapshot too fast - throttle this call
+			// This will prevent an infinite loop if the snapshot is old (?)
+			if value.SnapBlock == 0 && (value.Latest-value.Pending >= s.Threshold*2 || value.Known == 0) {
 				entries[i].Value.SnapBlock = 1 // released by fetch callback
-				s.fetch(args.node, boot)
+				s.fetch(node, boot)
 			}
 			return
 		}
@@ -83,17 +86,18 @@ func (s *SnapshotNodeLatest) checkFetch(args snapCheckArgs) {
 }
 
 // checkSelf is called when the state for this node is updated.
-func (s *SnapshotNodeLatest) checkSelf(delivered SvMap[uint64]) {
+func (s *SnapshotNodeLatest) checkSelf(state SvMap[svsDataState]) {
 	// This strategy only cares about the latest boot.
-	boots := delivered[s.pss.nodePrefix.TlvStr()]
-	entry := boots[len(boots)-1]
+	hash := s.pss.nodePrefix.TlvStr()
+	entries := state[hash]
+	entry := entries[len(entries)-1]
+	seqNo := entry.Value.Known
 
 	// Check if I should take a snapshot
 	// 1. I have reached the threshold
 	// 2. I have not taken any snapshot yet
-	if entry.Value-s.prevSeq >= s.Threshold || (s.prevSeq == 0 && entry.Value > 0) {
-		s.prevSeq = entry.Value
-		s.takeSnap(entry.Boot, entry.Value)
+	if seqNo-s.prevSeq >= s.Threshold || (s.prevSeq == 0 && seqNo > 0) {
+		s.takeSnap(entry.Boot, seqNo)
 	}
 }
 
@@ -125,8 +129,8 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 		hash := node.TlvStr()
 		pub.Publisher = node
 
+		// Unblock the state on error. This will trigger a re-fetch.
 		if err := cstate.Error(); err != nil {
-			// Unblock the state - will lead back to us
 			entry := state.Get(hash, boot)
 			if entry.SnapBlock == 1 {
 				entry.SnapBlock = 0
@@ -135,11 +139,13 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 			return pub, err
 		}
 
+		// Check if the snapshot is still current
 		entry := state.Get(hash, boot)
 		if entry.SnapBlock != 1 || entry.Known >= cstate.Version() {
-			return pub, fmt.Errorf("fetched invalid snapshot")
+			return pub, fmt.Errorf("fetched old snapshot - ignoring")
 		}
 
+		// Update the state vector
 		entry.SnapBlock = 0
 		entry.Known = cstate.Version()
 		entry.Pending = max(entry.Pending, entry.Known)
@@ -157,8 +163,8 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 }
 
 // takeSnap takes a snapshot of the application state.
-func (s *SnapshotNodeLatest) takeSnap(boot uint64, seq uint64) {
-	name := s.snapName(s.pss.nodePrefix, boot).WithVersion(seq)
+func (s *SnapshotNodeLatest) takeSnap(boot uint64, seqNo uint64) {
+	name := s.snapName(s.pss.nodePrefix, boot).WithVersion(seqNo)
 
 	// Request snapshot from application
 	wire, err := s.SnapMe(name)
@@ -176,4 +182,7 @@ func (s *SnapshotNodeLatest) takeSnap(boot uint64, seq uint64) {
 		log.Error(nil, "Failed to publish snapshot", "err", err, "name", name)
 		return
 	}
+
+	// Update the sequence number
+	s.prevSeq = seqNo
 }

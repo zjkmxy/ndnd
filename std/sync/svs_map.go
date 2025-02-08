@@ -74,6 +74,7 @@ func (m SvMap[V]) IsNewerThan(other SvMap[V], cmp func(V, V) bool) bool {
 // Encode the state vector map to a StateVector.
 // seq is the function to get the sequence number
 func (m SvMap[V]) Encode(seq func(V) uint64) *spec_svs.StateVector {
+	// TODO: optimize malloc
 	sv := &spec_svs.StateVector{
 		Entries: make([]*spec_svs.StateVectorEntry, 0, len(m)),
 	}
