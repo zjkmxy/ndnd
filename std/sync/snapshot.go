@@ -9,14 +9,16 @@ type Snapshot interface {
 	// initialize the strategy, and set up ps state.
 	initialize(snapPsState)
 
-	// checkFetch is called when the state vector is updated for a different node.
+	// onUpdate is called when the state vector is updated for a different node.
 	// The strategy can decide to block fetching for the snapshot.
 	// This function may also be called for this node name with a different boot time.
-	checkFetch(state SvMap[svsDataState], node enc.Name)
+	onUpdate(state SvMap[svsDataState], node enc.Name)
 
-	// checkSelf is called when the state for this node is updated (for this boot).
+	// onPublication is called when the state for this node is updated (for this boot).
 	// The strategy can decide to take a snapshot.
-	checkSelf(state SvMap[svsDataState])
+	// The name of the new publication is passed to the strategy, so old publications
+	// can be evicted if needed.
+	onPublication(state SvMap[svsDataState], pub enc.Name)
 }
 
 // snapPsState is the shared data struct between snapshot strategy
@@ -27,7 +29,7 @@ type snapPsState struct {
 	// groupPrefix is the name of the sync groupPrefix.
 	groupPrefix enc.Name
 
-	// onReceive is the callback for snapshot received from a remote party.
+	// onSnap is the callback for snapshot received from a remote party.
 	// The snapshot strategy should call the inner function when
 	// a snapshot is received.
 	//
@@ -50,7 +52,7 @@ type snapPsState struct {
 	// Even if the callback returns an error, the Publication field should
 	// be appropriately set. This will trigger a re-fetch for the producers.
 	//
-	onReceive func(callback snapRecvCallback)
+	onSnap func(callback snapRecvCallback)
 }
 
 // snapRecvCallback is the callback function passed to the onReceive callback.

@@ -59,7 +59,7 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 	})
 
 	// Notify the snapshot strategy
-	s.opts.Snapshot.checkSelf(s.state)
+	s.opts.Snapshot.onPublication(s.state, name)
 
 	// Update the state vector
 	if got := s.svs.IncrSeqNo(node); got != seq {
@@ -76,7 +76,7 @@ func (s *SvsALO) consumeCheck(node enc.Name) {
 	}
 
 	// Check with the snapshot strategy
-	s.opts.Snapshot.checkFetch(s.state, node)
+	s.opts.Snapshot.onUpdate(s.state, node)
 
 	hash := node.TlvStr()
 	totalPending := uint64(0)

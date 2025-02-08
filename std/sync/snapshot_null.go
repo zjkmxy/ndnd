@@ -13,8 +13,8 @@ func (s *SnapshotNull) Snapshot() Snapshot {
 func (s *SnapshotNull) initialize(snapPsState) {
 }
 
-func (s *SnapshotNull) checkFetch(SvMap[svsDataState], enc.Name) {
+func (s *SnapshotNull) onUpdate(SvMap[svsDataState], enc.Name) {
 }
 
-func (s *SnapshotNull) checkSelf(SvMap[svsDataState]) {
+func (s *SnapshotNull) onPublication(SvMap[svsDataState], enc.Name) {
 }

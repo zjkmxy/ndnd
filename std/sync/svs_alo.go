@@ -90,7 +90,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		s.opts.Snapshot.initialize(snapPsState{
 			nodePrefix:  s.opts.Name,
 			groupPrefix: s.opts.Svs.GroupPrefix,
-			onReceive:   s.snapRecvCallback,
+			onSnap:      s.snapRecvCallback,
 		})
 	}
 
