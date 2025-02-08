@@ -91,16 +91,14 @@ func (s *SnapshotNodeLatest) onUpdate(state SvMap[svsDataState], node enc.Name) 
 // onPublication is called when the state for this node is updated.
 func (s *SnapshotNodeLatest) onPublication(state SvMap[svsDataState], pub enc.Name) {
 	// This strategy only cares about the latest boot.
-	hash := s.pss.nodePrefix.TlvStr()
-	entries := state[hash]
-	entry := entries[len(entries)-1]
-	seqNo := entry.Value.Known
+	entry := state.Get(s.pss.nodePrefix.TlvStr(), s.pss.bootTime)
+	seqNo := entry.Known
 
 	// Check if I should take a snapshot
 	// 1. I have reached the threshold
 	// 2. I have not taken any snapshot yet
 	if seqNo-s.prevSeq >= s.Threshold || (s.prevSeq == 0 && seqNo > 0) {
-		s.takeSnap(entry.Boot, seqNo)
+		s.takeSnap(seqNo)
 	}
 }
 
@@ -130,8 +128,10 @@ func (s *SnapshotNodeLatest) fetchSnap(node enc.Name, boot uint64) {
 // handleSnap processes the fetched snapshot.
 func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.ConsumeState) {
 	s.pss.onSnap(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
-		hash := node.TlvStr()
 		pub.Publisher = node
+		pub.BootTime = boot
+
+		hash := node.TlvStr()
 		entry := state.Get(hash, boot)
 
 		// SnapBlock could change if a new boot is detected
@@ -171,8 +171,8 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 }
 
 // takeSnap takes a snapshot of the application state for the current node.
-func (s *SnapshotNodeLatest) takeSnap(boot uint64, seqNo uint64) {
-	basename := s.snapName(s.pss.nodePrefix, boot)
+func (s *SnapshotNodeLatest) takeSnap(seqNo uint64) {
+	basename := s.snapName(s.pss.nodePrefix, s.pss.bootTime)
 	name := basename.WithVersion(seqNo)
 
 	// Request snapshot from application
@@ -209,12 +209,12 @@ func (s *SnapshotNodeLatest) takeSnap(boot uint64, seqNo uint64) {
 	}
 
 	// Evict covered publications from seqNo-4*threshold to seqNo-3*threshold
-	pubBaseName := s.pss.nodePrefix.
+	pubBasename := s.pss.nodePrefix.
 		Append(s.pss.groupPrefix...).
-		Append(enc.NewTimestampComponent(boot))
+		Append(enc.NewTimestampComponent(s.pss.bootTime))
 	if seqNo > 4*s.Threshold {
 		for i := seqNo - 4*s.Threshold; i < seqNo-3*s.Threshold; i++ {
-			pubName := pubBaseName.
+			pubName := pubBasename.
 				Append(enc.NewSequenceNumComponent(i)).
 				WithVersion(enc.VersionImmutable)
 			if err := s.Client.Remove(pubName); err != nil {

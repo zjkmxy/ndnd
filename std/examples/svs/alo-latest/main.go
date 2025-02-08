@@ -14,12 +14,18 @@ import (
 )
 
 func main() {
+	// This example shows how to use the SVS ALO with the SnapshotNodeLatest.
+	//
+	// The SnapshotNodeLatest strategy will only deliver the latest snapshot
+	// and all publications after the snapshot. This strategy is useful when
+	// the application can take a snapshot of its state and send it to other
+	// nodes, so that the publication history can be pruned
+	//
 	// Before running this example, make sure the strategy is correctly setup
 	// to multicast for the /ndn/svs prefix. For example, using the following:
 	//
 	//   ndnd fw strategy-set prefix=/ndn/svs strategy=/localhost/nfd/strategy/multicast
 	//
-
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <name>", os.Args[0])
 		os.Exit(1)
@@ -144,15 +150,15 @@ func main() {
 	svsalo.SetOnError(func(err error) {
 		errSync := &ndn_sync.ErrSync{}
 		if errors.As(err, &errSync) {
-			hash := errSync.Name().Hash()
+			hash := errSync.Publisher.Hash()
 			if _, ok := subs[hash]; !ok {
 				return // not subscribed
 			}
 
 			subs[hash]++
 			if subs[hash] >= 3 {
-				fmt.Fprintf(os.Stderr, "*** Unsubscribing from %s (too many errors)\n", errSync.Name())
-				svsalo.UnsubscribePublisher(errSync.Name())
+				fmt.Fprintf(os.Stderr, "*** Unsubscribing from %s (too many errors)\n", errSync.Publisher)
+				svsalo.UnsubscribePublisher(errSync.Publisher)
 				delete(subs, hash)
 				return
 			}

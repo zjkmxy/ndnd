@@ -10,18 +10,15 @@ import (
 var ErrSnapshot = errors.New("snapshot error")
 
 type ErrSync struct {
-	name enc.Name
-	err  error
-}
-
-func (e *ErrSync) Name() enc.Name {
-	return e.name
+	Publisher enc.Name
+	BootTime  uint64
+	Err       error
 }
 
 func (e *ErrSync) Error() string {
-	return fmt.Sprintf("sync error [%s]: %v", e.name, e.err)
+	return fmt.Sprintf("sync error [%s][%d]: %v", e.Publisher, e.BootTime, e.Err)
 }
 
 func (e *ErrSync) Unwrap() error {
-	return e.err
+	return e.Err
 }

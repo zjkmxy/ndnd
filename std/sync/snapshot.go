@@ -28,6 +28,8 @@ type snapPsState struct {
 	nodePrefix enc.Name
 	// groupPrefix is the name of the sync groupPrefix.
 	groupPrefix enc.Name
+	// bootTime is the boot time of the node.
+	bootTime uint64
 
 	// onSnap is the callback for snapshot received from a remote party.
 	// The snapshot strategy should call the inner function when

@@ -154,29 +154,6 @@ func (c *Client) Remove(name enc.Name) error {
 	return nil
 }
 
-// LatestLocal returns the latest version name of an object in the store
-func (c *Client) LatestLocal(name enc.Name) (enc.Name, error) {
-	raw, err := c.store.Get(name.Append(enc.NewKeywordComponent(rdr.MetadataKeyword)), true)
-	if err != nil {
-		return nil, err
-	}
-	if raw == nil {
-		return nil, nil
-	}
-
-	data, _, err := spec.Spec{}.ReadData(enc.NewBufferView(raw))
-	if err != nil {
-		return nil, err
-	}
-
-	version := data.Name().At(-2)
-	if !version.IsVersion() {
-		return nil, fmt.Errorf("invalid metadata for %s", name)
-	}
-
-	return name.Append(version), nil
-}
-
 // onInterest looks up the store for the requested data
 func (c *Client) onInterest(args ndn.InterestHandlerArgs) {
 	// TODO: consult security if we can send this

@@ -83,6 +83,14 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		s.opts.MaxPipelineSize = 10
 	}
 
+	// Initialize the SVS instance.
+	s.opts.Svs.OnUpdate = s.onSvsUpdate
+	s.svs = NewSvSync(s.opts.Svs)
+
+	// Get instance state
+	bootTime := s.svs.GetBootTime()
+	seqNo := s.svs.GetSeqNo(s.opts.Name)
+
 	// Use null snapshot strategy by default
 	if s.opts.Snapshot == nil {
 		s.opts.Snapshot = &SnapshotNull{}
@@ -90,21 +98,16 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		s.opts.Snapshot.initialize(snapPsState{
 			nodePrefix:  s.opts.Name,
 			groupPrefix: s.opts.Svs.GroupPrefix,
+			bootTime:    bootTime,
 			onSnap:      s.snapRecvCallback,
 		})
 	}
 
-	// Initialize the SVS instance.
-	s.opts.Svs.OnUpdate = s.onSvsUpdate
-	s.svs = NewSvSync(s.opts.Svs)
-
 	// Initialize the state vector with our own state.
-	boot := s.svs.GetBootTime()
-	seq := s.svs.GetSeqNo(s.opts.Name)
-	s.state.Set(s.opts.Name.TlvStr(), boot, svsDataState{
-		Known:   seq,
-		Latest:  seq,
-		Pending: seq,
+	s.state.Set(s.opts.Name.TlvStr(), bootTime, svsDataState{
+		Known:   seqNo,
+		Latest:  seqNo,
+		Pending: seqNo,
 	})
 
 	return s

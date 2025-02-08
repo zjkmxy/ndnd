@@ -144,7 +144,11 @@ func (s *SvsALO) consumeObject(node enc.Name, boot uint64, seq uint64) {
 		// Check for errors
 		if err := status.Error(); err != nil {
 			// Propagate the error to application
-			s.queueError(&ErrSync{node, err})
+			s.queueError(&ErrSync{
+				Publisher: node,
+				BootTime:  boot,
+				Err:       err,
+			})
 
 			// TODO: exponential backoff
 			time.AfterFunc(2*time.Second, func() {
@@ -206,7 +210,11 @@ func (s *SvsALO) snapRecvCallback(callback snapRecvCallback) {
 	// mutate the state safely.
 	pub, err := callback(s.state)
 	if err != nil {
-		s.queueError(&ErrSync{pub.Publisher, fmt.Errorf("%w: %w", ErrSnapshot, err)})
+		s.queueError(&ErrSync{
+			Publisher: pub.Publisher,
+			BootTime:  pub.BootTime,
+			Err:       fmt.Errorf("%w: %w", ErrSnapshot, err),
+		})
 		return
 	}
 
