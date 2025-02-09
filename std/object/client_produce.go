@@ -45,8 +45,11 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 	}
 
 	// use a transaction to ensure the entire object is written
-	store.Begin()
-	defer store.Commit()
+	tx, err := store.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
 
 	var seg uint64
 	for seg = 0; seg <= lastSeg; seg++ {
@@ -74,7 +77,7 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 			return nil, err
 		}
 
-		err = store.Put(name, version, data.Wire.Join())
+		err = tx.Put(name, version, data.Wire.Join())
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +104,7 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 			return nil, err
 		}
 
-		err = store.Put(name, version, data.Wire.Join())
+		err = tx.Put(name, version, data.Wire.Join())
 		if err != nil {
 			return nil, err
 		}
@@ -132,8 +135,14 @@ func (c *Client) Remove(name enc.Name) error {
 		return nil
 	}
 
+	tx, err := c.store.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Commit()
+
 	// Remove object data
-	err := c.store.Remove(name, true)
+	err = tx.Remove(name, true)
 	if err != nil {
 		return err
 	}
@@ -142,7 +151,7 @@ func (c *Client) Remove(name enc.Name) error {
 	// If there is no version, we removed this anyway in the previous step
 	if version := name.At(-1); version.IsVersion() {
 		metadata := name.Prefix(-1).Append(enc.NewKeywordComponent(rdr.MetadataKeyword), version)
-		err = c.store.Remove(metadata, true)
+		err = tx.Remove(metadata, true)
 		if err != nil {
 			return err
 		}

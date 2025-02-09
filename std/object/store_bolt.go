@@ -6,9 +6,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -23,9 +23,8 @@ var ErrBoltNoBucket = errors.New("no bucket in bolt")
 //	The key is the name of the object as a TLV encoded byte slice
 //	The value is the 8-byte version (big endian), followed by data wire
 type BoltStore struct {
-	db   *bolt.DB
-	tx   *bolt.Tx
-	wmut sync.Mutex
+	db *bolt.DB
+	tx *bolt.Tx
 }
 
 func NewBoltStore(path string) (*BoltStore, error) {
@@ -49,6 +48,10 @@ func (s *BoltStore) Close() error {
 }
 
 func (s *BoltStore) Get(name enc.Name, prefix bool) (wire []byte, err error) {
+	if s.tx != nil {
+		panic("Get() called within a write transaction")
+	}
+
 	key := s.nameKey(name)
 	err = s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(BoltBucket)
@@ -98,10 +101,6 @@ func (s *BoltStore) Put(name enc.Name, version uint64, wire []byte) error {
 	binary.BigEndian.PutUint64(buf, version)
 	copy(buf[8:], wire)
 
-	// get lock after encoding data
-	s.wmut.Lock()
-	defer s.wmut.Unlock()
-
 	// insert data into bolt
 	update := func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(BoltBucket)
@@ -121,7 +120,7 @@ func (s *BoltStore) Put(name enc.Name, version uint64, wire []byte) error {
 
 func (s *BoltStore) Remove(name enc.Name, prefix bool) error {
 	key := s.nameKey(name)
-	return s.db.Update(func(tx *bolt.Tx) (err error) {
+	update := func(tx *bolt.Tx) (err error) {
 		bucket := tx.Bucket(BoltBucket)
 		if bucket == nil {
 			return ErrBoltNoBucket
@@ -138,44 +137,42 @@ func (s *BoltStore) Remove(name enc.Name, prefix bool) error {
 		} else {
 			return bucket.Delete(key)
 		}
-	})
+	}
+
+	if s.tx != nil {
+		return update(s.tx)
+	} else {
+		return s.db.Update(update)
+	}
 }
 
-func (s *BoltStore) Begin() error {
+func (s *BoltStore) Begin() (ndn.Store, error) {
+	if s.tx != nil {
+		panic("Begin() called within a write transaction")
+	}
+
 	// bolt has only one concurrent write transaction
 	// so this will block if there is already a write transaction
 	tx, err := s.db.Begin(true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	s.wmut.Lock()
-	defer s.wmut.Unlock()
-
-	if s.tx != nil {
-		panic("bolt: write transaction already in progress")
-	}
-	s.tx = tx
-
-	return nil
+	return &BoltStore{db: s.db, tx: tx}, nil
 }
 
 func (s *BoltStore) Commit() error {
-	s.wmut.Lock()
-	defer s.wmut.Unlock()
-
-	err := s.tx.Commit()
-	s.tx = nil
-	return err
+	if s.tx == nil {
+		panic("Commit() called without a write transaction")
+	}
+	return s.tx.Commit()
 }
 
 func (s *BoltStore) Rollback() error {
-	s.wmut.Lock()
-	defer s.wmut.Unlock()
-
-	err := s.tx.Rollback()
-	s.tx = nil
-	return err
+	if s.tx == nil {
+		panic("Rollback() called without a write transaction")
+	}
+	return s.tx.Rollback()
 }
 
 func (s *BoltStore) nameKey(name enc.Name) []byte {

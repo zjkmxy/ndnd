@@ -133,20 +133,20 @@ func testStoreTxn(t *testing.T, store ndn.Store) {
 
 	// put data1 and data2 under transaction
 	// verify that neither can be seen
-	err := store.Begin()
+	tx, err := store.Begin()
 	require.NoError(t, err)
-	require.NoError(t, store.Put(txname1, 1, wire1))
+	require.NoError(t, tx.Put(txname1, 1, wire1))
 	data, err := store.Get(txname1, false)
 	require.NoError(t, err)
 	require.Equal(t, []byte(nil), data)
 
-	require.NoError(t, store.Put(txname2, 5, wire2))
+	require.NoError(t, tx.Put(txname2, 5, wire2))
 	data, err = store.Get(txname2, false)
 	require.NoError(t, err)
 	require.Equal(t, []byte(nil), data)
 
 	// commit transaction
-	require.NoError(t, store.Commit())
+	require.NoError(t, tx.Commit())
 
 	// verify that both data can be seen
 	data, err = store.Get(txname1, false)
@@ -157,13 +157,13 @@ func testStoreTxn(t *testing.T, store ndn.Store) {
 	require.Equal(t, wire2, data)
 
 	// add data3 under transaction and rollback
-	err = store.Begin()
+	tx, err = store.Begin()
 	require.NoError(t, err)
-	require.NoError(t, store.Put(txname3, 9, wire3))
+	require.NoError(t, tx.Put(txname3, 9, wire3))
 	data, err = store.Get(txname3, false)
 	require.NoError(t, err)
 	require.Equal(t, []byte(nil), data)
-	store.Rollback()
+	tx.Rollback()
 	data, err = store.Get(txname3, false)
 	require.NoError(t, err)
 	require.Equal(t, []byte(nil), data)

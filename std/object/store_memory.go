@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn"
 )
 
 type MemoryStore struct {
@@ -69,10 +70,10 @@ func (s *MemoryStore) Remove(name enc.Name, prefix bool) error {
 	return nil
 }
 
-func (s *MemoryStore) Begin() error {
+func (s *MemoryStore) Begin() (ndn.Store, error) {
 	s.txMutex.Lock()
 	s.tx = &memoryStoreNode{}
-	return nil
+	return s, nil
 }
 
 func (s *MemoryStore) Commit() error {

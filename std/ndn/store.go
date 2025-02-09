@@ -17,7 +17,7 @@ type Store interface {
 	// begin a write transaction (for put only)
 	// we support these primarily for performance rather than correctness
 	// do not rely on atomicity of transactions as far as possible
-	Begin() error
+	Begin() (Store, error)
 	// commit a write transaction
 	Commit() error
 	// rollback a write transaction
