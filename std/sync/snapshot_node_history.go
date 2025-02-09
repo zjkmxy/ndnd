@@ -284,8 +284,6 @@ func (s *SnapshotNodeHistory) takeSnap(seqNo uint64) {
 			log.Warn(s, "Failed to evict old index", "err", err, "name", prevIndexName)
 		}
 	}
-
-	log.Info(s, "Snapshot", "name", snapName, "seq", seqNo)
 }
 
 func (s *SnapshotNodeHistory) getIndex() (enc.Name, *svs_ps.HistoryIndex, error) {
