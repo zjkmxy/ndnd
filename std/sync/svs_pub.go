@@ -19,8 +19,8 @@ type SvsPub struct {
 	SeqNum uint64
 	// IsSnapshot is true if this is a snapshot.
 	IsSnapshot bool
-	// State is the state vector after this publication is applied.
-	State *spec_svs.StateVector
+	// State is the state after this publication is applied.
+	State *spec_svs.InstanceState
 
 	// subcribers is the list of subscribers.
 	subcribers []func(SvsPub)

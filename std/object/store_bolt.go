@@ -49,7 +49,7 @@ func (s *BoltStore) Close() error {
 }
 
 func (s *BoltStore) Get(name enc.Name, prefix bool) (wire []byte, err error) {
-	key := s.encodeName(name)
+	key := s.nameKey(name)
 	err = s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(BoltBucket)
 		if bucket == nil {
@@ -92,11 +92,11 @@ func (s *BoltStore) Get(name enc.Name, prefix bool) (wire []byte, err error) {
 }
 
 func (s *BoltStore) Put(name enc.Name, version uint64, wire []byte) error {
-	key := s.encodeName(name)
+	key := s.nameKey(name)
 
-	buf := make([]byte, 8, 8+len(wire))
+	buf := make([]byte, 8+len(wire))
 	binary.BigEndian.PutUint64(buf, version)
-	buf = append(buf, wire...)
+	copy(buf[8:], wire)
 
 	// get lock after encoding data
 	s.wmut.Lock()
@@ -120,7 +120,7 @@ func (s *BoltStore) Put(name enc.Name, version uint64, wire []byte) error {
 }
 
 func (s *BoltStore) Remove(name enc.Name, prefix bool) error {
-	key := s.encodeName(name)
+	key := s.nameKey(name)
 	return s.db.Update(func(tx *bolt.Tx) (err error) {
 		bucket := tx.Bucket(BoltBucket)
 		if bucket == nil {
@@ -178,11 +178,6 @@ func (s *BoltStore) Rollback() error {
 	return err
 }
 
-func (s *BoltStore) encodeName(name enc.Name) []byte {
-	buf := make([]byte, name.EncodingLength())
-	size := 0
-	for _, comp := range name {
-		size += comp.EncodeInto(buf[size:])
-	}
-	return buf[:size]
+func (s *BoltStore) nameKey(name enc.Name) []byte {
+	return name.BytesInner()
 }

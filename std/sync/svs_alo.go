@@ -6,6 +6,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 )
 
 // SvsALO is a Sync Transport with At Least One delivery semantics.
@@ -47,6 +48,8 @@ type SvsAloOpts struct {
 	Svs SvSyncOpts
 	// Snapshot is the snapshot strategy.
 	Snapshot Snapshot
+	// InitialState is the initial state of the instance.
+	InitialState *spec_svs.InstanceState
 
 	// MaxPipelineSize is the number of objects to fetch
 	// concurrently for a single publisher (default 10)
@@ -83,14 +86,40 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		s.opts.MaxPipelineSize = 10
 	}
 
-	// Initialize the SVS instance.
+	// Read initial state if provided.
 	s.opts.Svs.OnUpdate = s.onSvsUpdate
+	if s.opts.InitialState != nil {
+		if !s.opts.InitialState.Name.Equal(s.opts.Name) {
+			panic("Name mismatch in provided initial state")
+		}
+		s.opts.Svs.BootTime = s.opts.InitialState.BootstrapTime
+		s.opts.Svs.InitialState = s.opts.InitialState.StateVector
+
+		for _, entry := range s.opts.InitialState.StateVector.Entries {
+			hash := entry.Name.TlvStr()
+			for _, seqEntry := range entry.SeqNoEntries {
+				s.state.Set(hash, seqEntry.BootstrapTime, svsDataState{
+					Known:   seqEntry.SeqNo,
+					Latest:  seqEntry.SeqNo,
+					Pending: seqEntry.SeqNo,
+				})
+			}
+		}
+	}
+
+	// Initialize the underlying SVS instance
 	s.svs = NewSvSync(s.opts.Svs)
 
-	// Get instance state
+	// Initialize the state vector with our own state.
+	// If initial state is provided, this should be equal.
 	seqNo := s.svs.GetSeqNo(s.opts.Name)
+	s.state.Set(s.opts.Name.TlvStr(), s.BootTime(), svsDataState{
+		Known:   seqNo,
+		Latest:  seqNo,
+		Pending: seqNo,
+	})
 
-	// Use null snapshot strategy by default
+	// Configure the snapshot strategy.
 	if s.opts.Snapshot == nil {
 		s.opts.Snapshot = &SnapshotNull{}
 	} else {
@@ -101,13 +130,6 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 			onSnap:      s.snapRecvCallback,
 		})
 	}
-
-	// Initialize the state vector with our own state.
-	s.state.Set(s.opts.Name.TlvStr(), s.BootTime(), svsDataState{
-		Known:   seqNo,
-		Latest:  seqNo,
-		Pending: seqNo,
-	})
 
 	return s
 }
@@ -170,7 +192,7 @@ func (s *SvsALO) SetOnPublisher(callback func(enc.Name)) {
 }
 
 // Publish sends a message to the group
-func (s *SvsALO) Publish(content enc.Wire) (enc.Name, error) {
+func (s *SvsALO) Publish(content enc.Wire) (enc.Name, *spec_svs.InstanceState, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

@@ -28,3 +28,13 @@ type SeqNoEntry struct {
 	//+field:natural
 	SeqNo uint64 `tlv:"0xd6"`
 }
+
+// This actually belongs in SVS-PS but codegen doesn't support cross-package
+type InstanceState struct {
+	//+field:name
+	Name enc.Name `tlv:"0x07"`
+	//+field:natural
+	BootstrapTime uint64 `tlv:"0xd4"`
+	//+field:struct:StateVector
+	StateVector *StateVector `tlv:"0xc9"`
+}

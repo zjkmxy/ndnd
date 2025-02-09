@@ -180,7 +180,7 @@ func main() {
 	fmt.Fprintln(os.Stderr)
 
 	// Publish an initial empty message to announce our presence
-	_, err = svsalo.Publish(enc.Wire{})
+	_, _, err = svsalo.Publish(enc.Wire{})
 	if err != nil {
 		log.Error(nil, "Unable to publish message", "err", err)
 	}
@@ -203,7 +203,7 @@ func main() {
 		// Publish chat message
 		msgCount++
 		msgSize += len(line)
-		_, err = svsalo.Publish(enc.Wire{line})
+		_, _, err = svsalo.Publish(enc.Wire{line})
 		if err != nil {
 			log.Error(nil, "Unable to publish message", "err", err)
 		}

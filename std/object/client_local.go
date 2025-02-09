@@ -44,7 +44,7 @@ func (c *Client) GetLocal(name enc.Name) (enc.Wire, error) {
 	for i := uint64(0); i <= lastSeg; i++ {
 		name[len(name)-1] = enc.NewSegmentComponent(i)
 
-		raw, err := c.store.Get(name, true)
+		raw, err := c.store.Get(name, false)
 		if err != nil {
 			return nil, err
 		}

@@ -39,6 +39,7 @@ type SvSyncOpts struct {
 	GroupPrefix enc.Name
 	OnUpdate    func(SvSyncUpdate)
 
+	InitialState      *spec_svs.StateVector
 	BootTime          uint64
 	PeriodicTimeout   time.Duration
 	SuppressionPeriod time.Duration
@@ -64,6 +65,17 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 		panic("SvSync: OnUpdate is required")
 	}
 
+	// Use initial state if provided
+	initialState := NewSvMap[uint64](0)
+	if opts.InitialState != nil {
+		for _, node := range opts.InitialState.Entries {
+			hash := node.Name.TlvStr()
+			for _, entry := range node.SeqNoEntries {
+				initialState.Set(hash, entry.BootstrapTime, entry.SeqNo)
+			}
+		}
+	}
+
 	// Set default options
 	if opts.BootTime == 0 {
 		opts.BootTime = uint64(time.Now().Unix())
@@ -86,7 +98,7 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 		ticker:  time.NewTicker(1 * time.Second),
 
 		mutex: sync.Mutex{},
-		state: NewSvMap[uint64](0),
+		state: initialState,
 		mtime: make(map[string]time.Time),
 
 		suppress: false,

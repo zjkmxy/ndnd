@@ -6,6 +6,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
+	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 )
 
 type svsDataState struct {
@@ -33,7 +34,7 @@ func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
 		WithVersion(enc.VersionImmutable)
 }
 
-func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
+func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, *spec_svs.InstanceState, error) {
 	// This instance owns the underlying SVS instance.
 	// So we can be sure that the sequence number does not
 	// change while we hold the lock on this instance.
@@ -46,7 +47,7 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 		Content: content,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// We don't get notified of changes to our own state.
@@ -65,7 +66,7 @@ func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, error) {
 		panic("[BUG] sequence number mismatch - who changed it?")
 	}
 
-	return name, nil
+	return name, s.instanceState(), nil
 }
 
 // consumeCheck looks for new objects to fetch and queues them.
@@ -223,11 +224,24 @@ func (s *SvsALO) queuePub(pub SvsPub) {
 		pub.subcribers = slices.Collect(s.nodePs.Subs(pub.Publisher))
 	}
 
-	pub.State = s.state.Encode(func(state svsDataState) uint64 {
+	if pub.State == nil {
+		pub.State = s.instanceState()
+	}
+
+	s.outpipe <- pub
+}
+
+// instanceState returns the current state of the instance.
+func (s *SvsALO) instanceState() *spec_svs.InstanceState {
+	stateVector := s.state.Encode(func(state svsDataState) uint64 {
 		return state.Known
 	})
 
-	s.outpipe <- pub
+	return &spec_svs.InstanceState{
+		Name:          s.opts.Name,
+		BootstrapTime: s.BootTime(),
+		StateVector:   stateVector,
+	}
 }
 
 // queueError queues an error to the application.

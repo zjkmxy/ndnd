@@ -132,9 +132,6 @@ func (c *Client) Remove(name enc.Name) error {
 		return nil
 	}
 
-	c.store.Begin()
-	defer c.store.Commit()
-
 	// Remove object data
 	err := c.store.Remove(name, true)
 	if err != nil {

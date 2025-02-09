@@ -218,7 +218,7 @@ func (s *SnapshotNodeHistory) takeSnap(seqNo uint64) {
 	if len(index.SeqNos) > 0 {
 		s.prevSeq = index.SeqNos[len(index.SeqNos)-1]
 	}
-	if s.prevSeq >= seqNo-s.Threshold+1 {
+	if s.prevSeq > 0 && seqNo < s.prevSeq+s.Threshold-1 {
 		log.Info(s, "Previous snapshot is still current", "prev", s.prevSeq, "seq", seqNo)
 		return
 	}
