@@ -30,3 +30,44 @@ func (c *Client) LatestLocal(name enc.Name) (enc.Name, error) {
 
 	return name.Append(version), nil
 }
+
+// GetLocal returns the object data from the store
+func (c *Client) GetLocal(name enc.Name) (enc.Wire, error) {
+	if !name.At(-1).IsVersion() {
+		return nil, fmt.Errorf("GetLocal called without version (use LatestLocal): %s", name)
+	}
+
+	var wire enc.Wire
+	name = name.Append(enc.NewSegmentComponent(0))
+	lastSeg := uint64(0)
+
+	for i := uint64(0); i <= lastSeg; i++ {
+		name[len(name)-1] = enc.NewSegmentComponent(i)
+
+		raw, err := c.store.Get(name, true)
+		if err != nil {
+			return nil, err
+		}
+		if raw == nil {
+			return nil, fmt.Errorf("missing segment %d for %s", i, name)
+		}
+
+		data, _, err := spec.Spec{}.ReadData(enc.NewBufferView(raw))
+		if err != nil {
+			return nil, err
+		}
+
+		if i == 0 {
+			if fbId, ok := data.FinalBlockID().Get(); !ok {
+				return nil, fmt.Errorf("missing final block id for %s", name)
+			} else {
+				lastSeg = fbId.NumberVal()
+				wire = make(enc.Wire, 0, (lastSeg + 1))
+			}
+		}
+
+		wire = append(wire, data.Content()...)
+	}
+
+	return wire, nil
+}

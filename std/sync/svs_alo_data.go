@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"fmt"
 	"slices"
 	"time"
 
@@ -28,7 +27,7 @@ type svsDataState struct {
 
 func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
 	return node.
-		Append(s.opts.Svs.GroupPrefix...).
+		Append(s.SyncPrefix()...).
 		Append(enc.NewTimestampComponent(boot)).
 		Append(enc.NewSequenceNumComponent(seq)).
 		WithVersion(enc.VersionImmutable)
@@ -210,11 +209,7 @@ func (s *SvsALO) snapRecvCallback(callback snapRecvCallback) {
 	// mutate the state safely.
 	pub, err := callback(s.state)
 	if err != nil {
-		s.queueError(&ErrSync{
-			Publisher: pub.Publisher,
-			BootTime:  pub.BootTime,
-			Err:       fmt.Errorf("%w: %w", ErrSnapshot, err),
-		})
+		s.queueError(err)
 		return
 	}
 

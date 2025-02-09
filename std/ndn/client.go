@@ -26,8 +26,6 @@ type Client interface {
 	Produce(args ProduceArgs) (enc.Name, error)
 	// Remove removes an object from the client's store by name.
 	Remove(name enc.Name) error
-	// LatestLocal returns the latest version name of an object in the store.
-	LatestLocal(name enc.Name) (enc.Name, error)
 
 	// Consume fetches an object with a given name.
 	// By default, Consume will attemt to discover the latest version of the object.
@@ -36,6 +34,11 @@ type Client interface {
 	// ConsumeExt is a more advanced consume API that allows for
 	// more control over the fetching process.
 	ConsumeExt(args ConsumeExtArgs)
+
+	// LatestLocal returns the latest version name of an object in the store.
+	LatestLocal(name enc.Name) (enc.Name, error)
+	// GetLocal returns the object data from the store.
+	GetLocal(name enc.Name) (enc.Wire, error)
 
 	// ExpressR sends a single interest with reliability.
 	// Since this is a low-level API, the result is NOT validated.

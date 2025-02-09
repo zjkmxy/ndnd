@@ -128,9 +128,6 @@ func (s *SnapshotNodeLatest) fetchSnap(node enc.Name, boot uint64) {
 // handleSnap processes the fetched snapshot.
 func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.ConsumeState) {
 	s.pss.onSnap(func(state SvMap[svsDataState]) (pub SvsPub, err error) {
-		pub.Publisher = node
-		pub.BootTime = boot
-
 		hash := node.TlvStr()
 		entry := state.Get(hash, boot)
 
@@ -150,7 +147,11 @@ func (s *SnapshotNodeLatest) handleSnap(node enc.Name, boot uint64, cstate ndn.C
 		if err != nil {
 			entry.SnapBlock = 0
 			state.Set(hash, boot, entry)
-			return pub, err
+			return pub, &ErrSync{
+				Publisher: node,
+				BootTime:  boot,
+				Err:       fmt.Errorf("%w: %w", ErrSnapshot, err),
+			}
 		}
 
 		// Update the state vector

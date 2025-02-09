@@ -88,7 +88,6 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	s.svs = NewSvSync(s.opts.Svs)
 
 	// Get instance state
-	bootTime := s.svs.GetBootTime()
 	seqNo := s.svs.GetSeqNo(s.opts.Name)
 
 	// Use null snapshot strategy by default
@@ -97,14 +96,14 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	} else {
 		s.opts.Snapshot.initialize(snapPsState{
 			nodePrefix:  s.opts.Name,
-			groupPrefix: s.opts.Svs.GroupPrefix,
-			bootTime:    bootTime,
+			groupPrefix: s.SyncPrefix(),
+			bootTime:    s.BootTime(),
 			onSnap:      s.snapRecvCallback,
 		})
 	}
 
 	// Initialize the state vector with our own state.
-	s.state.Set(s.opts.Name.TlvStr(), bootTime, svsDataState{
+	s.state.Set(s.opts.Name.TlvStr(), s.BootTime(), svsDataState{
 		Known:   seqNo,
 		Latest:  seqNo,
 		Pending: seqNo,
@@ -116,6 +115,23 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 // String is the log identifier.
 func (s *SvsALO) String() string {
 	return "svs-alo"
+}
+
+// BootTime returns the boot time of the instance.
+func (s *SvsALO) BootTime() uint64 {
+	return s.svs.GetBootTime()
+}
+
+// SyncPrefix is the sync route prefix for this instance.
+func (s *SvsALO) SyncPrefix() enc.Name {
+	return s.opts.Svs.GroupPrefix
+}
+
+// DataPrefix is the data route prefix for this instance.
+func (s *SvsALO) DataPrefix() enc.Name {
+	return s.opts.Name.
+		Append(s.SyncPrefix()...).
+		Append(enc.NewTimestampComponent(s.BootTime()))
 }
 
 // Start starts the SvsALO instance.
