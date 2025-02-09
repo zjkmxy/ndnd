@@ -361,7 +361,7 @@ func (dv *Router) createPrefixTable() {
 
 	// Local prefix table
 	dv.pfx = table.NewPrefixTable(dv.config, func(w enc.Wire) {
-		if _, err := dv.pfxSvs.Publish(w); err != nil {
+		if _, _, err := dv.pfxSvs.Publish(w); err != nil {
 			log.Error(dv, "Failed to publish prefix table update", "err", err)
 		}
 	})
