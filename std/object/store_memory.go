@@ -108,7 +108,7 @@ func (n *memoryStoreNode) find(name enc.Name) *memoryStoreNode {
 		return nil
 	}
 
-	key := name[0].String()
+	key := name[0].TlvStr()
 	if child := n.children[key]; child != nil {
 		return child.find(name[1:])
 	} else {
@@ -138,7 +138,7 @@ func (n *memoryStoreNode) insert(name enc.Name, version uint64, wire []byte) {
 		n.children = make(map[string]*memoryStoreNode)
 	}
 
-	key := name[0].String()
+	key := name[0].TlvStr()
 	if child := n.children[key]; child != nil {
 		child.insert(name[1:], version, wire)
 	} else {
@@ -163,7 +163,7 @@ func (n *memoryStoreNode) remove(name enc.Name, prefix bool) bool {
 		return false
 	}
 
-	key := name[0].String()
+	key := name[0].TlvStr()
 	if child := n.children[key]; child != nil {
 		prune := child.remove(name[1:], prefix)
 		if prune {
