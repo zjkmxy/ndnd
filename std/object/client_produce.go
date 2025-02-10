@@ -83,7 +83,7 @@ func Produce(args ndn.ProduceArgs, store ndn.Store, signer ndn.Signer) (enc.Name
 		}
 
 		// force run GC every ~80MB to prevent excessive memory usage
-		if seg%10000 == 0 {
+		if seg > 0 && seg%10000 == 0 {
 			runtime.GC() // slow
 		}
 	}
