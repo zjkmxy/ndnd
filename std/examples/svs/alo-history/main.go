@@ -57,11 +57,17 @@ func main() {
 
 	// History snapshot works best with persistent storage
 	ident := strings.ReplaceAll(name.String(), "/", "-")
-	store, err = object.NewBoltStore(fmt.Sprintf("chat%s.db", ident))
+	bstore, err := object.NewBoltStore(fmt.Sprintf("chat%s.db", ident))
 	if err != nil {
 		log.Error(nil, "Unable to create object store", "err", err)
 		return
 	}
+	defer bstore.Close()
+
+	// Use caching layer to reduce the number of writes to the underlying store
+	cstore := object.NewCachingStore(bstore)
+	defer cstore.Close()
+	store = cstore
 
 	// Create object client
 	client := object.NewClient(app, store, nil)
