@@ -261,7 +261,7 @@ func (Spec) MakeData(name enc.Name, config *ndn.DataConfig, content enc.Wire, si
 		if config.SigNotBefore.IsSet() && config.SigNotAfter.IsSet() {
 			data.SignatureInfo.ValidityPeriod = &ValidityPeriod{
 				NotBefore: config.SigNotBefore.Unwrap().UTC().Format(TimeFmt),
-				NotAfter:  config.SigNotAfter.Unwrap().Format(TimeFmt),
+				NotAfter:  config.SigNotAfter.Unwrap().UTC().Format(TimeFmt),
 			}
 		}
 	}
