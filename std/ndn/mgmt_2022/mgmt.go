@@ -50,6 +50,10 @@ func (mgmt *MgmtConfig) MakeCmdDict(module string, cmd string, args map[string]a
 	return mgmt.MakeCmd(module, cmd, vv, config)
 }
 
+func (mgmt *MgmtConfig) SetSigner(signer ndn.Signer) {
+	mgmt.signer = signer
+}
+
 func NewConfig(local bool, signer ndn.Signer, spec ndn.Spec) *MgmtConfig {
 	if signer == nil || spec == nil {
 		return nil

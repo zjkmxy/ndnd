@@ -15,31 +15,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func executeTest(t *testing.T, main func(*face.DummyFace, *basic_engine.Engine, *basic_engine.DummyTimer, ndn.Signer)) {
+func executeTest(t *testing.T, main func(*face.DummyFace, *basic_engine.Engine, *basic_engine.DummyTimer)) {
 	tu.SetT(t)
-
-	passAll := func(enc.Name, enc.Wire, ndn.Signature) bool {
-		return true
-	}
 
 	face := face.NewDummyFace()
 	timer := basic_engine.NewDummyTimer()
-	signer := sig.NewSha256Signer()
-	engine := basic_engine.NewEngine(face, timer, signer, passAll)
+	engine := basic_engine.NewEngine(face, timer)
 	require.NoError(t, engine.Start())
 
-	main(face, engine, timer, signer)
+	main(face, engine, timer)
 
 	require.NoError(t, engine.Stop())
 }
 
 func TestEngineStart(t *testing.T) {
-	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer) {
 	})
 }
 
 func TestConsumerBasic(t *testing.T) {
-	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -78,7 +73,7 @@ func TestConsumerBasic(t *testing.T) {
 // TODO: TestInterestCancel
 
 func TestInterestNack(t *testing.T) {
-	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -113,7 +108,7 @@ func TestInterestNack(t *testing.T) {
 }
 
 func TestInterestTimeout(t *testing.T) {
-	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -141,7 +136,7 @@ func TestInterestTimeout(t *testing.T) {
 }
 
 func TestInterestCanBePrefix(t *testing.T) {
-	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -204,7 +199,7 @@ func TestInterestCanBePrefix(t *testing.T) {
 }
 
 func TestImplicitSha256(t *testing.T) {
-	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer) {
 		hitCnt := 0
 
 		spec := engine.Spec()
@@ -261,7 +256,7 @@ func TestImplicitSha256(t *testing.T) {
 // No need to test AppParam for expression. If `spec.MakeInterest` works, `engine.Express` will.
 
 func TestRoute(t *testing.T) {
-	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer) {
 		hitCnt := 0
 		spec := engine.Spec()
 
@@ -295,7 +290,7 @@ func TestRoute(t *testing.T) {
 }
 
 func TestPitToken(t *testing.T) {
-	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer, signer ndn.Signer) {
+	executeTest(t, func(face *face.DummyFace, engine *basic_engine.Engine, timer *basic_engine.DummyTimer) {
 		hitCnt := 0
 		spec := engine.Spec()
 

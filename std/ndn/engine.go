@@ -36,14 +36,16 @@ type Engine interface {
 	// The callback should create go routine or channel back to another routine to avoid blocking the main thread.
 	Express(interest *EncodedInterest, callback ExpressCallbackFunc) error
 
-	// RegisterRoute registers a route of prefix to the local forwarder.
-	RegisterRoute(prefix enc.Name) error
-	// UnregisterRoute unregisters a route of prefix to the local forwarder.
-	UnregisterRoute(prefix enc.Name) error
 	// ExecMgmtCmd executes a management command.
 	//   args are the control arguments (*mgmt.ControlArgs)
 	//   returns response and error if any (*mgmt.ControlResponse, error)
 	ExecMgmtCmd(module string, cmd string, args any) (any, error)
+	// SetCmdSec sets the interest signing parameters for management commands.
+	SetCmdSec(signer Signer, validator func(enc.Name, enc.Wire, Signature) bool)
+	// RegisterRoute registers a route of prefix to the local forwarder.
+	RegisterRoute(prefix enc.Name) error
+	// UnregisterRoute unregisters a route of prefix to the local forwarder.
+	UnregisterRoute(prefix enc.Name) error
 }
 
 type Timer interface {

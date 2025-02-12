@@ -16,6 +16,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -562,6 +563,11 @@ func (e *Engine) ExecMgmtCmd(module string, cmd string, args any) (any, error) {
 	return resp.val, resp.err
 }
 
+func (e *Engine) SetCmdSec(signer ndn.Signer, validator func(enc.Name, enc.Wire, ndn.Signature) bool) {
+	e.mgmtConf.SetSigner(signer)
+	e.cmdChecker = validator
+}
+
 func (e *Engine) RegisterRoute(prefix enc.Name) error {
 	_, err := e.ExecMgmtCmd("rib", "register", &mgmt.ControlArgs{Name: prefix})
 	if err != nil {
@@ -584,16 +590,16 @@ func (e *Engine) UnregisterRoute(prefix enc.Name) error {
 	return nil
 }
 
-func NewEngine(face face.Face, timer ndn.Timer, cmdSigner ndn.Signer, cmdChecker ndn.SigChecker) *Engine {
-	if face == nil || timer == nil || cmdSigner == nil || cmdChecker == nil {
+func NewEngine(face face.Face, timer ndn.Timer) *Engine {
+	if face == nil || timer == nil {
 		return nil
 	}
-	mgmtCfg := mgmt.NewConfig(face.IsLocal(), cmdSigner, spec.Spec{})
+	mgmtCfg := mgmt.NewConfig(face.IsLocal(), sig.NewSha256Signer(), spec.Spec{})
 	return &Engine{
 		face:       face,
 		timer:      timer,
 		mgmtConf:   mgmtCfg,
-		cmdChecker: cmdChecker,
+		cmdChecker: func(enc.Name, enc.Wire, ndn.Signature) bool { return true },
 		fib:        NewNameTrie[fibEntry](),
 		pit:        NewNameTrie[pitEntry](),
 		fibLock:    sync.Mutex{},

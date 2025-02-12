@@ -5,20 +5,13 @@ import (
 	"net/url"
 	"os"
 
-	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine/basic"
 	"github.com/named-data/ndnd/std/engine/face"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/security/signer"
 )
 
 func NewBasicEngine(face face.Face) ndn.Engine {
-	timer := basic.NewTimer()
-	cmdSigner := signer.NewSha256Signer()
-	cmdValidator := func(enc.Name, enc.Wire, ndn.Signature) bool {
-		return true
-	}
-	return basic.NewEngine(face, timer, cmdSigner, cmdValidator)
+	return basic.NewEngine(face, basic.NewTimer())
 }
 
 func NewUnixFace(addr string) face.Face {
