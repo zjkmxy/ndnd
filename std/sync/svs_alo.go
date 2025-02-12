@@ -166,9 +166,10 @@ func (s *SvsALO) Start() error {
 }
 
 // Stop stops the SvsALO instance.
-func (s *SvsALO) Stop() {
+func (s *SvsALO) Stop() error {
 	s.stop <- struct{}{}
 	close(s.stop)
+	return s.svs.Stop()
 }
 
 // SetOnError sets the error callback.

@@ -147,10 +147,11 @@ func (s *SvSync) main() {
 }
 
 // Stop the SV Sync instance.
-func (s *SvSync) Stop() {
+func (s *SvSync) Stop() error {
 	s.ticker.Stop()
 	s.stop <- struct{}{}
 	close(s.stop)
+	return nil
 }
 
 // GetSeqNo returns the sequence number for a name.
