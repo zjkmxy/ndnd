@@ -42,7 +42,7 @@ func (t *Tool) ExecStatusGeneral(_ *cobra.Command, args []string) {
 	p.Print("uptime", (status.CurrentTimestamp - status.StartTimestamp))
 	p.Print("nNameTreeEntries", status.NNameTreeEntries)
 	p.Print("nFibEntries", status.NFibEntries)
-	p.Print("nPitEntries", status.NCsEntries)
+	p.Print("nPitEntries", status.NPitEntries)
 	p.Print("nMeasurementsEntries", status.NMeasurementsEntries)
 	p.Print("nCsEntries", status.NCsEntries)
 	p.Print("nInInterests", status.NInInterests)
