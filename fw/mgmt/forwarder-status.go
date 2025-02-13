@@ -65,19 +65,21 @@ func (f *ForwarderStatusModule) general(interest *Interest) {
 		NfdVersion:       utils.NDNdVersion,
 		StartTimestamp:   time.Duration(core.StartTimestamp.UnixNano()),
 		CurrentTimestamp: time.Duration(time.Now().UnixNano()),
-		NFibEntries:      uint64(len(table.FibStrategyTable.GetAllFIBEntries())),
+		NFibEntries:      uint64(table.FibStrategyTable.GetNumFIBEntries()),
 	}
 	// Don't set NNameTreeEntries because we don't use a NameTree
 	for threadID := 0; threadID < fw.CfgNumThreads(); threadID++ {
 		thread := dispatch.GetFWThread(threadID)
-		status.NPitEntries += uint64(thread.GetNumPitEntries())
-		status.NCsEntries += uint64(thread.GetNumCsEntries())
-		status.NInInterests += thread.(*fw.Thread).NInInterests
-		status.NInData += thread.(*fw.Thread).NInData
-		status.NOutInterests += thread.(*fw.Thread).NOutInterests
-		status.NOutData += thread.(*fw.Thread).NOutData
-		status.NSatisfiedInterests += thread.(*fw.Thread).NSatisfiedInterests
-		status.NUnsatisfiedInterests += thread.(*fw.Thread).NUnsatisfiedInterests
+		counters := thread.Counters()
+
+		status.NPitEntries += uint64(counters.NPitEntries)
+		status.NCsEntries += uint64(counters.NCsEntries)
+		status.NInInterests += counters.NInInterests
+		status.NInData += counters.NInData
+		status.NOutInterests += counters.NOutInterests
+		status.NOutData += counters.NOutData
+		status.NSatisfiedInterests += counters.NSatisfiedInterests
+		status.NUnsatisfiedInterests += counters.NUnsatisfiedInterests
 	}
 
 	name := LOCAL_PREFIX.

@@ -1,6 +1,7 @@
 package table
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
@@ -18,12 +19,12 @@ type OnPitExpiration func(PitEntry)
 type PitCsTree struct {
 	root *pitCsTreeNode
 
-	nPitEntries int
+	nPitEntries atomic.Int64
 
 	nPitToken uint64
 	pitTokens []*nameTreePitEntry
 
-	nCsEntries    int
+	nCsEntries    atomic.Int64
 	csReplacement CsReplacementPolicy
 	csMap         map[uint64]*nameTreeCsEntry
 
@@ -124,7 +125,7 @@ func (p *PitCsTree) InsertInterest(interest *defn.FwInterest, hint enc.Name, inF
 	}
 
 	if entry == nil {
-		p.nPitEntries++
+		p.nPitEntries.Add(1)
 		entry = PitCsPools.NameTreePitEntry.Get()
 		entry.node = node
 		entry.pitCsTable = p
@@ -166,7 +167,7 @@ func (p *PitCsTree) RemoveInterest(pitEntry PitEntry) bool {
 			}
 			e.node.pitEntries = e.node.pitEntries[:len(e.node.pitEntries)-1]
 			entry.node.pruneIfEmpty()
-			p.nPitEntries--
+			p.nPitEntries.Add(-1)
 
 			// remove entry from pit token lookup table
 			tokIdx := p.pitTokenIdx(entry.Token())
@@ -236,12 +237,12 @@ func (p *PitCsTree) findInterestPrefixMatchByNameEnc(name enc.Name) []PitEntry {
 
 // PitSize returns the number of entries in the PIT.
 func (p *PitCsTree) PitSize() int {
-	return p.nPitEntries
+	return int(p.nPitEntries.Load())
 }
 
 // CsSize returns the number of entries in the CS.
 func (p *PitCsTree) CsSize() int {
-	return p.nCsEntries
+	return int(p.nCsEntries.Load())
 }
 
 // IsCsAdmitting returns whether the CS is admitting content.
@@ -366,7 +367,7 @@ func (p *PitCsTree) InsertData(data *defn.FwData, wire []byte) {
 		p.csReplacement.AfterRefresh(index, wire, data)
 	} else {
 		// New entry
-		p.nCsEntries++
+		p.nCsEntries.Add(1)
 		node := p.root.fillTreeToPrefixEnc(data.NameV)
 		node.csEntry = &nameTreeCsEntry{
 			node: node,
@@ -391,7 +392,7 @@ func (p *PitCsTree) eraseCsDataFromReplacementStrategy(index uint64) {
 	if entry, ok := p.csMap[index]; ok {
 		entry.node.csEntry = nil
 		delete(p.csMap, index)
-		p.nCsEntries--
+		p.nCsEntries.Add(-1)
 	}
 }
 

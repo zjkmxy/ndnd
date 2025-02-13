@@ -19,8 +19,7 @@ type FWThread interface {
 	QueueData(packet *defn.Pkt)
 	QueueInterest(packet *defn.Pkt)
 
-	GetNumPitEntries() int
-	GetNumCsEntries() int
+	Counters() defn.FWThreadCounters
 }
 
 // FWDispatch is used to allow faces to interact with forwarding without a circular dependency issue.

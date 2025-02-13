@@ -122,7 +122,9 @@ func (c *ContentStoreModule) info(interest *Interest) {
 	}
 	for threadID := 0; threadID < fw.CfgNumThreads(); threadID++ {
 		thread := dispatch.GetFWThread(threadID)
-		status.CsInfo.NCsEntries += uint64(thread.GetNumCsEntries())
+		counters := thread.Counters()
+
+		status.CsInfo.NCsEntries += uint64(counters.NCsEntries)
 	}
 
 	name := LOCAL_PREFIX.

@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/named-data/ndnd/fw/core"
@@ -69,12 +70,12 @@ type Thread struct {
 	HasQuit       chan interface{}
 
 	// Counters
-	NInInterests          uint64
-	NInData               uint64
-	NOutInterests         uint64
-	NOutData              uint64
-	NSatisfiedInterests   uint64
-	NUnsatisfiedInterests uint64
+	nInInterests          atomic.Uint64
+	nInData               atomic.Uint64
+	nOutInterests         atomic.Uint64
+	nOutData              atomic.Uint64
+	nSatisfiedInterests   atomic.Uint64
+	nUnsatisfiedInterests atomic.Uint64
 }
 
 // NewThread creates a new forwarding thread
@@ -99,14 +100,18 @@ func (t *Thread) GetID() int {
 	return t.threadID
 }
 
-// GetNumPitEntries returns the number of entries in this thread's PIT.
-func (t *Thread) GetNumPitEntries() int {
-	return t.pitCS.PitSize()
-}
-
-// GetNumCsEntries returns the number of entries in this thread's ContentStore.
-func (t *Thread) GetNumCsEntries() int {
-	return t.pitCS.CsSize()
+// Counters returns the counters for this forwarding thread
+func (t *Thread) Counters() defn.FWThreadCounters {
+	return defn.FWThreadCounters{
+		NPitEntries:           t.pitCS.PitSize(),
+		NCsEntries:            t.pitCS.CsSize(),
+		NInInterests:          t.nInInterests.Load(),
+		NInData:               t.nInData.Load(),
+		NOutInterests:         t.nOutInterests.Load(),
+		NOutData:              t.nOutData.Load(),
+		NSatisfiedInterests:   t.nSatisfiedInterests.Load(),
+		NUnsatisfiedInterests: t.nUnsatisfiedInterests.Load(),
+	}
 }
 
 // TellToQuit tells the forwarding thread to quit
@@ -193,7 +198,8 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 		return
 	}
 
-	t.NInInterests++
+	// Update counter
+	t.nInInterests.Add(1)
 
 	// Check for forwarding hint and, if present, determine if reaching producer region (and then strip forwarding hint)
 	isReachingProducerRegion := true
@@ -374,7 +380,8 @@ func (t *Thread) processOutgoingInterest(
 	// Create or update out-record
 	pitEntry.InsertOutRecord(interest, nexthop)
 
-	t.NOutInterests++
+	// Update counters
+	t.nOutInterests.Add(1)
 
 	// Make new PIT token if needed
 	pitToken := make([]byte, 6)
@@ -397,9 +404,9 @@ func (t *Thread) finalizeInterest(pitEntry table.PitEntry) {
 		t.deadNonceList.Insert(pitEntry.EncName(), outRecord.LatestNonce)
 	}
 
-	// Counters
+	// Update counters
 	if !pitEntry.Satisfied() {
-		t.NUnsatisfiedInterests += uint64(len(pitEntry.InRecords()))
+		t.nUnsatisfiedInterests.Add(uint64(len(pitEntry.InRecords())))
 	}
 }
 
@@ -423,7 +430,8 @@ func (t *Thread) processIncomingData(packet *defn.Pkt) {
 		return
 	}
 
-	t.NInData++
+	// Update counters
+	t.nInData.Add(1)
 
 	// Check if violates /localhost
 	if incomingFace.Scope() == defn.NonLocal && len(packet.Name) > 0 && packet.Name[0].Equal(enc.LOCALHOST) {
@@ -540,8 +548,9 @@ func (t *Thread) processOutgoingData(
 		return
 	}
 
-	t.NOutData++
-	t.NSatisfiedInterests++
+	// Update counters
+	t.nOutData.Add(1)
+	t.nSatisfiedInterests.Add(1)
 
 	// Send on outgoing face
 	outgoingFace.SendPacket(dispatch.OutPkt{

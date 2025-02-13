@@ -334,10 +334,19 @@ func (f *FibStrategyHashTable) RemoveNextHopEnc(name enc.Name, nexthop uint64) {
 	}
 }
 
+// GetNumFIBEntries returns the number of entries in the FIB.
+func (f *FibStrategyHashTable) GetNumFIBEntries() int {
+	f.fibStrategyRWMutex.RLock()
+	defer f.fibStrategyRWMutex.RUnlock()
+
+	return len(f.realTable)
+}
+
 // GetAllFIBEntries returns all nexthop entries in the FIB.
 func (f *FibStrategyHashTable) GetAllFIBEntries() []FibStrategyEntry {
 	f.fibStrategyRWMutex.RLock()
 	defer f.fibStrategyRWMutex.RUnlock()
+
 	entries := make([]FibStrategyEntry, 0)
 	for _, v := range f.realTable {
 		if len(v.nexthops) > 0 {

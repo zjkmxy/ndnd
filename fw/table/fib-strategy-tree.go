@@ -201,6 +201,18 @@ func (f *FibStrategyTree) RemoveNextHopEnc(name enc.Name, nexthop uint64) {
 	}
 }
 
+// GetNumFIBEntries returns the number of nexthop entries in the FIB.
+func (f *FibStrategyTree) GetNumFIBEntries() int {
+	f.mutex.RLock()
+	defer f.mutex.RUnlock()
+
+	count := 0
+	f.walk(func(entry *fibStrategyTreeEntry) {
+		count++
+	})
+	return count
+}
+
 // GetAllFIBEntries returns all nexthop entries in the FIB.
 func (f *FibStrategyTree) GetAllFIBEntries() []FibStrategyEntry {
 	f.mutex.RLock()
