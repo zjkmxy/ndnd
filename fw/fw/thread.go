@@ -258,6 +258,10 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 				// significantly. We can optimize this later.
 				csData, csWire, err := csEntry.Copy()
 				if csData != nil && csWire != nil {
+					// Mark PIT entry as expired
+					table.UpdateExpirationTimer(pitEntry, time.Now())
+
+					// Create the pending packet structure
 					packet.L3.Data = csData
 					packet.L3.Interest = nil
 					packet.Raw = enc.Wire{csWire}
