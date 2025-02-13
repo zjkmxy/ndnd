@@ -76,6 +76,8 @@ type Thread struct {
 	nOutData              atomic.Uint64
 	nSatisfiedInterests   atomic.Uint64
 	nUnsatisfiedInterests atomic.Uint64
+	nCsHits               atomic.Uint64
+	nCsMisses             atomic.Uint64
 }
 
 // NewThread creates a new forwarding thread
@@ -111,6 +113,8 @@ func (t *Thread) Counters() defn.FWThreadCounters {
 		NOutData:              t.nOutData.Load(),
 		NSatisfiedInterests:   t.nSatisfiedInterests.Load(),
 		NUnsatisfiedInterests: t.nUnsatisfiedInterests.Load(),
+		NCsHits:               t.nCsHits.Load(),
+		NCsMisses:             t.nCsMisses.Load(),
 	}
 }
 
@@ -259,6 +263,9 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 		if t.pitCS.IsCsServing() {
 			csEntry := t.pitCS.FindMatchingDataFromCS(interest)
 			if csEntry != nil {
+				// Update counters
+				t.nCsHits.Add(1)
+
 				// Parse the cached data packet and replace in the pending one
 				// This is not the fastest way to do it, but simplifies everything
 				// significantly. We can optimize this later.
@@ -279,7 +286,9 @@ func (t *Thread) processIncomingInterest(packet *defn.Pkt) {
 				} else {
 					core.Log.Error(t, "Error copying CS entry", "err", "csData is nil")
 				}
-
+			} else {
+				// Update counters
+				t.nCsMisses.Add(1)
 			}
 		}
 	} else {

@@ -9,4 +9,6 @@ type FWThreadCounters struct {
 	NOutData              uint64
 	NSatisfiedInterests   uint64
 	NUnsatisfiedInterests uint64
+	NCsHits               uint64
+	NCsMisses             uint64
 }

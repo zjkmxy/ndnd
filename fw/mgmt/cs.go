@@ -125,6 +125,8 @@ func (c *ContentStoreModule) info(interest *Interest) {
 		counters := thread.Counters()
 
 		status.CsInfo.NCsEntries += uint64(counters.NCsEntries)
+		status.CsInfo.NHits += uint64(counters.NCsHits)
+		status.CsInfo.NMisses += uint64(counters.NCsMisses)
 	}
 
 	name := LOCAL_PREFIX.
