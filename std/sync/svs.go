@@ -115,9 +115,10 @@ func (s *SvSync) String() string {
 
 // Start the SV Sync instance.
 func (s *SvSync) Start() (err error) {
-	err = s.o.Client.Engine().AttachHandler(s.o.GroupPrefix, func(args ndn.InterestHandlerArgs) {
-		go s.onSyncInterest(args.Interest)
-	})
+	err = s.o.Client.Engine().AttachHandler(s.o.GroupPrefix.Append(enc.NewVersionComponent(3)),
+		func(args ndn.InterestHandlerArgs) {
+			go s.onSyncInterest(args.Interest)
+		})
 	if err != nil {
 		return err
 	}
