@@ -80,7 +80,7 @@ func (e *Engine) AttachHandler(prefix enc.Name, handler ndn.InterestHandler) err
 	defer e.fibLock.Unlock()
 	n := e.fib.MatchAlways(prefix)
 	if n.Value() != nil {
-		return ndn.ErrMultipleHandlers
+		return fmt.Errorf("%w: %s", ndn.ErrMultipleHandlers, prefix)
 	}
 	n.SetValue(handler)
 	return nil
