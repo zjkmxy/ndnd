@@ -115,7 +115,7 @@ func (s *SvSync) String() string {
 
 // Start the SV Sync instance.
 func (s *SvSync) Start() (err error) {
-	err = s.o.Client.Engine().AttachHandler(s.o.GroupPrefix.Append(enc.NewVersionComponent(3)),
+	err = s.o.Client.Engine().AttachHandler(s.handlerPrefix(),
 		func(args ndn.InterestHandlerArgs) {
 			go s.onSyncInterest(args.Interest)
 		})
@@ -130,7 +130,7 @@ func (s *SvSync) Start() (err error) {
 }
 
 func (s *SvSync) main() {
-	defer s.o.Client.Engine().DetachHandler(s.o.GroupPrefix)
+	defer s.o.Client.Engine().DetachHandler(s.handlerPrefix())
 
 	s.running.Store(true)
 	defer s.running.Store(false)
@@ -145,6 +145,10 @@ func (s *SvSync) main() {
 			return
 		}
 	}
+}
+
+func (s *SvSync) handlerPrefix() enc.Name {
+	return s.o.GroupPrefix.Append(enc.NewVersionComponent(3))
 }
 
 // Stop the SV Sync instance.

@@ -161,6 +161,8 @@ func (s *SvsALO) Start() error {
 	if err := s.svs.Start(); err != nil {
 		return err
 	}
+
+	// SVS is stopped when the main loop quits.
 	go s.run()
 	return nil
 }
@@ -168,8 +170,7 @@ func (s *SvsALO) Start() error {
 // Stop stops the SvsALO instance.
 func (s *SvsALO) Stop() error {
 	s.stop <- struct{}{}
-	close(s.stop)
-	return s.svs.Stop()
+	return nil
 }
 
 // SetOnError sets the error callback.
