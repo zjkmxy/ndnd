@@ -1,6 +1,6 @@
 //go:build js && wasm
 
-package utils
+package js
 
 import (
 	"errors"
@@ -51,16 +51,4 @@ func Await(promise js.Value) (val js.Value, err error) {
 	case e := <-errc:
 		return js.Undefined(), e
 	}
-}
-
-func SliceToJsArray(slice []byte) js.Value {
-	jsSlice := js.Global().Get("Uint8Array").New(len(slice))
-	js.CopyBytesToJS(jsSlice, slice)
-	return jsSlice
-}
-
-func JsArrayToSlice(jsSlice js.Value) []byte {
-	slice := make([]byte, jsSlice.Get("length").Int())
-	js.CopyBytesToGo(slice, jsSlice)
-	return slice
 }

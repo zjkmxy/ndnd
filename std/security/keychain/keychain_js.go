@@ -11,7 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	sig "github.com/named-data/ndnd/std/security/signer"
-	"github.com/named-data/ndnd/std/utils"
+	jsutil "github.com/named-data/ndnd/std/utils/js"
 )
 
 // KeyChainJS is a JS-based keychain.
@@ -27,17 +27,13 @@ func NewKeyChainJS(api js.Value, pubStore ndn.Store) (ndn.KeyChain, error) {
 		api: api,
 	}
 
-	list, err := utils.Await(api.Call("list"))
+	list, err := jsutil.Await(api.Call("list"))
 	if err != nil {
 		return nil, err
 	}
 
 	list.Call("forEach", js.FuncOf(func(this js.Value, args []js.Value) any {
-		size := args[0].Get("length").Int()
-		content := make([]byte, size)
-		js.CopyBytesToGo(content, args[0])
-
-		err := InsertFile(kc.mem, content)
+		err := InsertFile(kc.mem, jsutil.JsArrayToSlice(args[0]))
 		if err != nil {
 			log.Error(kc, "Failed to insert keychain entry", "err", err)
 		}
@@ -91,10 +87,6 @@ func (kc *KeyChainJS) writeFile(wire []byte, ext string) error {
 	hash := sha256.Sum256(wire)
 	filename := hex.EncodeToString(hash[:])
 
-	jsBytes := js.Global().Get("Uint8Array").New(len(wire))
-	js.CopyBytesToJS(jsBytes, wire)
-
-	kc.api.Call("write", filename+ext, jsBytes)
-
+	kc.api.Call("write", filename+ext, jsutil.SliceToJsArray(wire))
 	return nil
 }
