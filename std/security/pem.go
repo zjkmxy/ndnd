@@ -41,8 +41,8 @@ func PemEncode(raw []byte) ([]byte, error) {
 	}
 
 	// Add validity period
-	if nb, na := data.Signature().Validity(); nb != nil && na != nil {
-		headers[PEM_HEADER_VALIDITY] = fmt.Sprintf("%s - %s", *nb, *na)
+	if nb, na := data.Signature().Validity(); nb.IsSet() && na.IsSet() {
+		headers[PEM_HEADER_VALIDITY] = fmt.Sprintf("%s - %s", nb.Unwrap(), na.Unwrap())
 	}
 
 	// Add signature type

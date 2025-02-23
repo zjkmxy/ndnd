@@ -63,8 +63,8 @@ func TestSignCertSelf(t *testing.T) {
 
 	// check validity period
 	notBefore, notAfter := signature.Validity()
-	require.Equal(t, T1, *notBefore)
-	require.Equal(t, T2, *notAfter)
+	require.Equal(t, T1, notBefore.Unwrap())
+	require.Equal(t, T2, notAfter.Unwrap())
 
 	// check signature
 	require.Equal(t, 64, len(signature.SigValue())) // ed25519
@@ -126,8 +126,8 @@ func TestSignCertOther(t *testing.T) {
 
 	// check validity period
 	notBefore, notAfter := signature.Validity()
-	require.Equal(t, T1, *notBefore)
-	require.Equal(t, T2, *notAfter)
+	require.Equal(t, T1, notBefore.Unwrap())
+	require.Equal(t, T2, notAfter.Unwrap())
 
 	// check signature
 	require.Equal(t, 64, len(signature.SigValue())) // ed25519

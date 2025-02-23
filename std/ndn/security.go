@@ -4,6 +4,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 // Signature is the abstract of the signature of a packet.
@@ -16,7 +17,7 @@ type Signature interface {
 	KeyName() enc.Name
 	// Validity returns the validity period of the signature.
 	// This field is generally only present in NDN certificates.
-	Validity() (notBefore, notAfter *time.Time)
+	Validity() (notBefore, notAfter optional.Optional[time.Time])
 	// SigValue returns the signature value.
 	SigValue() []byte
 

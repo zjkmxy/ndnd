@@ -67,20 +67,19 @@ func (d *Data) SigSeqNum() *uint64 {
 	return nil
 }
 
-func (d *Data) Validity() (notBefore, notAfter *time.Time) {
+func (d *Data) Validity() (notBefore, notAfter optional.Optional[time.Time]) {
 	if d.SignatureInfo != nil && d.SignatureInfo.ValidityPeriod != nil {
-		notBefore, err := time.Parse(TimeFmt, d.SignatureInfo.ValidityPeriod.NotBefore)
+		nbVal, err := time.Parse(TimeFmt, d.SignatureInfo.ValidityPeriod.NotBefore)
 		if err != nil {
-			return nil, nil
+			return
 		}
-		notAfter, err := time.Parse(TimeFmt, d.SignatureInfo.ValidityPeriod.NotAfter)
+		naVal, err := time.Parse(TimeFmt, d.SignatureInfo.ValidityPeriod.NotAfter)
 		if err != nil {
-			return nil, nil
+			return
 		}
-		return &notBefore, &notAfter
-	} else {
-		return nil, nil
+		return optional.Some(nbVal), optional.Some(naVal)
 	}
+	return
 }
 
 func (d *Data) SigValue() []byte {
@@ -167,8 +166,8 @@ func (t *Interest) SigSeqNum() *uint64 {
 	}
 }
 
-func (t *Interest) Validity() (notBefore, notAfter *time.Time) {
-	return nil, nil
+func (t *Interest) Validity() (notBefore, notAfter optional.Optional[time.Time]) {
+	return
 }
 
 func (t *Interest) SigValue() []byte {

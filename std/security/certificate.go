@@ -99,12 +99,12 @@ func CertIsExpired(cert ndn.Data) bool {
 		return true
 	}
 
+	now := time.Now()
 	notBefore, notAfter := cert.Signature().Validity()
-	if notBefore == nil || notAfter == nil {
+	if val, ok := notBefore.Get(); !ok || now.Before(val) {
 		return true
 	}
-
-	if time.Now().Before(*notBefore) || time.Now().After(*notAfter) {
+	if val, ok := notAfter.Get(); !ok || now.After(val) {
 		return true
 	}
 
