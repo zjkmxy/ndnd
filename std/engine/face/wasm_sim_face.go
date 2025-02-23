@@ -8,6 +8,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
+	jsutil "github.com/named-data/ndnd/std/utils/js"
 )
 
 type WasmSimFace struct {
@@ -74,14 +75,6 @@ func (f *WasmSimFace) Send(pkt enc.Wire) error {
 }
 
 func (f *WasmSimFace) receive(this js.Value, args []js.Value) any {
-	pkt := args[0]
-	if !pkt.InstanceOf(js.Global().Get("Uint8Array")) {
-		return nil
-	}
-
-	buf := make([]byte, pkt.Get("byteLength").Int())
-	js.CopyBytesToGo(buf, pkt)
-
-	f.onPkt(buf)
+	f.onPkt(jsutil.JsArrayToSlice(args[0]))
 	return nil
 }
