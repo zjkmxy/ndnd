@@ -97,6 +97,9 @@ type ConsumeState interface {
 type ConsumeExtArgs struct {
 	// Name is the name of the object to consume.
 	Name enc.Name
+	// Try the local store to get the object.
+	// Note that if Name is not versioned, this may get an older version.
+	TryStore bool
 	// Callback is called when data is available.
 	// True should be returned to continue fetching the object.
 	Callback func(status ConsumeState)
@@ -119,6 +122,8 @@ type ExpressRArgs struct {
 	Signer Signer
 	// Number of retries.
 	Retries int
+	// Try to get the data from a local store.
+	TryStore Store
 	// Callback for the result. This will be called on the engine's
 	// main thread, so make sure it is either non-blocking and very fast,
 	// or use a goroutine to handle the result.

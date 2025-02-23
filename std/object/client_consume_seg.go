@@ -8,6 +8,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 // round-robin based segment fetcher
@@ -148,7 +149,8 @@ func (s *rrSegFetcher) check() {
 			Config: &ndn.InterestConfig{
 				MustBeFresh: false,
 			},
-			Retries: 3,
+			Retries:  3,
+			TryStore: utils.If(state.args.TryStore, s.client.store, nil),
 			Callback: func(args ndn.ExpressCallbackArgs) {
 				s.handleData(args, state)
 			},

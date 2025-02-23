@@ -1,8 +1,10 @@
 package object
 
 import (
+	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -13,46 +15,68 @@ func (c *Client) ExpressR(args ndn.ExpressRArgs) {
 
 // Express a single interest with reliability
 func ExpressR(engine ndn.Engine, args ndn.ExpressRArgs) {
-	sendErr := func(err error) {
+	finalizeError := func(err error) {
 		args.Callback(ndn.ExpressCallbackArgs{
 			Result: ndn.InterestResultError,
 			Error:  err,
 		})
 	}
 
-	// new nonce for each call
+	// Try local store if available
+	if args.TryStore != nil {
+		bytes, err := args.TryStore.Get(args.Name, args.Config.CanBePrefix)
+		if bytes != nil && err == nil {
+			wire := enc.Wire{bytes}
+			data, sigCov, err := spec_2022.Spec{}.ReadData(enc.NewWireView(wire))
+			if err == nil {
+				args.Callback(ndn.ExpressCallbackArgs{
+					Result:     ndn.InterestResultData,
+					Data:       data,
+					RawData:    wire,
+					SigCovered: sigCov,
+				})
+				return
+			}
+		}
+
+		// Try the store only once
+		args.TryStore = nil
+	}
+
+	// New nonce for each transmitted interest
 	args.Config.Nonce = utils.ConvertNonce(engine.Timer().Nonce())
 
-	// create interest packet
+	// Create interest packet
 	interest, err := engine.Spec().MakeInterest(args.Name, args.Config, args.AppParam, args.Signer)
 	if err != nil {
-		sendErr(err)
+		finalizeError(err)
 		return
 	}
 
-	// send the interest
+	// Send the interest
 	// TODO: reexpress faster than lifetime
 	err = engine.Express(interest, func(res ndn.ExpressCallbackArgs) {
 		if res.Result == ndn.InterestResultTimeout {
 			log.Debug(nil, "ExpressR Interest timeout", "name", args.Name)
 
-			// check if retries are exhausted
+			// Check if retries are exhausted
 			if args.Retries == 0 {
 				args.Callback(res)
 				return
 			}
 
-			// retry on timeout
+			// Retry on timeout
 			args.Retries--
 			ExpressR(engine, args)
+			return
 		} else {
-			// all other results / errors are final
+			// All other results / errors are final
 			args.Callback(res)
 			return
 		}
 	})
 	if err != nil {
-		sendErr(err)
+		finalizeError(err)
 		return
 	}
 }

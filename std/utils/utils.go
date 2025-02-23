@@ -38,3 +38,12 @@ func ConvertNonce(nonce []byte) (ret optional.Optional[uint32]) {
 	ret.Set(x)
 	return ret
 }
+
+// If is the ternary operator
+func If[T any](cond bool, t, f T) T {
+	if cond {
+		return t
+	} else {
+		return f
+	}
+}
