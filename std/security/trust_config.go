@@ -92,6 +92,7 @@ type TrustConfigValidateArgs struct {
 	OverrideName enc.Name
 
 	// cert is the certificate to use for validation.
+	// The caller is responsible for checking the expiry of the cert.
 	cert ndn.Data
 	// certSigCov is the signature covered certificate wire.
 	certSigCov enc.Wire
@@ -163,7 +164,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 
 		// Check schema if the key is allowed
 		if !tc.schema.Check(dataName, certName) {
-			args.Callback(false, fmt.Errorf("key is not allowed: %s signed by %s", dataName, certName))
+			args.Callback(false, fmt.Errorf("trust schema mismatch: %s signed by %s", dataName, certName))
 			return
 		}
 
@@ -247,80 +248,74 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		args.cert = cachedCert
 		args.certIsValid = true
 
-		// No need for these, the cert is already validated
-		args.certSigCov = nil
-		args.certRaw = nil
+		// Continue validation with cached cert
+		tc.Validate(args)
+		return
 	}
 
 	// Attempt to get cert from store.
-	if args.cert == nil {
-		// Store is thread-safe.
-		certBytes, err := tc.keychain.Store().Get(keyLocator, true)
+	if storeCertBytes, err := tc.keychain.Store().Get(keyLocator, true); err != nil { // store is broken (panic)
+		log.Error(tc, "Store returned error", "err", err)
+		args.Callback(false, err)
+		return
+	} else if len(storeCertBytes) > 0 {
+		// Attempt to parse the certificate
+		storeCert, storeCertCov, err := spec.Spec{}.ReadData(enc.NewBufferView(storeCertBytes))
 		if err != nil {
-			log.Error(nil, "Failed to get certificate from store", "err", err)
-			args.Callback(false, err)
-			return // store is likely broken
-		}
-		if len(certBytes) > 0 {
-			// Attempt to parse the certificate
-			args.cert, args.certSigCov, err = spec.Spec{}.ReadData(enc.NewBufferView(certBytes))
-			if err != nil {
-				log.Error(nil, "Failed to parse certificate in store", "err", err)
-				args.cert = nil
-				args.certSigCov = nil
-				args.certRaw = nil
-				args.certIsValid = false
-			}
-		}
-	}
-
-	// Make sure the certificate is fresh
-	if args.cert != nil && !args.certIsValid && CertIsExpired(args.cert) {
-		args.cert = nil
-		args.certSigCov = nil
-		args.certRaw = nil
-		args.certIsValid = false
-	}
-
-	// If not found, attempt to fetch cert from network
-	if args.cert == nil {
-		log.Debug(tc, "Fetching certificate", "name", keyLocator)
-		args.Fetch(keyLocator, &ndn.InterestConfig{
-			CanBePrefix: true,
-			MustBeFresh: true,
-		}, func(res ndn.ExpressCallbackArgs) {
-			if res.Error == nil && res.Result != ndn.InterestResultData {
-				res.Error = fmt.Errorf("failed to fetch certificate (%s) with result: %s", keyLocator, res.Result)
-			}
-
-			if res.Error != nil {
-				args.Callback(false, res.Error)
-				return // failed to fetch cert
-			}
-
-			// Bail if not a certificate
-			if t, ok := res.Data.ContentType().Get(); !ok || t != ndn.ContentTypeKey {
-				args.Callback(false, fmt.Errorf("non-certificate in chain: %s", res.Data.Name()))
-				return
-			}
-
-			// Bail if the fetched cert is not fresh
-			if CertIsExpired(res.Data) {
-				args.Callback(false, fmt.Errorf("certificate is expired: %s", res.Data.Name()))
-				return
-			}
-
-			// Fetched cert is fresh
-			log.Debug(tc, "Fetched certificate from network", "cert", res.Data.Name())
-
-			// Call again with the fetched cert
-			args.cert = res.Data
-			args.certSigCov = res.SigCovered
-			args.certRaw = res.RawData
+			// This is not supposed to happen, misconfiguration likely
+			log.Warn(tc, "Failed to parse certificate in store", "err", err)
+		} else if CertIsExpired(storeCert) {
+			// No log, this will happen often.
+			// Try to fetch a fresh cert from network.
+		} else {
+			// The store is not trusted, we must validate the cert
+			args.cert = storeCert
+			args.certSigCov = storeCertCov
+			args.certRaw = nil // don't re-store
 			args.certIsValid = false
+
+			// Continue validation with store cert
 			tc.Validate(args)
-		})
-	} else {
-		tc.Validate(args)
+			return
+		}
 	}
+
+	// Cert not found, attempt to fetch from network
+	args.Fetch(keyLocator, &ndn.InterestConfig{
+		CanBePrefix: true,
+		MustBeFresh: true,
+	}, func(res ndn.ExpressCallbackArgs) {
+		if res.Error == nil && res.Result != ndn.InterestResultData {
+			res.Error = fmt.Errorf("failed to fetch certificate (%s) with result: %s", keyLocator, res.Result)
+		}
+
+		if res.Error != nil {
+			args.Callback(false, res.Error)
+			return // failed to fetch cert
+		}
+
+		// Bail if not a certificate
+		if t, ok := res.Data.ContentType().Get(); !ok || t != ndn.ContentTypeKey {
+			args.Callback(false, fmt.Errorf("non-certificate in chain: %s", res.Data.Name()))
+			return
+		}
+
+		// Bail if the fetched cert is not fresh
+		if CertIsExpired(res.Data) {
+			args.Callback(false, fmt.Errorf("certificate is expired: %s", res.Data.Name()))
+			return
+		}
+
+		// Fetched cert is fresh
+		log.Debug(tc, "Fetched certificate from network", "cert", res.Data.Name())
+
+		// Call again with the fetched cert
+		args.cert = res.Data
+		args.certSigCov = res.SigCovered
+		args.certRaw = res.RawData
+		args.certIsValid = false
+
+		// Continue validation with fetched cert
+		tc.Validate(args)
+	})
 }
