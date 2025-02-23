@@ -4,7 +4,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/ndn/spec_2022"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -27,13 +27,16 @@ func ExpressR(engine ndn.Engine, args ndn.ExpressRArgs) {
 		bytes, err := args.TryStore.Get(args.Name, args.Config.CanBePrefix)
 		if bytes != nil && err == nil {
 			wire := enc.Wire{bytes}
-			data, sigCov, err := spec_2022.Spec{}.ReadData(enc.NewWireView(wire))
+			data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireView(wire))
 			if err == nil {
-				args.Callback(ndn.ExpressCallbackArgs{
-					Result:     ndn.InterestResultData,
-					Data:       data,
-					RawData:    wire,
-					SigCovered: sigCov,
+				// Callback should always be called on the engine goroutine
+				engine.Post(func() {
+					args.Callback(ndn.ExpressCallbackArgs{
+						Result:     ndn.InterestResultData,
+						Data:       data,
+						RawData:    wire,
+						SigCovered: sigCov,
+					})
 				})
 				return
 			}
