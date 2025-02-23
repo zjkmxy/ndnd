@@ -16,7 +16,9 @@ type CachingStore struct {
 	// cache is the cache.
 	cache *MemoryStore
 	// journal is the journal.
-	journal []journalEntry
+	journal []storeJournalEntry
+	// flushDelay is the flush delay.
+	flushDelay time.Duration
 	// jmutex is the journal mutex.
 	jmutex sync.Mutex
 	// txp is the active transaction parent
@@ -25,7 +27,7 @@ type CachingStore struct {
 	flushTimer *time.Timer
 }
 
-type journalEntry struct {
+type storeJournalEntry struct {
 	// name is the name of the object.
 	name enc.Name
 	// version is the version of the object.
@@ -33,22 +35,23 @@ type journalEntry struct {
 	// wire is the wire of the object.
 	wire []byte
 	// action is the action.
-	action journalAction
+	action storeJournalAction
 }
 
-type journalAction uint8
+type storeJournalAction uint8
 
 const (
-	journalActionPut = iota
-	journalActionRemove
+	storeJournalActionPut = iota
+	storeJournalActionRemove
 )
 
 // NewCachingStore creates a new caching store.
-func NewCachingStore(store ndn.Store) *CachingStore {
+func NewCachingStore(store ndn.Store, flushDelay time.Duration) *CachingStore {
 	return &CachingStore{
-		store:   store,
-		cache:   NewMemoryStore(),
-		journal: make([]journalEntry, 0),
+		store:      store,
+		cache:      NewMemoryStore(),
+		journal:    make([]storeJournalEntry, 0),
+		flushDelay: flushDelay,
 	}
 }
 
@@ -76,11 +79,11 @@ func (s *CachingStore) Put(name enc.Name, version uint64, wire []byte) error {
 	s.jmutex.Lock()
 	defer s.jmutex.Unlock()
 
-	s.journal = append(s.journal, journalEntry{
+	s.journal = append(s.journal, storeJournalEntry{
 		name:    name,
 		version: version,
 		wire:    wire,
-		action:  journalActionPut,
+		action:  storeJournalActionPut,
 	})
 
 	s.scheduleFlush()
@@ -96,9 +99,9 @@ func (s *CachingStore) Remove(name enc.Name, prefix bool) error {
 	s.jmutex.Lock()
 	defer s.jmutex.Unlock()
 
-	s.journal = append(s.journal, journalEntry{
+	s.journal = append(s.journal, storeJournalEntry{
 		name:   name,
-		action: journalActionRemove,
+		action: storeJournalActionRemove,
 	})
 
 	s.scheduleFlush()
@@ -115,7 +118,7 @@ func (s *CachingStore) Begin() (ndn.Store, error) {
 	return &CachingStore{
 		store:   s.store,
 		cache:   cacheTxn.(*MemoryStore),
-		journal: make([]journalEntry, 0),
+		journal: make([]storeJournalEntry, 0),
 		txp:     s,
 	}, nil
 }
@@ -158,11 +161,11 @@ func (s *CachingStore) Flush() error {
 
 		for _, entry := range journal {
 			switch entry.action {
-			case journalActionPut:
+			case storeJournalActionPut:
 				if err := tx.Put(entry.name, entry.version, entry.wire); err != nil {
 					return err
 				}
-			case journalActionRemove:
+			case storeJournalActionRemove:
 				if err := tx.Remove(entry.name, false); err != nil {
 					return err
 				}
@@ -177,7 +180,7 @@ func (s *CachingStore) Flush() error {
 	// Evict cache entries from PUT journal entries.
 	// TODO: this is incorrect if a new PUT entry is added during the flush.
 	for _, entry := range journal {
-		if entry.action == journalActionPut {
+		if entry.action == storeJournalActionPut {
 			s.cache.Remove(entry.name, false)
 		}
 	}
@@ -190,7 +193,20 @@ func (s *CachingStore) scheduleFlush() {
 		return
 	}
 
-	s.flushTimer = time.AfterFunc(100*time.Millisecond, func() {
+	// scheduleFlush is called with mutex held.
+	// If we're doing an immediate flush, release the mutex first.
+	if s.flushDelay == 0 {
+		s.jmutex.Unlock()
+		defer s.jmutex.Lock()
+
+		if err := s.Flush(); err != nil {
+			log.Error(s, "Failed to flush cache", "err", err)
+		}
+		return
+	}
+
+	// Otherwise, schedule a flush.
+	s.flushTimer = time.AfterFunc(s.flushDelay, func() {
 		if err := s.Flush(); err != nil {
 			log.Error(s, "Failed to flush cache", "err", err)
 		}

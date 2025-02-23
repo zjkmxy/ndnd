@@ -33,14 +33,16 @@ func NewKeyChainJS(api js.Value, pubStore ndn.Store) (ndn.KeyChain, error) {
 		return nil, err
 	}
 
-	list.Call("forEach", js.FuncOf(func(this js.Value, args []js.Value) any {
+	callback := js.FuncOf(func(this js.Value, args []js.Value) any {
 		err := InsertFile(kc.mem, jsutil.JsArrayToSlice(args[0]))
 		if err != nil {
 			log.Error(kc, "Failed to insert keychain entry", "err", err)
 		}
 
 		return nil
-	}))
+	})
+	list.Call("forEach", callback)
+	callback.Release()
 
 	return kc, nil
 }
