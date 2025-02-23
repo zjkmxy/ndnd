@@ -21,6 +21,7 @@ type KeyChainJS struct {
 }
 
 // NewKeyChainJS creates a new JS-based keychain.
+// See keychain_js.ts for the interface and a sample implementation.
 func NewKeyChainJS(api js.Value, pubStore ndn.Store) (ndn.KeyChain, error) {
 	kc := &KeyChainJS{
 		mem: NewKeyChainMem(pubStore),
