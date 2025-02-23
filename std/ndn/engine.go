@@ -84,6 +84,9 @@ type ExpressCallbackArgs struct {
 	NackReason uint64
 	// Error, if the result is InterestResultError.
 	Error error
+	// IsLocal indicates if a local copy of the Data was found.
+	// e.g. returned by ExpressR when used with TryStore.
+	IsLocal bool
 }
 
 // InterestHandler represents the callback function for an Interest handler.

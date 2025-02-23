@@ -52,6 +52,7 @@ func (c *Client) ValidateExt(args ndn.ValidateExtArgs) {
 				Config:   config,
 				Retries:  3,
 				Callback: callback,
+				TryStore: c.store,
 			})
 		},
 	})

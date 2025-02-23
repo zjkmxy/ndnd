@@ -36,6 +36,7 @@ func ExpressR(engine ndn.Engine, args ndn.ExpressRArgs) {
 						Data:       data,
 						RawData:    wire,
 						SigCovered: sigCov,
+						IsLocal:    true,
 					})
 				})
 				return

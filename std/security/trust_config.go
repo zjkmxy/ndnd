@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 // TrustConfig is the configuration of the trust module.
@@ -85,6 +86,7 @@ type TrustConfigValidateArgs struct {
 	DataSigCov enc.Wire
 
 	// Fetch is the fetch function to use for fetching certificates.
+	// The fetcher MUST check the store for the certificate before fetching.
 	Fetch func(enc.Name, *ndn.InterestConfig, ndn.ExpressCallbackFunc)
 	// Callback is the callback to call when validation is done.
 	Callback func(bool, error)
@@ -253,33 +255,6 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		return
 	}
 
-	// Attempt to get cert from store.
-	if storeCertBytes, err := tc.keychain.Store().Get(keyLocator, true); err != nil { // store is broken (panic)
-		log.Error(tc, "Store returned error", "err", err)
-		args.Callback(false, err)
-		return
-	} else if len(storeCertBytes) > 0 {
-		// Attempt to parse the certificate
-		storeCert, storeCertCov, err := spec.Spec{}.ReadData(enc.NewBufferView(storeCertBytes))
-		if err != nil {
-			// This is not supposed to happen, misconfiguration likely
-			log.Warn(tc, "Failed to parse certificate in store", "err", err)
-		} else if CertIsExpired(storeCert) {
-			// No log, this will happen often.
-			// Try to fetch a fresh cert from network.
-		} else {
-			// The store is not trusted, we must validate the cert
-			args.cert = storeCert
-			args.certSigCov = storeCertCov
-			args.certRaw = nil // don't re-store
-			args.certIsValid = false
-
-			// Continue validation with store cert
-			tc.Validate(args)
-			return
-		}
-	}
-
 	// Cert not found, attempt to fetch from network
 	args.Fetch(keyLocator, &ndn.InterestConfig{
 		CanBePrefix: true,
@@ -312,7 +287,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		// Call again with the fetched cert
 		args.cert = res.Data
 		args.certSigCov = res.SigCovered
-		args.certRaw = res.RawData
+		args.certRaw = utils.If(!res.IsLocal, res.RawData, nil) // prevent double insert
 		args.certIsValid = false
 
 		// Continue validation with fetched cert

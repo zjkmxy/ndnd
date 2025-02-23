@@ -186,23 +186,39 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 	// Simulate fetch from network using engine
 	fetchCount := 0
 	fetch := func(name enc.Name, _ *ndn.InterestConfig, callback ndn.ExpressCallbackFunc) {
-		fetchCount++
-		for certName, certWire := range network {
-			if strings.HasPrefix(certName, name.String()) {
-				data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireView(certWire))
-				callback(ndn.ExpressCallbackArgs{
-					Result:     ndn.InterestResultData,
-					Data:       data,
-					RawData:    certWire,
-					SigCovered: sigCov,
-					Error:      err,
-				})
-				return
+		var certWire enc.Wire = nil
+		var isLocal bool = false
+
+		// Fetch functions are required to check the store first
+		if buf, _ := keychain.Store().Get(name, true); buf != nil {
+			certWire = enc.Wire{buf}
+			isLocal = true
+		} else {
+			// Simulate fetch from network
+			fetchCount++
+			for netName, netWire := range network {
+				if strings.HasPrefix(netName, name.String()) {
+					certWire = netWire
+					break
+				}
 			}
 		}
-		callback(ndn.ExpressCallbackArgs{
-			Result: ndn.InterestResultNack,
-		})
+
+		if certWire != nil {
+			data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireView(certWire))
+			callback(ndn.ExpressCallbackArgs{
+				Result:     ndn.InterestResultData,
+				Data:       data,
+				RawData:    certWire,
+				SigCovered: sigCov,
+				Error:      err,
+				IsLocal:    isLocal,
+			})
+		} else {
+			callback(ndn.ExpressCallbackArgs{
+				Result: ndn.InterestResultNack,
+			})
+		}
 	}
 
 	// Create trust config
@@ -247,9 +263,14 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 	require.True(t, validateSync("/test/bob/data1", bobSigner))
 	require.Equal(t, 1, fetchCount) // fetch bob's certificate
 	require.True(t, validateSync("/test/bob/data2", bobSigner))
-	require.Equal(t, 1, fetchCount) // cert in store
+	require.Equal(t, 1, fetchCount) // cert in cache
 	require.True(t, validateSync("/test/cathy/data1", cathySigner))
 	require.Equal(t, 1, fetchCount) // have all certificates
+
+	// Make sure that bob's cert was inserted into the store
+	if buf, _ := keychain.Store().Get(bobCertData.Name(), false); buf == nil {
+		t.Error("bob's cert not in store")
+	}
 
 	// Signing with admin key
 	require.True(t, validateSync("/test/admin/alice/data1", aliceAdminSigner))
