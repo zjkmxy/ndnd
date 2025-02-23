@@ -9,8 +9,8 @@ import (
 type baseFace struct {
 	running atomic.Bool
 	local   bool
-	onPkt   func(frame []byte) error
-	onError func(err error) error
+	onPkt   func(frame []byte)
+	onError func(err error)
 	onUp    func()
 	onDown  func()
 	sendMut sync.Mutex
@@ -32,11 +32,11 @@ func (f *baseFace) IsLocal() bool {
 	return f.local
 }
 
-func (f *baseFace) OnPacket(onPkt func(frame []byte) error) {
+func (f *baseFace) OnPacket(onPkt func(frame []byte)) {
 	f.onPkt = onPkt
 }
 
-func (f *baseFace) OnError(onError func(err error) error) {
+func (f *baseFace) OnError(onError func(err error)) {
 	f.onError = onError
 }
 

@@ -96,10 +96,6 @@ func (f *WasmWsFace) receive(this js.Value, args []js.Value) any {
 	view := js.Global().Get("Uint8Array").New(data)
 	js.CopyBytesToGo(buf, view)
 
-	err := f.onPkt(buf)
-	if err != nil {
-		f.Close()
-	}
-
+	f.onPkt(buf)
 	return nil
 }

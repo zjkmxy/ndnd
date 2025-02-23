@@ -12,14 +12,12 @@ import (
 func TestBasicConsume(t *testing.T) {
 	tu.SetT(t)
 
-	testOnData := func([]byte) error {
+	testOnData := func([]byte) {
 		t.Fatal("No data should be received in this test.")
-		return nil
 	}
 	// onError is not actually called by dummy face.
-	testOnError := func(err error) error {
+	testOnError := func(err error) {
 		require.NoError(t, err)
-		return err
 	}
 
 	face := face.NewDummyFace()
@@ -53,29 +51,27 @@ func TestBasicFeed(t *testing.T) {
 	tu.SetT(t)
 	cnt := 0
 
-	testOnData := func(frame []byte) error {
+	testOnData := func(frame []byte) {
 		r := enc.NewBufferReader(frame)
 		cnt++
 		switch cnt {
 		case 1:
 			buf := tu.NoErr(r.ReadBuf(r.Length()))
 			require.Equal(t, enc.Buffer{0x05, 0x03, 0x01, 0x02, 0x03}, buf)
-			return nil
+			return
 		case 2:
 			buf := tu.NoErr(r.ReadBuf(r.Length()))
 			require.Equal(t, enc.Buffer{0x05, 0x01, 0x01}, buf)
-			return nil
+			return
 		case 3:
 			buf := tu.NoErr(r.ReadBuf(r.Length()))
 			require.Equal(t, enc.Buffer{0x05, 0x04, 0x01, 0x02, 0x03, 0x04}, buf)
-			return nil
+			return
 		}
 		t.Fatal("No data should be received now.")
-		return nil
 	}
-	testOnError := func(err error) error {
+	testOnError := func(err error) {
 		require.NoError(t, err)
-		return err
 	}
 
 	face := face.NewDummyFace()

@@ -83,10 +83,6 @@ func (f *WebSocketFace) receive() {
 			continue
 		}
 
-		err = f.onPkt(pkt)
-		if err != nil {
-			f.Close() // engine error
-			return
-		}
+		f.onPkt(pkt)
 	}
 }

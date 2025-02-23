@@ -90,10 +90,7 @@ func (f *StreamFace) receive() {
 	defer f.setStateDown()
 
 	err := ndn_io.ReadTlvStream(f.conn, func(b []byte) bool {
-		if err := f.onPkt(b); err != nil {
-			f.Close()    // engine error
-			return false // break
-		}
+		f.onPkt(b)
 		return f.IsRunning()
 	}, nil)
 

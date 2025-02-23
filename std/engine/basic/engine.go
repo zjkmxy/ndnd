@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -44,7 +45,6 @@ type Engine struct {
 
 	// fib contains the registered Interest handlers.
 	fib *NameTrie[fibEntry]
-
 	// pit contains pending outgoing Interests.
 	pit *NameTrie[pitEntry]
 
@@ -54,9 +54,40 @@ type Engine struct {
 
 	// mgmtConf is the configuration for the management protocol.
 	mgmtConf *mgmt.MgmtConfig
-
 	// cmdChecker is used to validate NFD management packets.
 	cmdChecker ndn.SigChecker
+
+	// inQueue is the incoming packet queue.
+	// The face will be blocked when the queue is full.
+	inQueue chan []byte
+	// close is the channel to signal the main goroutine to stop.
+	close chan struct{}
+	// running is the flag to indicate if the engine is running.
+	running atomic.Bool
+}
+
+func NewEngine(face face.Face, timer ndn.Timer) *Engine {
+	if face == nil || timer == nil {
+		return nil
+	}
+	mgmtCfg := mgmt.NewConfig(face.IsLocal(), sig.NewSha256Signer(), spec.Spec{})
+	return &Engine{
+		face:  face,
+		timer: timer,
+
+		fib: NewNameTrie[fibEntry](),
+		pit: NewNameTrie[pitEntry](),
+
+		fibLock: sync.Mutex{},
+		pitLock: sync.Mutex{},
+
+		mgmtConf:   mgmtCfg,
+		cmdChecker: func(enc.Name, enc.Wire, ndn.Signature) bool { return true },
+
+		inQueue: make(chan []byte, 256),
+		close:   make(chan struct{}),
+		running: atomic.Bool{},
+	}
 }
 
 func (e *Engine) String() string {
@@ -100,10 +131,7 @@ func (e *Engine) DetachHandler(prefix enc.Name) error {
 }
 
 func (e *Engine) onPacket(frame []byte) error {
-	// Copy received buffer from face so face can reuse it
-	frameCopy := make([]byte, len(frame))
-	copy(frameCopy, frame)
-	reader := enc.NewBufferView(frameCopy)
+	reader := enc.NewBufferView(frame)
 
 	var nackReason uint64 = spec.NackReasonNone
 	var pitToken []byte = nil
@@ -227,8 +255,8 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 			log.Warn(e, "Deadline exceeded - DROP", "name", name)
 			return ndn.ErrDeadlineExceed
 		}
-		if !e.face.IsRunning() {
-			log.Error(e, "Cannot send through a closed face - DROP", "name", name)
+		if !e.IsRunning() || !e.face.IsRunning() {
+			log.Warn(e, "Cannot send through a closed face - DROP", "name", name)
 			return ndn.ErrFaceDown
 		}
 		if args.PitToken != nil {
@@ -351,37 +379,60 @@ func (e *Engine) onNack(name enc.Name, reason uint64) {
 	}
 }
 
-func (e *Engine) onError(err error) error {
-	log.Error(e, "Error on face", "err", err, "face", e.face)
-	// TODO: Handle Interest cancellation
-	return err
-}
-
 func (e *Engine) Start() error {
 	if e.face.IsRunning() {
 		return fmt.Errorf("face is already running")
 	}
 
-	e.face.OnPacket(e.onPacket)
-	e.face.OnError(e.onError)
+	e.face.OnPacket(func(frame []byte) {
+		// Copy received buffer from face so face can reuse it
+		frameCopy := make([]byte, len(frame))
+		copy(frameCopy, frame)
+		e.inQueue <- frameCopy
+	})
+	e.face.OnError(func(err error) {
+		log.Error(e, "Error on face", "err", err, "face", e.face)
+		e.Stop()
+	})
 
 	err := e.face.Open()
 	if err != nil {
 		return err
 	}
 
+	e.running.Store(true)
+	go func() {
+		defer e.face.Close()
+		defer e.running.Store(false)
+
+		for {
+			select {
+			case frame := <-e.inQueue:
+				err := e.onPacket(frame)
+				if err != nil {
+					// This never really happens.
+					log.Error(e, "[BUG] Engine::onPacket error", "err", err)
+				}
+			case <-e.close:
+				return
+			}
+		}
+	}()
+
 	return nil
 }
 
 func (e *Engine) Stop() error {
-	if !e.face.IsRunning() {
-		return fmt.Errorf("face is not running")
+	if !e.IsRunning() {
+		return fmt.Errorf("engine is not running")
 	}
-	return e.face.Close()
+
+	e.close <- struct{}{} // closes face too
+	return nil
 }
 
 func (e *Engine) IsRunning() bool {
-	return e.face.IsRunning()
+	return e.running.Load()
 }
 
 func (e *Engine) onExpressTimeout(n *NameTrie[pitEntry]) {
@@ -588,23 +639,6 @@ func (e *Engine) UnregisterRoute(prefix enc.Name) error {
 		log.Debug(e, "Prefix unregistered", "name", prefix)
 	}
 	return nil
-}
-
-func NewEngine(face face.Face, timer ndn.Timer) *Engine {
-	if face == nil || timer == nil {
-		return nil
-	}
-	mgmtCfg := mgmt.NewConfig(face.IsLocal(), sig.NewSha256Signer(), spec.Spec{})
-	return &Engine{
-		face:       face,
-		timer:      timer,
-		mgmtConf:   mgmtCfg,
-		cmdChecker: func(enc.Name, enc.Wire, ndn.Signature) bool { return true },
-		fib:        NewNameTrie[fibEntry](),
-		pit:        NewNameTrie[pitEntry](),
-		fibLock:    sync.Mutex{},
-		pitLock:    sync.Mutex{},
-	}
 }
 
 func hasLogTrace() bool {

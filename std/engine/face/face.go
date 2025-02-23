@@ -11,10 +11,11 @@ type Face interface {
 	IsLocal() bool
 	// OnPacket sets the callback for receiving packets.
 	// This function should only be called by engine implementations.
-	OnPacket(onPkt func(frame []byte) error)
-	// OnError sets the callback for errors.
+	OnPacket(onPkt func(frame []byte))
+	// OnError sets the callback for fatal errors.
+	// On receiving an error, the engine will close itself.
 	// This function should only be called by engine implementations.
-	OnError(onError func(err error) error)
+	OnError(onError func(err error))
 
 	// Open starts the face and may blocks until it is up.
 	Open() error

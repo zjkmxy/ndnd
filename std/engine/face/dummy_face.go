@@ -2,6 +2,7 @@ package face
 
 import (
 	"fmt"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 )
@@ -61,7 +62,11 @@ func (f *DummyFace) FeedPacket(pkt enc.Buffer) error {
 	if !f.running.Load() {
 		return fmt.Errorf("face is not running")
 	}
-	return f.onPkt(pkt)
+	f.onPkt(pkt)
+
+	// hack: yield to give engine time to process the packet
+	time.Sleep(1 * time.Millisecond)
+	return nil
 }
 
 // Consume consumes a packet from the engine
@@ -69,6 +74,10 @@ func (f *DummyFace) Consume() (enc.Buffer, error) {
 	if !f.running.Load() {
 		return nil, fmt.Errorf("face is not running")
 	}
+
+	// hack: yield to wait for packet to arrive
+	time.Sleep(1 * time.Millisecond)
+
 	if len(f.sendPkts) == 0 {
 		return nil, fmt.Errorf("no packet to consume")
 	}

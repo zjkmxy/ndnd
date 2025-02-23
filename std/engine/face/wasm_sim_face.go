@@ -82,10 +82,6 @@ func (f *WasmSimFace) receive(this js.Value, args []js.Value) any {
 	buf := make([]byte, pkt.Get("byteLength").Int())
 	js.CopyBytesToGo(buf, pkt)
 
-	err := f.onPkt(buf)
-	if err != nil {
-		f.Close()
-	}
-
+	f.onPkt(buf)
 	return nil
 }
