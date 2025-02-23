@@ -21,6 +21,10 @@ type TrustConfig struct {
 	schema ndn.TrustSchema
 	// roots are the full names of the trust anchors.
 	roots []enc.Name
+
+	// certCache is the certificate memcache.
+	// Everything in here is validated, fresh and passes the schema.
+	certCache *CertCache
 }
 
 // NewTrustConfig creates a new TrustConfig.
@@ -36,18 +40,28 @@ func NewTrustConfig(keyChain ndn.KeyChain, schema ndn.TrustSchema, roots []enc.N
 		return nil, fmt.Errorf("no trust anchors provided")
 	}
 
+	// The cache must start with all trust anchors
+	certCache := NewCertCache()
+
 	// Check if all roots are present in the keychain
 	for _, root := range roots {
-		if cert, _ := keyChain.Store().Get(root, false); cert == nil {
+		if certBytes, _ := keyChain.Store().Get(root, false); len(certBytes) == 0 {
 			return nil, fmt.Errorf("trust anchor not found in keychain: %s", root)
+		} else {
+			certData, _, err := spec.Spec{}.ReadData(enc.NewBufferView(certBytes))
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse trust anchor %s: %w", root, err)
+			}
+			certCache.Put(certData)
 		}
 	}
 
 	return &TrustConfig{
-		mutex:    sync.RWMutex{},
-		keychain: keyChain,
-		schema:   schema,
-		roots:    roots,
+		mutex:     sync.RWMutex{},
+		keychain:  keyChain,
+		schema:    schema,
+		roots:     roots,
+		certCache: certCache,
 	}, nil
 }
 
@@ -81,6 +95,10 @@ type TrustConfigValidateArgs struct {
 	cert ndn.Data
 	// certSigCov is the signature covered certificate wire.
 	certSigCov enc.Wire
+	// certRaw is the raw certificate bytes (if fetched).
+	certRaw enc.Wire
+	// certIsValid indicates if the certificate has been already validated.
+	certIsValid bool
 
 	// depth is the maximum depth of the validation chain.
 	depth int
@@ -115,6 +133,20 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		return
 	}
 
+	// Get the key locator
+	keyLocator := signature.KeyName()
+	if len(keyLocator) == 0 {
+		args.Callback(false, fmt.Errorf("key locator is nil"))
+		return
+	}
+
+	// Disallow self-signed certificates, all trust anchors must be in validated cache.
+	// This check is redundant since the trust schema should always disallow self-signed certs.
+	if keyLocator.IsPrefix(args.Data.Name()) {
+		args.Callback(false, fmt.Errorf("self-signed certificate: %s", keyLocator))
+		return
+	}
+
 	// If a certificate is provided, go directly to validation
 	if args.cert != nil {
 		certName := args.cert.Name()
@@ -126,19 +158,6 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		// Disallow empty names
 		if len(dataName) == 0 {
 			args.Callback(false, fmt.Errorf("data name is empty"))
-			return
-		}
-
-		// Check if the data claims to be a root certificate.
-		// This breaks the recursion for validation.
-		if dataName.Equal(certName) {
-			for _, root := range tc.roots {
-				if dataName.Equal(root) {
-					args.Callback(true, nil)
-					return
-				}
-			}
-			args.Callback(false, fmt.Errorf("data claims to be a trust anchor: %s", dataName))
 			return
 		}
 
@@ -155,9 +174,41 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 			return
 		}
 
+		// Check if the certificate was already validated.
+		// Since all roots are in cache, this breaks the recursion.
+		if args.certIsValid {
+			args.Callback(true, nil)
+			return
+		}
+
+		// This should never happen, but just in case
 		if len(args.certSigCov) == 0 {
 			args.Callback(false, fmt.Errorf("cert sig covered is nil: %s", certName))
 			return
+		}
+
+		// Monkey patch the callback to store the cert in
+		// keychain and cache if the validation passes.
+		origCallback := args.Callback
+		args.Callback = func(valid bool, err error) {
+			if valid && err == nil {
+				// Cache is thread safe
+				tc.certCache.Put(args.cert)
+
+				// Keychain is not thread safe for inserts
+				if len(args.certRaw) > 0 {
+					tc.mutex.Lock()
+					err := tc.keychain.InsertCert(args.certRaw.Join())
+					tc.mutex.Unlock()
+					if err != nil { // broken keychain
+						log.Error(tc, "Failed to insert certificate to keychain", "name", args.cert.Name(), "err", err)
+					}
+				}
+			} else {
+				log.Warn(tc, "Received invalid certificate", "name", args.cert.Name(), "valid", valid, "err", err)
+			}
+
+			origCallback(valid, err) // continue bubbling up result
 		}
 
 		// Recursively validate the certificate
@@ -169,51 +220,62 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 			Callback:     args.Callback,
 			OverrideName: nil,
 
-			cert:       nil,
-			certSigCov: nil,
+			cert:        nil,
+			certSigCov:  nil,
+			certRaw:     nil,
+			certIsValid: false,
 
 			depth: args.depth,
 		})
 		return
 	}
 
-	// Get the key locator
-	keyLocator := signature.KeyName()
-	if keyLocator == nil {
-		args.Callback(false, fmt.Errorf("key locator is nil"))
-		return
-	}
+	// Reset all cert fields, this is just for extra safety
+	// The code below might seem to have a lot of redundancy - this is intentional.
+	args.cert = nil
+	args.certSigCov = nil
+	args.certRaw = nil
+	args.certIsValid = false
 
-	// Detect if this is a self-signed certificate, and automatically pick the cert
-	// as itself to verify in this case.
-	if ctype, ok := args.Data.ContentType().Get(); ok && ctype == ndn.ContentTypeKey && keyLocator.IsPrefix(args.Data.Name()) {
-		args.cert = args.Data
-		tc.Validate(args)
-		return
+	// Check the validated memcache for the certificate
+	if cachedCert, ok := tc.certCache.Get(keyLocator); ok {
+		// The cache always checks the expiry of the cert
+		args.cert = cachedCert
+		args.certIsValid = true
+
+		// No need for these, the cert is already validated
+		args.certSigCov = nil
+		args.certRaw = nil
 	}
 
 	// Attempt to get cert from store.
-	// Store is thread-safe so no need to lock here.
-	certBytes, err := tc.keychain.Store().Get(keyLocator, true)
-	if err != nil {
-		log.Error(nil, "Failed to get certificate from store", "err", err)
-		args.Callback(false, err)
-		return // store is likely broken
-	}
-	if len(certBytes) > 0 {
-		// Attempt to parse the certificate
-		args.cert, args.certSigCov, err = spec.Spec{}.ReadData(enc.NewBufferView(certBytes))
+	if args.cert == nil {
+		// Store is thread-safe.
+		certBytes, err := tc.keychain.Store().Get(keyLocator, true)
 		if err != nil {
-			log.Error(nil, "Failed to parse certificate in store", "err", err)
-			args.cert = nil
-			args.certSigCov = nil
+			log.Error(nil, "Failed to get certificate from store", "err", err)
+			args.Callback(false, err)
+			return // store is likely broken
+		}
+		if len(certBytes) > 0 {
+			// Attempt to parse the certificate
+			args.cert, args.certSigCov, err = spec.Spec{}.ReadData(enc.NewBufferView(certBytes))
+			if err != nil {
+				log.Error(nil, "Failed to parse certificate in store", "err", err)
+				args.cert = nil
+				args.certSigCov = nil
+				args.certRaw = nil
+				args.certIsValid = false
+			}
 		}
 	}
 
 	// Make sure the certificate is fresh
-	if args.cert != nil && CertIsExpired(args.cert) {
+	if args.cert != nil && !args.certIsValid && CertIsExpired(args.cert) {
 		args.cert = nil
 		args.certSigCov = nil
+		args.certRaw = nil
+		args.certIsValid = false
 	}
 
 	// If not found, attempt to fetch cert from network
@@ -232,6 +294,12 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 				return // failed to fetch cert
 			}
 
+			// Bail if not a certificate
+			if t, ok := res.Data.ContentType().Get(); !ok || t != ndn.ContentTypeKey {
+				args.Callback(false, fmt.Errorf("non-certificate in chain: %s", res.Data.Name()))
+				return
+			}
+
 			// Bail if the fetched cert is not fresh
 			if CertIsExpired(res.Data) {
 				args.Callback(false, fmt.Errorf("certificate is expired: %s", res.Data.Name()))
@@ -244,24 +312,8 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 			// Call again with the fetched cert
 			args.cert = res.Data
 			args.certSigCov = res.SigCovered
-
-			// Monkey patch the callback to store the cert in keychain
-			// if the validation passes.
-			origCallback := args.Callback
-			args.Callback = func(valid bool, err error) {
-				if valid && err == nil {
-					tc.mutex.Lock()
-					err := tc.keychain.InsertCert(res.RawData.Join())
-					tc.mutex.Unlock()
-					if err != nil {
-						log.Error(tc, "Failed to insert certificate to keychain", "name", res.Data.Name(), "err", err)
-					}
-				} else {
-					log.Warn(tc, "Received invalid certificate", "name", res.Data.Name(), "valid", valid, "err", err)
-				}
-				origCallback(valid, err) // continue validation
-			}
-
+			args.certRaw = res.RawData
+			args.certIsValid = false
 			tc.Validate(args)
 		})
 	} else {
