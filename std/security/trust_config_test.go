@@ -152,20 +152,35 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 	// -----------------------------------
 
 	// ------------- Mallory -------------
-	// Mallory root key
+	// Mallory root key 1 (different key name from real root)
 	malloryRootSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
 	malloryRootCertWire, malloryRootCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(malloryRootSigner)))
 	network[malloryRootCertData.Name().String()] = malloryRootCertWire
 
-	// Mallory key
+	// Mallory root key 2 (same key name as real root)
+	malloryRoot2Signer, _ := signer.KeygenEd25519(rootSigner.KeyName())
+	malloryRoot2CertWire, malloryRoot2CertData := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(malloryRoot2Signer)))
+	network[malloryRoot2CertData.Name().String()] = malloryRoot2CertWire
+
+	// Mallory key (mallory root 1)
 	mallorySigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/mallory")))
 	malloryCertWire, malloryCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(mallorySigner)))
 	network[malloryCertData.Name().String()] = malloryCertWire
 
-	// Mallory Alice key
+	// Mallory key (mallory root 2)
+	mallory2Signer, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/mallory")))
+	mallory2CertWire, mallory2CertData := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(mallory2Signer)))
+	network[mallory2CertData.Name().String()] = mallory2CertWire
+
+	// Mallory Alice key (mallory root 1)
 	mAliceSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
 	mAliceCertWire, mAliceCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(mAliceSigner)))
 	network[mAliceCertData.Name().String()] = mAliceCertWire
+
+	// Mallory Alice key (mallory root 2)
+	mAlice2Signer, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
+	mAlice2CertWire, mAlice2CertData := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(mAlice2Signer)))
+	network[mAlice2CertData.Name().String()] = mAlice2CertWire
 	// -----------------------------------
 
 	// Simulate fetch from network using engine
@@ -267,7 +282,7 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 	// Sign with root certificate
 	require.False(t, validateSync("/test/alice/data1", rootSigner))
 
-	// Sign with mallory's malicious keys
+	// Sign with mallory's malicious keys (root 1)
 	fetchCount = 0
 	require.False(t, validateSync("/test/alice/data3", mAliceSigner))
 	require.Equal(t, 2, fetchCount) // fetch 2x mallory certs
@@ -278,6 +293,21 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 	require.False(t, validateSync("/test/alice/data/extra", mallorySigner))
 	require.Equal(t, 6, fetchCount) // don't bother fetching mallory root because of schema miss
 	require.False(t, validateSync("/test/mallory/data4", mallorySigner))
+	require.Equal(t, 8, fetchCount) // schema hit, fetch 2x mallory certs
+
+	// Sign with mallory's malicious keys (root 2)
+	// In this case the root certificate name is the same, so that cert should not be fetched
+	fetchCount = 0
+	require.False(t, validateSync("/test/alice/data3", mAlice2Signer))
+	require.Equal(t, 1, fetchCount) // fetch mallory's alice cert
+	require.False(t, validateSync("/test/alice/data4", mAlice2Signer))
+	require.Equal(t, 2, fetchCount) // invalid cert not in store
+	require.False(t, validateSync("/test/alice/data3", malloryRoot2Signer))
+	require.Equal(t, 2, fetchCount) // nothing fetched, root cert is in store
+	require.False(t, validateSync("/test/alice/data/extra", mallory2Signer))
+	require.Equal(t, 3, fetchCount) // (same as root 1)
+	require.False(t, validateSync("/test/mallory/data4", mallory2Signer))
+	require.Equal(t, 4, fetchCount) // (same as root 1, except no mallory root fetch)
 }
 
 func TestTrustConfigLvs(t *testing.T) {
