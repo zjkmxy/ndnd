@@ -78,9 +78,7 @@ func (f *WasmWsFace) Send(pkt enc.Wire) error {
 		return fmt.Errorf("face is not running")
 	}
 
-	l := pkt.Length()
-	arr := js.Global().Get("Uint8Array").New(int(l))
-	js.CopyBytesToJS(arr, pkt.Join())
+	arr := jsutil.SliceToJsArray(pkt.Join())
 	f.conn.Call("send", arr)
 
 	return nil
