@@ -10,6 +10,8 @@ import (
 // Engine represents a running NDN App low-level engine.
 // Used by NTSchema.
 type Engine interface {
+	// String is the instance log identifier.
+	String() string
 	// EngineTrait is the type trait of the NDN engine.
 	EngineTrait() Engine
 	// Spec returns an NDN packet specification.
@@ -46,6 +48,10 @@ type Engine interface {
 	RegisterRoute(prefix enc.Name) error
 	// UnregisterRoute unregisters a route of prefix to the local forwarder.
 	UnregisterRoute(prefix enc.Name) error
+
+	// Post a task to the engine goroutine (internal usage only).
+	// Be careful not to deadlock the engine.
+	Post(func())
 }
 
 type Timer interface {

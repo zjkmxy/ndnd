@@ -60,6 +60,8 @@ type Engine struct {
 	// inQueue is the incoming packet queue.
 	// The face will be blocked when the queue is full.
 	inQueue chan []byte
+	// taskQueue is the task queue for the main goroutine.
+	taskQueue chan func()
 	// close is the channel to signal the main goroutine to stop.
 	close chan struct{}
 	// running is the flag to indicate if the engine is running.
@@ -84,9 +86,10 @@ func NewEngine(face face.Face, timer ndn.Timer) *Engine {
 		mgmtConf:   mgmtCfg,
 		cmdChecker: func(enc.Name, enc.Wire, ndn.Signature) bool { return true },
 
-		inQueue: make(chan []byte, 256),
-		close:   make(chan struct{}),
-		running: atomic.Bool{},
+		inQueue:   make(chan []byte, 256),
+		taskQueue: make(chan func(), 512),
+		close:     make(chan struct{}),
+		running:   atomic.Bool{},
 	}
 }
 
@@ -415,6 +418,8 @@ func (e *Engine) Start() error {
 				}
 			case <-e.close:
 				return
+			case task := <-e.taskQueue:
+				task()
 			}
 		}
 	}()
@@ -639,6 +644,16 @@ func (e *Engine) UnregisterRoute(prefix enc.Name) error {
 		log.Debug(e, "Prefix unregistered", "name", prefix)
 	}
 	return nil
+}
+
+func (e *Engine) Post(task func()) {
+	select {
+	case e.taskQueue <- task:
+	default:
+		// Do not block in case this is being called from the
+		// main goroutine itself - ideally this never happens.
+		go func() { e.taskQueue <- task }()
+	}
 }
 
 func hasLogTrace() bool {
