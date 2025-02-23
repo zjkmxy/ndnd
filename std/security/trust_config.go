@@ -169,8 +169,12 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 
 		// Validate signature on data
 		valid, err := signer.ValidateData(args.Data, args.DataSigCov, args.cert)
-		if !valid || err != nil {
-			args.Callback(false, fmt.Errorf("signature is invalid: %w", err))
+		if !valid {
+			args.Callback(false, fmt.Errorf("signature is invalid"))
+			return
+		}
+		if err != nil {
+			args.Callback(false, fmt.Errorf("signature validate error: %w", err))
 			return
 		}
 
@@ -205,7 +209,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 					}
 				}
 			} else {
-				log.Warn(tc, "Received invalid certificate", "name", args.cert.Name(), "valid", valid, "err", err)
+				log.Warn(tc, "Received invalid certificate", "name", args.cert.Name(), "err", err)
 			}
 
 			origCallback(valid, err) // continue bubbling up result
