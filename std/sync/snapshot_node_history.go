@@ -168,10 +168,6 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 			s.pss.onSnap(func(state SvMap[svsDataState]) (SvsPub, error) {
 				entry := state.Get(hash, boot)
 
-				if entry.Known >= scstate.Version() {
-					return SvsPub{}, fmt.Errorf("fetched old snapshot - ignoring")
-				}
-
 				// Filter out any publications which are already known
 				for len(snapshot.Entries) > 0 {
 					if snapshot.Entries[0].SeqNo <= entry.Known {
@@ -181,14 +177,26 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 					}
 				}
 
+				// Check if snapshot is outdated
+				isOutdated := entry.Known >= scstate.Version()
+
 				// Update the state vector
 				if indexI == len(index.SeqNos)-1 {
 					// Reset only if this is the last snapshot in the index
 					entry.SnapBlock = 0
 				}
-				entry.Known = scstate.Version()
-				entry.Pending = max(entry.Pending, entry.Known)
+
+				// Update the state vector
+				if !isOutdated {
+					entry.Known = scstate.Version()
+					entry.Pending = max(entry.Pending, entry.Known)
+				}
 				state.Set(hash, boot, entry)
+
+				// Do this last so that we reset snap block first
+				if isOutdated {
+					return SvsPub{}, fmt.Errorf("fetched old snapshot - ignoring")
+				}
 
 				return SvsPub{
 					Publisher:  node,
