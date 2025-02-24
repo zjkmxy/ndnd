@@ -65,7 +65,7 @@ func (f *DummyFace) FeedPacket(pkt enc.Buffer) error {
 	f.onPkt(pkt)
 
 	// hack: yield to give engine time to process the packet
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	return nil
 }
 
@@ -76,7 +76,7 @@ func (f *DummyFace) Consume() (enc.Buffer, error) {
 	}
 
 	// hack: yield to wait for packet to arrive
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	if len(f.sendPkts) == 0 {
 		return nil, fmt.Errorf("no packet to consume")
