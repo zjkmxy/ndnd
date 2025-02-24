@@ -273,3 +273,10 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 	// Check if we want to queue new fetch for this update.
 	s.consumeCheck(update.Name)
 }
+
+func ParseInitialState(wire enc.Wire) (*spec_svs.InstanceState, error) {
+	if wire == nil {
+		return nil, nil
+	}
+	return spec_svs.ParseInstanceState(enc.NewWireView(wire), true)
+}
