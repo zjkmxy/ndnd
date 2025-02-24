@@ -24,6 +24,21 @@ type SnapshotNodeHistory struct {
 	// Threshold is the number of updates before a snapshot is taken.
 	Threshold uint64
 
+	// Compress is the optional callback to compress the history snapshot.
+	//
+	// 1. The snapshot should be compressed in place.
+	// 2. If grouping is used, the last sequence number of a group should be kept.
+	//    Earlier sequence numbers can then be removed.
+	// 3. #2 implies that the last sequence number cannot be removed.
+	//
+	// For example, for snapshot 1, [2, 3, 4], (5), 6, (7), 8, 9, 10:
+	//  - [VALID] 1, [234], 6, (57), 8, 10
+	//  - [INVALID] 1, 4[234], 6, 7(57), 8, 9, 10
+	//  - [INVALID] 1, 3[234], 6, 7(57), 8, 9, 10
+	//  - [INVALID] 1, 4[234], 5(57), 6, 8, 9, 10
+	//  - [INVALID] 1, 4[234], 6, 8, 9, 10
+	Compress func(*svs_ps.HistorySnap)
+
 	// pss is the struct from the svs layer.
 	pss snapPsState
 	// prevSeq is my last snapshot sequence number.
@@ -235,7 +250,7 @@ func (s *SnapshotNodeHistory) takeSnap(seqNo uint64) {
 	index.SeqNos = append(index.SeqNos, seqNo)
 
 	// Create a new snapshot
-	snapshot := svs_ps.HistorySnap{
+	snapshot := &svs_ps.HistorySnap{
 		Entries: make([]*svs_ps.HistorySnapEntry, 0, seqNo-s.prevSeq),
 	}
 
@@ -256,6 +271,11 @@ func (s *SnapshotNodeHistory) takeSnap(seqNo uint64) {
 			SeqNo:   i,
 			Content: content,
 		})
+	}
+
+	// Compress the snapshot
+	if s.Compress != nil {
+		s.Compress(snapshot)
 	}
 
 	// Publish snapshot into our store
