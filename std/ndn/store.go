@@ -11,8 +11,9 @@ type Store interface {
 	Put(name enc.Name, version uint64, wire []byte) error
 
 	// removes a Data wire from the store
-	// if prefix is set, all names with the given prefix are removed
-	Remove(name enc.Name, prefix bool) error
+	Remove(name enc.Name) error
+	// remove all Data wires under a prefix
+	RemovePrefix(prefix enc.Name) error
 
 	// begin a write transaction (for put only)
 	// we support these primarily for performance rather than correctness

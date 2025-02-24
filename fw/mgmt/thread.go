@@ -225,7 +225,7 @@ func (m *Thread) sendStatusDataset(interest *Interest, name enc.Name, dataset en
 
 	// Evict oldest object if we have too many
 	if old := m.objDir.Pop(); old != nil {
-		if err := m.store.Remove(old, true); err != nil {
+		if err := m.store.RemovePrefix(old); err != nil {
 			core.Log.Warn(m, "Unable to clean up old status dataset", "err", err)
 		}
 	}

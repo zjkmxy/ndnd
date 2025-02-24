@@ -62,11 +62,19 @@ func (s *MemoryStore) Put(name enc.Name, version uint64, wire []byte) error {
 	return nil
 }
 
-func (s *MemoryStore) Remove(name enc.Name, prefix bool) error {
+func (s *MemoryStore) Remove(name enc.Name) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.root.remove(name, prefix)
+	s.root.remove(name, false)
+	return nil
+}
+
+func (s *MemoryStore) RemovePrefix(prefix enc.Name) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.root.remove(prefix, true)
 	return nil
 }
 

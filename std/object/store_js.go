@@ -110,13 +110,18 @@ func (s *JsStore) Put(name enc.Name, version uint64, wire []byte) error {
 	return nil
 }
 
-func (s *JsStore) Remove(name enc.Name, prefix bool) error {
-	name_js := jsutil.SliceToJsArray(name.BytesInner())
-
+func (s *JsStore) Remove(name enc.Name) error {
 	// This does not evict the cache, but that's fine.
 	// Applications should not rely on the cache for correctness.
 
-	s.api.Call("remove", name_js, prefix)
+	name_js := jsutil.SliceToJsArray(name.BytesInner())
+	s.api.Call("remove", name_js, false)
+	return nil
+}
+
+func (s *JsStore) RemovePrefix(prefix enc.Name) error {
+	name_js := jsutil.SliceToJsArray(prefix.BytesInner())
+	s.api.Call("remove", name_js, true)
 	return nil
 }
 

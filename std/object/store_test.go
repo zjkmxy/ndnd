@@ -100,7 +100,7 @@ func testStoreBasic(t *testing.T, store ndn.Store) {
 	require.Equal(t, wire3, data)
 
 	// remove data 3
-	require.NoError(t, store.Remove(name3, false))
+	require.NoError(t, store.Remove(name3))
 
 	// check prefix now returns data 2
 	data, err = store.Get(name1pfx, true)
@@ -108,7 +108,7 @@ func testStoreBasic(t *testing.T, store ndn.Store) {
 	require.Equal(t, wire2, data)
 
 	// clear subtree of name1
-	require.NoError(t, store.Remove(name1pfx, true))
+	require.NoError(t, store.RemovePrefix(name1pfx))
 
 	// check prefix now returns no data
 	data, err = store.Get(name1pfx, true)

@@ -142,7 +142,7 @@ func (c *Client) Remove(name enc.Name) error {
 	defer tx.Commit()
 
 	// Remove object data
-	err = tx.Remove(name, true)
+	err = tx.RemovePrefix(name)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (c *Client) Remove(name enc.Name) error {
 	// If there is no version, we removed this anyway in the previous step
 	if version := name.At(-1); version.IsVersion() {
 		metadata := name.Prefix(-1).Append(enc.NewKeywordComponent(rdr.MetadataKeyword), version)
-		err = tx.Remove(metadata, true)
+		err = tx.RemovePrefix(metadata)
 		if err != nil {
 			return err
 		}

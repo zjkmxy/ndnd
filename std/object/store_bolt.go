@@ -101,49 +101,29 @@ func (s *BoltStore) Put(name enc.Name, version uint64, wire []byte) error {
 	binary.BigEndian.PutUint64(buf, version)
 	copy(buf[8:], wire)
 
-	// insert data into bolt
-	update := func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(BoltBucket)
-		if bucket == nil {
-			return ErrBoltNoBucket
-		}
+	return s.update(func(tx *bolt.Tx, bucket *bolt.Bucket) error {
 		return bucket.Put(key, buf)
-	}
-
-	// use current transaction if available otherwise create a new one
-	if s.tx != nil {
-		return update(s.tx)
-	} else {
-		return s.db.Update(update)
-	}
+	})
 }
 
-func (s *BoltStore) Remove(name enc.Name, prefix bool) error {
+func (s *BoltStore) Remove(name enc.Name) error {
 	key := s.nameKey(name)
-	update := func(tx *bolt.Tx) (err error) {
-		bucket := tx.Bucket(BoltBucket)
-		if bucket == nil {
-			return ErrBoltNoBucket
-		}
+	return s.update(func(tx *bolt.Tx, bucket *bolt.Bucket) error {
+		return bucket.Delete(key)
+	})
+}
 
-		if prefix {
-			c := bucket.Cursor()
-			for k, _ := c.Seek(key); k != nil && bytes.HasPrefix(k, key); k, _ = c.Next() {
-				if err = bucket.Delete(k); err != nil {
-					return err
-				}
+func (s *BoltStore) RemovePrefix(prefix enc.Name) error {
+	key := s.nameKey(prefix)
+	return s.update(func(tx *bolt.Tx, bucket *bolt.Bucket) (err error) {
+		c := bucket.Cursor()
+		for k, _ := c.Seek(key); k != nil && bytes.HasPrefix(k, key); k, _ = c.Next() {
+			if err = bucket.Delete(k); err != nil {
+				return err
 			}
-			return nil
-		} else {
-			return bucket.Delete(key)
 		}
-	}
-
-	if s.tx != nil {
-		return update(s.tx)
-	} else {
-		return s.db.Update(update)
-	}
+		return nil
+	})
 }
 
 func (s *BoltStore) Begin() (ndn.Store, error) {
@@ -177,4 +157,19 @@ func (s *BoltStore) Rollback() error {
 
 func (s *BoltStore) nameKey(name enc.Name) []byte {
 	return name.BytesInner()
+}
+
+func (s *BoltStore) update(f func(tx *bolt.Tx, bucket *bolt.Bucket) error) error {
+	update := func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(BoltBucket)
+		if bucket == nil {
+			return ErrBoltNoBucket
+		}
+		return f(tx, bucket)
+	}
+	if s.tx != nil {
+		return update(s.tx)
+	} else {
+		return s.db.Update(update)
+	}
 }
