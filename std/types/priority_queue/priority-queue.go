@@ -82,8 +82,18 @@ func (pq *Queue[V, P]) Pop() V {
 // Update modifies the priority and value of the item
 func (pq *Queue[V, P]) Update(item *Item[V, P], value V, priority P) {
 	item.object = value
+	pq.UpdatePriority(item, priority)
+}
+
+// UpdatePriority modifies the priority of the item
+func (pq *Queue[V, P]) UpdatePriority(item *Item[V, P], priority P) {
 	item.priority = priority
 	heap.Fix(&pq.pq, item.index)
+}
+
+// Value returns the value of the item
+func (item *Item[V, P]) Value() V {
+	return item.object
 }
 
 // New creates a new priority queue. Not required to call.
