@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
@@ -64,11 +63,7 @@ func main() {
 		return
 	}
 	defer bstore.Close()
-
-	// Use caching layer to reduce the number of writes to the underlying store
-	cstore := object.NewCachingStore(bstore, 100*time.Millisecond)
-	defer cstore.Close()
-	store = cstore
+	store = bstore
 
 	// Create object client
 	client := object.NewClient(app, store, nil)
