@@ -10,7 +10,6 @@ import (
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 	"github.com/named-data/ndnd/std/ndn/svs_ps"
 	"github.com/named-data/ndnd/std/object"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
@@ -74,7 +73,7 @@ func main() {
 	defer client.Stop()
 
 	// Create a new SVS ALO instance
-	svsalo = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+	svsalo, err = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
 		// Name is the name of the node
 		Name: name,
 
@@ -95,6 +94,9 @@ func main() {
 			Threshold: 10,
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	// OnError gets called when we get an error from the SVS ALO instance.
 	svsalo.SetOnError(func(err error) {
@@ -190,30 +192,21 @@ func publish(content []byte) {
 	commitState(state)
 }
 
-func commitState(state *spec_svs.InstanceState) {
+func commitState(state enc.Wire) {
 	// Once a publication is processed, ideally the application should persist
 	// it's own state and the state of the Sync group *atomically*.
 	//
 	// Applications can use their own data structures to store the state.
-	// In this example, we use the object store to persist the state.
-	store.Put(group, 0, state.Encode().Join())
+	// In this example, we use the NDN object store to persist the state.
+	store.Put(group, 0, state.Join())
 }
 
-func readState() *spec_svs.InstanceState {
+func readState() enc.Wire {
 	// Read the state from the object store
 	// See commitState for more information
 	stateWire, err := store.Get(group, false)
 	if err != nil {
-		log.Error(nil, "Unable to get state from object store", "err", err)
-		os.Exit(1)
+		panic("unable to get state (store is broken)")
 	}
-	if stateWire != nil {
-		state, err := spec_svs.ParseInstanceState(enc.NewBufferView(stateWire), true)
-		if err != nil {
-			log.Error(nil, "Unable to parse state from object store", "err", err)
-			os.Exit(1)
-		}
-		return state
-	}
-	return nil
+	return enc.Wire{stateWire}
 }

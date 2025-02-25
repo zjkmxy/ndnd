@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"fmt"
 	"slices"
 	"time"
 
@@ -34,7 +35,7 @@ func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
 		WithVersion(enc.VersionImmutable)
 }
 
-func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, *spec_svs.InstanceState, error) {
+func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, enc.Wire, error) {
 	// This instance owns the underlying SVS instance.
 	// So we can be sure that the sequence number does not
 	// change while we hold the lock on this instance.
@@ -231,23 +232,51 @@ func (s *SvsALO) queuePub(pub SvsPub) {
 	s.outpipe <- pub
 }
 
-// instanceState returns the current state of the instance.
-func (s *SvsALO) instanceState() *spec_svs.InstanceState {
-	stateVector := s.state.Encode(func(state svsDataState) uint64 {
-		return state.Known
-	})
-
-	return &spec_svs.InstanceState{
-		Name:          s.opts.Name,
-		BootstrapTime: s.BootTime(),
-		StateVector:   stateVector,
-	}
-}
-
 // queueError queues an error to the application.
 func (s *SvsALO) queueError(err error) {
 	select {
 	case s.errpipe <- err:
 	default:
 	}
+}
+
+// instanceState returns the current state of the instance.
+func (s *SvsALO) instanceState() enc.Wire {
+	state := spec_svs.InstanceState{
+		Name:          s.opts.Name,
+		BootstrapTime: s.BootTime(),
+		StateVector: s.state.Encode(func(state svsDataState) uint64 {
+			return state.Known
+		}),
+	}
+	return state.Encode()
+}
+
+// parseInstanceState parses an instance state into the current state.
+// Only the constructor should call this function.
+func (s *SvsALO) parseInstanceState(wire enc.Wire) error {
+	initState, err := spec_svs.ParseInstanceState(enc.NewWireView(wire), true)
+	if err != nil {
+		return err
+	}
+
+	if !initState.Name.Equal(s.opts.Name) {
+		return fmt.Errorf("initial state name mismatch: %v != %v", initState.Name, s.opts.Name)
+	}
+
+	s.opts.Svs.BootTime = initState.BootstrapTime
+	s.opts.Svs.InitialState = initState.StateVector
+
+	for _, entry := range initState.StateVector.Entries {
+		hash := entry.Name.TlvStr()
+		for _, seqEntry := range entry.SeqNoEntries {
+			s.state.Set(hash, seqEntry.BootstrapTime, svsDataState{
+				Known:   seqEntry.SeqNo,
+				Latest:  seqEntry.SeqNo,
+				Pending: seqEntry.SeqNo,
+			})
+		}
+	}
+
+	return nil
 }

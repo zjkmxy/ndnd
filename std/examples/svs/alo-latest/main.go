@@ -71,7 +71,7 @@ func main() {
 	msgSize := 0
 
 	// Create a new SVS ALO instance
-	svsalo := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+	svsalo, err := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
 		// Name is the name of the node
 		Name: name,
 
@@ -102,6 +102,9 @@ func main() {
 			Threshold: 10,
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	// Set of publishers that we are subscribed to.
 	// The value is the number of errors received for the publisher.

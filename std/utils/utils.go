@@ -39,7 +39,7 @@ func ConvertNonce(nonce []byte) (ret optional.Optional[uint32]) {
 	return ret
 }
 
-// If is the ternary operator
+// If is the ternary operator (eager evaluation)
 func If[T any](cond bool, t, f T) T {
 	if cond {
 		return t

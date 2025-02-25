@@ -343,7 +343,8 @@ func (dv *Router) createPrefixTable() {
 	dv.pfxSubs = make(map[uint64]enc.Name)
 
 	// SVS delivery agent
-	dv.pfxSvs = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+	var err error
+	dv.pfxSvs, err = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
 		Name: dv.config.RouterDataPrefix(),
 		Svs: ndn_sync.SvSyncOpts{
 			Client:      dv.client,
@@ -358,6 +359,9 @@ func (dv *Router) createPrefixTable() {
 			Threshold: PrefixSnapThreshold,
 		},
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	// Local prefix table
 	dv.pfx = table.NewPrefixTable(dv.config, func(w enc.Wire) {

@@ -49,7 +49,7 @@ type SvsAloOpts struct {
 	// Snapshot is the snapshot strategy.
 	Snapshot Snapshot
 	// InitialState is the initial state of the instance.
-	InitialState *spec_svs.InstanceState
+	InitialState enc.Wire
 
 	// MaxPipelineSize is the number of objects to fetch
 	// concurrently for a single publisher (default 10)
@@ -57,7 +57,7 @@ type SvsAloOpts struct {
 }
 
 // NewSvsALO creates a new SvsALO instance.
-func NewSvsALO(opts SvsAloOpts) *SvsALO {
+func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 	if len(opts.Name) == 0 {
 		panic("Name is required")
 	}
@@ -89,21 +89,8 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 	// Read initial state if provided.
 	s.opts.Svs.OnUpdate = s.onSvsUpdate
 	if s.opts.InitialState != nil {
-		if !s.opts.InitialState.Name.Equal(s.opts.Name) {
-			panic("Name mismatch in provided initial state")
-		}
-		s.opts.Svs.BootTime = s.opts.InitialState.BootstrapTime
-		s.opts.Svs.InitialState = s.opts.InitialState.StateVector
-
-		for _, entry := range s.opts.InitialState.StateVector.Entries {
-			hash := entry.Name.TlvStr()
-			for _, seqEntry := range entry.SeqNoEntries {
-				s.state.Set(hash, seqEntry.BootstrapTime, svsDataState{
-					Known:   seqEntry.SeqNo,
-					Latest:  seqEntry.SeqNo,
-					Pending: seqEntry.SeqNo,
-				})
-			}
+		if err := s.parseInstanceState(s.opts.InitialState); err != nil {
+			return nil, err
 		}
 	}
 
@@ -131,7 +118,7 @@ func NewSvsALO(opts SvsAloOpts) *SvsALO {
 		})
 	}
 
-	return s
+	return s, nil
 }
 
 // String is the log identifier.
@@ -194,7 +181,7 @@ func (s *SvsALO) SetOnPublisher(callback func(enc.Name)) {
 }
 
 // Publish sends a message to the group
-func (s *SvsALO) Publish(content enc.Wire) (enc.Name, *spec_svs.InstanceState, error) {
+func (s *SvsALO) Publish(content enc.Wire) (name enc.Name, state enc.Wire, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
