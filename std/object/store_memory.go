@@ -80,15 +80,15 @@ func (s *MemoryStore) RemovePrefix(prefix enc.Name) error {
 }
 
 func (s *MemoryStore) RemoveFlatRange(prefix enc.Name, first enc.Component, last enc.Component) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	pfx := s.root.find(prefix)
 	firstKey, lastKey := first.TlvStr(), last.TlvStr()
 	if firstKey > lastKey {
 		return fmt.Errorf("firstKey > lastKey")
 	}
 
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	pfx := s.root.find(prefix)
 	for child := range pfx.children {
 		if child >= firstKey && child <= lastKey {
 			delete(pfx.children, child)
