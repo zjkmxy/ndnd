@@ -225,8 +225,8 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 	name := args.Interest.Name()
 
 	// Compute deadline
-	args.Deadline = e.timer.Now().
-		Add(args.Interest.Lifetime().GetOr(DefaultInterestLife))
+	args.Deadline = e.timer.Now().Add(
+		args.Interest.Lifetime().GetOr(DefaultInterestLife))
 
 	// Match node
 	handler := func() ndn.InterestHandler {
@@ -252,38 +252,47 @@ func (e *Engine) onInterest(args ndn.InterestHandlerArgs) {
 	}
 
 	// The reply callback function
-	args.Reply = func(encodedData enc.Wire) error {
-		now := e.timer.Now()
-		if args.Deadline.Before(now) {
-			log.Warn(e, "Deadline exceeded - DROP", "name", name)
-			return ndn.ErrDeadlineExceed
+	args.Reply = e.newDataReplyFunc(args.PitToken)
+
+	// Call the handler. The handler should create goroutine to avoid blocking.
+	// Do not `go` here because if Data is ready at hand, creating a goroutine is slower.
+	handler(args)
+}
+
+func (e *Engine) newDataReplyFunc(pitToken []byte) ndn.WireReplyFunc {
+	return func(dataWire enc.Wire) error {
+		if dataWire == nil {
+			return nil
 		}
+
+		// Check if the face is running
 		if !e.IsRunning() || !e.face.IsRunning() {
-			log.Warn(e, "Cannot send through a closed face - DROP", "name", name)
 			return ndn.ErrFaceDown
 		}
-		if args.PitToken != nil {
+
+		// Outgoing packet
+		var outWire enc.Wire = dataWire
+
+		// Wrap the data in LP packet if needed
+		if pitToken != nil {
 			lpPkt := &spec.Packet{
 				LpPacket: &spec.LpPacket{
-					PitToken: args.PitToken,
-					Fragment: encodedData,
+					PitToken: pitToken,
+					Fragment: dataWire,
 				},
 			}
 			encoder := spec.PacketEncoder{}
 			encoder.Init(lpPkt)
 			wire := encoder.Encode(lpPkt)
 			if wire == nil {
-				return ndn.ErrFailedToEncode
+				log.Error(e, "[BUG] Failed to encode LP packet")
+			} else {
+				outWire = wire
 			}
-			return e.face.Send(wire)
-		} else {
-			return e.face.Send(encodedData)
 		}
-	}
 
-	// Call the handler. The handler should create goroutine to avoid blocking.
-	// Do not `go` here because if Data is ready at hand, creating a go routine may be slower. Not tested though.
-	handler(args)
+		return e.face.Send(outWire)
+	}
 }
 
 func (e *Engine) onDataMatch(pkt *spec.Data, raw enc.Wire) pitEntry {
