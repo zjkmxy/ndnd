@@ -24,25 +24,40 @@ type SvSync struct {
 	stop    chan struct{}
 	ticker  *time.Ticker
 
-	mutex sync.Mutex
-	state SvMap[uint64]
-	mtime map[string]time.Time
+	mutex  sync.Mutex
+	state  SvMap[uint64]
+	mtime  map[string]time.Time
+	prefix enc.Name
 
+	// Suppression state
 	suppress bool
 	merge    SvMap[uint64]
 
-	recvSv chan *spec_svs.StateVector
+	// Channel for incoming state vectors
+	recvSv chan svSyncRecvSvArgs
+	// Last received buffered wire (passive mode)
+	lastWire enc.Wire
 }
 
 type SvSyncOpts struct {
-	Client      ndn.Client
+	// NDN Object API client
+	Client ndn.Client
+	// Sync group prefix for the SVS group
 	GroupPrefix enc.Name
-	OnUpdate    func(SvSyncUpdate)
+	// Callback for SVSync updates
+	OnUpdate func(SvSyncUpdate)
 
-	InitialState      *spec_svs.StateVector
-	BootTime          uint64
-	PeriodicTimeout   time.Duration
+	// Initial state vector from persistence
+	InitialState *spec_svs.StateVector
+	// Boot time from persistence
+	BootTime uint64
+	// Periodic timeout for sending Sync Interests (default 30s)
+	PeriodicTimeout time.Duration
+	// Suppression period for ignoring outdated Sync Interests (default 200ms)
 	SuppressionPeriod time.Duration
+
+	// Passive mode does not send sign Sync Interests
+	Passive bool
 }
 
 type SvSyncUpdate struct {
@@ -50,6 +65,11 @@ type SvSyncUpdate struct {
 	Boot uint64
 	High uint64
 	Low  uint64
+}
+
+type svSyncRecvSvArgs struct {
+	sv   *spec_svs.StateVector
+	data enc.Wire
 }
 
 // NewSvSync creates a new SV Sync instance.
@@ -87,24 +107,23 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 		opts.SuppressionPeriod = 200 * time.Millisecond
 	}
 
-	// Deep copy referenced options
-	opts.GroupPrefix = opts.GroupPrefix.Clone()
-
 	return &SvSync{
 		o: opts,
 
 		running: atomic.Bool{},
 		stop:    make(chan struct{}),
-		ticker:  time.NewTicker(1 * time.Second),
+		ticker:  time.NewTicker(opts.PeriodicTimeout),
 
-		mutex: sync.Mutex{},
-		state: initialState,
-		mtime: make(map[string]time.Time),
+		mutex:  sync.Mutex{},
+		state:  initialState,
+		mtime:  make(map[string]time.Time),
+		prefix: opts.GroupPrefix.Append(enc.NewVersionComponent(3)),
 
 		suppress: false,
 		merge:    NewSvMap[uint64](0),
 
-		recvSv: make(chan *spec_svs.StateVector, 128),
+		recvSv:   make(chan svSyncRecvSvArgs, 128),
+		lastWire: nil,
 	}
 }
 
@@ -115,7 +134,7 @@ func (s *SvSync) String() string {
 
 // Start the SV Sync instance.
 func (s *SvSync) Start() (err error) {
-	err = s.o.Client.Engine().AttachHandler(s.handlerPrefix(),
+	err = s.o.Client.Engine().AttachHandler(s.prefix,
 		func(args ndn.InterestHandlerArgs) {
 			s.onSyncInterest(args.Interest)
 		})
@@ -130,7 +149,7 @@ func (s *SvSync) Start() (err error) {
 }
 
 func (s *SvSync) main() {
-	defer s.o.Client.Engine().DetachHandler(s.handlerPrefix())
+	defer s.o.Client.Engine().DetachHandler(s.prefix)
 
 	s.running.Store(true)
 	defer s.running.Store(false)
@@ -145,10 +164,6 @@ func (s *SvSync) main() {
 			return
 		}
 	}
-}
-
-func (s *SvSync) handlerPrefix() enc.Name {
-	return s.o.GroupPrefix.Append(enc.NewVersionComponent(3))
 }
 
 // Stop the SV Sync instance.
@@ -210,7 +225,7 @@ func (s *SvSync) GetBootTime() uint64 {
 	return s.o.BootTime
 }
 
-func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
+func (s *SvSync) onReceiveStateVector(args svSyncRecvSvArgs) {
 	// Deliver the updates after this call is done
 	// This ensures the mutex is not held during the callback
 	// This function, in turn, runs on our main goroutine, so
@@ -227,10 +242,10 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 
 	isOutdated := false
 	canDrop := true
-	recvSv := NewSvMap[uint64](len(sv.Entries))
+	recvSv := NewSvMap[uint64](len(args.sv.Entries))
 	now := time.Now()
 
-	for _, node := range sv.Entries {
+	for _, node := range args.sv.Entries {
 		hash := node.Name.TlvStr()
 
 		// Walk through the state vector entries in reverse order.
@@ -276,7 +291,8 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 			}
 
 			// [Spec] Suppression state
-			if s.suppress {
+			// [Passive] Never update MergedStateVector
+			if s.suppress && !s.o.Passive {
 				// [Spec] For every incoming Sync Interest, aggregate
 				// the state vector into a MergedStateVector.
 				known := s.merge.Get(hash, entry.BootstrapTime)
@@ -298,6 +314,9 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 		// [Spec] Suppression state: Move to Steady State.
 		// [Spec] Steady state: Reset Sync Interest timer.
 		s.enterSteadyState()
+
+		// [Passive] Buffer the last up-to-date wire
+		s.lastWire = args.data
 		return
 	} else if canDrop || s.suppress {
 		// See above for explanation
@@ -339,6 +358,48 @@ func (s *SvSync) sendSyncInterest() {
 		return
 	}
 
+	// Make SVS Sync Data
+	var dataWire enc.Wire
+	if s.o.Passive {
+		// [Passive] Send the last buffered wire
+		func() {
+			s.mutex.Lock()
+			defer s.mutex.Unlock()
+			dataWire = s.lastWire
+		}()
+	} else {
+		// Encode and sign the current state vector
+		dataWire = s.encodeSyncData()
+	}
+	if dataWire == nil {
+		return
+	}
+
+	// [Passive] Append the PSV keyword to the Interest name
+	name := s.prefix
+	if s.o.Passive {
+		name = name.Append(enc.NewKeywordComponent("PSV"))
+	}
+
+	// Make SVS Sync Interest
+	intCfg := &ndn.InterestConfig{
+		Lifetime: optional.Some(1 * time.Second),
+		Nonce:    utils.ConvertNonce(s.o.Client.Engine().Timer().Nonce()),
+	}
+	interest, err := s.o.Client.Engine().Spec().MakeInterest(name, intCfg, dataWire, nil)
+	if err != nil {
+		log.Error(s, "sendSyncInterest failed make interest", "err", err)
+		return
+	}
+
+	// [Spec] Sync Ack Policy - Do not acknowledge Sync Interests
+	err = s.o.Client.Engine().Express(interest, nil)
+	if err != nil {
+		log.Error(s, "sendSyncInterest failed express", "err", err)
+	}
+}
+
+func (s *SvSync) encodeSyncData() enc.Wire {
 	// Critical section
 	sv := func() *spec_svs.StateVector {
 		s.mutex.Lock()
@@ -352,40 +413,24 @@ func (s *SvSync) sendSyncInterest() {
 	svWire := (&spec_svs.SvsData{StateVector: sv}).Encode()
 
 	// SVS v3 Sync Data
-	syncName := s.o.GroupPrefix.Append(enc.NewVersionComponent(3))
+	name := s.prefix
 
 	// Sign Sync Data
-	signer := s.o.Client.SuggestSigner(syncName)
+	signer := s.o.Client.SuggestSigner(name)
 	if signer == nil {
-		log.Error(s, "SvSync failed to find valid signer", "name", syncName)
-		return
+		log.Error(s, "SvSync failed to find valid signer", "name", name)
+		return nil
 	}
 
 	dataCfg := &ndn.DataConfig{
 		ContentType: optional.Some(ndn.ContentTypeBlob),
 	}
-	data, err := s.o.Client.Engine().Spec().MakeData(syncName, dataCfg, svWire, signer)
+	data, err := s.o.Client.Engine().Spec().MakeData(name, dataCfg, svWire, signer)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed make data", "err", err)
-		return
+		return nil
 	}
-
-	// Make SVS Sync Interest
-	intCfg := &ndn.InterestConfig{
-		Lifetime: optional.Some(1 * time.Second),
-		Nonce:    utils.ConvertNonce(s.o.Client.Engine().Timer().Nonce()),
-	}
-	interest, err := s.o.Client.Engine().Spec().MakeInterest(syncName, intCfg, data.Wire, nil)
-	if err != nil {
-		log.Error(s, "sendSyncInterest failed make interest", "err", err)
-		return
-	}
-
-	// [Spec] Sync Ack Policy - Do not acknowledge Sync Interests
-	err = s.o.Client.Engine().Express(interest, nil)
-	if err != nil {
-		log.Error(s, "sendSyncInterest failed express", "err", err)
-	}
+	return data.Wire
 }
 
 func (s *SvSync) onSyncInterest(interest ndn.Interest) {
@@ -400,7 +445,8 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 	}
 
 	// Decode Sync Data
-	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireView(interest.AppParam()))
+	dataWire := interest.AppParam()
+	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireView(dataWire))
 	if err != nil {
 		log.Warn(s, "onSyncInterest failed to parse SyncData", "err", err)
 		return
@@ -421,7 +467,10 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 			return
 		}
 
-		s.recvSv <- params.StateVector
+		s.recvSv <- svSyncRecvSvArgs{
+			sv:   params.StateVector,
+			data: dataWire,
+		}
 	})
 }
 
