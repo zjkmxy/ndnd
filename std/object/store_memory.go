@@ -1,6 +1,7 @@
 package object
 
 import (
+	"fmt"
 	"sync"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -75,6 +76,25 @@ func (s *MemoryStore) RemovePrefix(prefix enc.Name) error {
 	defer s.mutex.Unlock()
 
 	s.root.remove(prefix, true)
+	return nil
+}
+
+func (s *MemoryStore) RemoveFlatRange(prefix enc.Name, first enc.Component, last enc.Component) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	pfx := s.root.find(prefix)
+	firstKey, lastKey := first.TlvStr(), last.TlvStr()
+	if firstKey > lastKey {
+		return fmt.Errorf("firstKey > lastKey")
+	}
+
+	for child := range pfx.children {
+		if child >= firstKey && child <= lastKey {
+			delete(pfx.children, child)
+		}
+	}
+
 	return nil
 }
 

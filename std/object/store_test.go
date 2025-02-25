@@ -121,6 +121,101 @@ func testStoreBasic(t *testing.T, store ndn.Store) {
 	require.Equal(t, wire5, data)
 }
 
+func testStoreRemoveRange(t *testing.T, store ndn.Store) {
+	seq1, _ := enc.NameFromStr("/ndn/edu/wustl/test/packet/seq=1")
+	seq2, _ := enc.NameFromStr("/ndn/edu/wustl/test/packet/seq=2")
+	seq3, _ := enc.NameFromStr("/ndn/edu/wustl/test/packet/seq=3")
+	seq4, _ := enc.NameFromStr("/ndn/edu/wustl/test/packet/seq=4")
+	seq5, _ := enc.NameFromStr("/ndn/edu/wustl/test/packet/seq=5")
+	seq6, _ := enc.NameFromStr("/ndn/edu/wustl/test/packet/seq=6")
+	seq7, _ := enc.NameFromStr("/ndn/edu/wustl/test/packet/seq=7")
+
+	wire1 := []byte{0x01, 0x02, 0x03}
+	wire2 := []byte{0x04, 0x05, 0x06}
+	wire3 := []byte{0x07, 0x08, 0x09}
+	wire4 := []byte{0x0a, 0x0b, 0x0c}
+	wire5 := []byte{0x0d, 0x0e, 0x0f}
+	wire6 := []byte{0x10, 0x11, 0x12}
+	wire7 := []byte{0x13, 0x14, 0x15}
+
+	// put data
+	require.NoError(t, store.Put(seq1, 1, wire1))
+	require.NoError(t, store.Put(seq2, 2, wire2))
+	require.NoError(t, store.Put(seq3, 3, wire3))
+	require.NoError(t, store.Put(seq4, 4, wire4))
+	require.NoError(t, store.Put(seq5, 5, wire5))
+	require.NoError(t, store.Put(seq6, 6, wire6))
+	require.NoError(t, store.Put(seq7, 7, wire7))
+
+	// make sure we can get
+	data, _ := store.Get(seq2, false)
+	require.Equal(t, wire2, data)
+	data, _ = store.Get(seq3, false)
+	require.Equal(t, wire3, data)
+	data, _ = store.Get(seq4, false)
+	require.Equal(t, wire4, data)
+	data, _ = store.Get(seq5, false)
+	require.Equal(t, wire5, data)
+	data, _ = store.Get(seq6, false)
+	require.Equal(t, wire6, data)
+
+	// remove range 3-5
+	err := store.RemoveFlatRange(seq1.Prefix(-1), enc.NewSequenceNumComponent(3), enc.NewSequenceNumComponent(5))
+	require.NoError(t, err)
+
+	// check removed
+	data, _ = store.Get(seq3, false)
+	require.Equal(t, []byte(nil), data)
+	data, _ = store.Get(seq4, false)
+	require.Equal(t, []byte(nil), data)
+	data, _ = store.Get(seq5, false)
+	require.Equal(t, []byte(nil), data)
+
+	// check 2 and 6 are still there
+	data, _ = store.Get(seq2, false)
+	require.Equal(t, wire2, data)
+	data, _ = store.Get(seq6, false)
+	require.Equal(t, wire6, data)
+
+	// remove with a wrong range (differnt component types)
+	err = store.RemoveFlatRange(seq1.Prefix(-1), enc.NewVersionComponent(1), enc.NewVersionComponent(10))
+	require.NoError(t, err)
+
+	// check nothing is removed
+	data, _ = store.Get(seq2, false)
+	require.Equal(t, wire2, data)
+	data, _ = store.Get(seq6, false)
+	require.Equal(t, wire6, data)
+
+	// remove with first > last
+	err = store.RemoveFlatRange(seq1.Prefix(-1), enc.NewSequenceNumComponent(10), enc.NewSequenceNumComponent(1))
+	require.Error(t, err)
+
+	// remove single element
+	err = store.RemoveFlatRange(seq1.Prefix(-1), enc.NewSequenceNumComponent(2), enc.NewSequenceNumComponent(2))
+	require.NoError(t, err)
+
+	// check 2 is removed
+	data, _ = store.Get(seq2, false)
+	require.Equal(t, []byte(nil), data)
+	data, _ = store.Get(seq6, false)
+	require.Equal(t, wire6, data)
+
+	// remove outer range
+	err = store.RemoveFlatRange(seq1.Prefix(-1), enc.NewSequenceNumComponent(1), enc.NewSequenceNumComponent(6))
+	require.NoError(t, err)
+
+	// check 1 and 6 are removed
+	data, _ = store.Get(seq1, false)
+	require.Equal(t, []byte(nil), data)
+	data, _ = store.Get(seq6, false)
+	require.Equal(t, []byte(nil), data)
+
+	// check 7 is still there
+	data, _ = store.Get(seq7, false)
+	require.Equal(t, wire7, data)
+}
+
 func testStoreTxn(t *testing.T, store ndn.Store) {
 	txname1, _ := enc.NameFromStr("/ndn/edu/memphis/test/packet/v1")
 	txname2, _ := enc.NameFromStr("/ndn/edu/memphis/test/packet/v5")
@@ -178,5 +273,6 @@ func TestMemoryStore(t *testing.T) {
 	tu.SetT(t)
 	store := object.NewMemoryStore()
 	testStoreBasic(t, store)
+	testStoreRemoveRange(t, store)
 	testStoreTxn(t, store)
 }

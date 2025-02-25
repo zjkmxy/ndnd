@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
@@ -118,6 +119,24 @@ func (s *BoltStore) RemovePrefix(prefix enc.Name) error {
 	return s.update(func(tx *bolt.Tx, bucket *bolt.Bucket) (err error) {
 		c := bucket.Cursor()
 		for k, _ := c.Seek(key); k != nil && bytes.HasPrefix(k, key); k, _ = c.Next() {
+			if err = bucket.Delete(k); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (s *BoltStore) RemoveFlatRange(prefix enc.Name, first enc.Component, last enc.Component) error {
+	firstKey := s.nameKey(prefix.Append(first))
+	lastKey := s.nameKey(prefix.Append(last))
+	if bytes.Compare(firstKey, lastKey) > 0 {
+		return fmt.Errorf("firstKey > lastKey")
+	}
+
+	return s.update(func(tx *bolt.Tx, bucket *bolt.Bucket) (err error) {
+		c := bucket.Cursor()
+		for k, _ := c.Seek(firstKey); k != nil && bytes.Compare(k, lastKey) <= 0; k, _ = c.Next() {
 			if err = bucket.Delete(k); err != nil {
 				return err
 			}

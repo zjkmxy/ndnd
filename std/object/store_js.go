@@ -125,6 +125,13 @@ func (s *JsStore) RemovePrefix(prefix enc.Name) error {
 	return nil
 }
 
+func (s *JsStore) RemoveFlatRange(prefix enc.Name, first enc.Component, last enc.Component) error {
+	first_js := jsutil.SliceToJsArray(prefix.Append(first).BytesInner())
+	last_js := jsutil.SliceToJsArray(prefix.Append(last).BytesInner())
+	s.api.Call("remove_flat_range", first_js, last_js)
+	return nil
+}
+
 func (s *JsStore) Begin() (ndn.Store, error) {
 	return &JsStore{
 		api:       s.api,

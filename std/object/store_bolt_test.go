@@ -20,6 +20,7 @@ func TestBoltStore(t *testing.T) {
 	store, err := object.NewBoltStore(filename)
 	require.NoError(t, err)
 	testStoreBasic(t, store)
+	testStoreRemoveRange(t, store)
 	testStoreTxn(t, store)
 	require.NoError(t, store.Close())
 }
