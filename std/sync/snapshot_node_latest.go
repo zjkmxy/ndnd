@@ -209,18 +209,17 @@ func (s *SnapshotNodeLatest) takeSnap(seqNo uint64) {
 		}
 	}
 
-	// Evict covered publications from seqNo-4*threshold to seqNo-3*threshold
-	pubBasename := s.pss.nodePrefix.
-		Append(s.pss.groupPrefix...).
-		Append(enc.NewTimestampComponent(s.pss.bootTime))
-	if seqNo > 4*s.Threshold {
-		for i := seqNo - 4*s.Threshold; i < seqNo-3*s.Threshold; i++ {
-			pubName := pubBasename.
-				Append(enc.NewSequenceNumComponent(i)).
-				WithVersion(enc.VersionImmutable)
-			if err := s.Client.Remove(pubName); err != nil {
-				log.Warn(s, "Failed to remove old publication", "err", err, "name", pubName)
-			}
+	// Evict covered publications from 0 to seqNo-3*threshold
+	if seqNo >= 4*s.Threshold {
+		// No version specified - this will remove metadata too
+		if err := s.Client.Store().RemoveFlatRange(
+			s.pss.nodePrefix.
+				Append(s.pss.groupPrefix...).
+				Append(enc.NewTimestampComponent(s.pss.bootTime)),
+			enc.NewSequenceNumComponent(0),
+			enc.NewSequenceNumComponent(seqNo-3*s.Threshold),
+		); err != nil {
+			log.Warn(s, "Failed to evict old publications from store", "err", err)
 		}
 	}
 }
