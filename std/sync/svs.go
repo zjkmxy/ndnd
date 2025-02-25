@@ -117,7 +117,7 @@ func (s *SvSync) String() string {
 func (s *SvSync) Start() (err error) {
 	err = s.o.Client.Engine().AttachHandler(s.handlerPrefix(),
 		func(args ndn.InterestHandlerArgs) {
-			go s.onSyncInterest(args.Interest)
+			s.onSyncInterest(args.Interest)
 		})
 	if err != nil {
 		return err
