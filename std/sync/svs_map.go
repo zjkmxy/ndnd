@@ -74,17 +74,22 @@ func (m SvMap[V]) IsNewerThan(other SvMap[V], cmp func(V, V) bool) bool {
 // Encode the state vector map to a StateVector.
 // seq is the function to get the sequence number
 func (m SvMap[V]) Encode(seq func(V) uint64) *spec_svs.StateVector {
-	// TODO: optimize malloc
-	sv := &spec_svs.StateVector{
-		Entries: make([]*spec_svs.StateVectorEntry, 0, len(m)),
+	entries := make([]*spec_svs.StateVectorEntry, 0, len(m))
+
+	// Pre-allocate the slice for sequence entries
+	numSeqEntries := 0
+	for _, entries := range m {
+		numSeqEntries += len(entries)
 	}
+	seqNoEntries := make([]*spec_svs.SeqNoEntry, numSeqEntries)
 
 	for name, vals := range m.Iter() {
 		entry := &spec_svs.StateVectorEntry{
 			Name:         name,
-			SeqNoEntries: make([]*spec_svs.SeqNoEntry, 0, len(vals)),
+			SeqNoEntries: seqNoEntries[:0],
 		}
-		sv.Entries = append(sv.Entries, entry)
+		entries = append(entries, entry)
+		seqNoEntries = seqNoEntries[len(vals):]
 
 		for _, val := range vals {
 			if seqNo := seq(val.Value); seqNo > 0 {
@@ -97,11 +102,11 @@ func (m SvMap[V]) Encode(seq func(V) uint64) *spec_svs.StateVector {
 	}
 
 	// Sort entries by in the NDN canonical order
-	slices.SortFunc(sv.Entries, func(a, b *spec_svs.StateVectorEntry) int {
+	slices.SortFunc(entries, func(a, b *spec_svs.StateVectorEntry) int {
 		return a.Name.Compare(b.Name)
 	})
 
-	return sv
+	return &spec_svs.StateVector{Entries: entries}
 }
 
 func (m SvMap[V]) Iter() iter.Seq2[enc.Name, []SvMapVal[V]] {
