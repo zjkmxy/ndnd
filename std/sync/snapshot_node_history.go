@@ -312,6 +312,19 @@ func (s *SnapshotNodeHistory) takeSnap(seqNo uint64) {
 			log.Warn(s, "Failed to evict old index", "err", err, "name", prevIndexName)
 		}
 	}
+
+	// Evict publications more than 3 snapshots old
+	if len(index.SeqNos) > 4 {
+		evictLast := index.SeqNos[len(index.SeqNos)-3]
+		err = s.Client.Store().RemoveFlatRange(
+			pubBasename,
+			enc.NewSequenceNumComponent(0),
+			enc.NewSequenceNumComponent(evictLast),
+		)
+		if err != nil {
+			log.Warn(s, "Failed to evict old publications", "err", err)
+		}
+	}
 }
 
 func (s *SnapshotNodeHistory) getIndex() (enc.Name, *svs_ps.HistoryIndex, error) {
