@@ -228,6 +228,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	isOutdated := false
 	canDrop := true
 	recvSv := NewSvMap[uint64](len(sv.Entries))
+	now := time.Now()
 
 	for _, node := range sv.Entries {
 		hash := node.Name.TlvStr()
@@ -240,7 +241,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 
 			// [SPEC] If any received BootstrapTime is more than 86400s in the
 			// future compared to current time, the entire state vector SHOULD be ignored.
-			if entry.BootstrapTime > uint64(time.Now().Unix())+86400 {
+			if entry.BootstrapTime > uint64(now.Unix())+86400 {
 				log.Warn(s, "Dropping state vector with far future BootstrapTime: %d", entry.BootstrapTime)
 				return
 			}
@@ -254,7 +255,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 
 				// [Spec] Store the current timestamp as the last update
 				// time for each updated node.
-				s.mtime[hash] = time.Now()
+				s.mtime[hash] = now
 
 				// Notify the application of the update
 				updates = append(updates, SvSyncUpdate{
@@ -269,7 +270,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 				// [Spec] If every node with an outdated sequence number
 				// in the incoming state vector was updated in the last
 				// SuppressionPeriod, drop the Sync Interest.
-				if time.Now().After(s.mtime[hash].Add(s.o.SuppressionPeriod)) {
+				if now.After(s.mtime[hash].Add(s.o.SuppressionPeriod)) {
 					canDrop = false
 				}
 			}
@@ -306,7 +307,7 @@ func (s *SvSync) onReceiveStateVector(sv *spec_svs.StateVector) {
 	// [Spec] Incoming Sync Interest is outdated.
 	// [Spec] Move to Suppression State.
 	s.suppress = true
-	s.merge = make(SvMap[uint64], len(s.state))
+	s.merge.Clear()
 
 	// [Spec] When entering Suppression State, reset
 	// the Sync Interest timer to SuppressionTimeout

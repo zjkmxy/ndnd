@@ -48,6 +48,12 @@ func (m SvMap[V]) Set(hash string, boot uint64, value V) {
 	m[hash] = slices.Insert(m[hash], i, entry)
 }
 
+func (m SvMap[V]) Clear() {
+	if m != nil {
+		clear(m)
+	}
+}
+
 // Check if a SvMap is newer than another.
 // cmp(a, b) is the function to compare values (a > b).
 func (m SvMap[V]) IsNewerThan(other SvMap[V], cmp func(V, V) bool) bool {
