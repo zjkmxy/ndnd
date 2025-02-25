@@ -6,7 +6,6 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 )
 
 // SvsALO is a Sync Transport with At Least One delivery semantics.
@@ -259,11 +258,4 @@ func (s *SvsALO) onSvsUpdate(update SvSyncUpdate) {
 
 	// Check if we want to queue new fetch for this update.
 	s.consumeCheck(update.Name)
-}
-
-func ParseInitialState(wire enc.Wire) (*spec_svs.InstanceState, error) {
-	if wire == nil {
-		return nil, nil
-	}
-	return spec_svs.ParseInstanceState(enc.NewWireView(wire), true)
 }
