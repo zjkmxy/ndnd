@@ -34,7 +34,8 @@ type SvSync struct {
 	merge    SvMap[uint64]
 
 	// Buffered wires (passive mode)
-	passiveSv SvMap[enc.Wire]
+	passiveWiresSv     SvMap[enc.Wire]
+	passiveWillPersist atomic.Bool
 
 	// Channel for incoming state vectors
 	recvSv chan svSyncRecvSvArgs
@@ -123,7 +124,8 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 		suppress: false,
 		merge:    NewSvMap[uint64](0),
 
-		passiveSv: NewSvMap[enc.Wire](0),
+		passiveWiresSv:     NewSvMap[enc.Wire](0),
+		passiveWillPersist: atomic.Bool{},
 
 		recvSv: make(chan svSyncRecvSvArgs, 128),
 	}
@@ -146,6 +148,9 @@ func (s *SvSync) Start() (err error) {
 
 	go s.main()
 	go s.sendSyncInterest()
+
+	// [Passive] Load the buffered wires from persistence
+	go s.loadPassiveWires()
 
 	return nil
 }
@@ -171,6 +176,7 @@ func (s *SvSync) main() {
 // Stop the SV Sync instance.
 func (s *SvSync) Stop() error {
 	s.ticker.Stop()
+	s.persistPassiveWires()
 	s.stop <- struct{}{}
 	return nil
 }
@@ -312,7 +318,7 @@ func (s *SvSync) onReceiveStateVector(args svSyncRecvSvArgs) {
 
 			// [Passive] Buffer the incoming wire
 			if s.o.Passive && entry.SeqNo >= known {
-				s.passiveSv.Set(hash, entry.BootstrapTime, args.data)
+				s.passiveWiresSv.Set(hash, entry.BootstrapTime, args.data)
 			}
 		}
 	}
@@ -322,6 +328,11 @@ func (s *SvSync) onReceiveStateVector(args svSyncRecvSvArgs) {
 	if !isOutdated && s.state.IsNewerThan(recvSv, func(_, _ uint64) bool { return false }) {
 		isOutdated = true
 		canDrop = false
+	}
+
+	// [Passive] Persist the buffered wires with throttling
+	if s.o.Passive && !s.passiveWillPersist.Swap(true) {
+		time.AfterFunc(5*time.Second, s.persistPassiveWires)
 	}
 
 	if !isOutdated {
@@ -438,32 +449,6 @@ func (s *SvSync) encodeSyncData() enc.Wire {
 	return data.Wire
 }
 
-func (s *SvSync) passiveWires() []enc.Wire {
-	outgoing := make([]enc.Wire, 0, 4)
-
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	// Do not use Iter() because no point decoding the name
-	for _, mval := range s.passiveSv {
-		for _, val := range mval {
-			// A map might actually be slower since the # is small
-			found := false
-			for _, wire := range outgoing {
-				if utils.HeaderEqual(wire, val.Value) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				outgoing = append(outgoing, val.Value)
-			}
-		}
-	}
-
-	return outgoing
-}
-
 func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 	if !s.running.Load() {
 		return
@@ -476,7 +461,10 @@ func (s *SvSync) onSyncInterest(interest ndn.Interest) {
 	}
 
 	// Decode Sync Data
-	dataWire := interest.AppParam()
+	s.onSyncData(interest.AppParam())
+}
+
+func (s *SvSync) onSyncData(dataWire enc.Wire) {
 	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireView(dataWire))
 	if err != nil {
 		log.Warn(s, "onSyncInterest failed to parse SyncData", "err", err)
@@ -533,4 +521,84 @@ func (s *SvSync) getSuppressionTimeout() time.Duration {
 	timeout := time.Duration(c * (1 - math.Pow(math.E, ((v-c)/(c/f)))))
 
 	return timeout
+}
+
+// passiveWires returns the list of buffered wires in passive mode.
+func (s *SvSync) passiveWires() []enc.Wire {
+	outgoing := make([]enc.Wire, 0, 4)
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// Do not use Iter() because no point decoding the name
+	for _, mval := range s.passiveWiresSv {
+		for _, val := range mval {
+			// A map might actually be slower since the # is small
+			found := false
+			for _, wire := range outgoing {
+				if utils.HeaderEqual(wire, val.Value) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				outgoing = append(outgoing, val.Value)
+			}
+		}
+	}
+
+	return outgoing
+}
+
+// persistPassiveWires persists the buffered wires in passive mode.
+func (s *SvSync) persistPassiveWires() {
+	if !s.o.Passive {
+		return
+	}
+
+	defer s.passiveWillPersist.Store(false)
+
+	wires := s.passiveWires()
+	if len(wires) == 0 {
+		log.Info(s, "No passive state to persist")
+		return
+	}
+
+	pstate := spec_svs.PassiveState{
+		Data: make([][]byte, len(wires)),
+	}
+	for i, wire := range wires {
+		pstate.Data[i] = wire.Join()
+	}
+
+	name := s.prefix.Append(enc.NewKeywordComponent("passive-state"))
+	wire := pstate.Encode().Join()
+	if err := s.o.Client.Store().Put(name, 0, wire); err != nil {
+		log.Error(s, "Failed to persist wires", "err", err)
+	}
+}
+
+// loadPassiveWires loads the buffered wires in passive mode.
+func (s *SvSync) loadPassiveWires() {
+	if !s.o.Passive {
+		return
+	}
+
+	name := s.prefix.Append(enc.NewKeywordComponent("passive-state"))
+	wire, _ := s.o.Client.Store().Get(name, false)
+	if wire == nil {
+		log.Info(s, "No existing passive state found", "name", name)
+		return
+	}
+
+	pstate, err := spec_svs.ParsePassiveState(enc.NewBufferView(wire), false)
+	if err != nil {
+		log.Error(s, "Failed to parse passive state", "err", err)
+		return
+	}
+
+	log.Info(s, "Loading passive state", "name", name)
+	for _, data := range pstate.Data {
+		s.onSyncData(enc.Wire{data})
+	}
 }

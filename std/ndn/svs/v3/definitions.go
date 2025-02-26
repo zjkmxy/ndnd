@@ -38,3 +38,9 @@ type InstanceState struct {
 	//+field:struct:StateVector
 	StateVector *StateVector `tlv:"0xc9"`
 }
+
+// +tlv-model:nocopy
+type PassiveState struct {
+	//+field:sequence:[]byte:binary:[]byte
+	Data [][]byte `tlv:"0xfa0"`
+}

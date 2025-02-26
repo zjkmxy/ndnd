@@ -2,6 +2,7 @@
 package svs
 
 import (
+	"encoding/binary"
 	"io"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -935,6 +936,244 @@ func (value *InstanceState) Bytes() []byte {
 
 func ParseInstanceState(reader enc.WireView, ignoreCritical bool) (*InstanceState, error) {
 	context := InstanceStateParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type PassiveStateEncoder struct {
+	length uint
+
+	wirePlan []uint
+
+	Data_subencoder []struct {
+	}
+}
+
+type PassiveStateParsingContext struct {
+}
+
+func (encoder *PassiveStateEncoder) Init(value *PassiveState) {
+	{
+		Data_l := len(value.Data)
+		encoder.Data_subencoder = make([]struct {
+		}, Data_l)
+		for i := 0; i < Data_l; i++ {
+			pseudoEncoder := &encoder.Data_subencoder[i]
+			pseudoValue := struct {
+				Data []byte
+			}{
+				Data: value.Data[i],
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+
+	l := uint(0)
+	if value.Data != nil {
+		for seq_i, seq_v := range value.Data {
+			pseudoEncoder := &encoder.Data_subencoder[seq_i]
+			pseudoValue := struct {
+				Data []byte
+			}{
+				Data: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.Data != nil {
+					l += 3
+					l += uint(enc.TLNum(len(value.Data)).EncodingLength())
+					l += uint(len(value.Data))
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+	encoder.length = l
+
+	wirePlan := make([]uint, 0, 8)
+	l = uint(0)
+	if value.Data != nil {
+		for seq_i, seq_v := range value.Data {
+			pseudoEncoder := &encoder.Data_subencoder[seq_i]
+			pseudoValue := struct {
+				Data []byte
+			}{
+				Data: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.Data != nil {
+					l += 3
+					l += uint(enc.TLNum(len(value.Data)).EncodingLength())
+					l += uint(len(value.Data))
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+	if l > 0 {
+		wirePlan = append(wirePlan, l)
+	}
+	encoder.wirePlan = wirePlan
+}
+
+func (context *PassiveStateParsingContext) Init() {
+
+}
+
+func (encoder *PassiveStateEncoder) EncodeInto(value *PassiveState, wire enc.Wire) {
+
+	wireIdx := 0
+	buf := wire[wireIdx]
+
+	pos := uint(0)
+
+	if value.Data != nil {
+		for seq_i, seq_v := range value.Data {
+			pseudoEncoder := &encoder.Data_subencoder[seq_i]
+			pseudoValue := struct {
+				Data []byte
+			}{
+				Data: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.Data != nil {
+					buf[pos] = 253
+					binary.BigEndian.PutUint16(buf[pos+1:], uint16(4000))
+					pos += 3
+					pos += uint(enc.TLNum(len(value.Data)).EncodeInto(buf[pos:]))
+					copy(buf[pos:], value.Data)
+					pos += uint(len(value.Data))
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+}
+
+func (encoder *PassiveStateEncoder) Encode(value *PassiveState) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
+
+	wire := make(enc.Wire, len(encoder.wirePlan))
+	for i, l := range encoder.wirePlan {
+		if l > 0 {
+			wire[i] = content[:l]
+			content = content[l:]
+		}
+	}
+	encoder.EncodeInto(value, wire)
+
+	return wire
+}
+
+func (context *PassiveStateParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*PassiveState, error) {
+
+	var handled_Data bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &PassiveState{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 4000:
+				if true {
+					handled = true
+					handled_Data = true
+					if value.Data == nil {
+						value.Data = make([][]byte, 0)
+					}
+					{
+						pseudoValue := struct {
+							Data []byte
+						}{}
+						{
+							value := &pseudoValue
+							value.Data = make([]byte, l)
+							_, err = reader.ReadFull(value.Data)
+							_ = value
+						}
+						value.Data = append(value.Data, pseudoValue.Data)
+					}
+					progress--
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_Data && err == nil {
+		// sequence - skip
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *PassiveState) Encode() enc.Wire {
+	encoder := PassiveStateEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *PassiveState) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParsePassiveState(reader enc.WireView, ignoreCritical bool) (*PassiveState, error) {
+	context := PassiveStateParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }
