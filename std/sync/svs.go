@@ -149,9 +149,6 @@ func (s *SvSync) Start() (err error) {
 	go s.main()
 	go s.sendSyncInterest()
 
-	// [Passive] Load the buffered wires from persistence
-	go s.loadPassiveWires()
-
 	return nil
 }
 
@@ -160,6 +157,9 @@ func (s *SvSync) main() {
 
 	s.running.Store(true)
 	defer s.running.Store(false)
+
+	// [Passive] Load the buffered wires from persistence
+	go s.loadPassiveWires()
 
 	for {
 		select {
@@ -552,7 +552,7 @@ func (s *SvSync) passiveWires() []enc.Wire {
 
 // persistPassiveWires persists the buffered wires in passive mode.
 func (s *SvSync) persistPassiveWires() {
-	if !s.o.Passive {
+	if !s.o.Passive || !s.running.Load() {
 		return
 	}
 
@@ -580,7 +580,7 @@ func (s *SvSync) persistPassiveWires() {
 
 // loadPassiveWires loads the buffered wires in passive mode.
 func (s *SvSync) loadPassiveWires() {
-	if !s.o.Passive {
+	if !s.o.Passive || !s.running.Load() {
 		return
 	}
 
