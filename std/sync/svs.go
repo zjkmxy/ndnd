@@ -147,7 +147,6 @@ func (s *SvSync) Start() (err error) {
 	}
 
 	go s.main()
-	go s.sendSyncInterest()
 
 	return nil
 }
@@ -158,8 +157,14 @@ func (s *SvSync) main() {
 	s.running.Store(true)
 	defer s.running.Store(false)
 
-	// [Passive] Load the buffered wires from persistence
-	go s.loadPassiveWires()
+	if s.o.Passive {
+		// [Passive] Load the buffered wires from persistence
+		// This will send the initial Sync Interest
+		go s.loadPassiveWires()
+	} else {
+		// Send the initial Sync Interest
+		go s.sendSyncInterest()
+	}
 
 	for {
 		select {
@@ -601,4 +606,7 @@ func (s *SvSync) loadPassiveWires() {
 	for _, data := range pstate.Data {
 		s.onSyncData(enc.Wire{data})
 	}
+
+	// This is hacky but pragmatic - wait for the state to be processed
+	time.AfterFunc(500*time.Millisecond, s.sendSyncInterest)
 }
