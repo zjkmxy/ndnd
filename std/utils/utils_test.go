@@ -34,3 +34,27 @@ func TestConvertNonce(t *testing.T) {
 	val = utils.ConvertNonce(nonce)
 	require.Equal(t, uint32(0x421ce14b), val.Unwrap())
 }
+
+func TestHeaderEqual(t *testing.T) {
+	tu.SetT(t)
+
+	a := []int{1, 2, 3, 4, 5, 6}
+	b := []int{1, 2, 3, 4, 5, 6}
+	c := []int{1, 2, 3, 4, 5, 6, 7}
+	require.True(t, utils.HeaderEqual(a, a))
+	require.False(t, utils.HeaderEqual(a, b))
+	require.False(t, utils.HeaderEqual(a, c))
+
+	d := a[1:4]
+	e := a[1:4]
+	f := a[1:3]
+	require.True(t, utils.HeaderEqual(d, d))
+	require.True(t, utils.HeaderEqual(d, e))
+	require.False(t, utils.HeaderEqual(d, f))
+	require.False(t, utils.HeaderEqual(e, f))
+	require.False(t, utils.HeaderEqual(a, f))
+
+	g := a[2:5]
+	h := a[1:4]
+	require.False(t, utils.HeaderEqual(g, h))
+}

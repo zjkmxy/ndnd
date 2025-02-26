@@ -312,7 +312,7 @@ func (n Name) Equal(rhs Name) bool {
 	if len(n) != len(rhs) {
 		return false
 	}
-	if unsafe.SliceData(n) == unsafe.SliceData(rhs) {
+	if len(n) == 0 || &n[0] == &rhs[0] {
 		return true // cheap
 	}
 	for i := 0; i < len(n); i++ {

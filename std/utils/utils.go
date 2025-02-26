@@ -47,3 +47,8 @@ func If[T any](cond bool, t, f T) T {
 		return f
 	}
 }
+
+// HeaderEqual compares two slices for header equality
+func HeaderEqual[T any](a, b []T) bool {
+	return len(a) == len(b) && (len(a) == 0 || &a[0] == &b[0])
+}
