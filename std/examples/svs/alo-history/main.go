@@ -208,5 +208,8 @@ func readState() enc.Wire {
 	if err != nil {
 		panic("unable to get state (store is broken)")
 	}
+	if stateWire == nil {
+		return nil
+	}
 	return enc.Wire{stateWire}
 }

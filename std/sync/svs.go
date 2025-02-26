@@ -33,10 +33,11 @@ type SvSync struct {
 	suppress bool
 	merge    SvMap[uint64]
 
+	// Buffered wires (passive mode)
+	passiveSv SvMap[enc.Wire]
+
 	// Channel for incoming state vectors
 	recvSv chan svSyncRecvSvArgs
-	// Last received buffered wire (passive mode)
-	lastWire enc.Wire
 }
 
 type SvSyncOpts struct {
@@ -122,8 +123,9 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 		suppress: false,
 		merge:    NewSvMap[uint64](0),
 
-		recvSv:   make(chan svSyncRecvSvArgs, 128),
-		lastWire: nil,
+		passiveSv: NewSvMap[enc.Wire](0),
+
+		recvSv: make(chan svSyncRecvSvArgs, 128),
 	}
 }
 
@@ -185,6 +187,10 @@ func (s *SvSync) GetSeqNo(name enc.Name) uint64 {
 // The instance must only set sequence numbers for names it owns.
 // The sequence number must be greater than the previous value.
 func (s *SvSync) SetSeqNo(name enc.Name, seqNo uint64) error {
+	if s.o.Passive {
+		panic("passive sync violation")
+	}
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -206,6 +212,10 @@ func (s *SvSync) SetSeqNo(name enc.Name, seqNo uint64) error {
 // IncrSeqNo increments the sequence number for a name.
 // The instance must only increment sequence numbers for names it owns.
 func (s *SvSync) IncrSeqNo(name enc.Name) uint64 {
+	if s.o.Passive {
+		panic("passive sync violation")
+	}
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -291,14 +301,18 @@ func (s *SvSync) onReceiveStateVector(args svSyncRecvSvArgs) {
 			}
 
 			// [Spec] Suppression state
-			// [Passive] Never update MergedStateVector
-			if s.suppress && !s.o.Passive {
+			if s.suppress {
 				// [Spec] For every incoming Sync Interest, aggregate
 				// the state vector into a MergedStateVector.
 				known := s.merge.Get(hash, entry.BootstrapTime)
 				if entry.SeqNo > known {
 					s.merge.Set(hash, entry.BootstrapTime, entry.SeqNo)
 				}
+			}
+
+			// [Passive] Buffer the incoming wire
+			if s.o.Passive && entry.SeqNo >= known {
+				s.passiveSv.Set(hash, entry.BootstrapTime, args.data)
 			}
 		}
 	}
@@ -314,9 +328,6 @@ func (s *SvSync) onReceiveStateVector(args svSyncRecvSvArgs) {
 		// [Spec] Suppression state: Move to Steady State.
 		// [Spec] Steady state: Reset Sync Interest timer.
 		s.enterSteadyState()
-
-		// [Passive] Buffer the last up-to-date wire
-		s.lastWire = args.data
 		return
 	} else if canDrop || s.suppress {
 		// See above for explanation
@@ -358,35 +369,29 @@ func (s *SvSync) sendSyncInterest() {
 		return
 	}
 
-	// Make SVS Sync Data
-	var dataWire enc.Wire
+	// [Passive] Send all buffered wires without duplicates
 	if s.o.Passive {
-		// [Passive] Send the last buffered wire
-		func() {
-			s.mutex.Lock()
-			defer s.mutex.Unlock()
-			dataWire = s.lastWire
-		}()
-	} else {
-		// Encode and sign the current state vector
-		dataWire = s.encodeSyncData()
+		for _, wire := range s.passiveWires() {
+			s.sendSyncInterestWith(wire)
+		}
+		return
 	}
+
+	// Encode and sign the current state vector
+	wire := s.encodeSyncData()
+	s.sendSyncInterestWith(wire)
+}
+
+func (s *SvSync) sendSyncInterestWith(dataWire enc.Wire) {
 	if dataWire == nil {
 		return
 	}
 
-	// [Passive] Append the PSV keyword to the Interest name
-	name := s.prefix
-	if s.o.Passive {
-		name = name.Append(enc.NewKeywordComponent("PSV"))
-	}
-
-	// Make SVS Sync Interest
 	intCfg := &ndn.InterestConfig{
 		Lifetime: optional.Some(1 * time.Second),
 		Nonce:    utils.ConvertNonce(s.o.Client.Engine().Timer().Nonce()),
 	}
-	interest, err := s.o.Client.Engine().Spec().MakeInterest(name, intCfg, dataWire, nil)
+	interest, err := s.o.Client.Engine().Spec().MakeInterest(s.prefix, intCfg, dataWire, nil)
 	if err != nil {
 		log.Error(s, "sendSyncInterest failed make interest", "err", err)
 		return
@@ -431,6 +436,32 @@ func (s *SvSync) encodeSyncData() enc.Wire {
 		return nil
 	}
 	return data.Wire
+}
+
+func (s *SvSync) passiveWires() []enc.Wire {
+	outgoing := make([]enc.Wire, 0, 4)
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// Do not use Iter() because no point decoding the name
+	for _, mval := range s.passiveSv {
+		for _, val := range mval {
+			// A map might actually be slower since the # is small
+			found := false
+			for _, wire := range outgoing {
+				if utils.HeaderEqual(wire, val.Value) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				outgoing = append(outgoing, val.Value)
+			}
+		}
+	}
+
+	return outgoing
 }
 
 func (s *SvSync) onSyncInterest(interest ndn.Interest) {
