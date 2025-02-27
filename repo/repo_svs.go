@@ -63,10 +63,7 @@ func (r *RepoSvs) Start() (err error) {
 
 	r.svsalo.SubscribePublisher(enc.Name{}, func(pub ndn_sync.SvsPub) {
 		r.commitState(pub.State)
-
-		if err = r.registerPublisherRoute(pub.Publisher); err != nil {
-			log.Error(r, "Failed to register route", "err", err)
-		}
+		r.registerPublisherRoute(pub.Publisher)
 	})
 
 	if err = r.registerRoute(r.svsalo.SyncPrefix()); err != nil {
@@ -127,6 +124,7 @@ func (r *RepoSvs) registerRoute(prefix enc.Name) (err error) {
 	}
 
 	if err = r.client.Engine().RegisterRoute(prefix); err != nil {
+		log.Error(r, "Failed to register route", "err", err)
 		return err
 	}
 
@@ -162,7 +160,6 @@ func (r *RepoSvs) processInitialState(wire enc.Wire) {
 		}
 
 		if err = r.registerPublisherRoute(entry.Name); err != nil {
-			log.Error(r, "Failed to register route", "err", err)
 			continue
 		}
 	}
