@@ -156,6 +156,7 @@ func (s *SvsALO) Start() error {
 // Stop stops the SvsALO instance.
 func (s *SvsALO) Stop() error {
 	s.stop <- struct{}{}
+	s.svs.Stop()
 	return nil
 }
 
@@ -222,7 +223,6 @@ func (s *SvsALO) UnsubscribePublisher(prefix enc.Name) {
 // run is the main loop for the SvsALO instance.
 // Only this thread has interaction with the application.
 func (s *SvsALO) run() {
-	defer s.svs.Stop()
 	for {
 		select {
 		case <-s.stop:
