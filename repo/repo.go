@@ -104,11 +104,8 @@ func (r *Repo) setupEngineHook() {
 		// Assume that if there is a version it is the second-last component.
 		// We might not want to store non-versioned data anyway (?)
 		if ver := data.Name().At(-2); ver.IsVersion() {
-			log.Info(r, "Storing data", "name", data.Name())
 			return r.store.Put(data.Name(), ver.NumberVal(), raw.Join())
-		} else {
-			log.Warn(r, "Data without version", "name", data.Name())
-			return nil
 		}
+		return nil
 	}
 }

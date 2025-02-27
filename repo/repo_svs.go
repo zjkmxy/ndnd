@@ -6,8 +6,10 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
+	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type RepoSvs struct {
@@ -87,9 +89,7 @@ func (r *RepoSvs) Stop() (err error) {
 		return nil
 	}
 
-	if err = r.unregisterRoutes(); err != nil {
-		return err
-	}
+	r.unregisterRoutes()
 
 	if err = r.svsalo.Stop(); err != nil {
 		return err
@@ -123,21 +123,32 @@ func (r *RepoSvs) registerRoute(prefix enc.Name) (err error) {
 		}
 	}
 
-	if err = r.client.Engine().RegisterRoute(prefix); err != nil {
+	// Disable route inheritance
+	if _, err = r.client.Engine().ExecMgmtCmd("rib", "register", &mgmt.ControlArgs{
+		Name:  prefix,
+		Mask:  optional.Some(uint64(mgmt.RouteFlagChildInherit)),
+		Flags: optional.Some(uint64(0)),
+	}); err != nil {
 		log.Error(r, "Failed to register route", "err", err)
 		return err
+	} else {
+		log.Info(r, "Registered route", "prefix", prefix)
 	}
 
-	log.Info(r, "Registered route", "prefix", prefix)
 	r.routes = append(r.routes, prefix)
 
 	return nil
 }
 
 func (r *RepoSvs) unregisterRoutes() (err error) {
-	for _, reg := range r.routes {
-		if err = r.client.Engine().UnregisterRoute(reg); err != nil {
+	for _, name := range r.routes {
+		if _, err = r.client.Engine().ExecMgmtCmd("rib", "unregister", &mgmt.ControlArgs{
+			Name: name,
+		}); err != nil {
+			log.Error(r, "Failed to unregister route", "err", err)
 			return err
+		} else {
+			log.Info(r, "Unregistered route", "prefix", name)
 		}
 	}
 	r.routes = nil
