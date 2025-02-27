@@ -66,6 +66,9 @@ type Engine struct {
 	close chan struct{}
 	// running is the flag to indicate if the engine is running.
 	running atomic.Bool
+
+	// (advanced usage) global hook on receiving data packets
+	OnDataHook func(data ndn.Data, raw enc.Wire, sigCov enc.Wire) error
 }
 
 func NewEngine(face face.Face, timer ndn.Timer) *Engine {
@@ -344,10 +347,23 @@ func (e *Engine) onDataMatch(pkt *spec.Data, raw enc.Wire) pitEntry {
 }
 
 func (e *Engine) onData(pkt *spec.Data, sigCovered enc.Wire, raw enc.Wire, pitToken []byte) {
+	var hookErr error = nil
+	if e.OnDataHook != nil {
+		hookErr = e.OnDataHook(pkt, raw, sigCovered)
+	}
+
 	for _, entry := range e.onDataMatch(pkt, raw) {
 		entry.timeoutCancel()
 		if entry.callback == nil {
 			panic("[BUG] PIT has empty entry")
+		}
+
+		if hookErr != nil {
+			entry.callback(ndn.ExpressCallbackArgs{
+				Result: ndn.InterestResultError,
+				Error:  hookErr,
+			})
+			continue
 		}
 
 		entry.callback(ndn.ExpressCallbackArgs{
