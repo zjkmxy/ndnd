@@ -56,7 +56,7 @@ func main() {
 
 	// History snapshot works best with persistent storage
 	ident := strings.ReplaceAll(name.String(), "/", "-")
-	bstore, err := object.NewBoltStore(fmt.Sprintf("chat%s.db", ident))
+	bstore, err := object.NewBadgerStore(fmt.Sprintf("db-chat%s", ident))
 	if err != nil {
 		log.Error(nil, "Unable to create object store", "err", err)
 		return

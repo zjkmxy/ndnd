@@ -35,7 +35,7 @@ func main() {
 	defer app.Stop()
 
 	// Create object client
-	store, err := object.NewBoltStore("passive-svs.db")
+	store, err := object.NewBadgerStore("db-passive-svs")
 	if err != nil {
 		log.Error(nil, "Unable to create object store", "err", err)
 		return

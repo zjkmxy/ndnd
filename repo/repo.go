@@ -34,7 +34,7 @@ func (r *Repo) Start() (err error) {
 	log.Info(r, "Starting NDN Data Repository", "dir", r.config.StorageDir)
 
 	// Make object store database
-	r.store, err = object.NewBoltStore(r.config.StorageDir + "/bolt.db")
+	r.store, err = object.NewBadgerStore(r.config.StorageDir + "/badger")
 	if err != nil {
 		return err
 	}
