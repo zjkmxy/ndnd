@@ -91,7 +91,7 @@ func main() {
 		// since the node bootstrapped will be delivered.
 		Snapshot: &ndn_sync.SnapshotNodeHistory{
 			Client:    client,
-			Threshold: 10,
+			Threshold: 100,
 		},
 	})
 	if err != nil {
@@ -172,10 +172,10 @@ func main() {
 			continue
 		}
 
-		// Special testing function !! to send 20 messages after counter
+		// Special testing function !! to send 100 messages after counter
 		if string(line) == "!!" {
-			for i := 0; i < 20; i++ {
-				publish([]byte(fmt.Sprintf("Message %d", counter)))
+			for range 100 {
+				publish(fmt.Appendf(nil, "Message %d", counter))
 				counter++
 			}
 			continue
