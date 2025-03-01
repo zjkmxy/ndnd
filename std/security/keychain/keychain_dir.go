@@ -32,6 +32,12 @@ func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 		path: path,
 	}
 
+	// Create directory if it doesn't exist
+	err := os.MkdirAll(path, 0600)
+	if err != nil {
+		return nil, err
+	}
+
 	// Populate keychain from disk
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -113,5 +119,5 @@ func (kc *KeyChainDir) writeFile(wire []byte, ext string) error {
 		return err
 	}
 
-	return os.WriteFile(path, str, 0644)
+	return os.WriteFile(path, str, 0600)
 }
