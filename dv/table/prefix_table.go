@@ -17,7 +17,7 @@ type PrefixTable struct {
 }
 
 type PrefixTableRouter struct {
-	Prefixes map[uint64]*PrefixEntry
+	Prefixes map[string]*PrefixEntry
 }
 
 type PrefixEntry struct {
@@ -53,7 +53,7 @@ func (pt *PrefixTable) GetRouter(name enc.Name) *PrefixTableRouter {
 	router := pt.routers[hash]
 	if router == nil {
 		router = &PrefixTableRouter{
-			Prefixes: make(map[uint64]*PrefixEntry),
+			Prefixes: make(map[string]*PrefixEntry),
 		}
 		pt.routers[hash] = router
 	}
@@ -73,7 +73,7 @@ func (pt *PrefixTable) Reset() {
 
 func (pt *PrefixTable) Announce(name enc.Name, face uint64, cost uint64) {
 	log.Info(pt, "Local announce", "name", name, "face", face, "cost", cost)
-	hash := name.Hash()
+	hash := name.TlvStr()
 
 	// Create nexthop to store
 	nexthop := PrefixNextHop{
@@ -112,7 +112,7 @@ func (pt *PrefixTable) Announce(name enc.Name, face uint64, cost uint64) {
 
 func (pt *PrefixTable) Withdraw(name enc.Name, face uint64) {
 	log.Info(pt, "Local withdraw", "name", name, "face", face)
-	hash := name.Hash()
+	hash := name.TlvStr()
 
 	// Check if entry does not exist
 	entry := pt.me.Prefixes[hash]
@@ -135,7 +135,7 @@ func (pt *PrefixTable) Withdraw(name enc.Name, face uint64) {
 }
 
 // Publishes the update to the network.
-func (pt *PrefixTable) publishEntry(hash uint64) {
+func (pt *PrefixTable) publishEntry(hash string) {
 	entry := pt.me.Prefixes[hash]
 	if entry == nil {
 		return // never
@@ -179,13 +179,13 @@ func (pt *PrefixTable) Apply(wire enc.Wire) (dirty bool) {
 
 	if ops.PrefixOpReset {
 		log.Info(pt, "Reset remote prefixes", "router", ops.ExitRouter.Name)
-		router.Prefixes = make(map[uint64]*PrefixEntry)
+		router.Prefixes = make(map[string]*PrefixEntry)
 		dirty = true
 	}
 
 	for _, add := range ops.PrefixOpAdds {
 		log.Info(pt, "Add remote prefix", "router", ops.ExitRouter.Name, "name", add.Name, "cost", add.Cost)
-		router.Prefixes[add.Name.Hash()] = &PrefixEntry{
+		router.Prefixes[add.Name.TlvStr()] = &PrefixEntry{
 			Name: add.Name.Clone(),
 			Cost: add.Cost,
 		}
@@ -194,7 +194,7 @@ func (pt *PrefixTable) Apply(wire enc.Wire) (dirty bool) {
 
 	for _, remove := range ops.PrefixOpRemoves {
 		log.Info(pt, "Remove remote prefix", "router", ops.ExitRouter.Name, "name", remove.Name)
-		delete(router.Prefixes, remove.Name.Hash())
+		delete(router.Prefixes, remove.Name.TlvStr())
 		dirty = true
 	}
 
