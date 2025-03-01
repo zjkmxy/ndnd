@@ -239,8 +239,9 @@ func (dv *Router) register() (err error) {
 	pfxs := []enc.Name{
 		dv.config.AdvertisementSyncPrefix(),
 		dv.config.AdvertisementDataPrefix(),
-		dv.config.PrefixTableSyncPrefix(),
-		dv.config.RouterDataPrefix(),
+		dv.config.RouterGenericPrefix(),
+		dv.pfxSvs.SyncPrefix(),
+		dv.pfxSvs.DataPrefix(),
 		dv.config.MgmtPrefix(),
 	}
 	for _, prefix := range pfxs {
@@ -259,7 +260,7 @@ func (dv *Router) register() (err error) {
 	// Set strategy to multicast for sync prefixes
 	pfxs = []enc.Name{
 		dv.config.AdvertisementSyncPrefix(),
-		dv.config.PrefixTableSyncPrefix(),
+		dv.pfxSvs.SyncPrefix(),
 	}
 	for _, prefix := range pfxs {
 		dv.nfdc.Exec(nfdc.NfdMgmtCmd{
@@ -345,10 +346,10 @@ func (dv *Router) createPrefixTable() {
 	// SVS delivery agent
 	var err error
 	dv.pfxSvs, err = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
-		Name: dv.config.RouterDataPrefix(),
+		Name: dv.config.RouterName(),
 		Svs: ndn_sync.SvSyncOpts{
 			Client:      dv.client,
-			GroupPrefix: dv.config.PrefixTableSyncPrefix(),
+			GroupPrefix: dv.config.PrefixTableGroupPrefix(),
 			BootTime:    dv.advert.bootTime,
 		},
 		Snapshot: &ndn_sync.SnapshotNodeLatest{

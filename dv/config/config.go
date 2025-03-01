@@ -55,11 +55,9 @@ type Config struct {
 	// Advertisement Data Prefix
 	advDataPfxN enc.Name
 	// Universal router data prefix
-	routerDataPfxN enc.Name
+	routerGenericPfxN enc.Name
 	// Prefix Table Sync Prefix
-	pfxSyncPfxN enc.Name
-	// Prefix Table Data Prefix
-	pfxDataPfxN enc.Name
+	pfxSyncGroupPfxN enc.Name
 	// NLSR readvertise prefix
 	mgmtPrefix enc.Name
 	// Trust anchor names
@@ -154,17 +152,14 @@ func (c *Config) Parse() (err error) {
 		Append(enc.NewKeywordComponent("DV")).
 		Append(enc.NewKeywordComponent("ADV"))
 
+	// Generic router prefix for serving certificates etc.
+	c.routerGenericPfxN = c.routerNameN.
+		Append(enc.NewKeywordComponent("DV"))
+
 	// Prefix table sync prefix
-	c.pfxSyncPfxN = c.networkNameN.
+	c.pfxSyncGroupPfxN = c.networkNameN.
 		Append(enc.NewKeywordComponent("DV")).
 		Append(enc.NewKeywordComponent("PFS"))
-
-	// Router data prefix including prefix data and certificates
-	c.routerDataPfxN = c.routerNameN.
-		Append(enc.NewKeywordComponent("DV"))
-	c.pfxDataPfxN = c.routerNameN.
-		Append(enc.NewKeywordComponent("DV")).
-		Append(enc.NewKeywordComponent("PFX"))
 
 	// Local prefixes to NFD
 	c.mgmtPrefix = enc.LOCALHOST.
@@ -197,16 +192,12 @@ func (c *Config) AdvertisementDataPrefix() enc.Name {
 	return c.advDataPfxN
 }
 
-func (c *Config) RouterDataPrefix() enc.Name {
-	return c.routerDataPfxN
+func (c *Config) RouterGenericPrefix() enc.Name {
+	return c.routerGenericPfxN
 }
 
-func (c *Config) PrefixTableSyncPrefix() enc.Name {
-	return c.pfxSyncPfxN
-}
-
-func (c *Config) PrefixTableDataPrefix() enc.Name {
-	return c.pfxDataPfxN
+func (c *Config) PrefixTableGroupPrefix() enc.Name {
+	return c.pfxSyncGroupPfxN
 }
 
 func (c *Config) MgmtPrefix() enc.Name {

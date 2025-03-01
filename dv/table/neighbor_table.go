@@ -142,6 +142,10 @@ func (ns *NeighborState) localRoute() enc.Name {
 		Append(enc.NewKeywordComponent("DV"))
 }
 
+// We register the cert route for neighbors explicitly because the
+// generic route is managed by the FIB update, so we don't want conflicts.
+// We need the certs for advertisement verification, so this needs to
+// happen before the FIB update.
 func (ns *NeighborState) certRoute() enc.Name {
 	return ns.Name.
 		Append(enc.NewKeywordComponent("DV")).
@@ -173,7 +177,8 @@ func (ns *NeighborState) routeRegister(faceId uint64) {
 	// Passive advertisement sync to neighbor
 	register(ns.nt.config.AdvertisementSyncPassivePrefix())
 	// For prefix table sync group
-	register(ns.nt.config.PrefixTableSyncPrefix())
+	register(ns.nt.config.PrefixTableGroupPrefix().
+		Append(enc.NewKeywordComponent("svs")))
 }
 
 // Single attempt to unregister the route
@@ -208,5 +213,6 @@ func (ns *NeighborState) routeUnregister() {
 	}
 
 	unregister(ns.nt.config.AdvertisementSyncPassivePrefix())
-	unregister(ns.nt.config.PrefixTableSyncPrefix())
+	unregister(ns.nt.config.PrefixTableGroupPrefix().
+		Append(enc.NewKeywordComponent("svs")))
 }

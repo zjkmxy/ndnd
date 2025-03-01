@@ -5,15 +5,16 @@
 // Router name from config
 #router: #network/router
 
-// Advertisement Sync
-#adv_svs: /"localhop"/#network/"32=DV"/"32=ADS"/type & { type: "32=ACT"|"32=PSV" } <= #router_cert
+// Advertisement Broadcast
+#adv_bcast: /"localhop"/#network/"32=DV"/"32=ADS"/type & { type: "32=ACT"|"32=PSV" } <= #router_cert
 // Advertisement data
 #adv_data: /"localhop"/#router/"32=DV"/"32=ADV"/_ <= #router_cert
 
 // Prefix table Sync
-#pfx_svs: #network/"32=DV"/"32=PFS" <= #router_cert
+#pfx: #network/"32=DV"/"32=PFS"
+#pfx_svs: #pfx/"32=svs" <= #router_cert
 // Prefix table data
-#pfx_data: #router/#pfx_svs/_/_ <= #router_cert
+#pfx_data: #pfx/#router/_/_ <= #router_cert
 
 // Certificate definitions
 #network_cert: #network/#KEY
