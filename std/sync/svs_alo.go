@@ -16,6 +16,8 @@ type SvsALO struct {
 	svs *SvSync
 	// client is the object client.
 	client ndn.Client
+	// group is the group prefix.
+	group enc.Name
 
 	// mutex protects the instance.
 	mutex gosync.Mutex
@@ -65,6 +67,7 @@ func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 		opts:   opts,
 		svs:    nil,
 		client: opts.Svs.Client,
+		group:  opts.Svs.GroupPrefix,
 
 		mutex: gosync.Mutex{},
 
@@ -94,6 +97,8 @@ func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 	}
 
 	// Initialize the underlying SVS instance
+	s.opts.Svs.GroupPrefix = s.opts.Svs.GroupPrefix.
+		Append(enc.NewKeywordComponent("svs"))
 	s.svs = NewSvSync(s.opts.Svs)
 
 	// Initialize the state vector with our own state.
@@ -111,7 +116,7 @@ func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 	} else {
 		s.opts.Snapshot.initialize(snapPsState{
 			nodePrefix:  s.opts.Name,
-			groupPrefix: s.SyncPrefix(),
+			groupPrefix: s.GroupPrefix(),
 			bootTime:    s.BootTime(),
 			onSnap:      s.snapRecvCallback,
 		}, s.state)
@@ -130,6 +135,11 @@ func (s *SvsALO) BootTime() uint64 {
 	return s.svs.GetBootTime()
 }
 
+// GroupPrefix is the group prefix for this instance.
+func (s *SvsALO) GroupPrefix() enc.Name {
+	return s.group
+}
+
 // SyncPrefix is the sync route prefix for this instance.
 func (s *SvsALO) SyncPrefix() enc.Name {
 	return s.opts.Svs.GroupPrefix
@@ -137,8 +147,8 @@ func (s *SvsALO) SyncPrefix() enc.Name {
 
 // DataPrefix is the data route prefix for this instance.
 func (s *SvsALO) DataPrefix() enc.Name {
-	return s.opts.Name.
-		Append(s.SyncPrefix()...).
+	return s.GroupPrefix().
+		Append(s.opts.Name...).
 		Append(enc.NewTimestampComponent(s.BootTime()))
 }
 

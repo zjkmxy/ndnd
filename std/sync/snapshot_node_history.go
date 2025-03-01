@@ -10,6 +10,8 @@ import (
 	"github.com/named-data/ndnd/std/ndn/svs_ps"
 )
 
+const SnapHistoryIndexFreshness = time.Millisecond * 10
+
 // SnapshotNodeLatest is a snapshot strategy that assumes that it is not
 // possible to take a snapshot of the application state. Instead, it creates
 // a snapshot of the entire publication history.
@@ -138,15 +140,15 @@ func (s *SnapshotNodeHistory) onPublication(state SvMap[svsDataState], pub enc.N
 
 // snapName is the naming convention for snapshots.
 func (s *SnapshotNodeHistory) snapName(node enc.Name, boot uint64) enc.Name {
-	return node.
-		Append(s.pss.groupPrefix...).
+	return s.pss.groupPrefix.
+		Append(node...).
 		Append(enc.NewTimestampComponent(boot)).
 		Append(enc.NewKeywordComponent("HIST"))
 }
 
 func (s *SnapshotNodeHistory) idxName(node enc.Name, boot uint64) enc.Name {
-	return node.
-		Append(s.pss.groupPrefix...).
+	return s.pss.groupPrefix.
+		Append(node...).
 		Append(enc.NewTimestampComponent(boot)).
 		Append(enc.NewKeywordComponent("HIDX"))
 }
@@ -192,7 +194,7 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 	}
 
 	// Fetch one snapshot at a time under this goroutine
-	for indexI, seqNo := range index.SeqNos {
+	for _, seqNo := range index.SeqNos {
 		if seqNo > known {
 			snapC := make(chan ndn.ConsumeState)
 
@@ -232,12 +234,6 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 					}
 				}
 
-				// Reset snap block if this is the last snapshot in the index
-				if indexI == len(index.SeqNos)-1 {
-					entry.SnapBlock = 0
-					state.Set(hash, boot, entry)
-				}
-
 				// In repo mode, we fetch the snapshot even if it is new,
 				// in this case do not deliver the fetched snapshot since it
 				// will prevent fetching the other updates.
@@ -269,6 +265,18 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 			})
 		}
 	}
+
+	// Wait for the freshness period of the index before giving back control.
+	// This ensure we don't fetch the same index again.
+	time.Sleep(SnapHistoryIndexFreshness)
+
+	// Reset snap block flag
+	s.pss.onSnap(func(state SvMap[svsDataState]) (SvsPub, error) {
+		entry := state.Get(hash, boot)
+		entry.SnapBlock = 0
+		state.Set(hash, boot, entry)
+		return SvsPub{}, nil
+	})
 }
 
 // takeSnap takes a snapshot of the application state for the current node.
@@ -300,8 +308,8 @@ func (s *SnapshotNodeHistory) takeSnap(seqNo uint64) {
 	}
 
 	// Add all publications since the last snapshot
-	pubBasename := s.pss.nodePrefix.
-		Append(s.pss.groupPrefix...).
+	pubBasename := s.pss.groupPrefix.
+		Append(s.pss.nodePrefix...).
 		Append(enc.NewTimestampComponent(s.pss.bootTime))
 	for i := s.prevSeq + 1; i <= seqNo; i++ {
 		pubName := pubBasename.
@@ -340,7 +348,8 @@ func (s *SnapshotNodeHistory) takeSnap(seqNo uint64) {
 	_, err = s.Client.Produce(ndn.ProduceArgs{
 		Name: s.idxName(s.pss.nodePrefix, s.pss.bootTime).
 			WithVersion(seqNo),
-		Content: indexWire,
+		Content:         indexWire,
+		FreshnessPeriod: SnapHistoryIndexFreshness,
 	})
 	if err != nil {
 		log.Error(s, "Failed to publish index", "err", err, "name", prevIndexName)

@@ -7,7 +7,6 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
-	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	"github.com/named-data/ndnd/std/types/optional"
 )
@@ -18,7 +17,6 @@ type RepoSvs struct {
 	client ndn.Client
 
 	svsalo *ndn_sync.SvsALO
-	routes []enc.Name
 }
 
 func NewRepoSvs(config *Config, group enc.Name, client ndn.Client) *RepoSvs {
@@ -66,19 +64,15 @@ func (r *RepoSvs) Start() (err error) {
 
 	r.svsalo.SubscribePublisher(enc.Name{}, func(pub ndn_sync.SvsPub) {
 		r.commitState(pub.State)
-		r.registerPublisherRoute(pub.Publisher)
 	})
 
-	if err = r.registerRoute(r.svsalo.SyncPrefix()); err != nil {
+	if err = r.registerRoute(r.svsalo.GroupPrefix()); err != nil {
 		return err
 	}
 
 	if err = r.svsalo.Start(); err != nil {
 		return err
 	}
-
-	// Register prefixes from existing members
-	r.processInitialState(initialState)
 
 	return nil
 }
@@ -90,7 +84,7 @@ func (r *RepoSvs) Stop() (err error) {
 		return nil
 	}
 
-	r.unregisterRoutes()
+	r.unregisterRoutes(r.svsalo.GroupPrefix())
 
 	if err = r.svsalo.Stop(); err != nil {
 		return err
@@ -112,23 +106,11 @@ func (r *RepoSvs) readState() enc.Wire {
 	return nil
 }
 
-func (r *RepoSvs) registerPublisherRoute(name enc.Name) error {
-	// Register the route for the publisher without boot time
-	return r.registerRoute(name.Append(r.group...))
-}
-
 func (r *RepoSvs) registerRoute(prefix enc.Name) (err error) {
-	for _, reg := range r.routes {
-		if reg.Equal(prefix) {
-			return nil
-		}
-	}
-
-	// Disable route inheritance
 	if _, err = r.client.Engine().ExecMgmtCmd("rib", "register", &mgmt.ControlArgs{
-		Name:  prefix,
-		Mask:  optional.Some(uint64(mgmt.RouteFlagChildInherit)),
-		Flags: optional.Some(uint64(0)),
+		Name:   prefix,
+		Cost:   optional.Some(uint64(1000)),
+		Origin: optional.Some(uint64(mgmt.RouteOriginClient)),
 	}); err != nil {
 		log.Error(r, "Failed to register route", "err", err)
 		return err
@@ -136,43 +118,19 @@ func (r *RepoSvs) registerRoute(prefix enc.Name) (err error) {
 		log.Info(r, "Registered route", "prefix", prefix)
 	}
 
-	r.routes = append(r.routes, prefix)
-
 	return nil
 }
 
-func (r *RepoSvs) unregisterRoutes() (err error) {
-	for _, name := range r.routes {
-		if _, err = r.client.Engine().ExecMgmtCmd("rib", "unregister", &mgmt.ControlArgs{
-			Name: name,
-		}); err != nil {
-			log.Error(r, "Failed to unregister route", "err", err)
-			return err
-		} else {
-			log.Info(r, "Unregistered route", "prefix", name)
-		}
+func (r *RepoSvs) unregisterRoutes(prefix enc.Name) (err error) {
+	if _, err = r.client.Engine().ExecMgmtCmd("rib", "unregister", &mgmt.ControlArgs{
+		Name:   prefix,
+		Origin: optional.Some(uint64(mgmt.RouteOriginClient)),
+	}); err != nil {
+		log.Error(r, "Failed to unregister route", "err", err)
+		return err
+	} else {
+		log.Info(r, "Unregistered route", "prefix", prefix)
 	}
-	r.routes = nil
+
 	return nil
-}
-
-func (r *RepoSvs) processInitialState(wire enc.Wire) {
-	if wire == nil {
-		return
-	}
-
-	state, err := spec_svs.ParseInstanceState(enc.NewWireView(wire), true)
-	if err != nil {
-		return
-	}
-
-	for _, entry := range state.StateVector.Entries {
-		if len(entry.SeqNoEntries) == 0 {
-			continue
-		}
-
-		if err = r.registerPublisherRoute(entry.Name); err != nil {
-			continue
-		}
-	}
 }
