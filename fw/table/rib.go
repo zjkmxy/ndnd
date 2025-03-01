@@ -143,6 +143,7 @@ func (r *RibTable) AddEncRoute(name enc.Name, route *Route) {
 	node := r.root.fillTreeToPrefixEnc(name)
 
 	defer node.updateNexthopsEnc()
+	defer readvertiseAnnounce(name, route)
 
 	for _, existingRoute := range node.routes {
 		if existingRoute.FaceID == route.FaceID && existingRoute.Origin == route.Origin {
@@ -154,7 +155,6 @@ func (r *RibTable) AddEncRoute(name enc.Name, route *Route) {
 	}
 
 	node.routes = append(node.routes, route)
-	readvertiseAnnounce(name, route)
 }
 
 // GetAllEntries returns all routes in the RIB.

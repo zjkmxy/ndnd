@@ -9,7 +9,13 @@ import (
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 )
 
+// CostInfinity is the maximum cost to a router.
 const CostInfinity = uint64(16)
+
+// CostPfxInfinity is the maximum cost to a name prefix.
+const CostPfxInfinity = uint64(0xFFFFFFFF)
+
+// NlsrOrigin is the origin to use for local registration.
 const NlsrOrigin = uint64(mgmt.RouteOriginNLSR)
 
 var MulticastStrategy = enc.LOCALHOST.
