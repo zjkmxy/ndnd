@@ -198,7 +198,7 @@ func commitState(state enc.Wire) {
 	//
 	// Applications can use their own data structures to store the state.
 	// In this example, we use the NDN object store to persist the state.
-	store.Put(group, 0, state.Join())
+	store.Put(group, state.Join())
 }
 
 func readState() enc.Wire {

@@ -67,7 +67,7 @@ func (s *BadgerStore) Get(name enc.Name, prefix bool) (wire []byte, err error) {
 	return
 }
 
-func (s *BadgerStore) Put(name enc.Name, version uint64, wire []byte) error {
+func (s *BadgerStore) Put(name enc.Name, wire []byte) error {
 	key := s.nameKey(name)
 	return s.update(func(txn *badger.Txn) error {
 		return txn.Set(key, wire)

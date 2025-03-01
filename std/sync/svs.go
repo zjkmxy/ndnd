@@ -578,7 +578,7 @@ func (s *SvSync) persistPassiveWires() {
 
 	name := s.prefix.Append(enc.NewKeywordComponent("passive-state"))
 	wire := pstate.Encode().Join()
-	if err := s.o.Client.Store().Put(name, 0, wire); err != nil {
+	if err := s.o.Client.Store().Put(name, wire); err != nil {
 		log.Error(s, "Failed to persist wires", "err", err)
 	}
 }

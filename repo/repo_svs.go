@@ -101,7 +101,7 @@ func (r *RepoSvs) Stop() (err error) {
 
 func (r *RepoSvs) commitState(state enc.Wire) {
 	name := r.group.Append(enc.NewKeywordComponent("alo-state"))
-	r.client.Store().Put(name, 0, state.Join())
+	r.client.Store().Put(name, state.Join())
 }
 
 func (r *RepoSvs) readState() enc.Wire {
