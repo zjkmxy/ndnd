@@ -3,6 +3,8 @@ package encoding
 import (
 	"bytes"
 	"io"
+	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -30,6 +32,8 @@ var (
 	HEX_UPPER = []rune("0123456789ABCDEF")
 )
 
+var DISABLE_ALT_URI = os.Getenv("NDN_NAME_ALT_URI") == "0"
+
 type Component struct {
 	Typ TLNum
 	Val []byte
@@ -42,7 +46,7 @@ func (c Component) ComponentPatternTrait() ComponentPattern {
 func (c Component) Clone() Component {
 	return Component{
 		Typ: c.Typ,
-		Val: append([]byte(nil), c.Val...),
+		Val: slices.Clone(c.Val),
 	}
 }
 
@@ -60,13 +64,13 @@ func (c Component) WriteTo(sb *strings.Builder) int {
 	size := 0
 
 	vFmt := compValFmt(compValFmtText{})
-	if conv, ok := compConvByType[c.Typ]; ok {
+	if conv, ok := compConvByType[c.Typ]; !DISABLE_ALT_URI && ok {
 		vFmt = conv.vFmt
 		typ := conv.name
 		sb.WriteString(typ)
 		sb.WriteRune('=')
 		size += len(typ) + 1
-	} else if c.Typ != TypeGenericNameComponent {
+	} else if DISABLE_ALT_URI || c.Typ != TypeGenericNameComponent {
 		typ := strconv.FormatUint(uint64(c.Typ), 10)
 		sb.WriteString(typ)
 		sb.WriteRune('=')
