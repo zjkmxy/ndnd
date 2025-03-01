@@ -48,7 +48,7 @@ func (s *SnapshotNodeLatest) Snapshot() Snapshot {
 }
 
 // initialize the snapshot strategy.
-func (s *SnapshotNodeLatest) initialize(pss snapPsState) {
+func (s *SnapshotNodeLatest) initialize(pss snapPsState, _ SvMap[svsDataState]) {
 	if s.Client == nil || s.SnapMe == nil || s.Threshold == 0 {
 		panic("SnapshotNodeLatest: not initialized")
 	}

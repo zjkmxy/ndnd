@@ -114,7 +114,7 @@ func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 			groupPrefix: s.SyncPrefix(),
 			bootTime:    s.BootTime(),
 			onSnap:      s.snapRecvCallback,
-		})
+		}, s.state)
 	}
 
 	return s, nil

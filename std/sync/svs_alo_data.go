@@ -212,6 +212,10 @@ func (s *SvsALO) snapRecvCallback(callback snapRecvCallback) {
 		s.queueError(err)
 		return
 	}
+	if pub.Content == nil {
+		// no error but ignore the snapshot
+		return
+	}
 
 	// Send the snapshot to the application
 	s.queuePub(pub)

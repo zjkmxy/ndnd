@@ -39,6 +39,11 @@ type SnapshotNodeHistory struct {
 	//  - [INVALID] 1, 4[234], 6, 8, 9, 10
 	Compress func(*svs_ps.HistorySnap)
 
+	// In Repo mode, all snapshots are fetched automtically for persistence.
+	IsRepo bool
+	// repoKnown is the known snapshot sequence number.
+	repoKnown SvMap[uint64]
+
 	// pss is the struct from the svs layer.
 	pss snapPsState
 	// prevSeq is my last snapshot sequence number.
@@ -54,32 +59,65 @@ func (s *SnapshotNodeHistory) Snapshot() Snapshot {
 }
 
 // initialize the snapshot strategy.
-func (s *SnapshotNodeHistory) initialize(pss snapPsState) {
+func (s *SnapshotNodeHistory) initialize(pss snapPsState, state SvMap[svsDataState]) {
 	if s.Client == nil || s.Threshold == 0 {
 		panic("SnapshotNodeLatest: not initialized")
 	}
 	s.pss = pss
+
+	// Load repo known state for repo mode
+	if s.IsRepo {
+		s.repoKnown = make(SvMap[uint64])
+		for hash, vals := range state {
+			for _, val := range vals {
+				// Fetch one threshold again if needed to be safe
+				rk := uint64(0)
+				if val.Value.Known > s.Threshold {
+					rk = val.Value.Known - s.Threshold
+				}
+				s.repoKnown.Set(hash, val.Boot, rk)
+			}
+		}
+	}
 }
 
 // onUpdate determines if a snapshot should be fetched.
 func (s *SnapshotNodeHistory) onUpdate(state SvMap[svsDataState], node enc.Name) {
-	entries := state[node.TlvStr()]
+	nodeHash := node.TlvStr()
+	entries := state[nodeHash]
 
 	for i := range entries {
-		boot, value := entries[i].Boot, entries[i].Value
+		boot, value := entries[i].Boot, entries[i].Value // copies
+
+		// Nothing to do
+		if value.Pending >= value.Latest {
+			continue
+		}
 
 		// Skip this instance, what's the point?
 		if node.Equal(s.pss.nodePrefix) && boot == s.pss.bootTime {
 			continue
 		}
 
+		// Threshold to fetch the snapshot
+		fetchThreshold := s.Threshold * 2
+
+		// Repo mode - fetch all snapshots
+		if value.SnapBlock == 0 && s.IsRepo {
+			rk := s.repoKnown.Get(nodeHash, boot)
+			value.Pending = rk
+			value.Known = rk
+			fetchThreshold = s.Threshold + 1
+		}
+
 		// Check if we should fetch a snapshot
 		//
 		// TODO: prevent fetching snapshot too fast - throttle this call
 		// This will prevent an infinite loop if the snapshot is old (?)
-		if value.SnapBlock == 0 && (value.Latest-value.Pending >= s.Threshold*2 || value.Known == 0) {
+		if value.SnapBlock == 0 && (value.Latest-value.Pending >= fetchThreshold || value.Known == 0) {
 			entries[i].Value.SnapBlock = 1 // released by fetch callback
 			s.fetchIndex(node, boot, value.Known)
+			continue
 		}
 	}
 }
@@ -175,12 +213,14 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 			}
 
 			// Verify snapshot has entries till the end
-			if len(snapshot.Entries) == 0 || snapshot.Entries[len(snapshot.Entries)-1].SeqNo != scstate.Version() {
-				onError(fmt.Errorf("fetched incomplete snapshot - ignoring"))
+			ssVersion := scstate.Version()
+			if len(snapshot.Entries) == 0 || snapshot.Entries[len(snapshot.Entries)-1].SeqNo != ssVersion {
+				onError(fmt.Errorf("fetched invalid snapshot - ignoring"))
 				return
 			}
 
 			s.pss.onSnap(func(state SvMap[svsDataState]) (SvsPub, error) {
+				// do not use onError in the callback (blocking sleep)
 				entry := state.Get(hash, boot)
 
 				// Filter out any publications which are already known
@@ -192,26 +232,31 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 					}
 				}
 
-				// Check if snapshot is outdated
-				isOutdated := entry.Known >= scstate.Version()
-
-				// Update the state vector
+				// Reset snap block if this is the last snapshot in the index
 				if indexI == len(index.SeqNos)-1 {
-					// Reset only if this is the last snapshot in the index
 					entry.SnapBlock = 0
+					state.Set(hash, boot, entry)
+				}
+
+				// In repo mode, we fetch the snapshot even if it is new,
+				// in this case do not deliver the fetched snapshot since it
+				// will prevent fetching the other updates.
+				if s.IsRepo {
+					s.repoKnown.Set(hash, boot, ssVersion)
+					if entry.Pending >= ssVersion-2*s.Threshold {
+						return SvsPub{}, nil
+					}
+				}
+
+				// Check if snapshot is outdated
+				if entry.Known >= ssVersion {
+					return SvsPub{}, nil
 				}
 
 				// Update the state vector
-				if !isOutdated {
-					entry.Known = scstate.Version()
-					entry.Pending = max(entry.Pending, entry.Known)
-				}
+				entry.Known = ssVersion
+				entry.Pending = max(entry.Pending, entry.Known)
 				state.Set(hash, boot, entry)
-
-				// Do this last so that we reset snap block first
-				if isOutdated {
-					return SvsPub{}, fmt.Errorf("fetched old snapshot - ignoring")
-				}
 
 				return SvsPub{
 					Publisher:  node,

@@ -53,6 +53,7 @@ func (r *RepoSvs) Start() (err error) {
 		Snapshot: &ndn_sync.SnapshotNodeHistory{
 			Client:    r.client,
 			Threshold: 10, // TODO: depends on app
+			IsRepo:    true,
 		},
 	})
 	if err != nil {
