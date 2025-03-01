@@ -129,7 +129,10 @@ func main() {
 	})
 
 	// Register routes to the local forwarder
-	for _, route := range []enc.Name{svsalo.SyncPrefix(), svsalo.DataPrefix()} {
+	for _, route := range []enc.Name{
+		svsalo.SyncPrefix(),
+		svsalo.DataPrefix(),
+	} {
 		err = app.RegisterRoute(route)
 		if err != nil {
 			log.Error(nil, "Unable to register route", "err", err)

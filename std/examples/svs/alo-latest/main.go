@@ -56,16 +56,6 @@ func main() {
 	}
 	defer client.Stop()
 
-	// Register routes to the local forwarder
-	for _, route := range []enc.Name{group, name} {
-		err = app.RegisterRoute(route)
-		if err != nil {
-			log.Error(nil, "Unable to register route", "err", err)
-			return
-		}
-		defer app.UnregisterRoute(route)
-	}
-
 	// Total number and size of messages
 	msgCount := 0
 	msgSize := 0
@@ -169,6 +159,19 @@ func main() {
 
 		fmt.Fprintf(os.Stderr, "*** %v\n", err)
 	})
+
+	// Register routes to the local forwarder
+	for _, route := range []enc.Name{
+		svsalo.SyncPrefix(),
+		svsalo.DataPrefix(),
+	} {
+		err = app.RegisterRoute(route)
+		if err != nil {
+			log.Error(nil, "Unable to register route", "err", err)
+			return
+		}
+		defer app.UnregisterRoute(route)
+	}
 
 	if err = svsalo.Start(); err != nil {
 		log.Error(nil, "Unable to start SVS ALO", "err", err)
