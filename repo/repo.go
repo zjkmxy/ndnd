@@ -59,7 +59,10 @@ func (r *Repo) Start() (err error) {
 	if err := r.client.AttachCommandHandler(r.config.NameN, r.onMgmtCmd); err != nil {
 		return err
 	}
-	r.client.AnnouncePrefix(ndn.Announcement{Name: r.config.NameN})
+	r.client.AnnouncePrefix(ndn.Announcement{
+		Name:   r.config.NameN,
+		Expose: true,
+	})
 
 	return nil
 }
