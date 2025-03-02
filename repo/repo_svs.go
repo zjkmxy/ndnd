@@ -59,7 +59,7 @@ func (r *RepoSvs) Start() (err error) {
 		Svs: ndn_sync.SvSyncOpts{
 			Client:            r.client,
 			GroupPrefix:       r.cmd.Group,
-			SuppressionPeriod: 1 * time.Second,
+			SuppressionPeriod: 500 * time.Millisecond,
 			PeriodicTimeout:   365 * 24 * time.Hour, // basically never
 			Passive:           true,
 		},
