@@ -54,6 +54,11 @@ type Client interface {
 	// ValidateExt validates a single data packet (advanced API).
 	ValidateExt(args ValidateExtArgs)
 
+	// AnnouncePrefix announces a prefix to the network.
+	AnnouncePrefix(args Announcement)
+	// WithdrawPrefix withdraws a prefix from the network.
+	WithdrawPrefix(name enc.Name, onError func(error))
+
 	// [EXPERIMENTAL] AttachCommandHandler creates a signed command handler.
 	// Currently signed commands bundle a signed data packet with a command
 	// inside an Interest's AppParam. The command cannot be bigger than
@@ -154,4 +159,17 @@ type ValidateExtArgs struct {
 	OverrideName enc.Name
 	// Next Hop ID to use for fetching certificates.
 	CertNextHop optional.Optional[uint64]
+}
+
+// Announcement are the arguments for the announce prefix API.
+type Announcement struct {
+	// Name of the prefix to announce.
+	Name enc.Name
+	// Cost of the prefix.
+	Cost uint64
+	// Expose the prefix to the global network.
+	Expose bool
+	// OnError is called when an error occurs.
+	// It may be called multiple times, e.g. if the face is reopened.
+	OnError func(error)
 }
