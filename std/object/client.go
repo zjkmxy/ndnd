@@ -31,6 +31,10 @@ func NewClient(engine ndn.Engine, store ndn.Store, trust *sec.TrustConfig) ndn.C
 	client.store = store
 	client.trust = trust
 	client.fetcher = newRrSegFetcher(client)
+
+	client.announcements = sync.Map{}
+	client.faceCancel = func() {}
+
 	return client
 }
 
@@ -56,12 +60,10 @@ func (c *Client) Start() error {
 
 // Stop the client
 func (c *Client) Stop() error {
+	c.faceCancel()
+
 	if err := c.engine.DetachHandler(enc.Name{}); err != nil {
 		return err
-	}
-
-	if c.faceCancel != nil {
-		c.faceCancel()
 	}
 
 	return nil

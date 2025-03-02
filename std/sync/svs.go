@@ -39,6 +39,9 @@ type SvSync struct {
 
 	// Channel for incoming state vectors
 	recvSv chan svSyncRecvSvArgs
+
+	// cancellation for face hook
+	faceCancel func()
 }
 
 type SvSyncOpts struct {
@@ -128,6 +131,8 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 		passiveWillPersist: atomic.Bool{},
 
 		recvSv: make(chan svSyncRecvSvArgs, 128),
+
+		faceCancel: func() {},
 	}
 }
 
@@ -152,10 +157,18 @@ func (s *SvSync) Start() (err error) {
 }
 
 func (s *SvSync) main() {
+	// Cleanup on exit
 	defer s.o.Client.Engine().DetachHandler(s.prefix)
 
+	// Set running state
 	s.running.Store(true)
 	defer s.running.Store(false)
+
+	// Notify everyone when we are back online
+	s.faceCancel = s.o.Client.Engine().Face().OnUp(func() {
+		time.AfterFunc(100*time.Millisecond, s.sendSyncInterest)
+	})
+	defer s.faceCancel()
 
 	if s.o.Passive {
 		// [Passive] Load the buffered wires from persistence
