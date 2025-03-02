@@ -137,12 +137,8 @@ func main() {
 		svsalo.SyncPrefix(),
 		svsalo.DataPrefix(),
 	} {
-		err = app.RegisterRoute(route)
-		if err != nil {
-			log.Error(nil, "Unable to register route", "err", err)
-			return
-		}
-		defer app.UnregisterRoute(route)
+		client.AnnouncePrefix(ndn.Announcement{Name: route})
+		defer client.WithdrawPrefix(route, nil)
 	}
 
 	if err = svsalo.Start(); err != nil {

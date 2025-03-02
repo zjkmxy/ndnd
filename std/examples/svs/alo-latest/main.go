@@ -9,6 +9,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
+	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 )
@@ -160,17 +161,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "*** %v\n", err)
 	})
 
-	// Register routes to the local forwarder
+	// Announce routes to the local forwarder
 	for _, route := range []enc.Name{
 		svsalo.SyncPrefix(),
 		svsalo.DataPrefix(),
 	} {
-		err = app.RegisterRoute(route)
-		if err != nil {
-			log.Error(nil, "Unable to register route", "err", err)
-			return
-		}
-		defer app.UnregisterRoute(route)
+		client.AnnouncePrefix(ndn.Announcement{Name: route})
+		defer client.WithdrawPrefix(route, nil)
 	}
 
 	if err = svsalo.Start(); err != nil {

@@ -59,9 +59,7 @@ func (r *Repo) Start() (err error) {
 	if err := r.client.AttachCommandHandler(r.config.NameN, r.onMgmtCmd); err != nil {
 		return err
 	}
-	if err := r.engine.RegisterRoute(r.config.NameN); err != nil {
-		return err
-	}
+	r.client.AnnouncePrefix(ndn.Announcement{Name: r.config.NameN})
 
 	return nil
 }
@@ -74,9 +72,7 @@ func (r *Repo) Stop() error {
 	}
 	clear(r.groupsSvs)
 
-	if err := r.engine.UnregisterRoute(r.config.NameN); err != nil {
-		log.Warn(r, "Failed to unregister route", "err", err)
-	}
+	r.client.WithdrawPrefix(r.config.NameN, nil)
 	if err := r.client.DetachCommandHandler(r.config.NameN); err != nil {
 		log.Warn(r, "Failed to detach command handler", "err", err)
 	}

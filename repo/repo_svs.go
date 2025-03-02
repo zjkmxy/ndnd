@@ -8,9 +8,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
-	"github.com/named-data/ndnd/std/types/optional"
 )
 
 type RepoSvs struct {
@@ -79,11 +77,13 @@ func (r *RepoSvs) Start() (err error) {
 		r.commitState(pub.State)
 	})
 
-	// Register route to group prefix.
 	// This covers both the sync prefix and all producers' data prefixes.
-	if err = r.registerRoute(r.svsalo.GroupPrefix()); err != nil {
-		return err
-	}
+	r.client.AnnouncePrefix(ndn.Announcement{
+		Name:    r.svsalo.GroupPrefix(),
+		Cost:    1000,
+		Expose:  true,
+		OnError: nil, // TODO
+	})
 
 	// Start SVS ALO
 	if err = r.svsalo.Start(); err != nil {
@@ -99,8 +99,8 @@ func (r *RepoSvs) Stop() (err error) {
 		return nil
 	}
 
-	// Unregister route to group prefix.
-	r.unregisterRoutes(r.svsalo.GroupPrefix())
+	// Withdraw group prefix.
+	r.client.WithdrawPrefix(r.svsalo.GroupPrefix(), nil)
 
 	// Stop SVS ALO
 	if err = r.svsalo.Stop(); err != nil {
@@ -120,34 +120,5 @@ func (r *RepoSvs) readState() enc.Wire {
 	if stateWire, _ := r.client.Store().Get(name, false); stateWire != nil {
 		return enc.Wire{stateWire}
 	}
-	return nil
-}
-
-func (r *RepoSvs) registerRoute(prefix enc.Name) (err error) {
-	if _, err = r.client.Engine().ExecMgmtCmd("rib", "register", &mgmt.ControlArgs{
-		Name:   prefix,
-		Cost:   optional.Some(uint64(1000)),
-		Origin: optional.Some(uint64(mgmt.RouteOriginClient)),
-	}); err != nil {
-		log.Error(r, "Failed to register route", "err", err)
-		return err
-	} else {
-		log.Info(r, "Registered route", "prefix", prefix)
-	}
-
-	return nil
-}
-
-func (r *RepoSvs) unregisterRoutes(prefix enc.Name) (err error) {
-	if _, err = r.client.Engine().ExecMgmtCmd("rib", "unregister", &mgmt.ControlArgs{
-		Name:   prefix,
-		Origin: optional.Some(uint64(mgmt.RouteOriginClient)),
-	}); err != nil {
-		log.Error(r, "Failed to unregister route", "err", err)
-		return err
-	} else {
-		log.Info(r, "Unregistered route", "prefix", prefix)
-	}
-
 	return nil
 }
