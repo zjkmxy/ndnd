@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	spec_repo "github.com/named-data/ndnd/repo/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
@@ -19,6 +20,9 @@ var group, _ = enc.NameFromStr("/ndn/svs")
 var name enc.Name
 var svsalo *ndn_sync.SvsALO
 var store ndn.Store
+var repoName, _ = enc.NameFromStr("/ndnd/repo")
+
+const SnapshotThreshold = 100
 
 func main() {
 	// This example shows how to use the SVS ALO with the SnapshotNodeHistory.
@@ -91,7 +95,7 @@ func main() {
 		// since the node bootstrapped will be delivered.
 		Snapshot: &ndn_sync.SnapshotNodeHistory{
 			Client:    client,
-			Threshold: 100,
+			Threshold: SnapshotThreshold,
 		},
 	})
 	if err != nil {
@@ -146,6 +150,27 @@ func main() {
 		return
 	}
 	defer svsalo.Stop()
+
+	// Command repo to join the group
+	repoCmd := spec_repo.RepoCmd{
+		SyncJoin: &spec_repo.SyncJoin{
+			Protocol: spec_repo.SyncProtocolSvsV3,
+			Group:    group,
+			HistorySnapshot: &spec_repo.HistorySnapshotConfig{
+				Threshold: SnapshotThreshold,
+			},
+		},
+	}
+	client.ExpressCommand(
+		repoName.Append(enc.NewKeywordComponent("cmd")),
+		repoCmd.Encode(),
+		func(w enc.Wire, err error) {
+			if err != nil {
+				log.Warn(nil, "Repo sync join command failed", "err", err)
+			} else {
+				log.Info(nil, "Repo joined SVS group")
+			}
+		})
 
 	fmt.Fprintln(os.Stderr, "*** Joined SVS ALO chat group")
 	fmt.Fprintln(os.Stderr, "*** You are:", name)

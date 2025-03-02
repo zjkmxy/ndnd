@@ -2,7 +2,9 @@ package repo
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/named-data/ndnd/repo/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
@@ -13,63 +15,77 @@ import (
 
 type RepoSvs struct {
 	config *Config
-	group  enc.Name
 	client ndn.Client
-
+	cmd    *tlv.SyncJoin
 	svsalo *ndn_sync.SvsALO
 }
 
-func NewRepoSvs(config *Config, group enc.Name, client ndn.Client) *RepoSvs {
+func NewRepoSvs(config *Config, client ndn.Client, cmd *tlv.SyncJoin) *RepoSvs {
 	return &RepoSvs{
 		config: config,
-		group:  group,
 		client: client,
+		cmd:    cmd,
+		svsalo: nil,
 	}
 }
 
 func (r *RepoSvs) String() string {
-	return fmt.Sprintf("repo-svs (%s)", r.group)
+	return fmt.Sprintf("repo-svs (%s)", r.cmd.Group)
 }
 
 func (r *RepoSvs) Start() (err error) {
-	log.Info(r, "Starting SVS persistence")
+	log.Info(r, "Starting SVS")
 
-	// Get previous saved state
-	initialState := r.readState()
+	// Parse snapshot configuration
+	var snapshot ndn_sync.Snapshot = nil
 
-	r.svsalo, err = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
-		Name:         enc.Name{enc.NewKeywordComponent("repo")}, // unused,
-		InitialState: initialState,
-		Svs: ndn_sync.SvSyncOpts{
-			Client:      r.client,
-			GroupPrefix: r.group,
-			Passive:     true,
-		},
+	// History snapshot
+	if r.cmd.HistorySnapshot != nil {
+		if t := r.cmd.HistorySnapshot.Threshold; t < 10 {
+			return fmt.Errorf("invalid history snapshot threshold: %d", t)
+		}
 
-		// TODO: support other snapshot strategies
-		// TODO: force fetch all snapshots
-		Snapshot: &ndn_sync.SnapshotNodeHistory{
+		snapshot = &ndn_sync.SnapshotNodeHistory{
 			Client:    r.client,
-			Threshold: 10, // TODO: depends on app
+			Threshold: r.cmd.HistorySnapshot.Threshold,
 			IsRepo:    true,
+		}
+	}
+
+	// Start SVS ALO
+	r.svsalo, err = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+		Name:         enc.Name{enc.NewKeywordComponent("repo")}, // unused
+		InitialState: r.readState(),
+		Svs: ndn_sync.SvSyncOpts{
+			Client:            r.client,
+			GroupPrefix:       r.cmd.Group,
+			SuppressionPeriod: 1 * time.Second,
+			PeriodicTimeout:   365 * 24 * time.Hour, // basically never
+			Passive:           true,
 		},
+		Snapshot: snapshot,
 	})
 	if err != nil {
 		return err
 	}
 
+	// Set error handler
 	r.svsalo.SetOnError(func(err error) {
 		log.Error(r, "SVS ALO error", "err", err)
 	})
 
+	// Subscribe to all publishers
 	r.svsalo.SubscribePublisher(enc.Name{}, func(pub ndn_sync.SvsPub) {
 		r.commitState(pub.State)
 	})
 
+	// Register route to group prefix.
+	// This covers both the sync prefix and all producers' data prefixes.
 	if err = r.registerRoute(r.svsalo.GroupPrefix()); err != nil {
 		return err
 	}
 
+	// Start SVS ALO
 	if err = r.svsalo.Start(); err != nil {
 		return err
 	}
@@ -78,14 +94,15 @@ func (r *RepoSvs) Start() (err error) {
 }
 
 func (r *RepoSvs) Stop() (err error) {
-	log.Info(r, "Stopping SVS persistence")
-
+	log.Info(r, "Stopping SVS")
 	if r.svsalo == nil {
 		return nil
 	}
 
+	// Unregister route to group prefix.
 	r.unregisterRoutes(r.svsalo.GroupPrefix())
 
+	// Stop SVS ALO
 	if err = r.svsalo.Stop(); err != nil {
 		return err
 	}
@@ -94,12 +111,12 @@ func (r *RepoSvs) Stop() (err error) {
 }
 
 func (r *RepoSvs) commitState(state enc.Wire) {
-	name := r.group.Append(enc.NewKeywordComponent("alo-state"))
+	name := r.cmd.Group.Append(enc.NewKeywordComponent("alo-state"))
 	r.client.Store().Put(name, state.Join())
 }
 
 func (r *RepoSvs) readState() enc.Wire {
-	name := r.group.Append(enc.NewKeywordComponent("alo-state"))
+	name := r.cmd.Group.Append(enc.NewKeywordComponent("alo-state"))
 	if stateWire, _ := r.client.Store().Get(name, false); stateWire != nil {
 		return enc.Wire{stateWire}
 	}

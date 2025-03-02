@@ -1,3 +1,5 @@
 repo:
+  # Name of the repo service
+  name: /ndnd/repo
   # Repo storage directory
   storage_dir: ./db-repo

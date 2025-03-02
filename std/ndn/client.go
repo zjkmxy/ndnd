@@ -53,6 +53,18 @@ type Client interface {
 	Validate(data Data, sigCov enc.Wire, callback func(bool, error))
 	// ValidateExt validates a single data packet (advanced API).
 	ValidateExt(args ValidateExtArgs)
+
+	// [EXPERIMENTAL] AttachCommandHandler creates a signed command handler.
+	// Currently signed commands bundle a signed data packet with a command
+	// inside an Interest's AppParam. The command cannot be bigger than
+	// the NDN MTU size since it must fit within a single packet.
+	//
+	// These methods are considered as experimental and work-in-progress.
+	AttachCommandHandler(name enc.Name, handler func(name enc.Name, content enc.Wire, reply func(enc.Wire) error)) error
+	// [EXPERIMENTAL] DetachCommandHandler removes a signed command handler.
+	DetachCommandHandler(name enc.Name) error
+	// [EXPERIMENTAL] ExpressCommand sends a signed command to a given name.
+	ExpressCommand(name enc.Name, cmd enc.Wire, callback func(enc.Wire, error))
 }
 
 // ProduceArgs are the arguments for the produce API.

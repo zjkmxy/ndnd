@@ -1,6 +1,8 @@
 package repo
 
 import (
+	"sync"
+
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/engine/basic"
@@ -17,6 +19,7 @@ type Repo struct {
 	client ndn.Client
 
 	groupsSvs map[string]*RepoSvs
+	mutex     sync.Mutex
 }
 
 func NewRepo(config *Config) *Repo {
@@ -52,12 +55,12 @@ func (r *Repo) Start() (err error) {
 		return err
 	}
 
-	// TODO: register Repo command prefix and handlers
-
-	// Start test group (TODO: remove)
-	test, _ := enc.NameFromStr("/ndn/svs")
-	if err := r.startSvs(test); err != nil {
-		log.Error(nil, "Failed to start test group", "err", err)
+	// Attach managmemt interest handler
+	if err := r.client.AttachCommandHandler(r.config.NameN, r.onMgmtCmd); err != nil {
+		return err
+	}
+	if err := r.engine.RegisterRoute(r.config.NameN); err != nil {
+		return err
 	}
 
 	return nil
@@ -71,28 +74,19 @@ func (r *Repo) Stop() error {
 	}
 	clear(r.groupsSvs)
 
+	if err := r.engine.UnregisterRoute(r.config.NameN); err != nil {
+		log.Warn(r, "Failed to unregister route", "err", err)
+	}
+	if err := r.client.DetachCommandHandler(r.config.NameN); err != nil {
+		log.Warn(r, "Failed to detach command handler", "err", err)
+	}
+
 	if r.client != nil {
 		r.client.Stop()
 	}
 	if r.engine != nil {
 		r.engine.Stop()
 	}
-
-	return nil
-}
-
-func (r *Repo) startSvs(group enc.Name) error {
-	// Check if already started
-	if _, ok := r.groupsSvs[group.String()]; ok {
-		return nil
-	}
-
-	// Start group
-	svs := NewRepoSvs(r.config, group, r.client)
-	if err := svs.Start(); err != nil {
-		return err
-	}
-	r.groupsSvs[group.String()] = svs
 
 	return nil
 }
