@@ -11,6 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +58,7 @@ func (pc *PutChunks) run(_ *cobra.Command, args []string) {
 	defer app.Stop()
 
 	// start object client
-	cli := object.NewClient(app, object.NewMemoryStore(), nil)
+	cli := object.NewClient(app, storage.NewMemoryStore(), nil)
 	err = cli.Start()
 	if err != nil {
 		log.Fatal(pc, "Unable to start object client", "err", err)

@@ -9,7 +9,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
-	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
 	"github.com/named-data/ndnd/std/security/signer"
@@ -334,7 +334,7 @@ func testTrustConfig(t *testing.T, keychain ndn.KeyChain, schema ndn.TrustSchema
 func TestTrustConfigLvs(t *testing.T) {
 	tu.SetT(t)
 
-	store := object.NewMemoryStore()
+	store := storage.NewMemoryStore()
 	keychain := keychain.NewKeyChainMem(store)
 	schema, err := trust_schema.NewLvsSchema(TRUST_CONFIG_TEST_LVS)
 	require.NoError(t, err)

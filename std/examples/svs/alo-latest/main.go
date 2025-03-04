@@ -11,6 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 )
 
@@ -50,7 +51,7 @@ func main() {
 	defer app.Stop()
 
 	// Create object client
-	client := object.NewClient(app, object.NewMemoryStore(), nil)
+	client := object.NewClient(app, storage.NewMemoryStore(), nil)
 	if err = client.Start(); err != nil {
 		log.Error(nil, "Unable to start object client", "err", err)
 		return

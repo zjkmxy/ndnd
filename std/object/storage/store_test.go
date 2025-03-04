@@ -1,11 +1,11 @@
-package object_test
+package storage_test
 
 import (
 	"testing"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -271,7 +271,7 @@ func testStoreTxn(t *testing.T, store ndn.Store) {
 
 func TestMemoryStore(t *testing.T) {
 	tu.SetT(t)
-	store := object.NewMemoryStore()
+	store := storage.NewMemoryStore()
 	testStoreBasic(t, store)
 	testStoreRemoveRange(t, store)
 	testStoreTxn(t, store)

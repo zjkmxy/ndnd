@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 )
 
 type Repo struct {
@@ -37,7 +38,7 @@ func (r *Repo) Start() (err error) {
 	log.Info(r, "Starting NDN Data Repository", "dir", r.config.StorageDir)
 
 	// Make object store database
-	r.store, err = object.NewBadgerStore(r.config.StorageDir + "/badger")
+	r.store, err = storage.NewBadgerStore(r.config.StorageDir + "/badger")
 	if err != nil {
 		return err
 	}

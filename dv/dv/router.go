@@ -12,6 +12,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	mgmt "github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	sec "github.com/named-data/ndnd/std/security"
 	"github.com/named-data/ndnd/std/security/keychain"
 	"github.com/named-data/ndnd/std/security/trust_schema"
@@ -70,7 +71,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 	}
 
 	// Create packet store
-	store := object.NewMemoryStore()
+	store := storage.NewMemoryStore()
 
 	// Create security configuration
 	var trust *sec.TrustConfig = nil
@@ -107,7 +108,7 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		dv:       dv,
 		bootTime: uint64(time.Now().Unix()),
 		seq:      0,
-		objDir:   object.NewMemoryFifoDir(32), // keep last few advertisements
+		objDir:   storage.NewMemoryFifoDir(32), // keep last few advertisements
 	}
 
 	// Create prefix table

@@ -11,6 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	"github.com/named-data/ndnd/std/sync"
 )
 
@@ -36,7 +37,7 @@ func main() {
 	defer app.Stop()
 
 	// Create object client
-	store, err := object.NewBadgerStore("db-passive-svs")
+	store, err := storage.NewBadgerStore("db-passive-svs")
 	if err != nil {
 		log.Error(nil, "Unable to create object store", "err", err)
 		return

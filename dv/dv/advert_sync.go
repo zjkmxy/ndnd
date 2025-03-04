@@ -10,7 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	spec_svs "github.com/named-data/ndnd/std/ndn/svs/v3"
-	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
@@ -23,7 +23,7 @@ type advertModule struct {
 	// advertisement sequence number for self
 	seq uint64
 	// object directory for advertisement data
-	objDir *object.MemoryFifoDir
+	objDir *storage.MemoryFifoDir
 }
 
 func (a *advertModule) String() string {

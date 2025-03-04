@@ -1,6 +1,6 @@
 //go:build !js
 
-package object
+package storage
 
 import (
 	"bytes"

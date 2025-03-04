@@ -10,6 +10,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	"github.com/named-data/ndnd/std/sync"
 )
 
@@ -42,7 +43,7 @@ func main() {
 	defer app.Stop()
 
 	// Create object client
-	store := object.NewMemoryStore()
+	store := storage.NewMemoryStore()
 	client := object.NewClient(app, store, nil)
 	err = client.Start()
 	if err != nil {

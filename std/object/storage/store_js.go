@@ -1,6 +1,6 @@
 //go:build js && wasm
 
-package object
+package storage
 
 import (
 	"bytes"

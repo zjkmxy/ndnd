@@ -13,6 +13,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/svs_ps"
 	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 )
 
@@ -60,7 +61,7 @@ func main() {
 
 	// History snapshot works best with persistent storage
 	ident := strings.ReplaceAll(name.String(), "/", "-")
-	bstore, err := object.NewBadgerStore(fmt.Sprintf("db-chat%s", ident))
+	bstore, err := storage.NewBadgerStore(fmt.Sprintf("db-chat%s", ident))
 	if err != nil {
 		log.Error(nil, "Unable to create object store", "err", err)
 		return
