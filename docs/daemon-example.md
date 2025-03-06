@@ -52,6 +52,9 @@ Once the daemons are running, we create a routing neighbor relationship between 
 ```sh
 # if udp is blocked, use tcp instead
 ndnd dv link-create "udp://<bob-ip>:6363"
+
+# replace <bob-ip> with the IP address of the bob node, e.g.
+# ndnd dv link-create "udp://192.168.1.5:6363"
 ```
 
 After a few seconds, logs should show up on both nodes indicating that the neighbor relationship has been established.
@@ -61,7 +64,7 @@ You can make this relationship permanent by adding the link to the configuration
 dv:
   ...
   neighbors:
-    - uri: "udp://<bob-ip>:6363"
+    - uri: "udp://<bob-ip>:6363"  # e.g., "udp://192.168.1.5:6363"
 ```
 
 Now, we can start serving the file on `alice` using the `put` tool:
