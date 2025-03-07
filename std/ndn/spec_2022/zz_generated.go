@@ -26,6 +26,7 @@ type DataEncoder struct {
 	SignatureInfo_encoder  SignatureInfoEncoder
 	SignatureValue_wireIdx int
 	SignatureValue_estLen  uint
+	CrossSchemaV_length    uint
 }
 
 type DataParsingContext struct {
@@ -58,6 +59,12 @@ func (encoder *DataEncoder) Init(value *Data) {
 		encoder.SignatureInfo_encoder.Init(value.SignatureInfo)
 	}
 	encoder.SignatureValue_wireIdx = -1
+	if value.CrossSchemaV != nil {
+		encoder.CrossSchemaV_length = 0
+		for _, c := range value.CrossSchemaV {
+			encoder.CrossSchemaV_length += uint(len(c))
+		}
+	}
 
 	l := uint(0)
 
@@ -86,6 +93,11 @@ func (encoder *DataEncoder) Init(value *Data) {
 		l += 1
 		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
 		l += encoder.SignatureValue_estLen
+	}
+	if value.CrossSchemaV != nil {
+		l += 3
+		l += uint(enc.TLNum(encoder.CrossSchemaV_length).EncodingLength())
+		l += encoder.CrossSchemaV_length
 	}
 	encoder.Length = l
 
@@ -126,6 +138,16 @@ func (encoder *DataEncoder) Init(value *Data) {
 		wirePlan = append(wirePlan, l)
 		l = 0
 	}
+	if value.CrossSchemaV != nil {
+		l += 3
+		l += uint(enc.TLNum(encoder.CrossSchemaV_length).EncodingLength())
+		wirePlan = append(wirePlan, l)
+		l = 0
+		for range value.CrossSchemaV {
+			wirePlan = append(wirePlan, l)
+			l = 0
+		}
+	}
 	if l > 0 {
 		wirePlan = append(wirePlan, l)
 	}
@@ -138,6 +160,7 @@ func (context *DataParsingContext) Init() {
 
 	context.SignatureInfo_context.Init()
 	context.sigCovered = make(enc.Wire, 0)
+
 }
 
 func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
@@ -229,6 +252,29 @@ func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
 			buf = nil
 		}
 	}
+	if value.CrossSchemaV != nil {
+		buf[pos] = 253
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(600))
+		pos += 3
+		pos += uint(enc.TLNum(encoder.CrossSchemaV_length).EncodeInto(buf[pos:]))
+		wireIdx++
+		pos = 0
+		if wireIdx < len(wire) {
+			buf = wire[wireIdx]
+		} else {
+			buf = nil
+		}
+		for _, w := range value.CrossSchemaV {
+			wire[wireIdx] = w
+			wireIdx++
+			pos = 0
+			if wireIdx < len(wire) {
+				buf = wire[wireIdx]
+			} else {
+				buf = nil
+			}
+		}
+	}
 }
 
 func (encoder *DataEncoder) Encode(value *Data) enc.Wire {
@@ -259,6 +305,7 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 	var handled_ContentV bool = false
 	var handled_SignatureInfo bool = false
 	var handled_SignatureValue bool = false
+	var handled_CrossSchemaV bool = false
 
 	progress := -1
 	_ = progress
@@ -283,7 +330,7 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 		}
 
 		err = nil
-		for handled := false; !handled && progress < 7; progress++ {
+		for handled := false; !handled && progress < 8; progress++ {
 			switch typ {
 			case 7:
 				if progress+1 == 2 {
@@ -320,6 +367,12 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 						context.sigCovered = append(context.sigCovered, coveredPart...)
 					}
 				}
+			case 600:
+				if progress+1 == 7 {
+					handled = true
+					handled_CrossSchemaV = true
+					value.CrossSchemaV, err = reader.ReadWire(int(l))
+				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
 					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
@@ -350,6 +403,9 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 				case 6 - 1:
 					handled_SignatureValue = true
 					value.SignatureValue = nil
+				case 7 - 1:
+					handled_CrossSchemaV = true
+					value.CrossSchemaV = nil
 				}
 			}
 			if err != nil {
@@ -381,6 +437,9 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 	}
 	if !handled_SignatureValue && err == nil {
 		value.SignatureValue = nil
+	}
+	if !handled_CrossSchemaV && err == nil {
+		value.CrossSchemaV = nil
 	}
 
 	if err != nil {

@@ -1,4 +1,3 @@
-//go:generate gondn_tlv_gen
 package spec_2022
 
 import (
@@ -25,6 +24,9 @@ type Data struct {
 	SignatureInfo *SignatureInfo `tlv:"0x16"`
 	//+field:signature:sigCoverStart:sigCovered
 	SignatureValue enc.Wire `tlv:"0x17"`
+
+	//+field:wire
+	CrossSchemaV enc.Wire `tlv:"0x258"`
 }
 
 type MetaInfo struct {

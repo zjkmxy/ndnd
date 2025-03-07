@@ -2,10 +2,616 @@
 package trust_schema
 
 import (
+	"encoding/binary"
 	"io"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn/spec_2022"
 )
+
+type CrossSchemaContentEncoder struct {
+	Length uint
+
+	SimpleSchemaRules_subencoder []struct {
+		SimpleSchemaRules_encoder SimpleSchemaRuleEncoder
+	}
+	PrefixSchemaRules_subencoder []struct {
+		PrefixSchemaRules_encoder PrefixSchemaRuleEncoder
+	}
+}
+
+type CrossSchemaContentParsingContext struct {
+	SimpleSchemaRules_context SimpleSchemaRuleParsingContext
+	PrefixSchemaRules_context PrefixSchemaRuleParsingContext
+}
+
+func (encoder *CrossSchemaContentEncoder) Init(value *CrossSchemaContent) {
+	{
+		SimpleSchemaRules_l := len(value.SimpleSchemaRules)
+		encoder.SimpleSchemaRules_subencoder = make([]struct {
+			SimpleSchemaRules_encoder SimpleSchemaRuleEncoder
+		}, SimpleSchemaRules_l)
+		for i := 0; i < SimpleSchemaRules_l; i++ {
+			pseudoEncoder := &encoder.SimpleSchemaRules_subencoder[i]
+			pseudoValue := struct {
+				SimpleSchemaRules *SimpleSchemaRule
+			}{
+				SimpleSchemaRules: value.SimpleSchemaRules[i],
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.SimpleSchemaRules != nil {
+					encoder.SimpleSchemaRules_encoder.Init(value.SimpleSchemaRules)
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+	{
+		PrefixSchemaRules_l := len(value.PrefixSchemaRules)
+		encoder.PrefixSchemaRules_subencoder = make([]struct {
+			PrefixSchemaRules_encoder PrefixSchemaRuleEncoder
+		}, PrefixSchemaRules_l)
+		for i := 0; i < PrefixSchemaRules_l; i++ {
+			pseudoEncoder := &encoder.PrefixSchemaRules_subencoder[i]
+			pseudoValue := struct {
+				PrefixSchemaRules *PrefixSchemaRule
+			}{
+				PrefixSchemaRules: value.PrefixSchemaRules[i],
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.PrefixSchemaRules != nil {
+					encoder.PrefixSchemaRules_encoder.Init(value.PrefixSchemaRules)
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+
+	l := uint(0)
+	if value.SimpleSchemaRules != nil {
+		for seq_i, seq_v := range value.SimpleSchemaRules {
+			pseudoEncoder := &encoder.SimpleSchemaRules_subencoder[seq_i]
+			pseudoValue := struct {
+				SimpleSchemaRules *SimpleSchemaRule
+			}{
+				SimpleSchemaRules: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.SimpleSchemaRules != nil {
+					l += 3
+					l += uint(enc.TLNum(encoder.SimpleSchemaRules_encoder.Length).EncodingLength())
+					l += encoder.SimpleSchemaRules_encoder.Length
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+	if value.PrefixSchemaRules != nil {
+		for seq_i, seq_v := range value.PrefixSchemaRules {
+			pseudoEncoder := &encoder.PrefixSchemaRules_subencoder[seq_i]
+			pseudoValue := struct {
+				PrefixSchemaRules *PrefixSchemaRule
+			}{
+				PrefixSchemaRules: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.PrefixSchemaRules != nil {
+					l += 3
+					l += uint(enc.TLNum(encoder.PrefixSchemaRules_encoder.Length).EncodingLength())
+					l += encoder.PrefixSchemaRules_encoder.Length
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+	encoder.Length = l
+
+}
+
+func (context *CrossSchemaContentParsingContext) Init() {
+	context.SimpleSchemaRules_context.Init()
+	context.PrefixSchemaRules_context.Init()
+}
+
+func (encoder *CrossSchemaContentEncoder) EncodeInto(value *CrossSchemaContent, buf []byte) {
+
+	pos := uint(0)
+
+	if value.SimpleSchemaRules != nil {
+		for seq_i, seq_v := range value.SimpleSchemaRules {
+			pseudoEncoder := &encoder.SimpleSchemaRules_subencoder[seq_i]
+			pseudoValue := struct {
+				SimpleSchemaRules *SimpleSchemaRule
+			}{
+				SimpleSchemaRules: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.SimpleSchemaRules != nil {
+					buf[pos] = 253
+					binary.BigEndian.PutUint16(buf[pos+1:], uint16(620))
+					pos += 3
+					pos += uint(enc.TLNum(encoder.SimpleSchemaRules_encoder.Length).EncodeInto(buf[pos:]))
+					if encoder.SimpleSchemaRules_encoder.Length > 0 {
+						encoder.SimpleSchemaRules_encoder.EncodeInto(value.SimpleSchemaRules, buf[pos:])
+						pos += encoder.SimpleSchemaRules_encoder.Length
+					}
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+	if value.PrefixSchemaRules != nil {
+		for seq_i, seq_v := range value.PrefixSchemaRules {
+			pseudoEncoder := &encoder.PrefixSchemaRules_subencoder[seq_i]
+			pseudoValue := struct {
+				PrefixSchemaRules *PrefixSchemaRule
+			}{
+				PrefixSchemaRules: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.PrefixSchemaRules != nil {
+					buf[pos] = 253
+					binary.BigEndian.PutUint16(buf[pos+1:], uint16(622))
+					pos += 3
+					pos += uint(enc.TLNum(encoder.PrefixSchemaRules_encoder.Length).EncodeInto(buf[pos:]))
+					if encoder.PrefixSchemaRules_encoder.Length > 0 {
+						encoder.PrefixSchemaRules_encoder.EncodeInto(value.PrefixSchemaRules, buf[pos:])
+						pos += encoder.PrefixSchemaRules_encoder.Length
+					}
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+}
+
+func (encoder *CrossSchemaContentEncoder) Encode(value *CrossSchemaContent) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *CrossSchemaContentParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*CrossSchemaContent, error) {
+
+	var handled_SimpleSchemaRules bool = false
+	var handled_PrefixSchemaRules bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &CrossSchemaContent{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 620:
+				if true {
+					handled = true
+					handled_SimpleSchemaRules = true
+					if value.SimpleSchemaRules == nil {
+						value.SimpleSchemaRules = make([]*SimpleSchemaRule, 0)
+					}
+					{
+						pseudoValue := struct {
+							SimpleSchemaRules *SimpleSchemaRule
+						}{}
+						{
+							value := &pseudoValue
+							value.SimpleSchemaRules, err = context.SimpleSchemaRules_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+							_ = value
+						}
+						value.SimpleSchemaRules = append(value.SimpleSchemaRules, pseudoValue.SimpleSchemaRules)
+					}
+					progress--
+				}
+			case 622:
+				if true {
+					handled = true
+					handled_PrefixSchemaRules = true
+					if value.PrefixSchemaRules == nil {
+						value.PrefixSchemaRules = make([]*PrefixSchemaRule, 0)
+					}
+					{
+						pseudoValue := struct {
+							PrefixSchemaRules *PrefixSchemaRule
+						}{}
+						{
+							value := &pseudoValue
+							value.PrefixSchemaRules, err = context.PrefixSchemaRules_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+							_ = value
+						}
+						value.PrefixSchemaRules = append(value.PrefixSchemaRules, pseudoValue.PrefixSchemaRules)
+					}
+					progress--
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_SimpleSchemaRules && err == nil {
+		// sequence - skip
+	}
+	if !handled_PrefixSchemaRules && err == nil {
+		// sequence - skip
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *CrossSchemaContent) Encode() enc.Wire {
+	encoder := CrossSchemaContentEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *CrossSchemaContent) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseCrossSchemaContent(reader enc.WireView, ignoreCritical bool) (*CrossSchemaContent, error) {
+	context := CrossSchemaContentParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type SimpleSchemaRuleEncoder struct {
+	Length uint
+
+	NamePrefix_length  uint
+	KeyLocator_encoder spec_2022.KeyLocatorEncoder
+}
+
+type SimpleSchemaRuleParsingContext struct {
+	KeyLocator_context spec_2022.KeyLocatorParsingContext
+}
+
+func (encoder *SimpleSchemaRuleEncoder) Init(value *SimpleSchemaRule) {
+	if value.NamePrefix != nil {
+		encoder.NamePrefix_length = 0
+		for _, c := range value.NamePrefix {
+			encoder.NamePrefix_length += uint(c.EncodingLength())
+		}
+	}
+	if value.KeyLocator != nil {
+		encoder.KeyLocator_encoder.Init(value.KeyLocator)
+	}
+
+	l := uint(0)
+	if value.NamePrefix != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.NamePrefix_length).EncodingLength())
+		l += encoder.NamePrefix_length
+	}
+	if value.KeyLocator != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.KeyLocator_encoder.Length).EncodingLength())
+		l += encoder.KeyLocator_encoder.Length
+	}
+	encoder.Length = l
+
+}
+
+func (context *SimpleSchemaRuleParsingContext) Init() {
+
+	context.KeyLocator_context.Init()
+}
+
+func (encoder *SimpleSchemaRuleEncoder) EncodeInto(value *SimpleSchemaRule, buf []byte) {
+
+	pos := uint(0)
+
+	if value.NamePrefix != nil {
+		buf[pos] = byte(7)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.NamePrefix_length).EncodeInto(buf[pos:]))
+		for _, c := range value.NamePrefix {
+			pos += uint(c.EncodeInto(buf[pos:]))
+		}
+	}
+	if value.KeyLocator != nil {
+		buf[pos] = byte(28)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.KeyLocator_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.KeyLocator_encoder.Length > 0 {
+			encoder.KeyLocator_encoder.EncodeInto(value.KeyLocator, buf[pos:])
+			pos += encoder.KeyLocator_encoder.Length
+		}
+	}
+}
+
+func (encoder *SimpleSchemaRuleEncoder) Encode(value *SimpleSchemaRule) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *SimpleSchemaRuleParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*SimpleSchemaRule, error) {
+
+	var handled_NamePrefix bool = false
+	var handled_KeyLocator bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &SimpleSchemaRule{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 7:
+				if true {
+					handled = true
+					handled_NamePrefix = true
+					delegate := reader.Delegate(int(l))
+					value.NamePrefix, err = delegate.ReadName()
+				}
+			case 28:
+				if true {
+					handled = true
+					handled_KeyLocator = true
+					value.KeyLocator, err = context.KeyLocator_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_NamePrefix && err == nil {
+		value.NamePrefix = nil
+	}
+	if !handled_KeyLocator && err == nil {
+		value.KeyLocator = nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *SimpleSchemaRule) Encode() enc.Wire {
+	encoder := SimpleSchemaRuleEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *SimpleSchemaRule) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseSimpleSchemaRule(reader enc.WireView, ignoreCritical bool) (*SimpleSchemaRule, error) {
+	context := SimpleSchemaRuleParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type PrefixSchemaRuleEncoder struct {
+	Length uint
+
+	NamePrefix_length uint
+}
+
+type PrefixSchemaRuleParsingContext struct {
+}
+
+func (encoder *PrefixSchemaRuleEncoder) Init(value *PrefixSchemaRule) {
+	if value.NamePrefix != nil {
+		encoder.NamePrefix_length = 0
+		for _, c := range value.NamePrefix {
+			encoder.NamePrefix_length += uint(c.EncodingLength())
+		}
+	}
+
+	l := uint(0)
+	if value.NamePrefix != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.NamePrefix_length).EncodingLength())
+		l += encoder.NamePrefix_length
+	}
+	encoder.Length = l
+
+}
+
+func (context *PrefixSchemaRuleParsingContext) Init() {
+
+}
+
+func (encoder *PrefixSchemaRuleEncoder) EncodeInto(value *PrefixSchemaRule, buf []byte) {
+
+	pos := uint(0)
+
+	if value.NamePrefix != nil {
+		buf[pos] = byte(7)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.NamePrefix_length).EncodeInto(buf[pos:]))
+		for _, c := range value.NamePrefix {
+			pos += uint(c.EncodeInto(buf[pos:]))
+		}
+	}
+}
+
+func (encoder *PrefixSchemaRuleEncoder) Encode(value *PrefixSchemaRule) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *PrefixSchemaRuleParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*PrefixSchemaRule, error) {
+
+	var handled_NamePrefix bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &PrefixSchemaRule{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 7:
+				if true {
+					handled = true
+					handled_NamePrefix = true
+					delegate := reader.Delegate(int(l))
+					value.NamePrefix, err = delegate.ReadName()
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_NamePrefix && err == nil {
+		value.NamePrefix = nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *PrefixSchemaRule) Encode() enc.Wire {
+	encoder := PrefixSchemaRuleEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *PrefixSchemaRule) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParsePrefixSchemaRule(reader enc.WireView, ignoreCritical bool) (*PrefixSchemaRule, error) {
+	context := PrefixSchemaRuleParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
 
 type LvsUserFnArgEncoder struct {
 	Length uint

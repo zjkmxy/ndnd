@@ -1,4 +1,3 @@
-//go:generate gondn_tlv_gen
 package spec_2022
 
 import (

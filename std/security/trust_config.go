@@ -9,6 +9,7 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/security/trust_schema"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -103,6 +104,9 @@ type TrustConfigValidateArgs struct {
 	// certIsValid indicates if the certificate has been already validated.
 	certIsValid bool
 
+	// crossSchemaIsValid indicates if the cross schema validation has been already done.
+	crossSchemaIsValid bool
+
 	// depth is the maximum depth of the validation chain.
 	depth int
 }
@@ -165,7 +169,31 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		}
 
 		// Check schema if the key is allowed
-		if !tc.schema.Check(dataName, certName) {
+		if args.crossSchemaIsValid {
+			// continue
+		} else if tc.schema.Check(dataName, certName) {
+			// continue
+		} else if args.Data.CrossSchema() != nil {
+			tc.validateCrossSchema(TrustConfigValidateArgs{
+				Data:       args.Data,
+				DataSigCov: args.DataSigCov,
+
+				Fetch: args.Fetch,
+				Callback: func(valid bool, err error) {
+					if valid && err == nil {
+						// Continue validation with cross schema
+						args.crossSchemaIsValid = true
+						tc.Validate(args)
+					} else {
+						args.Callback(valid, fmt.Errorf("cross schema: %w", err))
+					}
+				},
+				OverrideName: args.OverrideName,
+				cert:         args.cert,
+				depth:        args.depth,
+			})
+			return
+		} else {
 			args.Callback(false, fmt.Errorf("trust schema mismatch: %s signed by %s", dataName, certName))
 			return
 		}
@@ -292,5 +320,55 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 
 		// Continue validation with fetched cert
 		tc.Validate(args)
+	})
+}
+
+func (tc *TrustConfig) validateCrossSchema(args TrustConfigValidateArgs) {
+	crossWire := args.Data.CrossSchema()
+	if crossWire == nil {
+		panic("cross schema is nil")
+	}
+
+	// Parse the cross schema data
+	crossData, crossDataSigCov, err := spec.Spec{}.ReadData(enc.NewWireView(crossWire))
+	if err != nil {
+		args.Callback(false, fmt.Errorf("failed to parse cross schema wire: %w", err))
+		return
+	}
+
+	// Check validity period of the cross schema
+	if CertIsExpired(crossData) {
+		args.Callback(false, fmt.Errorf("cross schema is expired: %s", crossData.Name()))
+		return
+	}
+
+	// Parse the cross schema content
+	cross, err := trust_schema.ParseCrossSchemaContent(enc.NewWireView(crossData.Content()), false)
+	if err != nil {
+		args.Callback(false, fmt.Errorf("failed to parse cross schema: %w", err))
+		return
+	}
+
+	// Check if cross schema authorizes the certificate
+	certName := args.cert.Name()
+	dataName := args.Data.Name()
+	if len(args.OverrideName) > 0 {
+		dataName = args.OverrideName
+	}
+	if !cross.Match(dataName, certName) {
+		args.Callback(false, fmt.Errorf("cross schema mismatch: %s signed by %s", dataName, certName))
+		return
+	}
+
+	// Validate the cross schema signer to sign the original data
+	tc.Validate(TrustConfigValidateArgs{
+		Data:       crossData,
+		DataSigCov: crossDataSigCov,
+
+		Fetch:        args.Fetch,
+		Callback:     args.Callback,
+		OverrideName: dataName, // original data
+
+		depth: args.depth,
 	})
 }
