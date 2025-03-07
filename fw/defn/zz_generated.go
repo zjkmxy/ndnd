@@ -4,6 +4,7 @@ package defn
 import (
 	"encoding/binary"
 	"io"
+
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
