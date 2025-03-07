@@ -260,6 +260,8 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 			certRaw:     nil,
 			certIsValid: false,
 
+			crossSchemaIsValid: false,
+
 			depth: args.depth,
 		})
 		return
@@ -271,6 +273,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 	args.certSigCov = nil
 	args.certRaw = nil
 	args.certIsValid = false
+	args.crossSchemaIsValid = false
 
 	// Check the validated memcache for the certificate
 	if cachedCert, ok := tc.certCache.Get(keyLocator); ok {

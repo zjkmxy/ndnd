@@ -24,6 +24,8 @@ type SignCertArgs struct {
 	NotAfter time.Time
 	// Description is extra information to be included in the certificate.
 	Description map[string]string
+	// CrossSchema to attach to the certificate.
+	CrossSchema enc.Wire
 }
 
 // SignCert signs a new NDN certificate with the given signer.
@@ -61,6 +63,7 @@ func SignCert(args SignCertArgs) (enc.Wire, error) {
 		Freshness:    optional.Some(time.Hour),
 		SigNotBefore: optional.Some(args.NotBefore),
 		SigNotAfter:  optional.Some(args.NotAfter),
+		CrossSchema:  args.CrossSchema,
 	}
 	cert, err := spec.Spec{}.MakeData(certName, cfg, enc.Wire{pk}, args.Signer)
 	if err != nil {
