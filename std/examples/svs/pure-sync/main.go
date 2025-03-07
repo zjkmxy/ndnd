@@ -16,9 +16,9 @@ import (
 
 func main() {
 	// Before running this example, make sure the strategy is correctly setup
-	// to multicast for the /ndn/svs prefix. For example, using the following:
+	// to multicast for the sync prefix. For example, using the following:
 	//
-	//   ndnd fw strategy-set prefix=/ndn/svs strategy=/localhost/nfd/strategy/multicast
+	//   ndnd fw strategy-set prefix=/ndn/svs/32=svs strategy=/localhost/nfd/strategy/multicast
 	//
 
 	if len(os.Args) < 2 {
