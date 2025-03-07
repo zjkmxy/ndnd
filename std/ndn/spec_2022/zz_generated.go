@@ -11,82 +11,259 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 )
 
-type KeyLocatorEncoder struct {
+type DataEncoder struct {
 	Length uint
 
-	Name_length uint
+	wirePlan []uint
+
+	sigCovered             enc.Wire
+	sigCoverStart          int
+	sigCoverStart_wireIdx  int
+	sigCoverStart_pos      int
+	NameV_length           uint
+	MetaInfo_encoder       MetaInfoEncoder
+	ContentV_length        uint
+	SignatureInfo_encoder  SignatureInfoEncoder
+	SignatureValue_wireIdx int
+	SignatureValue_estLen  uint
 }
 
-type KeyLocatorParsingContext struct {
+type DataParsingContext struct {
+	sigCovered    enc.Wire
+	sigCoverStart int
+
+	MetaInfo_context MetaInfoParsingContext
+
+	SignatureInfo_context SignatureInfoParsingContext
 }
 
-func (encoder *KeyLocatorEncoder) Init(value *KeyLocator) {
-	if value.Name != nil {
-		encoder.Name_length = 0
-		for _, c := range value.Name {
-			encoder.Name_length += uint(c.EncodingLength())
+func (encoder *DataEncoder) Init(value *Data) {
+
+	if value.NameV != nil {
+		encoder.NameV_length = 0
+		for _, c := range value.NameV {
+			encoder.NameV_length += uint(c.EncodingLength())
 		}
 	}
+	if value.MetaInfo != nil {
+		encoder.MetaInfo_encoder.Init(value.MetaInfo)
+	}
+	if value.ContentV != nil {
+		encoder.ContentV_length = 0
+		for _, c := range value.ContentV {
+			encoder.ContentV_length += uint(len(c))
+		}
+	}
+	if value.SignatureInfo != nil {
+		encoder.SignatureInfo_encoder.Init(value.SignatureInfo)
+	}
+	encoder.SignatureValue_wireIdx = -1
 
 	l := uint(0)
-	if value.Name != nil {
+
+	encoder.sigCoverStart = int(l)
+	if value.NameV != nil {
 		l += 1
-		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
-		l += encoder.Name_length
+		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
+		l += encoder.NameV_length
 	}
-	if value.KeyDigest != nil {
+	if value.MetaInfo != nil {
 		l += 1
-		l += uint(enc.TLNum(len(value.KeyDigest)).EncodingLength())
-		l += uint(len(value.KeyDigest))
+		l += uint(enc.TLNum(encoder.MetaInfo_encoder.Length).EncodingLength())
+		l += encoder.MetaInfo_encoder.Length
+	}
+	if value.ContentV != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.ContentV_length).EncodingLength())
+		l += encoder.ContentV_length
+	}
+	if value.SignatureInfo != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodingLength())
+		l += encoder.SignatureInfo_encoder.Length
+	}
+	if encoder.SignatureValue_estLen > 0 {
+		l += 1
+		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
+		l += encoder.SignatureValue_estLen
 	}
 	encoder.Length = l
 
+	wirePlan := make([]uint, 0, 8)
+	l = uint(0)
+
+	if value.NameV != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
+		l += encoder.NameV_length
+	}
+	if value.MetaInfo != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.MetaInfo_encoder.Length).EncodingLength())
+		l += encoder.MetaInfo_encoder.Length
+	}
+	if value.ContentV != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.ContentV_length).EncodingLength())
+		wirePlan = append(wirePlan, l)
+		l = 0
+		for range value.ContentV {
+			wirePlan = append(wirePlan, l)
+			l = 0
+		}
+	}
+	if value.SignatureInfo != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodingLength())
+		l += encoder.SignatureInfo_encoder.Length
+	}
+	if encoder.SignatureValue_estLen > 0 {
+		l += 1
+		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
+		wirePlan = append(wirePlan, l)
+		l = 0
+		encoder.SignatureValue_wireIdx = len(wirePlan)
+		wirePlan = append(wirePlan, l)
+		l = 0
+	}
+	if l > 0 {
+		wirePlan = append(wirePlan, l)
+	}
+	encoder.wirePlan = wirePlan
 }
 
-func (context *KeyLocatorParsingContext) Init() {
+func (context *DataParsingContext) Init() {
 
+	context.MetaInfo_context.Init()
+
+	context.SignatureInfo_context.Init()
+	context.sigCovered = make(enc.Wire, 0)
 }
 
-func (encoder *KeyLocatorEncoder) EncodeInto(value *KeyLocator, buf []byte) {
+func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
+
+	wireIdx := 0
+	buf := wire[wireIdx]
 
 	pos := uint(0)
 
-	if value.Name != nil {
+	encoder.sigCoverStart_wireIdx = int(wireIdx)
+	encoder.sigCoverStart_pos = int(pos)
+	if value.NameV != nil {
 		buf[pos] = byte(7)
 		pos += 1
-		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
-		for _, c := range value.Name {
+		pos += uint(enc.TLNum(encoder.NameV_length).EncodeInto(buf[pos:]))
+		for _, c := range value.NameV {
 			pos += uint(c.EncodeInto(buf[pos:]))
 		}
 	}
-	if value.KeyDigest != nil {
-		buf[pos] = byte(29)
+	if value.MetaInfo != nil {
+		buf[pos] = byte(20)
 		pos += 1
-		pos += uint(enc.TLNum(len(value.KeyDigest)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], value.KeyDigest)
-		pos += uint(len(value.KeyDigest))
+		pos += uint(enc.TLNum(encoder.MetaInfo_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.MetaInfo_encoder.Length > 0 {
+			encoder.MetaInfo_encoder.EncodeInto(value.MetaInfo, buf[pos:])
+			pos += encoder.MetaInfo_encoder.Length
+		}
+	}
+	if value.ContentV != nil {
+		buf[pos] = byte(21)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.ContentV_length).EncodeInto(buf[pos:]))
+		wireIdx++
+		pos = 0
+		if wireIdx < len(wire) {
+			buf = wire[wireIdx]
+		} else {
+			buf = nil
+		}
+		for _, w := range value.ContentV {
+			wire[wireIdx] = w
+			wireIdx++
+			pos = 0
+			if wireIdx < len(wire) {
+				buf = wire[wireIdx]
+			} else {
+				buf = nil
+			}
+		}
+	}
+	if value.SignatureInfo != nil {
+		buf[pos] = byte(22)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.SignatureInfo_encoder.Length > 0 {
+			encoder.SignatureInfo_encoder.EncodeInto(value.SignatureInfo, buf[pos:])
+			pos += encoder.SignatureInfo_encoder.Length
+		}
+	}
+	if encoder.SignatureValue_estLen > 0 {
+		startPos := int(pos)
+		buf[pos] = byte(23)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodeInto(buf[pos:]))
+		if encoder.sigCoverStart_wireIdx == int(wireIdx) {
+			coveredPart := buf[encoder.sigCoverStart:startPos]
+			encoder.sigCovered = append(encoder.sigCovered, coveredPart)
+		} else {
+			coverStart := wire[encoder.sigCoverStart_wireIdx][encoder.sigCoverStart:]
+			encoder.sigCovered = append(encoder.sigCovered, coverStart)
+			for i := encoder.sigCoverStart_wireIdx + 1; i < int(wireIdx); i++ {
+				encoder.sigCovered = append(encoder.sigCovered, wire[i])
+			}
+			coverEnd := buf[:startPos]
+			encoder.sigCovered = append(encoder.sigCovered, coverEnd)
+		}
+		wireIdx++
+		pos = 0
+		if wireIdx < len(wire) {
+			buf = wire[wireIdx]
+		} else {
+			buf = nil
+		}
+		wireIdx++
+		pos = 0
+		if wireIdx < len(wire) {
+			buf = wire[wireIdx]
+		} else {
+			buf = nil
+		}
 	}
 }
 
-func (encoder *KeyLocatorEncoder) Encode(value *KeyLocator) enc.Wire {
+func (encoder *DataEncoder) Encode(value *Data) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
-	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.Length)
-	buf := wire[0]
-	encoder.EncodeInto(value, buf)
+	wire := make(enc.Wire, len(encoder.wirePlan))
+	for i, l := range encoder.wirePlan {
+		if l > 0 {
+			wire[i] = content[:l]
+			content = content[l:]
+		}
+	}
+	encoder.EncodeInto(value, wire)
 
 	return wire
 }
 
-func (context *KeyLocatorParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*KeyLocator, error) {
+func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Data, error) {
 
-	var handled_Name bool = false
-	var handled_KeyDigest bool = false
+	var handled_sigCovered bool = false
+	var handled_sigCoverStart bool = false
+	var handled_NameV bool = false
+	var handled_MetaInfo bool = false
+	var handled_ContentV bool = false
+	var handled_SignatureInfo bool = false
+	var handled_SignatureValue bool = false
 
 	progress := -1
 	_ = progress
 
-	value := &KeyLocator{}
+	value := &Data{}
 	var err error
 	var startPos int
 	for {
@@ -106,21 +283,42 @@ func (context *KeyLocatorParsingContext) Parse(reader enc.WireView, ignoreCritic
 		}
 
 		err = nil
-		if handled := false; true {
+		for handled := false; !handled && progress < 7; progress++ {
 			switch typ {
 			case 7:
-				if true {
+				if progress+1 == 2 {
 					handled = true
-					handled_Name = true
+					handled_NameV = true
 					delegate := reader.Delegate(int(l))
-					value.Name, err = delegate.ReadName()
+					value.NameV, err = delegate.ReadName()
 				}
-			case 29:
-				if true {
+			case 20:
+				if progress+1 == 3 {
 					handled = true
-					handled_KeyDigest = true
-					value.KeyDigest = make([]byte, l)
-					_, err = reader.ReadFull(value.KeyDigest)
+					handled_MetaInfo = true
+					value.MetaInfo, err = context.MetaInfo_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			case 21:
+				if progress+1 == 4 {
+					handled = true
+					handled_ContentV = true
+					value.ContentV, err = reader.ReadWire(int(l))
+				}
+			case 22:
+				if progress+1 == 5 {
+					handled = true
+					handled_SignatureInfo = true
+					value.SignatureInfo, err = context.SignatureInfo_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			case 23:
+				if progress+1 == 6 {
+					handled = true
+					handled_SignatureValue = true
+					value.SignatureValue, err = reader.ReadWire(int(l))
+					if err == nil {
+						coveredPart := reader.Range(context.sigCoverStart, startPos)
+						context.sigCovered = append(context.sigCovered, coveredPart...)
+					}
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -130,6 +328,29 @@ func (context *KeyLocatorParsingContext) Parse(reader enc.WireView, ignoreCritic
 				err = reader.Skip(int(l))
 			}
 			if err == nil && !handled {
+				switch progress {
+				case 0 - 1:
+					handled_sigCovered = true
+					// base - skip
+				case 1 - 1:
+					handled_sigCoverStart = true
+					context.sigCoverStart = int(startPos)
+				case 2 - 1:
+					handled_NameV = true
+					value.NameV = nil
+				case 3 - 1:
+					handled_MetaInfo = true
+					value.MetaInfo = nil
+				case 4 - 1:
+					handled_ContentV = true
+					value.ContentV = nil
+				case 5 - 1:
+					handled_SignatureInfo = true
+					value.SignatureInfo = nil
+				case 6 - 1:
+					handled_SignatureValue = true
+					value.SignatureValue = nil
+				}
 			}
 			if err != nil {
 				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
@@ -140,215 +361,26 @@ func (context *KeyLocatorParsingContext) Parse(reader enc.WireView, ignoreCritic
 	startPos = reader.Pos()
 	err = nil
 
-	if !handled_Name && err == nil {
-		value.Name = nil
+	if !handled_sigCovered && err == nil {
+		// base - skip
 	}
-	if !handled_KeyDigest && err == nil {
-		value.KeyDigest = nil
+	if !handled_sigCoverStart && err == nil {
+		context.sigCoverStart = int(startPos)
 	}
-
-	if err != nil {
-		return nil, err
+	if !handled_NameV && err == nil {
+		value.NameV = nil
 	}
-
-	return value, nil
-}
-
-func (value *KeyLocator) Encode() enc.Wire {
-	encoder := KeyLocatorEncoder{}
-	encoder.Init(value)
-	return encoder.Encode(value)
-}
-
-func (value *KeyLocator) Bytes() []byte {
-	return value.Encode().Join()
-}
-
-func ParseKeyLocator(reader enc.WireView, ignoreCritical bool) (*KeyLocator, error) {
-	context := KeyLocatorParsingContext{}
-	context.Init()
-	return context.Parse(reader, ignoreCritical)
-}
-
-type LinksEncoder struct {
-	Length uint
-
-	Names_subencoder []struct {
-		Names_length uint
+	if !handled_MetaInfo && err == nil {
+		value.MetaInfo = nil
 	}
-}
-
-type LinksParsingContext struct {
-}
-
-func (encoder *LinksEncoder) Init(value *Links) {
-	{
-		Names_l := len(value.Names)
-		encoder.Names_subencoder = make([]struct {
-			Names_length uint
-		}, Names_l)
-		for i := 0; i < Names_l; i++ {
-			pseudoEncoder := &encoder.Names_subencoder[i]
-			pseudoValue := struct {
-				Names enc.Name
-			}{
-				Names: value.Names[i],
-			}
-			{
-				encoder := pseudoEncoder
-				value := &pseudoValue
-				if value.Names != nil {
-					encoder.Names_length = 0
-					for _, c := range value.Names {
-						encoder.Names_length += uint(c.EncodingLength())
-					}
-				}
-				_ = encoder
-				_ = value
-			}
-		}
+	if !handled_ContentV && err == nil {
+		value.ContentV = nil
 	}
-
-	l := uint(0)
-	if value.Names != nil {
-		for seq_i, seq_v := range value.Names {
-			pseudoEncoder := &encoder.Names_subencoder[seq_i]
-			pseudoValue := struct {
-				Names enc.Name
-			}{
-				Names: seq_v,
-			}
-			{
-				encoder := pseudoEncoder
-				value := &pseudoValue
-				if value.Names != nil {
-					l += 1
-					l += uint(enc.TLNum(encoder.Names_length).EncodingLength())
-					l += encoder.Names_length
-				}
-				_ = encoder
-				_ = value
-			}
-		}
+	if !handled_SignatureInfo && err == nil {
+		value.SignatureInfo = nil
 	}
-	encoder.Length = l
-
-}
-
-func (context *LinksParsingContext) Init() {
-
-}
-
-func (encoder *LinksEncoder) EncodeInto(value *Links, buf []byte) {
-
-	pos := uint(0)
-
-	if value.Names != nil {
-		for seq_i, seq_v := range value.Names {
-			pseudoEncoder := &encoder.Names_subencoder[seq_i]
-			pseudoValue := struct {
-				Names enc.Name
-			}{
-				Names: seq_v,
-			}
-			{
-				encoder := pseudoEncoder
-				value := &pseudoValue
-				if value.Names != nil {
-					buf[pos] = byte(7)
-					pos += 1
-					pos += uint(enc.TLNum(encoder.Names_length).EncodeInto(buf[pos:]))
-					for _, c := range value.Names {
-						pos += uint(c.EncodeInto(buf[pos:]))
-					}
-				}
-				_ = encoder
-				_ = value
-			}
-		}
-	}
-}
-
-func (encoder *LinksEncoder) Encode(value *Links) enc.Wire {
-
-	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.Length)
-	buf := wire[0]
-	encoder.EncodeInto(value, buf)
-
-	return wire
-}
-
-func (context *LinksParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Links, error) {
-
-	var handled_Names bool = false
-
-	progress := -1
-	_ = progress
-
-	value := &Links{}
-	var err error
-	var startPos int
-	for {
-		startPos = reader.Pos()
-		if startPos >= reader.Length() {
-			break
-		}
-		typ := enc.TLNum(0)
-		l := enc.TLNum(0)
-		typ, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-		l, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-
-		err = nil
-		if handled := false; true {
-			switch typ {
-			case 7:
-				if true {
-					handled = true
-					handled_Names = true
-					if value.Names == nil {
-						value.Names = make([]enc.Name, 0)
-					}
-					{
-						pseudoValue := struct {
-							Names enc.Name
-						}{}
-						{
-							value := &pseudoValue
-							delegate := reader.Delegate(int(l))
-							value.Names, err = delegate.ReadName()
-							_ = value
-						}
-						value.Names = append(value.Names, pseudoValue.Names)
-					}
-					progress--
-				}
-			default:
-				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
-					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
-				}
-				handled = true
-				err = reader.Skip(int(l))
-			}
-			if err == nil && !handled {
-			}
-			if err != nil {
-				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
-			}
-		}
-	}
-
-	startPos = reader.Pos()
-	err = nil
-
-	if !handled_Names && err == nil {
-		// sequence - skip
+	if !handled_SignatureValue && err == nil {
+		value.SignatureValue = nil
 	}
 
 	if err != nil {
@@ -356,22 +388,6 @@ func (context *LinksParsingContext) Parse(reader enc.WireView, ignoreCritical bo
 	}
 
 	return value, nil
-}
-
-func (value *Links) Encode() enc.Wire {
-	encoder := LinksEncoder{}
-	encoder.Init(value)
-	return encoder.Encode(value)
-}
-
-func (value *Links) Bytes() []byte {
-	return value.Encode().Join()
-}
-
-func ParseLinks(reader enc.WireView, ignoreCritical bool) (*Links, error) {
-	context := LinksParsingContext{}
-	context.Init()
-	return context.Parse(reader, ignoreCritical)
 }
 
 type MetaInfoEncoder struct {
@@ -576,6 +592,499 @@ func (value *MetaInfo) Bytes() []byte {
 
 func ParseMetaInfo(reader enc.WireView, ignoreCritical bool) (*MetaInfo, error) {
 	context := MetaInfoParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type SignatureInfoEncoder struct {
+	Length uint
+
+	KeyLocator_encoder KeyLocatorEncoder
+
+	ValidityPeriod_encoder        ValidityPeriodEncoder
+	AdditionalDescription_encoder CertAdditionalDescriptionEncoder
+}
+
+type SignatureInfoParsingContext struct {
+	KeyLocator_context KeyLocatorParsingContext
+
+	ValidityPeriod_context        ValidityPeriodParsingContext
+	AdditionalDescription_context CertAdditionalDescriptionParsingContext
+}
+
+func (encoder *SignatureInfoEncoder) Init(value *SignatureInfo) {
+
+	if value.KeyLocator != nil {
+		encoder.KeyLocator_encoder.Init(value.KeyLocator)
+	}
+
+	if value.ValidityPeriod != nil {
+		encoder.ValidityPeriod_encoder.Init(value.ValidityPeriod)
+	}
+	if value.AdditionalDescription != nil {
+		encoder.AdditionalDescription_encoder.Init(value.AdditionalDescription)
+	}
+
+	l := uint(0)
+	l += 1
+	l += uint(1 + enc.Nat(value.SignatureType).EncodingLength())
+	if value.KeyLocator != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.KeyLocator_encoder.Length).EncodingLength())
+		l += encoder.KeyLocator_encoder.Length
+	}
+	if value.SignatureNonce != nil {
+		l += 1
+		l += uint(enc.TLNum(len(value.SignatureNonce)).EncodingLength())
+		l += uint(len(value.SignatureNonce))
+	}
+	if optval, ok := value.SignatureTime.Get(); ok {
+		l += 1
+		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
+	}
+	if optval, ok := value.SignatureSeqNum.Get(); ok {
+		l += 1
+		l += uint(1 + enc.Nat(optval).EncodingLength())
+	}
+	if value.ValidityPeriod != nil {
+		l += 3
+		l += uint(enc.TLNum(encoder.ValidityPeriod_encoder.Length).EncodingLength())
+		l += encoder.ValidityPeriod_encoder.Length
+	}
+	if value.AdditionalDescription != nil {
+		l += 3
+		l += uint(enc.TLNum(encoder.AdditionalDescription_encoder.Length).EncodingLength())
+		l += encoder.AdditionalDescription_encoder.Length
+	}
+	encoder.Length = l
+
+}
+
+func (context *SignatureInfoParsingContext) Init() {
+
+	context.KeyLocator_context.Init()
+
+	context.ValidityPeriod_context.Init()
+	context.AdditionalDescription_context.Init()
+}
+
+func (encoder *SignatureInfoEncoder) EncodeInto(value *SignatureInfo, buf []byte) {
+
+	pos := uint(0)
+
+	buf[pos] = byte(27)
+	pos += 1
+
+	buf[pos] = byte(enc.Nat(value.SignatureType).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
+	if value.KeyLocator != nil {
+		buf[pos] = byte(28)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.KeyLocator_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.KeyLocator_encoder.Length > 0 {
+			encoder.KeyLocator_encoder.EncodeInto(value.KeyLocator, buf[pos:])
+			pos += encoder.KeyLocator_encoder.Length
+		}
+	}
+	if value.SignatureNonce != nil {
+		buf[pos] = byte(38)
+		pos += 1
+		pos += uint(enc.TLNum(len(value.SignatureNonce)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], value.SignatureNonce)
+		pos += uint(len(value.SignatureNonce))
+	}
+	if optval, ok := value.SignatureTime.Get(); ok {
+		buf[pos] = byte(40)
+		pos += 1
+
+		buf[pos] = byte(enc.Nat(uint64(optval / time.Millisecond)).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
+	}
+	if optval, ok := value.SignatureSeqNum.Get(); ok {
+		buf[pos] = byte(42)
+		pos += 1
+
+		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
+		pos += uint(1 + buf[pos])
+
+	}
+	if value.ValidityPeriod != nil {
+		buf[pos] = 253
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(253))
+		pos += 3
+		pos += uint(enc.TLNum(encoder.ValidityPeriod_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.ValidityPeriod_encoder.Length > 0 {
+			encoder.ValidityPeriod_encoder.EncodeInto(value.ValidityPeriod, buf[pos:])
+			pos += encoder.ValidityPeriod_encoder.Length
+		}
+	}
+	if value.AdditionalDescription != nil {
+		buf[pos] = 253
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(258))
+		pos += 3
+		pos += uint(enc.TLNum(encoder.AdditionalDescription_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.AdditionalDescription_encoder.Length > 0 {
+			encoder.AdditionalDescription_encoder.EncodeInto(value.AdditionalDescription, buf[pos:])
+			pos += encoder.AdditionalDescription_encoder.Length
+		}
+	}
+}
+
+func (encoder *SignatureInfoEncoder) Encode(value *SignatureInfo) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *SignatureInfoParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*SignatureInfo, error) {
+
+	var handled_SignatureType bool = false
+	var handled_KeyLocator bool = false
+	var handled_SignatureNonce bool = false
+	var handled_SignatureTime bool = false
+	var handled_SignatureSeqNum bool = false
+	var handled_ValidityPeriod bool = false
+	var handled_AdditionalDescription bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &SignatureInfo{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 27:
+				if true {
+					handled = true
+					handled_SignatureType = true
+					value.SignatureType = uint64(0)
+					{
+						for i := 0; i < int(l); i++ {
+							x := byte(0)
+							x, err = reader.ReadByte()
+							if err != nil {
+								if err == io.EOF {
+									err = io.ErrUnexpectedEOF
+								}
+								break
+							}
+							value.SignatureType = uint64(value.SignatureType<<8) | uint64(x)
+						}
+					}
+				}
+			case 28:
+				if true {
+					handled = true
+					handled_KeyLocator = true
+					value.KeyLocator, err = context.KeyLocator_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			case 38:
+				if true {
+					handled = true
+					handled_SignatureNonce = true
+					value.SignatureNonce = make([]byte, l)
+					_, err = reader.ReadFull(value.SignatureNonce)
+				}
+			case 40:
+				if true {
+					handled = true
+					handled_SignatureTime = true
+					{
+						timeInt := uint64(0)
+						timeInt = uint64(0)
+						{
+							for i := 0; i < int(l); i++ {
+								x := byte(0)
+								x, err = reader.ReadByte()
+								if err != nil {
+									if err == io.EOF {
+										err = io.ErrUnexpectedEOF
+									}
+									break
+								}
+								timeInt = uint64(timeInt<<8) | uint64(x)
+							}
+						}
+						optval := time.Duration(timeInt) * time.Millisecond
+						value.SignatureTime.Set(optval)
+					}
+				}
+			case 42:
+				if true {
+					handled = true
+					handled_SignatureSeqNum = true
+					{
+						optval := uint64(0)
+						optval = uint64(0)
+						{
+							for i := 0; i < int(l); i++ {
+								x := byte(0)
+								x, err = reader.ReadByte()
+								if err != nil {
+									if err == io.EOF {
+										err = io.ErrUnexpectedEOF
+									}
+									break
+								}
+								optval = uint64(optval<<8) | uint64(x)
+							}
+						}
+						value.SignatureSeqNum.Set(optval)
+					}
+				}
+			case 253:
+				if true {
+					handled = true
+					handled_ValidityPeriod = true
+					value.ValidityPeriod, err = context.ValidityPeriod_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			case 258:
+				if true {
+					handled = true
+					handled_AdditionalDescription = true
+					value.AdditionalDescription, err = context.AdditionalDescription_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_SignatureType && err == nil {
+		err = enc.ErrSkipRequired{Name: "SignatureType", TypeNum: 27}
+	}
+	if !handled_KeyLocator && err == nil {
+		value.KeyLocator = nil
+	}
+	if !handled_SignatureNonce && err == nil {
+		value.SignatureNonce = nil
+	}
+	if !handled_SignatureTime && err == nil {
+		value.SignatureTime.Unset()
+	}
+	if !handled_SignatureSeqNum && err == nil {
+		value.SignatureSeqNum.Unset()
+	}
+	if !handled_ValidityPeriod && err == nil {
+		value.ValidityPeriod = nil
+	}
+	if !handled_AdditionalDescription && err == nil {
+		value.AdditionalDescription = nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *SignatureInfo) Encode() enc.Wire {
+	encoder := SignatureInfoEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *SignatureInfo) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseSignatureInfo(reader enc.WireView, ignoreCritical bool) (*SignatureInfo, error) {
+	context := SignatureInfoParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type KeyLocatorEncoder struct {
+	Length uint
+
+	Name_length uint
+}
+
+type KeyLocatorParsingContext struct {
+}
+
+func (encoder *KeyLocatorEncoder) Init(value *KeyLocator) {
+	if value.Name != nil {
+		encoder.Name_length = 0
+		for _, c := range value.Name {
+			encoder.Name_length += uint(c.EncodingLength())
+		}
+	}
+
+	l := uint(0)
+	if value.Name != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
+		l += encoder.Name_length
+	}
+	if value.KeyDigest != nil {
+		l += 1
+		l += uint(enc.TLNum(len(value.KeyDigest)).EncodingLength())
+		l += uint(len(value.KeyDigest))
+	}
+	encoder.Length = l
+
+}
+
+func (context *KeyLocatorParsingContext) Init() {
+
+}
+
+func (encoder *KeyLocatorEncoder) EncodeInto(value *KeyLocator, buf []byte) {
+
+	pos := uint(0)
+
+	if value.Name != nil {
+		buf[pos] = byte(7)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
+		for _, c := range value.Name {
+			pos += uint(c.EncodeInto(buf[pos:]))
+		}
+	}
+	if value.KeyDigest != nil {
+		buf[pos] = byte(29)
+		pos += 1
+		pos += uint(enc.TLNum(len(value.KeyDigest)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], value.KeyDigest)
+		pos += uint(len(value.KeyDigest))
+	}
+}
+
+func (encoder *KeyLocatorEncoder) Encode(value *KeyLocator) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *KeyLocatorParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*KeyLocator, error) {
+
+	var handled_Name bool = false
+	var handled_KeyDigest bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &KeyLocator{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 7:
+				if true {
+					handled = true
+					handled_Name = true
+					delegate := reader.Delegate(int(l))
+					value.Name, err = delegate.ReadName()
+				}
+			case 29:
+				if true {
+					handled = true
+					handled_KeyDigest = true
+					value.KeyDigest = make([]byte, l)
+					_, err = reader.ReadFull(value.KeyDigest)
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_Name && err == nil {
+		value.Name = nil
+	}
+	if !handled_KeyDigest && err == nil {
+		value.KeyDigest = nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *KeyLocator) Encode() enc.Wire {
+	encoder := KeyLocatorEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *KeyLocator) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseKeyLocator(reader enc.WireView, ignoreCritical bool) (*KeyLocator, error) {
+	context := KeyLocatorParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }
@@ -1091,165 +1600,396 @@ func ParseCertAdditionalDescription(reader enc.WireView, ignoreCritical bool) (*
 	return context.Parse(reader, ignoreCritical)
 }
 
-type SignatureInfoEncoder struct {
+type InterestEncoder struct {
 	Length uint
 
-	KeyLocator_encoder KeyLocatorEncoder
+	wirePlan []uint
 
-	ValidityPeriod_encoder        ValidityPeriodEncoder
-	AdditionalDescription_encoder CertAdditionalDescriptionEncoder
+	sigCovered       enc.Wire
+	digestCovered    enc.Wire
+	NameV_length     uint
+	NameV_needDigest bool
+	NameV_wireIdx    int
+	NameV_pos        uint
+
+	ForwardingHintV_encoder LinksEncoder
+
+	sigCoverStart                int
+	sigCoverStart_wireIdx        int
+	sigCoverStart_pos            int
+	digestCoverStart             int
+	digestCoverStart_wireIdx     int
+	digestCoverStart_pos         int
+	ApplicationParameters_length uint
+	SignatureInfo_encoder        SignatureInfoEncoder
+	SignatureValue_wireIdx       int
+	SignatureValue_estLen        uint
+	digestCoverEnd               int
+	digestCoverEnd_wireIdx       int
+	digestCoverEnd_pos           int
 }
 
-type SignatureInfoParsingContext struct {
-	KeyLocator_context KeyLocatorParsingContext
+type InterestParsingContext struct {
+	sigCovered    enc.Wire
+	digestCovered enc.Wire
+	NameV_wireIdx int
+	NameV_pos     uint
 
-	ValidityPeriod_context        ValidityPeriodParsingContext
-	AdditionalDescription_context CertAdditionalDescriptionParsingContext
+	ForwardingHintV_context LinksParsingContext
+
+	sigCoverStart    int
+	digestCoverStart int
+
+	SignatureInfo_context SignatureInfoParsingContext
+
+	digestCoverEnd int
 }
 
-func (encoder *SignatureInfoEncoder) Init(value *SignatureInfo) {
+func (encoder *InterestEncoder) Init(value *Interest) {
 
-	if value.KeyLocator != nil {
-		encoder.KeyLocator_encoder.Init(value.KeyLocator)
+	encoder.NameV_wireIdx = -1
+	encoder.NameV_length = 0
+	if value.NameV != nil {
+		if len(value.NameV) > 0 && value.NameV[len(value.NameV)-1].Typ == enc.TypeParametersSha256DigestComponent {
+			value.NameV = value.NameV[:len(value.NameV)-1]
+		}
+		if encoder.NameV_needDigest {
+			value.NameV = append(value.NameV, enc.Component{
+				Typ: enc.TypeParametersSha256DigestComponent,
+				Val: make([]byte, 32),
+			})
+		}
+		for _, c := range value.NameV {
+			encoder.NameV_length += uint(c.EncodingLength())
+		}
 	}
 
-	if value.ValidityPeriod != nil {
-		encoder.ValidityPeriod_encoder.Init(value.ValidityPeriod)
+	if value.ForwardingHintV != nil {
+		encoder.ForwardingHintV_encoder.Init(value.ForwardingHintV)
 	}
-	if value.AdditionalDescription != nil {
-		encoder.AdditionalDescription_encoder.Init(value.AdditionalDescription)
+
+	if value.ApplicationParameters != nil {
+		encoder.ApplicationParameters_length = 0
+		for _, c := range value.ApplicationParameters {
+			encoder.ApplicationParameters_length += uint(len(c))
+		}
 	}
+	if value.SignatureInfo != nil {
+		encoder.SignatureInfo_encoder.Init(value.SignatureInfo)
+	}
+	encoder.SignatureValue_wireIdx = -1
 
 	l := uint(0)
-	l += 1
-	l += uint(1 + enc.Nat(value.SignatureType).EncodingLength())
-	if value.KeyLocator != nil {
+
+	if value.NameV != nil {
 		l += 1
-		l += uint(enc.TLNum(encoder.KeyLocator_encoder.Length).EncodingLength())
-		l += encoder.KeyLocator_encoder.Length
+		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
+		l += encoder.NameV_length
 	}
-	if value.SignatureNonce != nil {
+	if value.CanBePrefixV {
 		l += 1
-		l += uint(enc.TLNum(len(value.SignatureNonce)).EncodingLength())
-		l += uint(len(value.SignatureNonce))
+		l += 1
 	}
-	if optval, ok := value.SignatureTime.Get(); ok {
+	if value.MustBeFreshV {
+		l += 1
+		l += 1
+	}
+	if value.ForwardingHintV != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.ForwardingHintV_encoder.Length).EncodingLength())
+		l += encoder.ForwardingHintV_encoder.Length
+	}
+	if value.NonceV.IsSet() {
+		l += 1
+		l += 1 + 4
+	}
+	if optval, ok := value.InterestLifetimeV.Get(); ok {
 		l += 1
 		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
 	}
-	if optval, ok := value.SignatureSeqNum.Get(); ok {
+	if value.HopLimitV != nil {
 		l += 1
-		l += uint(1 + enc.Nat(optval).EncodingLength())
+		l += 2
 	}
-	if value.ValidityPeriod != nil {
-		l += 3
-		l += uint(enc.TLNum(encoder.ValidityPeriod_encoder.Length).EncodingLength())
-		l += encoder.ValidityPeriod_encoder.Length
+	encoder.sigCoverStart = int(l)
+	encoder.digestCoverStart = int(l)
+	if value.ApplicationParameters != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodingLength())
+		l += encoder.ApplicationParameters_length
 	}
-	if value.AdditionalDescription != nil {
-		l += 3
-		l += uint(enc.TLNum(encoder.AdditionalDescription_encoder.Length).EncodingLength())
-		l += encoder.AdditionalDescription_encoder.Length
+	if value.SignatureInfo != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodingLength())
+		l += encoder.SignatureInfo_encoder.Length
 	}
+	if encoder.SignatureValue_estLen > 0 {
+		l += 1
+		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
+		l += encoder.SignatureValue_estLen
+	}
+	encoder.digestCoverEnd = int(l)
 	encoder.Length = l
 
+	wirePlan := make([]uint, 0, 8)
+	l = uint(0)
+
+	if value.NameV != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
+		l += encoder.NameV_length
+	}
+	if value.CanBePrefixV {
+		l += 1
+		l += 1
+	}
+	if value.MustBeFreshV {
+		l += 1
+		l += 1
+	}
+	if value.ForwardingHintV != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.ForwardingHintV_encoder.Length).EncodingLength())
+		l += encoder.ForwardingHintV_encoder.Length
+	}
+	if value.NonceV.IsSet() {
+		l += 1
+		l += 1 + 4
+	}
+	if optval, ok := value.InterestLifetimeV.Get(); ok {
+		l += 1
+		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
+	}
+	if value.HopLimitV != nil {
+		l += 1
+		l += 2
+	}
+
+	if value.ApplicationParameters != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodingLength())
+		wirePlan = append(wirePlan, l)
+		l = 0
+		for range value.ApplicationParameters {
+			wirePlan = append(wirePlan, l)
+			l = 0
+		}
+	}
+	if value.SignatureInfo != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodingLength())
+		l += encoder.SignatureInfo_encoder.Length
+	}
+	if encoder.SignatureValue_estLen > 0 {
+		l += 1
+		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
+		wirePlan = append(wirePlan, l)
+		l = 0
+		encoder.SignatureValue_wireIdx = len(wirePlan)
+		wirePlan = append(wirePlan, l)
+		l = 0
+	}
+
+	if l > 0 {
+		wirePlan = append(wirePlan, l)
+	}
+	encoder.wirePlan = wirePlan
 }
 
-func (context *SignatureInfoParsingContext) Init() {
+func (context *InterestParsingContext) Init() {
 
-	context.KeyLocator_context.Init()
+	context.ForwardingHintV_context.Init()
 
-	context.ValidityPeriod_context.Init()
-	context.AdditionalDescription_context.Init()
+	context.SignatureInfo_context.Init()
+	context.sigCovered = make(enc.Wire, 0)
+
 }
 
-func (encoder *SignatureInfoEncoder) EncodeInto(value *SignatureInfo, buf []byte) {
+func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
+
+	wireIdx := 0
+	buf := wire[wireIdx]
 
 	pos := uint(0)
 
-	buf[pos] = byte(27)
-	pos += 1
-
-	buf[pos] = byte(enc.Nat(value.SignatureType).EncodeInto(buf[pos+1:]))
-	pos += uint(1 + buf[pos])
-	if value.KeyLocator != nil {
-		buf[pos] = byte(28)
+	if value.NameV != nil {
+		buf[pos] = byte(7)
 		pos += 1
-		pos += uint(enc.TLNum(encoder.KeyLocator_encoder.Length).EncodeInto(buf[pos:]))
-		if encoder.KeyLocator_encoder.Length > 0 {
-			encoder.KeyLocator_encoder.EncodeInto(value.KeyLocator, buf[pos:])
-			pos += encoder.KeyLocator_encoder.Length
+		pos += uint(enc.TLNum(encoder.NameV_length).EncodeInto(buf[pos:]))
+		sigCoverStart := pos
+
+		i := 0
+		for i = 0; i < len(value.NameV)-1; i++ {
+			c := value.NameV[i]
+			pos += uint(c.EncodeInto(buf[pos:]))
+		}
+		sigCoverEnd := pos
+		encoder.NameV_wireIdx = int(wireIdx)
+		if len(value.NameV) > 0 {
+			encoder.NameV_pos = pos + 2
+			c := value.NameV[i]
+			pos += uint(c.EncodeInto(buf[pos:]))
+			if !encoder.NameV_needDigest {
+				sigCoverEnd = pos
+			}
+		}
+		encoder.sigCovered = append(encoder.sigCovered, buf[sigCoverStart:sigCoverEnd])
+	}
+	if value.CanBePrefixV {
+		buf[pos] = byte(33)
+		pos += 1
+		buf[pos] = byte(0)
+		pos += 1
+	}
+	if value.MustBeFreshV {
+		buf[pos] = byte(18)
+		pos += 1
+		buf[pos] = byte(0)
+		pos += 1
+	}
+	if value.ForwardingHintV != nil {
+		buf[pos] = byte(30)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.ForwardingHintV_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.ForwardingHintV_encoder.Length > 0 {
+			encoder.ForwardingHintV_encoder.EncodeInto(value.ForwardingHintV, buf[pos:])
+			pos += encoder.ForwardingHintV_encoder.Length
 		}
 	}
-	if value.SignatureNonce != nil {
-		buf[pos] = byte(38)
+	if optval, ok := value.NonceV.Get(); ok {
+		buf[pos] = byte(10)
 		pos += 1
-		pos += uint(enc.TLNum(len(value.SignatureNonce)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], value.SignatureNonce)
-		pos += uint(len(value.SignatureNonce))
+		buf[pos] = 4
+		binary.BigEndian.PutUint32(buf[pos+1:], uint32(optval))
+		pos += 5
 	}
-	if optval, ok := value.SignatureTime.Get(); ok {
-		buf[pos] = byte(40)
+	if optval, ok := value.InterestLifetimeV.Get(); ok {
+		buf[pos] = byte(12)
 		pos += 1
 
 		buf[pos] = byte(enc.Nat(uint64(optval / time.Millisecond)).EncodeInto(buf[pos+1:]))
 		pos += uint(1 + buf[pos])
 
 	}
-	if optval, ok := value.SignatureSeqNum.Get(); ok {
-		buf[pos] = byte(42)
+	if value.HopLimitV != nil {
+		buf[pos] = byte(34)
 		pos += 1
-
-		buf[pos] = byte(enc.Nat(optval).EncodeInto(buf[pos+1:]))
-		pos += uint(1 + buf[pos])
-
+		buf[pos] = 1
+		buf[pos+1] = byte(*value.HopLimitV)
+		pos += 2
 	}
-	if value.ValidityPeriod != nil {
-		buf[pos] = 253
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(253))
-		pos += 3
-		pos += uint(enc.TLNum(encoder.ValidityPeriod_encoder.Length).EncodeInto(buf[pos:]))
-		if encoder.ValidityPeriod_encoder.Length > 0 {
-			encoder.ValidityPeriod_encoder.EncodeInto(value.ValidityPeriod, buf[pos:])
-			pos += encoder.ValidityPeriod_encoder.Length
+	encoder.sigCoverStart_wireIdx = int(wireIdx)
+	encoder.sigCoverStart_pos = int(pos)
+	encoder.digestCoverStart_wireIdx = int(wireIdx)
+	encoder.digestCoverStart_pos = int(pos)
+	if value.ApplicationParameters != nil {
+		buf[pos] = byte(36)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodeInto(buf[pos:]))
+		wireIdx++
+		pos = 0
+		if wireIdx < len(wire) {
+			buf = wire[wireIdx]
+		} else {
+			buf = nil
+		}
+		for _, w := range value.ApplicationParameters {
+			wire[wireIdx] = w
+			wireIdx++
+			pos = 0
+			if wireIdx < len(wire) {
+				buf = wire[wireIdx]
+			} else {
+				buf = nil
+			}
 		}
 	}
-	if value.AdditionalDescription != nil {
-		buf[pos] = 253
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(258))
-		pos += 3
-		pos += uint(enc.TLNum(encoder.AdditionalDescription_encoder.Length).EncodeInto(buf[pos:]))
-		if encoder.AdditionalDescription_encoder.Length > 0 {
-			encoder.AdditionalDescription_encoder.EncodeInto(value.AdditionalDescription, buf[pos:])
-			pos += encoder.AdditionalDescription_encoder.Length
+	if value.SignatureInfo != nil {
+		buf[pos] = byte(44)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.SignatureInfo_encoder.Length > 0 {
+			encoder.SignatureInfo_encoder.EncodeInto(value.SignatureInfo, buf[pos:])
+			pos += encoder.SignatureInfo_encoder.Length
 		}
 	}
+	if encoder.SignatureValue_estLen > 0 {
+		startPos := int(pos)
+		buf[pos] = byte(46)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodeInto(buf[pos:]))
+		if encoder.sigCoverStart_wireIdx == int(wireIdx) {
+			coveredPart := buf[encoder.sigCoverStart:startPos]
+			encoder.sigCovered = append(encoder.sigCovered, coveredPart)
+		} else {
+			coverStart := wire[encoder.sigCoverStart_wireIdx][encoder.sigCoverStart:]
+			encoder.sigCovered = append(encoder.sigCovered, coverStart)
+			for i := encoder.sigCoverStart_wireIdx + 1; i < int(wireIdx); i++ {
+				encoder.sigCovered = append(encoder.sigCovered, wire[i])
+			}
+			coverEnd := buf[:startPos]
+			encoder.sigCovered = append(encoder.sigCovered, coverEnd)
+		}
+		wireIdx++
+		pos = 0
+		if wireIdx < len(wire) {
+			buf = wire[wireIdx]
+		} else {
+			buf = nil
+		}
+		wireIdx++
+		pos = 0
+		if wireIdx < len(wire) {
+			buf = wire[wireIdx]
+		} else {
+			buf = nil
+		}
+	}
+	encoder.digestCoverEnd_wireIdx = int(wireIdx)
+	encoder.digestCoverEnd_pos = int(pos)
 }
 
-func (encoder *SignatureInfoEncoder) Encode(value *SignatureInfo) enc.Wire {
+func (encoder *InterestEncoder) Encode(value *Interest) enc.Wire {
+	total := uint(0)
+	for _, l := range encoder.wirePlan {
+		total += l
+	}
+	content := make([]byte, total)
 
-	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.Length)
-	buf := wire[0]
-	encoder.EncodeInto(value, buf)
+	wire := make(enc.Wire, len(encoder.wirePlan))
+	for i, l := range encoder.wirePlan {
+		if l > 0 {
+			wire[i] = content[:l]
+			content = content[l:]
+		}
+	}
+	encoder.EncodeInto(value, wire)
 
 	return wire
 }
 
-func (context *SignatureInfoParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*SignatureInfo, error) {
+func (context *InterestParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Interest, error) {
 
-	var handled_SignatureType bool = false
-	var handled_KeyLocator bool = false
-	var handled_SignatureNonce bool = false
-	var handled_SignatureTime bool = false
-	var handled_SignatureSeqNum bool = false
-	var handled_ValidityPeriod bool = false
-	var handled_AdditionalDescription bool = false
+	var handled_sigCovered bool = false
+	var handled_digestCovered bool = false
+	var handled_NameV bool = false
+	var handled_CanBePrefixV bool = false
+	var handled_MustBeFreshV bool = false
+	var handled_ForwardingHintV bool = false
+	var handled_NonceV bool = false
+	var handled_InterestLifetimeV bool = false
+	var handled_HopLimitV bool = false
+	var handled_sigCoverStart bool = false
+	var handled_digestCoverStart bool = false
+	var handled_ApplicationParameters bool = false
+	var handled_SignatureInfo bool = false
+	var handled_SignatureValue bool = false
+	var handled_digestCoverEnd bool = false
 
 	progress := -1
 	_ = progress
 
-	value := &SignatureInfo{}
+	value := &Interest{}
 	var err error
 	var startPos int
 	for {
@@ -1269,44 +2009,92 @@ func (context *SignatureInfoParsingContext) Parse(reader enc.WireView, ignoreCri
 		}
 
 		err = nil
-		if handled := false; true {
+		for handled := false; !handled && progress < 15; progress++ {
 			switch typ {
-			case 27:
-				if true {
+			case 7:
+				if progress+1 == 2 {
 					handled = true
-					handled_SignatureType = true
-					value.SignatureType = uint64(0)
+					handled_NameV = true
 					{
-						for i := 0; i < int(l); i++ {
-							x := byte(0)
-							x, err = reader.ReadByte()
-							if err != nil {
-								if err == io.EOF {
-									err = io.ErrUnexpectedEOF
-								}
+
+						value.NameV = make(enc.Name, l/2+1)
+						startName := reader.Pos()
+						endName := startName + int(l)
+						sigCoverEnd := endName
+						for j := range value.NameV {
+							var err1, err3 error
+							startComponent := reader.Pos()
+							if startComponent >= endName {
+								value.NameV = value.NameV[:j]
 								break
 							}
-							value.SignatureType = uint64(value.SignatureType<<8) | uint64(x)
+							value.NameV[j].Typ, err1 = reader.ReadTLNum()
+							l, err2 := reader.ReadTLNum()
+							value.NameV[j].Val, err3 = reader.ReadBuf(int(l))
+							if err1 != nil || err2 != nil || err3 != nil {
+								err = io.ErrUnexpectedEOF
+								break
+							}
+							if value.NameV[j].Typ == enc.TypeParametersSha256DigestComponent {
+								sigCoverEnd = startComponent
+							}
+						}
+						if err == nil && reader.Pos() != endName {
+							err = enc.ErrBufferOverflow
+						}
+						if err == nil {
+							coveredPart := reader.Range(startName, sigCoverEnd)
+							context.sigCovered = append(context.sigCovered, coveredPart...)
 						}
 					}
 				}
-			case 28:
-				if true {
+			case 33:
+				if progress+1 == 3 {
 					handled = true
-					handled_KeyLocator = true
-					value.KeyLocator, err = context.KeyLocator_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+					handled_CanBePrefixV = true
+					value.CanBePrefixV = true
+					err = reader.Skip(int(l))
 				}
-			case 38:
-				if true {
+			case 18:
+				if progress+1 == 4 {
 					handled = true
-					handled_SignatureNonce = true
-					value.SignatureNonce = make([]byte, l)
-					_, err = reader.ReadFull(value.SignatureNonce)
+					handled_MustBeFreshV = true
+					value.MustBeFreshV = true
+					err = reader.Skip(int(l))
 				}
-			case 40:
-				if true {
+			case 30:
+				if progress+1 == 5 {
 					handled = true
-					handled_SignatureTime = true
+					handled_ForwardingHintV = true
+					value.ForwardingHintV, err = context.ForwardingHintV_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			case 10:
+				if progress+1 == 6 {
+					handled = true
+					handled_NonceV = true
+					{
+						optval := uint32(0)
+						optval = uint32(0)
+						{
+							for i := 0; i < int(l); i++ {
+								x := byte(0)
+								x, err = reader.ReadByte()
+								if err != nil {
+									if err == io.EOF {
+										err = io.ErrUnexpectedEOF
+									}
+									break
+								}
+								optval = uint32(optval<<8) | uint32(x)
+							}
+						}
+						value.NonceV.Set(optval)
+					}
+				}
+			case 12:
+				if progress+1 == 7 {
+					handled = true
+					handled_InterestLifetimeV = true
 					{
 						timeInt := uint64(0)
 						timeInt = uint64(0)
@@ -1324,43 +2112,321 @@ func (context *SignatureInfoParsingContext) Parse(reader enc.WireView, ignoreCri
 							}
 						}
 						optval := time.Duration(timeInt) * time.Millisecond
-						value.SignatureTime.Set(optval)
+						value.InterestLifetimeV.Set(optval)
 					}
 				}
-			case 42:
+			case 34:
+				if progress+1 == 8 {
+					handled = true
+					handled_HopLimitV = true
+					{
+						buf, err := reader.ReadBuf(1)
+						if err == io.EOF {
+							err = io.ErrUnexpectedEOF
+						}
+						value.HopLimitV = &buf[0]
+					}
+				}
+			case 36:
+				if progress+1 == 11 {
+					handled = true
+					handled_ApplicationParameters = true
+					value.ApplicationParameters, err = reader.ReadWire(int(l))
+				}
+			case 44:
+				if progress+1 == 12 {
+					handled = true
+					handled_SignatureInfo = true
+					value.SignatureInfo, err = context.SignatureInfo_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			case 46:
+				if progress+1 == 13 {
+					handled = true
+					handled_SignatureValue = true
+					value.SignatureValue, err = reader.ReadWire(int(l))
+					if err == nil {
+						coveredPart := reader.Range(context.sigCoverStart, startPos)
+						context.sigCovered = append(context.sigCovered, coveredPart...)
+					}
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+				switch progress {
+				case 0 - 1:
+					handled_sigCovered = true
+					// base - skip
+				case 1 - 1:
+					handled_digestCovered = true
+					// base - skip
+				case 2 - 1:
+					handled_NameV = true
+					value.NameV = nil
+				case 3 - 1:
+					handled_CanBePrefixV = true
+					value.CanBePrefixV = false
+				case 4 - 1:
+					handled_MustBeFreshV = true
+					value.MustBeFreshV = false
+				case 5 - 1:
+					handled_ForwardingHintV = true
+					value.ForwardingHintV = nil
+				case 6 - 1:
+					handled_NonceV = true
+					value.NonceV.Unset()
+				case 7 - 1:
+					handled_InterestLifetimeV = true
+					value.InterestLifetimeV.Unset()
+				case 8 - 1:
+					handled_HopLimitV = true
+					value.HopLimitV = nil
+				case 9 - 1:
+					handled_sigCoverStart = true
+					context.sigCoverStart = int(startPos)
+				case 10 - 1:
+					handled_digestCoverStart = true
+					context.digestCoverStart = int(startPos)
+				case 11 - 1:
+					handled_ApplicationParameters = true
+					value.ApplicationParameters = nil
+				case 12 - 1:
+					handled_SignatureInfo = true
+					value.SignatureInfo = nil
+				case 13 - 1:
+					handled_SignatureValue = true
+					value.SignatureValue = nil
+				case 14 - 1:
+					handled_digestCoverEnd = true
+					context.digestCoverEnd = int(startPos)
+					context.digestCovered = reader.Range(context.digestCoverStart, startPos)
+				}
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_sigCovered && err == nil {
+		// base - skip
+	}
+	if !handled_digestCovered && err == nil {
+		// base - skip
+	}
+	if !handled_NameV && err == nil {
+		value.NameV = nil
+	}
+	if !handled_CanBePrefixV && err == nil {
+		value.CanBePrefixV = false
+	}
+	if !handled_MustBeFreshV && err == nil {
+		value.MustBeFreshV = false
+	}
+	if !handled_ForwardingHintV && err == nil {
+		value.ForwardingHintV = nil
+	}
+	if !handled_NonceV && err == nil {
+		value.NonceV.Unset()
+	}
+	if !handled_InterestLifetimeV && err == nil {
+		value.InterestLifetimeV.Unset()
+	}
+	if !handled_HopLimitV && err == nil {
+		value.HopLimitV = nil
+	}
+	if !handled_sigCoverStart && err == nil {
+		context.sigCoverStart = int(startPos)
+	}
+	if !handled_digestCoverStart && err == nil {
+		context.digestCoverStart = int(startPos)
+	}
+	if !handled_ApplicationParameters && err == nil {
+		value.ApplicationParameters = nil
+	}
+	if !handled_SignatureInfo && err == nil {
+		value.SignatureInfo = nil
+	}
+	if !handled_SignatureValue && err == nil {
+		value.SignatureValue = nil
+	}
+	if !handled_digestCoverEnd && err == nil {
+		context.digestCoverEnd = int(startPos)
+		context.digestCovered = reader.Range(context.digestCoverStart, startPos)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+type LinksEncoder struct {
+	Length uint
+
+	Names_subencoder []struct {
+		Names_length uint
+	}
+}
+
+type LinksParsingContext struct {
+}
+
+func (encoder *LinksEncoder) Init(value *Links) {
+	{
+		Names_l := len(value.Names)
+		encoder.Names_subencoder = make([]struct {
+			Names_length uint
+		}, Names_l)
+		for i := 0; i < Names_l; i++ {
+			pseudoEncoder := &encoder.Names_subencoder[i]
+			pseudoValue := struct {
+				Names enc.Name
+			}{
+				Names: value.Names[i],
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.Names != nil {
+					encoder.Names_length = 0
+					for _, c := range value.Names {
+						encoder.Names_length += uint(c.EncodingLength())
+					}
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+
+	l := uint(0)
+	if value.Names != nil {
+		for seq_i, seq_v := range value.Names {
+			pseudoEncoder := &encoder.Names_subencoder[seq_i]
+			pseudoValue := struct {
+				Names enc.Name
+			}{
+				Names: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.Names != nil {
+					l += 1
+					l += uint(enc.TLNum(encoder.Names_length).EncodingLength())
+					l += encoder.Names_length
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+	encoder.Length = l
+
+}
+
+func (context *LinksParsingContext) Init() {
+
+}
+
+func (encoder *LinksEncoder) EncodeInto(value *Links, buf []byte) {
+
+	pos := uint(0)
+
+	if value.Names != nil {
+		for seq_i, seq_v := range value.Names {
+			pseudoEncoder := &encoder.Names_subencoder[seq_i]
+			pseudoValue := struct {
+				Names enc.Name
+			}{
+				Names: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.Names != nil {
+					buf[pos] = byte(7)
+					pos += 1
+					pos += uint(enc.TLNum(encoder.Names_length).EncodeInto(buf[pos:]))
+					for _, c := range value.Names {
+						pos += uint(c.EncodeInto(buf[pos:]))
+					}
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
+}
+
+func (encoder *LinksEncoder) Encode(value *Links) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *LinksParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Links, error) {
+
+	var handled_Names bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &Links{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 7:
 				if true {
 					handled = true
-					handled_SignatureSeqNum = true
+					handled_Names = true
+					if value.Names == nil {
+						value.Names = make([]enc.Name, 0)
+					}
 					{
-						optval := uint64(0)
-						optval = uint64(0)
+						pseudoValue := struct {
+							Names enc.Name
+						}{}
 						{
-							for i := 0; i < int(l); i++ {
-								x := byte(0)
-								x, err = reader.ReadByte()
-								if err != nil {
-									if err == io.EOF {
-										err = io.ErrUnexpectedEOF
-									}
-									break
-								}
-								optval = uint64(optval<<8) | uint64(x)
-							}
+							value := &pseudoValue
+							delegate := reader.Delegate(int(l))
+							value.Names, err = delegate.ReadName()
+							_ = value
 						}
-						value.SignatureSeqNum.Set(optval)
+						value.Names = append(value.Names, pseudoValue.Names)
 					}
-				}
-			case 253:
-				if true {
-					handled = true
-					handled_ValidityPeriod = true
-					value.ValidityPeriod, err = context.ValidityPeriod_context.Parse(reader.Delegate(int(l)), ignoreCritical)
-				}
-			case 258:
-				if true {
-					handled = true
-					handled_AdditionalDescription = true
-					value.AdditionalDescription, err = context.AdditionalDescription_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+					progress--
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -1380,26 +2446,8 @@ func (context *SignatureInfoParsingContext) Parse(reader enc.WireView, ignoreCri
 	startPos = reader.Pos()
 	err = nil
 
-	if !handled_SignatureType && err == nil {
-		err = enc.ErrSkipRequired{Name: "SignatureType", TypeNum: 27}
-	}
-	if !handled_KeyLocator && err == nil {
-		value.KeyLocator = nil
-	}
-	if !handled_SignatureNonce && err == nil {
-		value.SignatureNonce = nil
-	}
-	if !handled_SignatureTime && err == nil {
-		value.SignatureTime.Unset()
-	}
-	if !handled_SignatureSeqNum && err == nil {
-		value.SignatureSeqNum.Unset()
-	}
-	if !handled_ValidityPeriod && err == nil {
-		value.ValidityPeriod = nil
-	}
-	if !handled_AdditionalDescription && err == nil {
-		value.AdditionalDescription = nil
+	if !handled_Names && err == nil {
+		// sequence - skip
 	}
 
 	if err != nil {
@@ -1409,288 +2457,18 @@ func (context *SignatureInfoParsingContext) Parse(reader enc.WireView, ignoreCri
 	return value, nil
 }
 
-func (value *SignatureInfo) Encode() enc.Wire {
-	encoder := SignatureInfoEncoder{}
+func (value *Links) Encode() enc.Wire {
+	encoder := LinksEncoder{}
 	encoder.Init(value)
 	return encoder.Encode(value)
 }
 
-func (value *SignatureInfo) Bytes() []byte {
+func (value *Links) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseSignatureInfo(reader enc.WireView, ignoreCritical bool) (*SignatureInfo, error) {
-	context := SignatureInfoParsingContext{}
-	context.Init()
-	return context.Parse(reader, ignoreCritical)
-}
-
-type NetworkNackEncoder struct {
-	Length uint
-}
-
-type NetworkNackParsingContext struct {
-}
-
-func (encoder *NetworkNackEncoder) Init(value *NetworkNack) {
-
-	l := uint(0)
-	l += 3
-	l += uint(1 + enc.Nat(value.Reason).EncodingLength())
-	encoder.Length = l
-
-}
-
-func (context *NetworkNackParsingContext) Init() {
-
-}
-
-func (encoder *NetworkNackEncoder) EncodeInto(value *NetworkNack, buf []byte) {
-
-	pos := uint(0)
-
-	buf[pos] = 253
-	binary.BigEndian.PutUint16(buf[pos+1:], uint16(801))
-	pos += 3
-
-	buf[pos] = byte(enc.Nat(value.Reason).EncodeInto(buf[pos+1:]))
-	pos += uint(1 + buf[pos])
-}
-
-func (encoder *NetworkNackEncoder) Encode(value *NetworkNack) enc.Wire {
-
-	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.Length)
-	buf := wire[0]
-	encoder.EncodeInto(value, buf)
-
-	return wire
-}
-
-func (context *NetworkNackParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NetworkNack, error) {
-
-	var handled_Reason bool = false
-
-	progress := -1
-	_ = progress
-
-	value := &NetworkNack{}
-	var err error
-	var startPos int
-	for {
-		startPos = reader.Pos()
-		if startPos >= reader.Length() {
-			break
-		}
-		typ := enc.TLNum(0)
-		l := enc.TLNum(0)
-		typ, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-		l, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-
-		err = nil
-		if handled := false; true {
-			switch typ {
-			case 801:
-				if true {
-					handled = true
-					handled_Reason = true
-					value.Reason = uint64(0)
-					{
-						for i := 0; i < int(l); i++ {
-							x := byte(0)
-							x, err = reader.ReadByte()
-							if err != nil {
-								if err == io.EOF {
-									err = io.ErrUnexpectedEOF
-								}
-								break
-							}
-							value.Reason = uint64(value.Reason<<8) | uint64(x)
-						}
-					}
-				}
-			default:
-				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
-					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
-				}
-				handled = true
-				err = reader.Skip(int(l))
-			}
-			if err == nil && !handled {
-			}
-			if err != nil {
-				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
-			}
-		}
-	}
-
-	startPos = reader.Pos()
-	err = nil
-
-	if !handled_Reason && err == nil {
-		err = enc.ErrSkipRequired{Name: "Reason", TypeNum: 801}
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
-}
-
-func (value *NetworkNack) Encode() enc.Wire {
-	encoder := NetworkNackEncoder{}
-	encoder.Init(value)
-	return encoder.Encode(value)
-}
-
-func (value *NetworkNack) Bytes() []byte {
-	return value.Encode().Join()
-}
-
-func ParseNetworkNack(reader enc.WireView, ignoreCritical bool) (*NetworkNack, error) {
-	context := NetworkNackParsingContext{}
-	context.Init()
-	return context.Parse(reader, ignoreCritical)
-}
-
-type CachePolicyEncoder struct {
-	Length uint
-}
-
-type CachePolicyParsingContext struct {
-}
-
-func (encoder *CachePolicyEncoder) Init(value *CachePolicy) {
-
-	l := uint(0)
-	l += 3
-	l += uint(1 + enc.Nat(value.CachePolicyType).EncodingLength())
-	encoder.Length = l
-
-}
-
-func (context *CachePolicyParsingContext) Init() {
-
-}
-
-func (encoder *CachePolicyEncoder) EncodeInto(value *CachePolicy, buf []byte) {
-
-	pos := uint(0)
-
-	buf[pos] = 253
-	binary.BigEndian.PutUint16(buf[pos+1:], uint16(821))
-	pos += 3
-
-	buf[pos] = byte(enc.Nat(value.CachePolicyType).EncodeInto(buf[pos+1:]))
-	pos += uint(1 + buf[pos])
-}
-
-func (encoder *CachePolicyEncoder) Encode(value *CachePolicy) enc.Wire {
-
-	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.Length)
-	buf := wire[0]
-	encoder.EncodeInto(value, buf)
-
-	return wire
-}
-
-func (context *CachePolicyParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*CachePolicy, error) {
-
-	var handled_CachePolicyType bool = false
-
-	progress := -1
-	_ = progress
-
-	value := &CachePolicy{}
-	var err error
-	var startPos int
-	for {
-		startPos = reader.Pos()
-		if startPos >= reader.Length() {
-			break
-		}
-		typ := enc.TLNum(0)
-		l := enc.TLNum(0)
-		typ, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-		l, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-
-		err = nil
-		if handled := false; true {
-			switch typ {
-			case 821:
-				if true {
-					handled = true
-					handled_CachePolicyType = true
-					value.CachePolicyType = uint64(0)
-					{
-						for i := 0; i < int(l); i++ {
-							x := byte(0)
-							x, err = reader.ReadByte()
-							if err != nil {
-								if err == io.EOF {
-									err = io.ErrUnexpectedEOF
-								}
-								break
-							}
-							value.CachePolicyType = uint64(value.CachePolicyType<<8) | uint64(x)
-						}
-					}
-				}
-			default:
-				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
-					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
-				}
-				handled = true
-				err = reader.Skip(int(l))
-			}
-			if err == nil && !handled {
-			}
-			if err != nil {
-				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
-			}
-		}
-	}
-
-	startPos = reader.Pos()
-	err = nil
-
-	if !handled_CachePolicyType && err == nil {
-		err = enc.ErrSkipRequired{Name: "CachePolicyType", TypeNum: 821}
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
-}
-
-func (value *CachePolicy) Encode() enc.Wire {
-	encoder := CachePolicyEncoder{}
-	encoder.Init(value)
-	return encoder.Encode(value)
-}
-
-func (value *CachePolicy) Bytes() []byte {
-	return value.Encode().Join()
-}
-
-func ParseCachePolicy(reader enc.WireView, ignoreCritical bool) (*CachePolicy, error) {
-	context := CachePolicyParsingContext{}
+func ParseLinks(reader enc.WireView, ignoreCritical bool) (*Links, error) {
+	context := LinksParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }
@@ -2393,396 +3171,56 @@ func (context *LpPacketParsingContext) Parse(reader enc.WireView, ignoreCritical
 	return value, nil
 }
 
-type InterestEncoder struct {
+type NetworkNackEncoder struct {
 	Length uint
-
-	wirePlan []uint
-
-	sigCovered       enc.Wire
-	digestCovered    enc.Wire
-	NameV_length     uint
-	NameV_needDigest bool
-	NameV_wireIdx    int
-	NameV_pos        uint
-
-	ForwardingHintV_encoder LinksEncoder
-
-	sigCoverStart                int
-	sigCoverStart_wireIdx        int
-	sigCoverStart_pos            int
-	digestCoverStart             int
-	digestCoverStart_wireIdx     int
-	digestCoverStart_pos         int
-	ApplicationParameters_length uint
-	SignatureInfo_encoder        SignatureInfoEncoder
-	SignatureValue_wireIdx       int
-	SignatureValue_estLen        uint
-	digestCoverEnd               int
-	digestCoverEnd_wireIdx       int
-	digestCoverEnd_pos           int
 }
 
-type InterestParsingContext struct {
-	sigCovered    enc.Wire
-	digestCovered enc.Wire
-	NameV_wireIdx int
-	NameV_pos     uint
-
-	ForwardingHintV_context LinksParsingContext
-
-	sigCoverStart    int
-	digestCoverStart int
-
-	SignatureInfo_context SignatureInfoParsingContext
-
-	digestCoverEnd int
+type NetworkNackParsingContext struct {
 }
 
-func (encoder *InterestEncoder) Init(value *Interest) {
-
-	encoder.NameV_wireIdx = -1
-	encoder.NameV_length = 0
-	if value.NameV != nil {
-		if len(value.NameV) > 0 && value.NameV[len(value.NameV)-1].Typ == enc.TypeParametersSha256DigestComponent {
-			value.NameV = value.NameV[:len(value.NameV)-1]
-		}
-		if encoder.NameV_needDigest {
-			value.NameV = append(value.NameV, enc.Component{
-				Typ: enc.TypeParametersSha256DigestComponent,
-				Val: make([]byte, 32),
-			})
-		}
-		for _, c := range value.NameV {
-			encoder.NameV_length += uint(c.EncodingLength())
-		}
-	}
-
-	if value.ForwardingHintV != nil {
-		encoder.ForwardingHintV_encoder.Init(value.ForwardingHintV)
-	}
-
-	if value.ApplicationParameters != nil {
-		encoder.ApplicationParameters_length = 0
-		for _, c := range value.ApplicationParameters {
-			encoder.ApplicationParameters_length += uint(len(c))
-		}
-	}
-	if value.SignatureInfo != nil {
-		encoder.SignatureInfo_encoder.Init(value.SignatureInfo)
-	}
-	encoder.SignatureValue_wireIdx = -1
+func (encoder *NetworkNackEncoder) Init(value *NetworkNack) {
 
 	l := uint(0)
-
-	if value.NameV != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
-		l += encoder.NameV_length
-	}
-	if value.CanBePrefixV {
-		l += 1
-		l += 1
-	}
-	if value.MustBeFreshV {
-		l += 1
-		l += 1
-	}
-	if value.ForwardingHintV != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.ForwardingHintV_encoder.Length).EncodingLength())
-		l += encoder.ForwardingHintV_encoder.Length
-	}
-	if value.NonceV.IsSet() {
-		l += 1
-		l += 1 + 4
-	}
-	if optval, ok := value.InterestLifetimeV.Get(); ok {
-		l += 1
-		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
-	}
-	if value.HopLimitV != nil {
-		l += 1
-		l += 2
-	}
-	encoder.sigCoverStart = int(l)
-	encoder.digestCoverStart = int(l)
-	if value.ApplicationParameters != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodingLength())
-		l += encoder.ApplicationParameters_length
-	}
-	if value.SignatureInfo != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodingLength())
-		l += encoder.SignatureInfo_encoder.Length
-	}
-	if encoder.SignatureValue_estLen > 0 {
-		l += 1
-		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
-		l += encoder.SignatureValue_estLen
-	}
-	encoder.digestCoverEnd = int(l)
+	l += 3
+	l += uint(1 + enc.Nat(value.Reason).EncodingLength())
 	encoder.Length = l
 
-	wirePlan := make([]uint, 0, 8)
-	l = uint(0)
-
-	if value.NameV != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
-		l += encoder.NameV_length
-	}
-	if value.CanBePrefixV {
-		l += 1
-		l += 1
-	}
-	if value.MustBeFreshV {
-		l += 1
-		l += 1
-	}
-	if value.ForwardingHintV != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.ForwardingHintV_encoder.Length).EncodingLength())
-		l += encoder.ForwardingHintV_encoder.Length
-	}
-	if value.NonceV.IsSet() {
-		l += 1
-		l += 1 + 4
-	}
-	if optval, ok := value.InterestLifetimeV.Get(); ok {
-		l += 1
-		l += uint(1 + enc.Nat(uint64(optval/time.Millisecond)).EncodingLength())
-	}
-	if value.HopLimitV != nil {
-		l += 1
-		l += 2
-	}
-
-	if value.ApplicationParameters != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodingLength())
-		wirePlan = append(wirePlan, l)
-		l = 0
-		for range value.ApplicationParameters {
-			wirePlan = append(wirePlan, l)
-			l = 0
-		}
-	}
-	if value.SignatureInfo != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodingLength())
-		l += encoder.SignatureInfo_encoder.Length
-	}
-	if encoder.SignatureValue_estLen > 0 {
-		l += 1
-		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
-		wirePlan = append(wirePlan, l)
-		l = 0
-		encoder.SignatureValue_wireIdx = len(wirePlan)
-		wirePlan = append(wirePlan, l)
-		l = 0
-	}
-
-	if l > 0 {
-		wirePlan = append(wirePlan, l)
-	}
-	encoder.wirePlan = wirePlan
 }
 
-func (context *InterestParsingContext) Init() {
-
-	context.ForwardingHintV_context.Init()
-
-	context.SignatureInfo_context.Init()
-	context.sigCovered = make(enc.Wire, 0)
+func (context *NetworkNackParsingContext) Init() {
 
 }
 
-func (encoder *InterestEncoder) EncodeInto(value *Interest, wire enc.Wire) {
-
-	wireIdx := 0
-	buf := wire[wireIdx]
+func (encoder *NetworkNackEncoder) EncodeInto(value *NetworkNack, buf []byte) {
 
 	pos := uint(0)
 
-	if value.NameV != nil {
-		buf[pos] = byte(7)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.NameV_length).EncodeInto(buf[pos:]))
-		sigCoverStart := pos
+	buf[pos] = 253
+	binary.BigEndian.PutUint16(buf[pos+1:], uint16(801))
+	pos += 3
 
-		i := 0
-		for i = 0; i < len(value.NameV)-1; i++ {
-			c := value.NameV[i]
-			pos += uint(c.EncodeInto(buf[pos:]))
-		}
-		sigCoverEnd := pos
-		encoder.NameV_wireIdx = int(wireIdx)
-		if len(value.NameV) > 0 {
-			encoder.NameV_pos = pos + 2
-			c := value.NameV[i]
-			pos += uint(c.EncodeInto(buf[pos:]))
-			if !encoder.NameV_needDigest {
-				sigCoverEnd = pos
-			}
-		}
-		encoder.sigCovered = append(encoder.sigCovered, buf[sigCoverStart:sigCoverEnd])
-	}
-	if value.CanBePrefixV {
-		buf[pos] = byte(33)
-		pos += 1
-		buf[pos] = byte(0)
-		pos += 1
-	}
-	if value.MustBeFreshV {
-		buf[pos] = byte(18)
-		pos += 1
-		buf[pos] = byte(0)
-		pos += 1
-	}
-	if value.ForwardingHintV != nil {
-		buf[pos] = byte(30)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.ForwardingHintV_encoder.Length).EncodeInto(buf[pos:]))
-		if encoder.ForwardingHintV_encoder.Length > 0 {
-			encoder.ForwardingHintV_encoder.EncodeInto(value.ForwardingHintV, buf[pos:])
-			pos += encoder.ForwardingHintV_encoder.Length
-		}
-	}
-	if optval, ok := value.NonceV.Get(); ok {
-		buf[pos] = byte(10)
-		pos += 1
-		buf[pos] = 4
-		binary.BigEndian.PutUint32(buf[pos+1:], uint32(optval))
-		pos += 5
-	}
-	if optval, ok := value.InterestLifetimeV.Get(); ok {
-		buf[pos] = byte(12)
-		pos += 1
-
-		buf[pos] = byte(enc.Nat(uint64(optval / time.Millisecond)).EncodeInto(buf[pos+1:]))
-		pos += uint(1 + buf[pos])
-
-	}
-	if value.HopLimitV != nil {
-		buf[pos] = byte(34)
-		pos += 1
-		buf[pos] = 1
-		buf[pos+1] = byte(*value.HopLimitV)
-		pos += 2
-	}
-	encoder.sigCoverStart_wireIdx = int(wireIdx)
-	encoder.sigCoverStart_pos = int(pos)
-	encoder.digestCoverStart_wireIdx = int(wireIdx)
-	encoder.digestCoverStart_pos = int(pos)
-	if value.ApplicationParameters != nil {
-		buf[pos] = byte(36)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.ApplicationParameters_length).EncodeInto(buf[pos:]))
-		wireIdx++
-		pos = 0
-		if wireIdx < len(wire) {
-			buf = wire[wireIdx]
-		} else {
-			buf = nil
-		}
-		for _, w := range value.ApplicationParameters {
-			wire[wireIdx] = w
-			wireIdx++
-			pos = 0
-			if wireIdx < len(wire) {
-				buf = wire[wireIdx]
-			} else {
-				buf = nil
-			}
-		}
-	}
-	if value.SignatureInfo != nil {
-		buf[pos] = byte(44)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodeInto(buf[pos:]))
-		if encoder.SignatureInfo_encoder.Length > 0 {
-			encoder.SignatureInfo_encoder.EncodeInto(value.SignatureInfo, buf[pos:])
-			pos += encoder.SignatureInfo_encoder.Length
-		}
-	}
-	if encoder.SignatureValue_estLen > 0 {
-		startPos := int(pos)
-		buf[pos] = byte(46)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodeInto(buf[pos:]))
-		if encoder.sigCoverStart_wireIdx == int(wireIdx) {
-			coveredPart := buf[encoder.sigCoverStart:startPos]
-			encoder.sigCovered = append(encoder.sigCovered, coveredPart)
-		} else {
-			coverStart := wire[encoder.sigCoverStart_wireIdx][encoder.sigCoverStart:]
-			encoder.sigCovered = append(encoder.sigCovered, coverStart)
-			for i := encoder.sigCoverStart_wireIdx + 1; i < int(wireIdx); i++ {
-				encoder.sigCovered = append(encoder.sigCovered, wire[i])
-			}
-			coverEnd := buf[:startPos]
-			encoder.sigCovered = append(encoder.sigCovered, coverEnd)
-		}
-		wireIdx++
-		pos = 0
-		if wireIdx < len(wire) {
-			buf = wire[wireIdx]
-		} else {
-			buf = nil
-		}
-		wireIdx++
-		pos = 0
-		if wireIdx < len(wire) {
-			buf = wire[wireIdx]
-		} else {
-			buf = nil
-		}
-	}
-	encoder.digestCoverEnd_wireIdx = int(wireIdx)
-	encoder.digestCoverEnd_pos = int(pos)
+	buf[pos] = byte(enc.Nat(value.Reason).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
-func (encoder *InterestEncoder) Encode(value *Interest) enc.Wire {
-	total := uint(0)
-	for _, l := range encoder.wirePlan {
-		total += l
-	}
-	content := make([]byte, total)
+func (encoder *NetworkNackEncoder) Encode(value *NetworkNack) enc.Wire {
 
-	wire := make(enc.Wire, len(encoder.wirePlan))
-	for i, l := range encoder.wirePlan {
-		if l > 0 {
-			wire[i] = content[:l]
-			content = content[l:]
-		}
-	}
-	encoder.EncodeInto(value, wire)
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
 
 	return wire
 }
 
-func (context *InterestParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Interest, error) {
+func (context *NetworkNackParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NetworkNack, error) {
 
-	var handled_sigCovered bool = false
-	var handled_digestCovered bool = false
-	var handled_NameV bool = false
-	var handled_CanBePrefixV bool = false
-	var handled_MustBeFreshV bool = false
-	var handled_ForwardingHintV bool = false
-	var handled_NonceV bool = false
-	var handled_InterestLifetimeV bool = false
-	var handled_HopLimitV bool = false
-	var handled_sigCoverStart bool = false
-	var handled_digestCoverStart bool = false
-	var handled_ApplicationParameters bool = false
-	var handled_SignatureInfo bool = false
-	var handled_SignatureValue bool = false
-	var handled_digestCoverEnd bool = false
+	var handled_Reason bool = false
 
 	progress := -1
 	_ = progress
 
-	value := &Interest{}
+	value := &NetworkNack{}
 	var err error
 	var startPos int
 	for {
@@ -2802,144 +3240,25 @@ func (context *InterestParsingContext) Parse(reader enc.WireView, ignoreCritical
 		}
 
 		err = nil
-		for handled := false; !handled && progress < 15; progress++ {
+		if handled := false; true {
 			switch typ {
-			case 7:
-				if progress+1 == 2 {
+			case 801:
+				if true {
 					handled = true
-					handled_NameV = true
+					handled_Reason = true
+					value.Reason = uint64(0)
 					{
-
-						value.NameV = make(enc.Name, l/2+1)
-						startName := reader.Pos()
-						endName := startName + int(l)
-						sigCoverEnd := endName
-						for j := range value.NameV {
-							var err1, err3 error
-							startComponent := reader.Pos()
-							if startComponent >= endName {
-								value.NameV = value.NameV[:j]
+						for i := 0; i < int(l); i++ {
+							x := byte(0)
+							x, err = reader.ReadByte()
+							if err != nil {
+								if err == io.EOF {
+									err = io.ErrUnexpectedEOF
+								}
 								break
 							}
-							value.NameV[j].Typ, err1 = reader.ReadTLNum()
-							l, err2 := reader.ReadTLNum()
-							value.NameV[j].Val, err3 = reader.ReadBuf(int(l))
-							if err1 != nil || err2 != nil || err3 != nil {
-								err = io.ErrUnexpectedEOF
-								break
-							}
-							if value.NameV[j].Typ == enc.TypeParametersSha256DigestComponent {
-								sigCoverEnd = startComponent
-							}
+							value.Reason = uint64(value.Reason<<8) | uint64(x)
 						}
-						if err == nil && reader.Pos() != endName {
-							err = enc.ErrBufferOverflow
-						}
-						if err == nil {
-							coveredPart := reader.Range(startName, sigCoverEnd)
-							context.sigCovered = append(context.sigCovered, coveredPart...)
-						}
-					}
-				}
-			case 33:
-				if progress+1 == 3 {
-					handled = true
-					handled_CanBePrefixV = true
-					value.CanBePrefixV = true
-					err = reader.Skip(int(l))
-				}
-			case 18:
-				if progress+1 == 4 {
-					handled = true
-					handled_MustBeFreshV = true
-					value.MustBeFreshV = true
-					err = reader.Skip(int(l))
-				}
-			case 30:
-				if progress+1 == 5 {
-					handled = true
-					handled_ForwardingHintV = true
-					value.ForwardingHintV, err = context.ForwardingHintV_context.Parse(reader.Delegate(int(l)), ignoreCritical)
-				}
-			case 10:
-				if progress+1 == 6 {
-					handled = true
-					handled_NonceV = true
-					{
-						optval := uint32(0)
-						optval = uint32(0)
-						{
-							for i := 0; i < int(l); i++ {
-								x := byte(0)
-								x, err = reader.ReadByte()
-								if err != nil {
-									if err == io.EOF {
-										err = io.ErrUnexpectedEOF
-									}
-									break
-								}
-								optval = uint32(optval<<8) | uint32(x)
-							}
-						}
-						value.NonceV.Set(optval)
-					}
-				}
-			case 12:
-				if progress+1 == 7 {
-					handled = true
-					handled_InterestLifetimeV = true
-					{
-						timeInt := uint64(0)
-						timeInt = uint64(0)
-						{
-							for i := 0; i < int(l); i++ {
-								x := byte(0)
-								x, err = reader.ReadByte()
-								if err != nil {
-									if err == io.EOF {
-										err = io.ErrUnexpectedEOF
-									}
-									break
-								}
-								timeInt = uint64(timeInt<<8) | uint64(x)
-							}
-						}
-						optval := time.Duration(timeInt) * time.Millisecond
-						value.InterestLifetimeV.Set(optval)
-					}
-				}
-			case 34:
-				if progress+1 == 8 {
-					handled = true
-					handled_HopLimitV = true
-					{
-						buf, err := reader.ReadBuf(1)
-						if err == io.EOF {
-							err = io.ErrUnexpectedEOF
-						}
-						value.HopLimitV = &buf[0]
-					}
-				}
-			case 36:
-				if progress+1 == 11 {
-					handled = true
-					handled_ApplicationParameters = true
-					value.ApplicationParameters, err = reader.ReadWire(int(l))
-				}
-			case 44:
-				if progress+1 == 12 {
-					handled = true
-					handled_SignatureInfo = true
-					value.SignatureInfo, err = context.SignatureInfo_context.Parse(reader.Delegate(int(l)), ignoreCritical)
-				}
-			case 46:
-				if progress+1 == 13 {
-					handled = true
-					handled_SignatureValue = true
-					value.SignatureValue, err = reader.ReadWire(int(l))
-					if err == nil {
-						coveredPart := reader.Range(context.sigCoverStart, startPos)
-						context.sigCovered = append(context.sigCovered, coveredPart...)
 					}
 				}
 			default:
@@ -2950,54 +3269,6 @@ func (context *InterestParsingContext) Parse(reader enc.WireView, ignoreCritical
 				err = reader.Skip(int(l))
 			}
 			if err == nil && !handled {
-				switch progress {
-				case 0 - 1:
-					handled_sigCovered = true
-					// base - skip
-				case 1 - 1:
-					handled_digestCovered = true
-					// base - skip
-				case 2 - 1:
-					handled_NameV = true
-					value.NameV = nil
-				case 3 - 1:
-					handled_CanBePrefixV = true
-					value.CanBePrefixV = false
-				case 4 - 1:
-					handled_MustBeFreshV = true
-					value.MustBeFreshV = false
-				case 5 - 1:
-					handled_ForwardingHintV = true
-					value.ForwardingHintV = nil
-				case 6 - 1:
-					handled_NonceV = true
-					value.NonceV.Unset()
-				case 7 - 1:
-					handled_InterestLifetimeV = true
-					value.InterestLifetimeV.Unset()
-				case 8 - 1:
-					handled_HopLimitV = true
-					value.HopLimitV = nil
-				case 9 - 1:
-					handled_sigCoverStart = true
-					context.sigCoverStart = int(startPos)
-				case 10 - 1:
-					handled_digestCoverStart = true
-					context.digestCoverStart = int(startPos)
-				case 11 - 1:
-					handled_ApplicationParameters = true
-					value.ApplicationParameters = nil
-				case 12 - 1:
-					handled_SignatureInfo = true
-					value.SignatureInfo = nil
-				case 13 - 1:
-					handled_SignatureValue = true
-					value.SignatureValue = nil
-				case 14 - 1:
-					handled_digestCoverEnd = true
-					context.digestCoverEnd = int(startPos)
-					context.digestCovered = reader.Range(context.digestCoverStart, startPos)
-				}
 			}
 			if err != nil {
 				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
@@ -3008,51 +3279,8 @@ func (context *InterestParsingContext) Parse(reader enc.WireView, ignoreCritical
 	startPos = reader.Pos()
 	err = nil
 
-	if !handled_sigCovered && err == nil {
-		// base - skip
-	}
-	if !handled_digestCovered && err == nil {
-		// base - skip
-	}
-	if !handled_NameV && err == nil {
-		value.NameV = nil
-	}
-	if !handled_CanBePrefixV && err == nil {
-		value.CanBePrefixV = false
-	}
-	if !handled_MustBeFreshV && err == nil {
-		value.MustBeFreshV = false
-	}
-	if !handled_ForwardingHintV && err == nil {
-		value.ForwardingHintV = nil
-	}
-	if !handled_NonceV && err == nil {
-		value.NonceV.Unset()
-	}
-	if !handled_InterestLifetimeV && err == nil {
-		value.InterestLifetimeV.Unset()
-	}
-	if !handled_HopLimitV && err == nil {
-		value.HopLimitV = nil
-	}
-	if !handled_sigCoverStart && err == nil {
-		context.sigCoverStart = int(startPos)
-	}
-	if !handled_digestCoverStart && err == nil {
-		context.digestCoverStart = int(startPos)
-	}
-	if !handled_ApplicationParameters && err == nil {
-		value.ApplicationParameters = nil
-	}
-	if !handled_SignatureInfo && err == nil {
-		value.SignatureInfo = nil
-	}
-	if !handled_SignatureValue && err == nil {
-		value.SignatureValue = nil
-	}
-	if !handled_digestCoverEnd && err == nil {
-		context.digestCoverEnd = int(startPos)
-		context.digestCovered = reader.Range(context.digestCoverStart, startPos)
+	if !handled_Reason && err == nil {
+		err = enc.ErrSkipRequired{Name: "Reason", TypeNum: 801}
 	}
 
 	if err != nil {
@@ -3062,259 +3290,72 @@ func (context *InterestParsingContext) Parse(reader enc.WireView, ignoreCritical
 	return value, nil
 }
 
-type DataEncoder struct {
+func (value *NetworkNack) Encode() enc.Wire {
+	encoder := NetworkNackEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *NetworkNack) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseNetworkNack(reader enc.WireView, ignoreCritical bool) (*NetworkNack, error) {
+	context := NetworkNackParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type CachePolicyEncoder struct {
 	Length uint
-
-	wirePlan []uint
-
-	sigCovered             enc.Wire
-	sigCoverStart          int
-	sigCoverStart_wireIdx  int
-	sigCoverStart_pos      int
-	NameV_length           uint
-	MetaInfo_encoder       MetaInfoEncoder
-	ContentV_length        uint
-	SignatureInfo_encoder  SignatureInfoEncoder
-	SignatureValue_wireIdx int
-	SignatureValue_estLen  uint
 }
 
-type DataParsingContext struct {
-	sigCovered    enc.Wire
-	sigCoverStart int
-
-	MetaInfo_context MetaInfoParsingContext
-
-	SignatureInfo_context SignatureInfoParsingContext
+type CachePolicyParsingContext struct {
 }
 
-func (encoder *DataEncoder) Init(value *Data) {
-
-	if value.NameV != nil {
-		encoder.NameV_length = 0
-		for _, c := range value.NameV {
-			encoder.NameV_length += uint(c.EncodingLength())
-		}
-	}
-	if value.MetaInfo != nil {
-		encoder.MetaInfo_encoder.Init(value.MetaInfo)
-	}
-	if value.ContentV != nil {
-		encoder.ContentV_length = 0
-		for _, c := range value.ContentV {
-			encoder.ContentV_length += uint(len(c))
-		}
-	}
-	if value.SignatureInfo != nil {
-		encoder.SignatureInfo_encoder.Init(value.SignatureInfo)
-	}
-	encoder.SignatureValue_wireIdx = -1
+func (encoder *CachePolicyEncoder) Init(value *CachePolicy) {
 
 	l := uint(0)
-
-	encoder.sigCoverStart = int(l)
-	if value.NameV != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
-		l += encoder.NameV_length
-	}
-	if value.MetaInfo != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.MetaInfo_encoder.Length).EncodingLength())
-		l += encoder.MetaInfo_encoder.Length
-	}
-	if value.ContentV != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.ContentV_length).EncodingLength())
-		l += encoder.ContentV_length
-	}
-	if value.SignatureInfo != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodingLength())
-		l += encoder.SignatureInfo_encoder.Length
-	}
-	if encoder.SignatureValue_estLen > 0 {
-		l += 1
-		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
-		l += encoder.SignatureValue_estLen
-	}
+	l += 3
+	l += uint(1 + enc.Nat(value.CachePolicyType).EncodingLength())
 	encoder.Length = l
 
-	wirePlan := make([]uint, 0, 8)
-	l = uint(0)
-
-	if value.NameV != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.NameV_length).EncodingLength())
-		l += encoder.NameV_length
-	}
-	if value.MetaInfo != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.MetaInfo_encoder.Length).EncodingLength())
-		l += encoder.MetaInfo_encoder.Length
-	}
-	if value.ContentV != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.ContentV_length).EncodingLength())
-		wirePlan = append(wirePlan, l)
-		l = 0
-		for range value.ContentV {
-			wirePlan = append(wirePlan, l)
-			l = 0
-		}
-	}
-	if value.SignatureInfo != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodingLength())
-		l += encoder.SignatureInfo_encoder.Length
-	}
-	if encoder.SignatureValue_estLen > 0 {
-		l += 1
-		l += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodingLength())
-		wirePlan = append(wirePlan, l)
-		l = 0
-		encoder.SignatureValue_wireIdx = len(wirePlan)
-		wirePlan = append(wirePlan, l)
-		l = 0
-	}
-	if l > 0 {
-		wirePlan = append(wirePlan, l)
-	}
-	encoder.wirePlan = wirePlan
 }
 
-func (context *DataParsingContext) Init() {
+func (context *CachePolicyParsingContext) Init() {
 
-	context.MetaInfo_context.Init()
-
-	context.SignatureInfo_context.Init()
-	context.sigCovered = make(enc.Wire, 0)
 }
 
-func (encoder *DataEncoder) EncodeInto(value *Data, wire enc.Wire) {
-
-	wireIdx := 0
-	buf := wire[wireIdx]
+func (encoder *CachePolicyEncoder) EncodeInto(value *CachePolicy, buf []byte) {
 
 	pos := uint(0)
 
-	encoder.sigCoverStart_wireIdx = int(wireIdx)
-	encoder.sigCoverStart_pos = int(pos)
-	if value.NameV != nil {
-		buf[pos] = byte(7)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.NameV_length).EncodeInto(buf[pos:]))
-		for _, c := range value.NameV {
-			pos += uint(c.EncodeInto(buf[pos:]))
-		}
-	}
-	if value.MetaInfo != nil {
-		buf[pos] = byte(20)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.MetaInfo_encoder.Length).EncodeInto(buf[pos:]))
-		if encoder.MetaInfo_encoder.Length > 0 {
-			encoder.MetaInfo_encoder.EncodeInto(value.MetaInfo, buf[pos:])
-			pos += encoder.MetaInfo_encoder.Length
-		}
-	}
-	if value.ContentV != nil {
-		buf[pos] = byte(21)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.ContentV_length).EncodeInto(buf[pos:]))
-		wireIdx++
-		pos = 0
-		if wireIdx < len(wire) {
-			buf = wire[wireIdx]
-		} else {
-			buf = nil
-		}
-		for _, w := range value.ContentV {
-			wire[wireIdx] = w
-			wireIdx++
-			pos = 0
-			if wireIdx < len(wire) {
-				buf = wire[wireIdx]
-			} else {
-				buf = nil
-			}
-		}
-	}
-	if value.SignatureInfo != nil {
-		buf[pos] = byte(22)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.SignatureInfo_encoder.Length).EncodeInto(buf[pos:]))
-		if encoder.SignatureInfo_encoder.Length > 0 {
-			encoder.SignatureInfo_encoder.EncodeInto(value.SignatureInfo, buf[pos:])
-			pos += encoder.SignatureInfo_encoder.Length
-		}
-	}
-	if encoder.SignatureValue_estLen > 0 {
-		startPos := int(pos)
-		buf[pos] = byte(23)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.SignatureValue_estLen).EncodeInto(buf[pos:]))
-		if encoder.sigCoverStart_wireIdx == int(wireIdx) {
-			coveredPart := buf[encoder.sigCoverStart:startPos]
-			encoder.sigCovered = append(encoder.sigCovered, coveredPart)
-		} else {
-			coverStart := wire[encoder.sigCoverStart_wireIdx][encoder.sigCoverStart:]
-			encoder.sigCovered = append(encoder.sigCovered, coverStart)
-			for i := encoder.sigCoverStart_wireIdx + 1; i < int(wireIdx); i++ {
-				encoder.sigCovered = append(encoder.sigCovered, wire[i])
-			}
-			coverEnd := buf[:startPos]
-			encoder.sigCovered = append(encoder.sigCovered, coverEnd)
-		}
-		wireIdx++
-		pos = 0
-		if wireIdx < len(wire) {
-			buf = wire[wireIdx]
-		} else {
-			buf = nil
-		}
-		wireIdx++
-		pos = 0
-		if wireIdx < len(wire) {
-			buf = wire[wireIdx]
-		} else {
-			buf = nil
-		}
-	}
+	buf[pos] = 253
+	binary.BigEndian.PutUint16(buf[pos+1:], uint16(821))
+	pos += 3
+
+	buf[pos] = byte(enc.Nat(value.CachePolicyType).EncodeInto(buf[pos+1:]))
+	pos += uint(1 + buf[pos])
 }
 
-func (encoder *DataEncoder) Encode(value *Data) enc.Wire {
-	total := uint(0)
-	for _, l := range encoder.wirePlan {
-		total += l
-	}
-	content := make([]byte, total)
+func (encoder *CachePolicyEncoder) Encode(value *CachePolicy) enc.Wire {
 
-	wire := make(enc.Wire, len(encoder.wirePlan))
-	for i, l := range encoder.wirePlan {
-		if l > 0 {
-			wire[i] = content[:l]
-			content = content[l:]
-		}
-	}
-	encoder.EncodeInto(value, wire)
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
 
 	return wire
 }
 
-func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Data, error) {
+func (context *CachePolicyParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*CachePolicy, error) {
 
-	var handled_sigCovered bool = false
-	var handled_sigCoverStart bool = false
-	var handled_NameV bool = false
-	var handled_MetaInfo bool = false
-	var handled_ContentV bool = false
-	var handled_SignatureInfo bool = false
-	var handled_SignatureValue bool = false
+	var handled_CachePolicyType bool = false
 
 	progress := -1
 	_ = progress
 
-	value := &Data{}
+	value := &CachePolicy{}
 	var err error
 	var startPos int
 	for {
@@ -3334,41 +3375,25 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 		}
 
 		err = nil
-		for handled := false; !handled && progress < 7; progress++ {
+		if handled := false; true {
 			switch typ {
-			case 7:
-				if progress+1 == 2 {
+			case 821:
+				if true {
 					handled = true
-					handled_NameV = true
-					delegate := reader.Delegate(int(l))
-					value.NameV, err = delegate.ReadName()
-				}
-			case 20:
-				if progress+1 == 3 {
-					handled = true
-					handled_MetaInfo = true
-					value.MetaInfo, err = context.MetaInfo_context.Parse(reader.Delegate(int(l)), ignoreCritical)
-				}
-			case 21:
-				if progress+1 == 4 {
-					handled = true
-					handled_ContentV = true
-					value.ContentV, err = reader.ReadWire(int(l))
-				}
-			case 22:
-				if progress+1 == 5 {
-					handled = true
-					handled_SignatureInfo = true
-					value.SignatureInfo, err = context.SignatureInfo_context.Parse(reader.Delegate(int(l)), ignoreCritical)
-				}
-			case 23:
-				if progress+1 == 6 {
-					handled = true
-					handled_SignatureValue = true
-					value.SignatureValue, err = reader.ReadWire(int(l))
-					if err == nil {
-						coveredPart := reader.Range(context.sigCoverStart, startPos)
-						context.sigCovered = append(context.sigCovered, coveredPart...)
+					handled_CachePolicyType = true
+					value.CachePolicyType = uint64(0)
+					{
+						for i := 0; i < int(l); i++ {
+							x := byte(0)
+							x, err = reader.ReadByte()
+							if err != nil {
+								if err == io.EOF {
+									err = io.ErrUnexpectedEOF
+								}
+								break
+							}
+							value.CachePolicyType = uint64(value.CachePolicyType<<8) | uint64(x)
+						}
 					}
 				}
 			default:
@@ -3379,29 +3404,6 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 				err = reader.Skip(int(l))
 			}
 			if err == nil && !handled {
-				switch progress {
-				case 0 - 1:
-					handled_sigCovered = true
-					// base - skip
-				case 1 - 1:
-					handled_sigCoverStart = true
-					context.sigCoverStart = int(startPos)
-				case 2 - 1:
-					handled_NameV = true
-					value.NameV = nil
-				case 3 - 1:
-					handled_MetaInfo = true
-					value.MetaInfo = nil
-				case 4 - 1:
-					handled_ContentV = true
-					value.ContentV = nil
-				case 5 - 1:
-					handled_SignatureInfo = true
-					value.SignatureInfo = nil
-				case 6 - 1:
-					handled_SignatureValue = true
-					value.SignatureValue = nil
-				}
 			}
 			if err != nil {
 				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
@@ -3412,26 +3414,8 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 	startPos = reader.Pos()
 	err = nil
 
-	if !handled_sigCovered && err == nil {
-		// base - skip
-	}
-	if !handled_sigCoverStart && err == nil {
-		context.sigCoverStart = int(startPos)
-	}
-	if !handled_NameV && err == nil {
-		value.NameV = nil
-	}
-	if !handled_MetaInfo && err == nil {
-		value.MetaInfo = nil
-	}
-	if !handled_ContentV && err == nil {
-		value.ContentV = nil
-	}
-	if !handled_SignatureInfo && err == nil {
-		value.SignatureInfo = nil
-	}
-	if !handled_SignatureValue && err == nil {
-		value.SignatureValue = nil
+	if !handled_CachePolicyType && err == nil {
+		err = enc.ErrSkipRequired{Name: "CachePolicyType", TypeNum: 821}
 	}
 
 	if err != nil {
@@ -3439,6 +3423,22 @@ func (context *DataParsingContext) Parse(reader enc.WireView, ignoreCritical boo
 	}
 
 	return value, nil
+}
+
+func (value *CachePolicy) Encode() enc.Wire {
+	encoder := CachePolicyEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *CachePolicy) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseCachePolicy(reader enc.WireView, ignoreCritical bool) (*CachePolicy, error) {
+	context := CachePolicyParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
 }
 
 type PacketEncoder struct {
