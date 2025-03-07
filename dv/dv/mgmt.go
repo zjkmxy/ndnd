@@ -133,7 +133,5 @@ func (dv *Router) mgmtOnRib(args ndn.InterestHandlerArgs) {
 		Name:   params.Val.Name,
 		FaceId: optional.Some(uint64(1)), // NFD compatibility
 		Origin: optional.Some(uint64(65)),
-		Cost:   optional.Some(cost),
-		Flags:  optional.Some(uint64(0)),
 	}
 }
