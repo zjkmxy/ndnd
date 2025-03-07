@@ -10,7 +10,7 @@ import (
 )
 
 type RepoCmdEncoder struct {
-	length uint
+	Length uint
 
 	SyncJoin_encoder SyncJoinEncoder
 }
@@ -27,10 +27,10 @@ func (encoder *RepoCmdEncoder) Init(value *RepoCmd) {
 	l := uint(0)
 	if value.SyncJoin != nil {
 		l += 3
-		l += uint(enc.TLNum(encoder.SyncJoin_encoder.length).EncodingLength())
-		l += encoder.SyncJoin_encoder.length
+		l += uint(enc.TLNum(encoder.SyncJoin_encoder.Length).EncodingLength())
+		l += encoder.SyncJoin_encoder.Length
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -46,10 +46,10 @@ func (encoder *RepoCmdEncoder) EncodeInto(value *RepoCmd, buf []byte) {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(400))
 		pos += 3
-		pos += uint(enc.TLNum(encoder.SyncJoin_encoder.length).EncodeInto(buf[pos:]))
-		if encoder.SyncJoin_encoder.length > 0 {
+		pos += uint(enc.TLNum(encoder.SyncJoin_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.SyncJoin_encoder.Length > 0 {
 			encoder.SyncJoin_encoder.EncodeInto(value.SyncJoin, buf[pos:])
-			pos += encoder.SyncJoin_encoder.length
+			pos += encoder.SyncJoin_encoder.Length
 		}
 	}
 }
@@ -57,7 +57,7 @@ func (encoder *RepoCmdEncoder) EncodeInto(value *RepoCmd, buf []byte) {
 func (encoder *RepoCmdEncoder) Encode(value *RepoCmd) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -145,7 +145,7 @@ func ParseRepoCmd(reader enc.WireView, ignoreCritical bool) (*RepoCmd, error) {
 }
 
 type RepoCmdResEncoder struct {
-	length uint
+	Length uint
 }
 
 type RepoCmdResParsingContext struct {
@@ -159,7 +159,7 @@ func (encoder *RepoCmdResEncoder) Init(value *RepoCmdRes) {
 	l += 3
 	l += uint(enc.TLNum(len(value.Message)).EncodingLength())
 	l += uint(len(value.Message))
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -188,7 +188,7 @@ func (encoder *RepoCmdResEncoder) EncodeInto(value *RepoCmdRes, buf []byte) {
 func (encoder *RepoCmdResEncoder) Encode(value *RepoCmdRes) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -305,7 +305,7 @@ func ParseRepoCmdRes(reader enc.WireView, ignoreCritical bool) (*RepoCmdRes, err
 }
 
 type SyncJoinEncoder struct {
-	length uint
+	Length uint
 
 	Protocol_length         uint
 	Group_length            uint
@@ -346,10 +346,10 @@ func (encoder *SyncJoinEncoder) Init(value *SyncJoin) {
 	}
 	if value.HistorySnapshot != nil {
 		l += 3
-		l += uint(enc.TLNum(encoder.HistorySnapshot_encoder.length).EncodingLength())
-		l += encoder.HistorySnapshot_encoder.length
+		l += uint(enc.TLNum(encoder.HistorySnapshot_encoder.Length).EncodingLength())
+		l += encoder.HistorySnapshot_encoder.Length
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -384,10 +384,10 @@ func (encoder *SyncJoinEncoder) EncodeInto(value *SyncJoin, buf []byte) {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(420))
 		pos += 3
-		pos += uint(enc.TLNum(encoder.HistorySnapshot_encoder.length).EncodeInto(buf[pos:]))
-		if encoder.HistorySnapshot_encoder.length > 0 {
+		pos += uint(enc.TLNum(encoder.HistorySnapshot_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.HistorySnapshot_encoder.Length > 0 {
 			encoder.HistorySnapshot_encoder.EncodeInto(value.HistorySnapshot, buf[pos:])
-			pos += encoder.HistorySnapshot_encoder.length
+			pos += encoder.HistorySnapshot_encoder.Length
 		}
 	}
 }
@@ -395,7 +395,7 @@ func (encoder *SyncJoinEncoder) EncodeInto(value *SyncJoin, buf []byte) {
 func (encoder *SyncJoinEncoder) Encode(value *SyncJoin) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -505,7 +505,7 @@ func ParseSyncJoin(reader enc.WireView, ignoreCritical bool) (*SyncJoin, error) 
 }
 
 type HistorySnapshotConfigEncoder struct {
-	length uint
+	Length uint
 }
 
 type HistorySnapshotConfigParsingContext struct {
@@ -516,7 +516,7 @@ func (encoder *HistorySnapshotConfigEncoder) Init(value *HistorySnapshotConfig) 
 	l := uint(0)
 	l += 3
 	l += uint(1 + enc.Nat(value.Threshold).EncodingLength())
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -539,7 +539,7 @@ func (encoder *HistorySnapshotConfigEncoder) EncodeInto(value *HistorySnapshotCo
 func (encoder *HistorySnapshotConfigEncoder) Encode(value *HistorySnapshotConfig) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 

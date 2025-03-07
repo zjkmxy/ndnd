@@ -8,7 +8,7 @@ import (
 )
 
 type T1Encoder struct {
-	length uint
+	Length uint
 
 	wirePlan []uint
 
@@ -61,7 +61,7 @@ func (encoder *T1Encoder) Init(value *T1) {
 		l += 1
 		l += uint(1 + enc.Nat(optval).EncodingLength())
 	}
-	encoder.length = l
+	encoder.Length = l
 
 	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
@@ -401,7 +401,7 @@ func (context *T1ParsingContext) Parse(reader enc.WireView, ignoreCritical bool)
 }
 
 type T2Encoder struct {
-	length uint
+	Length uint
 
 	wirePlan []uint
 
@@ -480,7 +480,7 @@ func (encoder *T2Encoder) Init(value *T2) {
 	}
 	encoder.digestCoverEnd = int(l)
 
-	encoder.length = l
+	encoder.Length = l
 
 	wirePlan := make([]uint, 0, 8)
 	l = uint(0)

@@ -8,7 +8,7 @@ import (
 )
 
 type HistorySnapEncoder struct {
-	length uint
+	Length uint
 
 	wirePlan []uint
 
@@ -60,15 +60,15 @@ func (encoder *HistorySnapEncoder) Init(value *HistorySnap) {
 				value := &pseudoValue
 				if value.Entries != nil {
 					l += 1
-					l += uint(enc.TLNum(encoder.Entries_encoder.length).EncodingLength())
-					l += encoder.Entries_encoder.length
+					l += uint(enc.TLNum(encoder.Entries_encoder.Length).EncodingLength())
+					l += encoder.Entries_encoder.Length
 				}
 				_ = encoder
 				_ = value
 			}
 		}
 	}
-	encoder.length = l
+	encoder.Length = l
 
 	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
@@ -85,8 +85,8 @@ func (encoder *HistorySnapEncoder) Init(value *HistorySnap) {
 				value := &pseudoValue
 				if value.Entries != nil {
 					l += 1
-					l += uint(enc.TLNum(encoder.Entries_encoder.length).EncodingLength())
-					if encoder.Entries_encoder.length > 0 {
+					l += uint(enc.TLNum(encoder.Entries_encoder.Length).EncodingLength())
+					if encoder.Entries_encoder.Length > 0 {
 						l += encoder.Entries_encoder.wirePlan[0]
 						for i := 1; i < len(encoder.Entries_encoder.wirePlan); i++ {
 							wirePlan = append(wirePlan, l)
@@ -135,8 +135,8 @@ func (encoder *HistorySnapEncoder) EncodeInto(value *HistorySnap, wire enc.Wire)
 				if value.Entries != nil {
 					buf[pos] = byte(130)
 					pos += 1
-					pos += uint(enc.TLNum(encoder.Entries_encoder.length).EncodeInto(buf[pos:]))
-					if encoder.Entries_encoder.length > 0 {
+					pos += uint(enc.TLNum(encoder.Entries_encoder.Length).EncodeInto(buf[pos:]))
+					if encoder.Entries_encoder.Length > 0 {
 						{
 							subWire := make(enc.Wire, len(encoder.Entries_encoder.wirePlan))
 							subWire[0] = buf[pos:]
@@ -287,7 +287,7 @@ func ParseHistorySnap(reader enc.WireView, ignoreCritical bool) (*HistorySnap, e
 }
 
 type HistorySnapEntryEncoder struct {
-	length uint
+	Length uint
 
 	wirePlan []uint
 
@@ -314,7 +314,7 @@ func (encoder *HistorySnapEntryEncoder) Init(value *HistorySnapEntry) {
 		l += uint(enc.TLNum(encoder.Content_length).EncodingLength())
 		l += encoder.Content_length
 	}
-	encoder.length = l
+	encoder.Length = l
 
 	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
@@ -499,7 +499,7 @@ func ParseHistorySnapEntry(reader enc.WireView, ignoreCritical bool) (*HistorySn
 }
 
 type HistoryIndexEncoder struct {
-	length uint
+	Length uint
 
 	wirePlan []uint
 
@@ -551,7 +551,7 @@ func (encoder *HistoryIndexEncoder) Init(value *HistoryIndex) {
 			}
 		}
 	}
-	encoder.length = l
+	encoder.Length = l
 
 	wirePlan := make([]uint, 0, 8)
 	l = uint(0)

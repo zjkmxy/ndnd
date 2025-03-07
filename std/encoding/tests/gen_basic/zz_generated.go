@@ -11,7 +11,7 @@ import (
 )
 
 type FakeMetaInfoEncoder struct {
-	length uint
+	Length uint
 }
 
 type FakeMetaInfoParsingContext struct {
@@ -29,7 +29,7 @@ func (encoder *FakeMetaInfoEncoder) Init(value *FakeMetaInfo) {
 		l += uint(enc.TLNum(len(value.Binary)).EncodingLength())
 		l += uint(len(value.Binary))
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -63,7 +63,7 @@ func (encoder *FakeMetaInfoEncoder) EncodeInto(value *FakeMetaInfo, buf []byte) 
 func (encoder *FakeMetaInfoEncoder) Encode(value *FakeMetaInfo) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -202,7 +202,7 @@ func ParseFakeMetaInfo(reader enc.WireView, ignoreCritical bool) (*FakeMetaInfo,
 }
 
 type OptFieldEncoder struct {
-	length uint
+	Length uint
 }
 
 type OptFieldParsingContext struct {
@@ -228,7 +228,7 @@ func (encoder *OptFieldEncoder) Init(value *OptField) {
 		l += 1
 		l += 1
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -274,7 +274,7 @@ func (encoder *OptFieldEncoder) EncodeInto(value *OptField, buf []byte) {
 func (encoder *OptFieldEncoder) Encode(value *OptField) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -429,7 +429,7 @@ func ParseOptField(reader enc.WireView, ignoreCritical bool) (*OptField, error) 
 }
 
 type WireNameFieldEncoder struct {
-	length uint
+	Length uint
 
 	Wire_length uint
 	Name_length uint
@@ -463,7 +463,7 @@ func (encoder *WireNameFieldEncoder) Init(value *WireNameField) {
 		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
 		l += encoder.Name_length
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -497,7 +497,7 @@ func (encoder *WireNameFieldEncoder) EncodeInto(value *WireNameField, buf []byte
 func (encoder *WireNameFieldEncoder) Encode(value *WireNameField) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -596,7 +596,7 @@ func ParseWireNameField(reader enc.WireView, ignoreCritical bool) (*WireNameFiel
 }
 
 type MarkersEncoder struct {
-	length uint
+	Length uint
 
 	startMarker     int
 	startMarker_pos int
@@ -645,7 +645,7 @@ func (encoder *MarkersEncoder) Init(value *Markers) {
 		l += encoder.Name_length
 	}
 	encoder.endMarker = int(l)
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -682,7 +682,7 @@ func (encoder *MarkersEncoder) EncodeInto(value *Markers, buf []byte) {
 func (encoder *MarkersEncoder) Encode(value *Markers) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -794,7 +794,7 @@ func (context *MarkersParsingContext) Parse(reader enc.WireView, ignoreCritical 
 }
 
 type NoCopyStructEncoder struct {
-	length uint
+	Length uint
 
 	wirePlan []uint
 
@@ -834,7 +834,7 @@ func (encoder *NoCopyStructEncoder) Init(value *NoCopyStruct) {
 		l += uint(enc.TLNum(encoder.Wire2_length).EncodingLength())
 		l += encoder.Wire2_length
 	}
-	encoder.length = l
+	encoder.Length = l
 
 	wirePlan := make([]uint, 0, 8)
 	l = uint(0)
@@ -1061,7 +1061,7 @@ func ParseNoCopyStruct(reader enc.WireView, ignoreCritical bool) (*NoCopyStruct,
 }
 
 type StrFieldEncoder struct {
-	length uint
+	Length uint
 }
 
 type StrFieldParsingContext struct {
@@ -1078,7 +1078,7 @@ func (encoder *StrFieldEncoder) Init(value *StrField) {
 		l += uint(enc.TLNum(len(optval)).EncodingLength())
 		l += uint(len(optval))
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -1107,7 +1107,7 @@ func (encoder *StrFieldEncoder) EncodeInto(value *StrField, buf []byte) {
 func (encoder *StrFieldEncoder) Encode(value *StrField) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -1217,7 +1217,7 @@ func ParseStrField(reader enc.WireView, ignoreCritical bool) (*StrField, error) 
 }
 
 type FixedUintFieldEncoder struct {
-	length uint
+	Length uint
 }
 
 type FixedUintFieldParsingContext struct {
@@ -1240,7 +1240,7 @@ func (encoder *FixedUintFieldEncoder) Init(value *FixedUintField) {
 		l += 1
 		l += 2
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -1283,7 +1283,7 @@ func (encoder *FixedUintFieldEncoder) EncodeInto(value *FixedUintField, buf []by
 func (encoder *FixedUintFieldEncoder) Encode(value *FixedUintField) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
