@@ -42,12 +42,18 @@ func SignCrossSchema(args SignCrossSchemaArgs) (enc.Wire, error) {
 		return nil, fmt.Errorf("cross schema name must have a version")
 	}
 
+	// Cross schema is currently required to be a single segment
+	// but include this anyway for naming convention consistency
+	segComp := enc.NewSegmentComponent(0)
+	segName := args.Name.Append(segComp)
+
 	// Create schema data
 	cfg := &ndn.DataConfig{
 		SigNotBefore: optional.Some(args.NotBefore),
 		SigNotAfter:  optional.Some(args.NotAfter),
+		FinalBlockID: optional.Some(segComp),
 	}
-	cs, err := spec.Spec{}.MakeData(args.Name, cfg, args.Content.Encode(), args.Signer)
+	cs, err := spec.Spec{}.MakeData(segName, cfg, args.Content.Encode(), args.Signer)
 	if err != nil {
 		return nil, err
 	}

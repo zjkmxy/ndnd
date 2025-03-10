@@ -46,7 +46,9 @@ func TestSignCrossSchema(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, parsed)
 
-	require.Equal(t, name, parsed.Name())
+	// Make sure a segment component is appended to the name
+	require.Equal(t, name.Append(enc.NewSegmentComponent(0)), parsed.Name())
+
 	require.Equal(t, cs.Encode().Join(), parsed.Content().Join())
 	nb, na := parsed.Signature().Validity()
 	require.Equal(t, T1.Unix(), nb.Unwrap().Unix())
