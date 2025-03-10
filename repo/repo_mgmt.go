@@ -1,6 +1,8 @@
 package repo
 
 import (
+	"fmt"
+
 	"github.com/named-data/ndnd/repo/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -24,7 +26,7 @@ func (r *Repo) onMgmtCmd(_ enc.Name, wire enc.Wire, reply func(enc.Wire) error) 
 func (r *Repo) handleSyncJoin(cmd *tlv.SyncJoin, reply func(enc.Wire) error) {
 	res := tlv.RepoCmdRes{Status: 200}
 
-	if cmd.Protocol.Equal(tlv.SyncProtocolSvsV3) {
+	if cmd.Protocol != nil && cmd.Protocol.Name.Equal(tlv.SyncProtocolSvsV3) {
 		if err := r.startSvs(cmd); err != nil {
 			res.Status = 500
 			log.Error(r, "Failed to start SVS", "err", err)
@@ -39,11 +41,15 @@ func (r *Repo) handleSyncJoin(cmd *tlv.SyncJoin, reply func(enc.Wire) error) {
 }
 
 func (r *Repo) startSvs(cmd *tlv.SyncJoin) error {
+	if cmd.Group == nil || len(cmd.Group.Name) == 0 {
+		return fmt.Errorf("missing group name")
+	}
+
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
 	// Check if already started
-	hash := cmd.Group.TlvStr()
+	hash := cmd.Group.Name.TlvStr()
 	if _, ok := r.groupsSvs[hash]; ok {
 		return nil
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/ndn/svs_ps"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/object/storage"
@@ -151,8 +152,8 @@ func main() {
 	// Command repo to join the group
 	repoCmd := spec_repo.RepoCmd{
 		SyncJoin: &spec_repo.SyncJoin{
-			Protocol: spec_repo.SyncProtocolSvsV3,
-			Group:    group,
+			Protocol: &spec.NameContainer{Name: spec_repo.SyncProtocolSvsV3},
+			Group:    &spec.NameContainer{Name: group},
 			HistorySnapshot: &spec_repo.HistorySnapshotConfig{
 				Threshold: SnapshotThreshold,
 			},

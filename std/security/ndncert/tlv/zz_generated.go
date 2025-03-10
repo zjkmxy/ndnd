@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 )
 
 type CaProfileEncoder struct {
 	Length uint
 
-	CaPrefix_encoder NameContainerEncoder
+	CaPrefix_encoder spec.NameContainerEncoder
 
 	ParamKey_subencoder []struct {
 	}
@@ -20,7 +21,7 @@ type CaProfileEncoder struct {
 }
 
 type CaProfileParsingContext struct {
-	CaPrefix_context NameContainerParsingContext
+	CaPrefix_context spec.NameContainerParsingContext
 }
 
 func (encoder *CaProfileEncoder) Init(value *CaProfile) {
@@ -736,12 +737,12 @@ type ProbeResEncoder struct {
 	Vals_subencoder []struct {
 		Vals_encoder ProbeResValsEncoder
 	}
-	RedirectPrefix_encoder NameContainerEncoder
+	RedirectPrefix_encoder spec.NameContainerEncoder
 }
 
 type ProbeResParsingContext struct {
 	Vals_context           ProbeResValsParsingContext
-	RedirectPrefix_context NameContainerParsingContext
+	RedirectPrefix_context spec.NameContainerParsingContext
 }
 
 func (encoder *ProbeResEncoder) Init(value *ProbeRes) {
@@ -1821,15 +1822,15 @@ func ParseChallengeReq(reader enc.WireView, ignoreCritical bool) (*ChallengeReq,
 type ChallengeResEncoder struct {
 	Length uint
 
-	CertName_encoder       NameContainerEncoder
-	ForwardingHint_encoder NameContainerEncoder
+	CertName_encoder       spec.NameContainerEncoder
+	ForwardingHint_encoder spec.NameContainerEncoder
 	Params_valencoder      map[string]*struct {
 	}
 }
 
 type ChallengeResParsingContext struct {
-	CertName_context       NameContainerParsingContext
-	ForwardingHint_context NameContainerParsingContext
+	CertName_context       spec.NameContainerParsingContext
+	ForwardingHint_context spec.NameContainerParsingContext
 }
 
 func (encoder *ChallengeResEncoder) Init(value *ChallengeRes) {
@@ -2401,142 +2402,6 @@ func (value *ErrorRes) Bytes() []byte {
 
 func ParseErrorRes(reader enc.WireView, ignoreCritical bool) (*ErrorRes, error) {
 	context := ErrorResParsingContext{}
-	context.Init()
-	return context.Parse(reader, ignoreCritical)
-}
-
-type NameContainerEncoder struct {
-	Length uint
-
-	Name_length uint
-}
-
-type NameContainerParsingContext struct {
-}
-
-func (encoder *NameContainerEncoder) Init(value *NameContainer) {
-	if value.Name != nil {
-		encoder.Name_length = 0
-		for _, c := range value.Name {
-			encoder.Name_length += uint(c.EncodingLength())
-		}
-	}
-
-	l := uint(0)
-	if value.Name != nil {
-		l += 1
-		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
-		l += encoder.Name_length
-	}
-	encoder.Length = l
-
-}
-
-func (context *NameContainerParsingContext) Init() {
-
-}
-
-func (encoder *NameContainerEncoder) EncodeInto(value *NameContainer, buf []byte) {
-
-	pos := uint(0)
-
-	if value.Name != nil {
-		buf[pos] = byte(7)
-		pos += 1
-		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
-		for _, c := range value.Name {
-			pos += uint(c.EncodeInto(buf[pos:]))
-		}
-	}
-}
-
-func (encoder *NameContainerEncoder) Encode(value *NameContainer) enc.Wire {
-
-	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.Length)
-	buf := wire[0]
-	encoder.EncodeInto(value, buf)
-
-	return wire
-}
-
-func (context *NameContainerParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NameContainer, error) {
-
-	var handled_Name bool = false
-
-	progress := -1
-	_ = progress
-
-	value := &NameContainer{}
-	var err error
-	var startPos int
-	for {
-		startPos = reader.Pos()
-		if startPos >= reader.Length() {
-			break
-		}
-		typ := enc.TLNum(0)
-		l := enc.TLNum(0)
-		typ, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-		l, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-
-		err = nil
-		if handled := false; true {
-			switch typ {
-			case 7:
-				if true {
-					handled = true
-					handled_Name = true
-					delegate := reader.Delegate(int(l))
-					value.Name, err = delegate.ReadName()
-				}
-			default:
-				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
-					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
-				}
-				handled = true
-				err = reader.Skip(int(l))
-			}
-			if err == nil && !handled {
-			}
-			if err != nil {
-				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
-			}
-		}
-	}
-
-	startPos = reader.Pos()
-	err = nil
-
-	if !handled_Name && err == nil {
-		value.Name = nil
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
-}
-
-func (value *NameContainer) Encode() enc.Wire {
-	encoder := NameContainerEncoder{}
-	encoder.Init(value)
-	return encoder.Encode(value)
-}
-
-func (value *NameContainer) Bytes() []byte {
-	return value.Encode().Join()
-}
-
-func ParseNameContainer(reader enc.WireView, ignoreCritical bool) (*NameContainer, error) {
-	context := NameContainerParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }

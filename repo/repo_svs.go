@@ -56,7 +56,7 @@ func (r *RepoSvs) Start() (err error) {
 		InitialState: r.readState(),
 		Svs: ndn_sync.SvSyncOpts{
 			Client:            r.client,
-			GroupPrefix:       r.cmd.Group,
+			GroupPrefix:       r.cmd.Group.Name,
 			SuppressionPeriod: 500 * time.Millisecond,
 			PeriodicTimeout:   365 * 24 * time.Hour, // basically never
 			Passive:           true,
@@ -111,12 +111,12 @@ func (r *RepoSvs) Stop() (err error) {
 }
 
 func (r *RepoSvs) commitState(state enc.Wire) {
-	name := r.cmd.Group.Append(enc.NewKeywordComponent("alo-state"))
+	name := r.cmd.Group.Name.Append(enc.NewKeywordComponent("alo-state"))
 	r.client.Store().Put(name, state.Join())
 }
 
 func (r *RepoSvs) readState() enc.Wire {
-	name := r.cmd.Group.Append(enc.NewKeywordComponent("alo-state"))
+	name := r.cmd.Group.Name.Append(enc.NewKeywordComponent("alo-state"))
 	if stateWire, _ := r.client.Store().Get(name, false); stateWire != nil {
 		return enc.Wire{stateWire}
 	}

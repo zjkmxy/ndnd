@@ -3820,3 +3820,139 @@ func (context *PacketParsingContext) Parse(reader enc.WireView, ignoreCritical b
 
 	return value, nil
 }
+
+type NameContainerEncoder struct {
+	Length uint
+
+	Name_length uint
+}
+
+type NameContainerParsingContext struct {
+}
+
+func (encoder *NameContainerEncoder) Init(value *NameContainer) {
+	if value.Name != nil {
+		encoder.Name_length = 0
+		for _, c := range value.Name {
+			encoder.Name_length += uint(c.EncodingLength())
+		}
+	}
+
+	l := uint(0)
+	if value.Name != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.Name_length).EncodingLength())
+		l += encoder.Name_length
+	}
+	encoder.Length = l
+
+}
+
+func (context *NameContainerParsingContext) Init() {
+
+}
+
+func (encoder *NameContainerEncoder) EncodeInto(value *NameContainer, buf []byte) {
+
+	pos := uint(0)
+
+	if value.Name != nil {
+		buf[pos] = byte(7)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.Name_length).EncodeInto(buf[pos:]))
+		for _, c := range value.Name {
+			pos += uint(c.EncodeInto(buf[pos:]))
+		}
+	}
+}
+
+func (encoder *NameContainerEncoder) Encode(value *NameContainer) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *NameContainerParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*NameContainer, error) {
+
+	var handled_Name bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &NameContainer{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 7:
+				if true {
+					handled = true
+					handled_Name = true
+					delegate := reader.Delegate(int(l))
+					value.Name, err = delegate.ReadName()
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_Name && err == nil {
+		value.Name = nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *NameContainer) Encode() enc.Wire {
+	encoder := NameContainerEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *NameContainer) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseNameContainer(reader enc.WireView, ignoreCritical bool) (*NameContainer, error) {
+	context := NameContainerParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
