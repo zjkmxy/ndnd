@@ -21,6 +21,8 @@ type SignCrossSchemaArgs struct {
 	NotBefore time.Time
 	// NotAfter is the end of the certificate validity period.
 	NotAfter time.Time
+	// Store is the storage to insert the signed cross schema (optional)
+	Store ndn.Store
 }
 
 func SignCrossSchema(args SignCrossSchemaArgs) (enc.Wire, error) {
@@ -56,6 +58,13 @@ func SignCrossSchema(args SignCrossSchemaArgs) (enc.Wire, error) {
 	cs, err := spec.Spec{}.MakeData(segName, cfg, args.Content.Encode(), args.Signer)
 	if err != nil {
 		return nil, err
+	}
+
+	// Store the signed cross schema
+	if args.Store != nil {
+		if err := args.Store.Put(segName, cs.Wire.Join()); err != nil {
+			return nil, err
+		}
 	}
 
 	return cs.Wire, nil
