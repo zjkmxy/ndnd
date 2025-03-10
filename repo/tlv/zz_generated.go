@@ -56,7 +56,7 @@ func (encoder *RepoCmdEncoder) EncodeInto(value *RepoCmd, buf []byte) {
 
 	if value.SyncJoin != nil {
 		buf[pos] = 253
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(400))
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(7600))
 		pos += 3
 		pos += uint(enc.TLNum(encoder.SyncJoin_encoder.Length).EncodeInto(buf[pos:]))
 		if encoder.SyncJoin_encoder.Length > 0 {
@@ -66,7 +66,7 @@ func (encoder *RepoCmdEncoder) EncodeInto(value *RepoCmd, buf []byte) {
 	}
 	if value.BlobFetch != nil {
 		buf[pos] = 253
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(7568))
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(7602))
 		pos += 3
 		pos += uint(enc.TLNum(encoder.BlobFetch_encoder.Length).EncodeInto(buf[pos:]))
 		if encoder.BlobFetch_encoder.Length > 0 {
@@ -116,13 +116,13 @@ func (context *RepoCmdParsingContext) Parse(reader enc.WireView, ignoreCritical 
 		err = nil
 		if handled := false; true {
 			switch typ {
-			case 400:
+			case 7600:
 				if true {
 					handled = true
 					handled_SyncJoin = true
 					value.SyncJoin, err = context.SyncJoin_context.Parse(reader.Delegate(int(l)), ignoreCritical)
 				}
-			case 7568:
+			case 7602:
 				if true {
 					handled = true
 					handled_BlobFetch = true
@@ -533,141 +533,6 @@ func ParseSyncJoin(reader enc.WireView, ignoreCritical bool) (*SyncJoin, error) 
 	return context.Parse(reader, ignoreCritical)
 }
 
-type BlobFetchEncoder struct {
-	Length uint
-
-	Name_encoder spec.NameContainerEncoder
-}
-
-type BlobFetchParsingContext struct {
-	Name_context spec.NameContainerParsingContext
-}
-
-func (encoder *BlobFetchEncoder) Init(value *BlobFetch) {
-	if value.Name != nil {
-		encoder.Name_encoder.Init(value.Name)
-	}
-
-	l := uint(0)
-	if value.Name != nil {
-		l += 3
-		l += uint(enc.TLNum(encoder.Name_encoder.Length).EncodingLength())
-		l += encoder.Name_encoder.Length
-	}
-	encoder.Length = l
-
-}
-
-func (context *BlobFetchParsingContext) Init() {
-	context.Name_context.Init()
-}
-
-func (encoder *BlobFetchEncoder) EncodeInto(value *BlobFetch, buf []byte) {
-
-	pos := uint(0)
-
-	if value.Name != nil {
-		buf[pos] = 253
-		binary.BigEndian.PutUint16(buf[pos+1:], uint16(7569))
-		pos += 3
-		pos += uint(enc.TLNum(encoder.Name_encoder.Length).EncodeInto(buf[pos:]))
-		if encoder.Name_encoder.Length > 0 {
-			encoder.Name_encoder.EncodeInto(value.Name, buf[pos:])
-			pos += encoder.Name_encoder.Length
-		}
-	}
-}
-
-func (encoder *BlobFetchEncoder) Encode(value *BlobFetch) enc.Wire {
-
-	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.Length)
-	buf := wire[0]
-	encoder.EncodeInto(value, buf)
-
-	return wire
-}
-
-func (context *BlobFetchParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*BlobFetch, error) {
-
-	var handled_Name bool = false
-
-	progress := -1
-	_ = progress
-
-	value := &BlobFetch{}
-	var err error
-	var startPos int
-	for {
-		startPos = reader.Pos()
-		if startPos >= reader.Length() {
-			break
-		}
-		typ := enc.TLNum(0)
-		l := enc.TLNum(0)
-		typ, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-		l, err = reader.ReadTLNum()
-		if err != nil {
-			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
-		}
-
-		err = nil
-		if handled := false; true {
-			switch typ {
-			case 7569:
-				if true {
-					handled = true
-					handled_Name = true
-					value.Name, err = context.Name_context.Parse(reader.Delegate(int(l)), ignoreCritical)
-				}
-			default:
-				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
-					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
-				}
-				handled = true
-				err = reader.Skip(int(l))
-			}
-			if err == nil && !handled {
-			}
-			if err != nil {
-				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
-			}
-		}
-	}
-
-	startPos = reader.Pos()
-	err = nil
-
-	if !handled_Name && err == nil {
-		value.Name = nil
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
-}
-
-func (value *BlobFetch) Encode() enc.Wire {
-	encoder := BlobFetchEncoder{}
-	encoder.Init(value)
-	return encoder.Encode(value)
-}
-
-func (value *BlobFetch) Bytes() []byte {
-	return value.Encode().Join()
-}
-
-func ParseBlobFetch(reader enc.WireView, ignoreCritical bool) (*BlobFetch, error) {
-	context := BlobFetchParsingContext{}
-	context.Init()
-	return context.Parse(reader, ignoreCritical)
-}
-
 type HistorySnapshotConfigEncoder struct {
 	Length uint
 }
@@ -799,6 +664,141 @@ func (value *HistorySnapshotConfig) Bytes() []byte {
 
 func ParseHistorySnapshotConfig(reader enc.WireView, ignoreCritical bool) (*HistorySnapshotConfig, error) {
 	context := HistorySnapshotConfigParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type BlobFetchEncoder struct {
+	Length uint
+
+	Name_encoder spec.NameContainerEncoder
+}
+
+type BlobFetchParsingContext struct {
+	Name_context spec.NameContainerParsingContext
+}
+
+func (encoder *BlobFetchEncoder) Init(value *BlobFetch) {
+	if value.Name != nil {
+		encoder.Name_encoder.Init(value.Name)
+	}
+
+	l := uint(0)
+	if value.Name != nil {
+		l += 3
+		l += uint(enc.TLNum(encoder.Name_encoder.Length).EncodingLength())
+		l += encoder.Name_encoder.Length
+	}
+	encoder.Length = l
+
+}
+
+func (context *BlobFetchParsingContext) Init() {
+	context.Name_context.Init()
+}
+
+func (encoder *BlobFetchEncoder) EncodeInto(value *BlobFetch, buf []byte) {
+
+	pos := uint(0)
+
+	if value.Name != nil {
+		buf[pos] = 253
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(440))
+		pos += 3
+		pos += uint(enc.TLNum(encoder.Name_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.Name_encoder.Length > 0 {
+			encoder.Name_encoder.EncodeInto(value.Name, buf[pos:])
+			pos += encoder.Name_encoder.Length
+		}
+	}
+}
+
+func (encoder *BlobFetchEncoder) Encode(value *BlobFetch) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *BlobFetchParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*BlobFetch, error) {
+
+	var handled_Name bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &BlobFetch{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 440:
+				if true {
+					handled = true
+					handled_Name = true
+					value.Name, err = context.Name_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_Name && err == nil {
+		value.Name = nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *BlobFetch) Encode() enc.Wire {
+	encoder := BlobFetchEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *BlobFetch) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseBlobFetch(reader enc.WireView, ignoreCritical bool) (*BlobFetch, error) {
+	context := BlobFetchParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }

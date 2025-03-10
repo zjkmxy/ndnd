@@ -22,6 +22,7 @@ var group, _ = enc.NameFromStr("/ndn/svs")
 var name enc.Name
 var svsalo *ndn_sync.SvsALO
 var store ndn.Store
+var client ndn.Client
 var repoName, _ = enc.NameFromStr("/ndnd/repo")
 
 const SnapshotThreshold = 100
@@ -71,7 +72,7 @@ func main() {
 	store = bstore
 
 	// Create object client
-	client := object.NewClient(app, store, nil)
+	client = object.NewClient(app, store, nil)
 	if err = client.Start(); err != nil {
 		log.Error(nil, "Unable to start object client", "err", err)
 		return
@@ -134,7 +135,7 @@ func main() {
 		commitState(pub.State)
 	})
 
-	// Register routes to the local forwarder
+	// Announce our name prefixes to the network
 	for _, route := range []enc.Name{
 		svsalo.SyncPrefix(),
 		svsalo.DataPrefix(),
@@ -149,19 +150,24 @@ func main() {
 	}
 	defer svsalo.Stop()
 
-	// Command repo to join the group
-	repoCmd := spec_repo.RepoCmd{
-		SyncJoin: &spec_repo.SyncJoin{
-			Protocol: &spec.NameContainer{Name: spec_repo.SyncProtocolSvsV3},
-			Group:    &spec.NameContainer{Name: group},
-			HistorySnapshot: &spec_repo.HistorySnapshotConfig{
-				Threshold: SnapshotThreshold,
-			},
-		},
-	}
+	// This step is OPTIONAL, if you want to persist the group data to the repo.
+	//
+	// In a real application, you would need the right security configuration
+	// to allow the repo to accept this command.
+	//
+	// This command will fail with a log if repo is not running, or
+	// does not respond to the command.
 	client.ExpressCommand(
 		repoName.Append(enc.NewKeywordComponent("cmd")),
-		repoCmd.Encode(),
+		(&spec_repo.RepoCmd{
+			SyncJoin: &spec_repo.SyncJoin{
+				Protocol: &spec.NameContainer{Name: spec_repo.SyncProtocolSvsV3},
+				Group:    &spec.NameContainer{Name: group},
+				HistorySnapshot: &spec_repo.HistorySnapshotConfig{
+					Threshold: SnapshotThreshold,
+				},
+			},
+		}).Encode(),
 		func(w enc.Wire, err error) {
 			if err != nil {
 				log.Warn(nil, "Repo sync join command failed", "err", err)
@@ -170,6 +176,7 @@ func main() {
 			}
 		})
 
+	// Joined the group - now we can start the chat
 	fmt.Fprintln(os.Stderr, "*** Joined SVS ALO chat group")
 	fmt.Fprintln(os.Stderr, "*** You are:", name)
 	fmt.Fprintln(os.Stderr, "*** Type a message and press enter to send.")
@@ -195,7 +202,7 @@ func main() {
 			continue
 		}
 
-		// Special testing function !! to send 100 messages after counter
+		// Testing - use !! to send 100 messages after counter
 		if string(line) == "!!" {
 			for range 100 {
 				publish(fmt.Appendf(nil, "Message %d", counter))
@@ -204,10 +211,17 @@ func main() {
 			continue
 		}
 
+		// Testing - use + to publish a blob fetch command
+		if strings.HasPrefix(string(line), "+") {
+			publishBlob(line)
+			continue
+		}
+
 		publish(line)
 	}
 }
 
+// publish sends a publication to the SVS ALO group
 func publish(content []byte) {
 	_, state, err := svsalo.Publish(enc.Wire{content})
 	if err != nil {
@@ -216,6 +230,35 @@ func publish(content []byte) {
 
 	// Commit the state after processing our own publication
 	commitState(state)
+}
+
+// publishBlob creates a new blob and publishes a BlobFetch command for repo
+func publishBlob(content []byte) {
+	// To be reachable on the network, we produce the blob under
+	// the data prefix of the SVS ALO group.
+	// Repo requires that all blobs be under the group prefix, this
+	// automatically satisfies that requirement.
+	blobName := svsalo.DataPrefix().
+		Append(enc.NewKeywordComponent("blob")).
+		WithVersion(enc.VersionUnixMicro)
+
+	verName, err := client.Produce(ndn.ProduceArgs{
+		Name:    blobName,
+		Content: enc.Wire{content},
+	})
+	if err != nil {
+		log.Error(nil, "Unable to publish blob", "err", err)
+		return
+	}
+
+	// Publish a BlobFetch command for repo to the group
+	// This will trigger repo to fetch the published blob
+	cmd := spec_repo.RepoCmd{
+		BlobFetch: &spec_repo.BlobFetch{
+			Name: &spec.NameContainer{Name: verName},
+		},
+	}
+	publish(cmd.Encode().Join())
 }
 
 func commitState(state enc.Wire) {

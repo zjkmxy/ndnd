@@ -8,6 +8,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/ndn/svs_ps"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 )
 
@@ -28,7 +29,7 @@ func NewRepoSvs(config *Config, client ndn.Client, cmd *tlv.SyncJoin) *RepoSvs {
 }
 
 func (r *RepoSvs) String() string {
-	return fmt.Sprintf("repo-svs (%s)", r.cmd.Group)
+	return fmt.Sprintf("repo-svs (%s)", r.cmd.Group.Name)
 }
 
 func (r *RepoSvs) Start() (err error) {
@@ -74,6 +75,23 @@ func (r *RepoSvs) Start() (err error) {
 
 	// Subscribe to all publishers
 	r.svsalo.SubscribePublisher(enc.Name{}, func(pub ndn_sync.SvsPub) {
+		if pub.IsSnapshot {
+			// Each type of snapshot has separate handling.
+			if r.cmd.HistorySnapshot != nil {
+				snapshot, err := svs_ps.ParseHistorySnap(enc.NewWireView(pub.Content), true)
+				if err != nil {
+					panic(err) // impossible, encoded by us
+				}
+
+				for _, entry := range snapshot.Entries {
+					r.processIncomingPub(entry.Content)
+				}
+			}
+		} else {
+			// Process the publication.
+			r.processIncomingPub(pub.Content)
+		}
+
 		r.commitState(pub.State)
 	})
 
@@ -121,4 +139,40 @@ func (r *RepoSvs) readState() enc.Wire {
 		return enc.Wire{stateWire}
 	}
 	return nil
+}
+
+// processIncomingPub checks if the given pub is a command for repo.
+func (r *RepoSvs) processIncomingPub(w enc.Wire) {
+	cmd, err := tlv.ParseRepoCmd(enc.NewWireView(w), false)
+	if err != nil {
+		// Likely application data.
+		return
+	}
+
+	if cmd.BlobFetch != nil {
+		r.processBlobFetch(cmd.BlobFetch)
+	}
+}
+
+// processBlobFetch processes a BlobFetch command.
+func (r *RepoSvs) processBlobFetch(cmd *tlv.BlobFetch) {
+	if cmd.Name == nil {
+		log.Warn(r, "Received BlobFetch with missing Name")
+		return
+	}
+	if !r.cmd.Group.Name.IsPrefix(cmd.Name.Name) {
+		log.Warn(r, "Ignoring BlobFetch outside group", "name", cmd.Name.Name)
+		return
+	}
+
+	// TODO: retry fetching if failed, even across restarts
+	// TODO: do not fetch blobs that are too large
+	// TODO: do not fetch blobs that are already stored (though this shouldn't happen)
+	r.client.Consume(cmd.Name.Name, func(status ndn.ConsumeState) {
+		if status.Error() != nil {
+			log.Warn(r, "BlobFetch error", "err", status.Error(), "name", cmd.Name.Name)
+			return
+		}
+		log.Info(r, "BlobFetch success", "name", cmd.Name.Name)
+	})
 }

@@ -239,7 +239,7 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 				// will prevent fetching the other updates.
 				if s.IsRepo {
 					s.repoKnown.Set(hash, boot, ssVersion)
-					if entry.Pending >= ssVersion-2*s.Threshold {
+					if entry.Latest <= ssVersion+2*s.Threshold {
 						return SvsPub{}, nil
 					}
 				}

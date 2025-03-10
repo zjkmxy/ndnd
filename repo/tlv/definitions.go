@@ -14,9 +14,9 @@ var SyncProtocolSvsV3 = enc.Name{
 
 type RepoCmd struct {
 	//+field:struct:SyncJoin
-	SyncJoin *SyncJoin `tlv:"0x190"`
+	SyncJoin *SyncJoin `tlv:"0x1DB0"`
 	//+field:struct:BlobFetch
-	BlobFetch *BlobFetch `tlv:"0x1D90"`
+	BlobFetch *BlobFetch `tlv:"0x1DB2"`
 }
 
 type RepoCmdRes struct {
@@ -35,12 +35,12 @@ type SyncJoin struct {
 	HistorySnapshot *HistorySnapshotConfig `tlv:"0x1A4"`
 }
 
-type BlobFetch struct {
-	//+field:struct:spec.NameContainer
-	Name *spec.NameContainer `tlv:"0x1D91"`
-}
-
 type HistorySnapshotConfig struct {
 	//+field:natural
 	Threshold uint64 `tlv:"0x1A5"`
+}
+
+type BlobFetch struct {
+	//+field:struct:spec.NameContainer
+	Name *spec.NameContainer `tlv:"0x1B8"`
 }
