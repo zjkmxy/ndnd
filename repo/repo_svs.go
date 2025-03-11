@@ -196,6 +196,6 @@ func (r *RepoSvs) processBlobStore(data [][]byte) {
 			continue
 		}
 
-		log.Debug(r, "BlobFetch store success", "name", name)
+		log.Info(r, "BlobFetch store success", "name", name)
 	}
 }
