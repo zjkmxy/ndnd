@@ -74,7 +74,7 @@ func SignCert(args SignCertArgs) (enc.Wire, error) {
 }
 
 // SelfSign generates a self-signed certificate.
-func SelfSign(args SignCertArgs) (enc.Wire, error) {
+func SelfSign(args SignCertArgs) (wire enc.Wire, err error) {
 	if args.Data != nil {
 		return nil, ndn.ErrInvalidValue{Item: "SelfSign.args.Data", Value: args.Data}
 	}
@@ -85,11 +85,7 @@ func SelfSign(args SignCertArgs) (enc.Wire, error) {
 		args.IssuerId = enc.NewGenericComponent("self")
 	}
 
-	keyWire, err := sig.MarshalSecret(args.Signer)
-	if err != nil {
-		return nil, err
-	}
-	args.Data, _, err = spec.Spec{}.ReadData(enc.NewWireView(keyWire))
+	args.Data, err = sig.MarshalSecretToData(args.Signer)
 	if err != nil {
 		return nil, err
 	}
