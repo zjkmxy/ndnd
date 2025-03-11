@@ -671,7 +671,9 @@ func ParseHistorySnapshotConfig(reader enc.WireView, ignoreCritical bool) (*Hist
 type BlobFetchEncoder struct {
 	Length uint
 
-	Name_encoder spec.NameContainerEncoder
+	Name_encoder    spec.NameContainerEncoder
+	Data_subencoder []struct {
+	}
 }
 
 type BlobFetchParsingContext struct {
@@ -682,6 +684,26 @@ func (encoder *BlobFetchEncoder) Init(value *BlobFetch) {
 	if value.Name != nil {
 		encoder.Name_encoder.Init(value.Name)
 	}
+	{
+		Data_l := len(value.Data)
+		encoder.Data_subencoder = make([]struct {
+		}, Data_l)
+		for i := 0; i < Data_l; i++ {
+			pseudoEncoder := &encoder.Data_subencoder[i]
+			pseudoValue := struct {
+				Data []byte
+			}{
+				Data: value.Data[i],
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+
+				_ = encoder
+				_ = value
+			}
+		}
+	}
 
 	l := uint(0)
 	if value.Name != nil {
@@ -689,12 +711,34 @@ func (encoder *BlobFetchEncoder) Init(value *BlobFetch) {
 		l += uint(enc.TLNum(encoder.Name_encoder.Length).EncodingLength())
 		l += encoder.Name_encoder.Length
 	}
+	if value.Data != nil {
+		for seq_i, seq_v := range value.Data {
+			pseudoEncoder := &encoder.Data_subencoder[seq_i]
+			pseudoValue := struct {
+				Data []byte
+			}{
+				Data: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.Data != nil {
+					l += 3
+					l += uint(enc.TLNum(len(value.Data)).EncodingLength())
+					l += uint(len(value.Data))
+				}
+				_ = encoder
+				_ = value
+			}
+		}
+	}
 	encoder.Length = l
 
 }
 
 func (context *BlobFetchParsingContext) Init() {
 	context.Name_context.Init()
+
 }
 
 func (encoder *BlobFetchEncoder) EncodeInto(value *BlobFetch, buf []byte) {
@@ -709,6 +753,30 @@ func (encoder *BlobFetchEncoder) EncodeInto(value *BlobFetch, buf []byte) {
 		if encoder.Name_encoder.Length > 0 {
 			encoder.Name_encoder.EncodeInto(value.Name, buf[pos:])
 			pos += encoder.Name_encoder.Length
+		}
+	}
+	if value.Data != nil {
+		for seq_i, seq_v := range value.Data {
+			pseudoEncoder := &encoder.Data_subencoder[seq_i]
+			pseudoValue := struct {
+				Data []byte
+			}{
+				Data: seq_v,
+			}
+			{
+				encoder := pseudoEncoder
+				value := &pseudoValue
+				if value.Data != nil {
+					buf[pos] = 253
+					binary.BigEndian.PutUint16(buf[pos+1:], uint16(442))
+					pos += 3
+					pos += uint(enc.TLNum(len(value.Data)).EncodeInto(buf[pos:]))
+					copy(buf[pos:], value.Data)
+					pos += uint(len(value.Data))
+				}
+				_ = encoder
+				_ = value
+			}
 		}
 	}
 }
@@ -726,6 +794,7 @@ func (encoder *BlobFetchEncoder) Encode(value *BlobFetch) enc.Wire {
 func (context *BlobFetchParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*BlobFetch, error) {
 
 	var handled_Name bool = false
+	var handled_Data bool = false
 
 	progress := -1
 	_ = progress
@@ -758,6 +827,27 @@ func (context *BlobFetchParsingContext) Parse(reader enc.WireView, ignoreCritica
 					handled_Name = true
 					value.Name, err = context.Name_context.Parse(reader.Delegate(int(l)), ignoreCritical)
 				}
+			case 442:
+				if true {
+					handled = true
+					handled_Data = true
+					if value.Data == nil {
+						value.Data = make([][]byte, 0)
+					}
+					{
+						pseudoValue := struct {
+							Data []byte
+						}{}
+						{
+							value := &pseudoValue
+							value.Data = make([]byte, l)
+							_, err = reader.ReadFull(value.Data)
+							_ = value
+						}
+						value.Data = append(value.Data, pseudoValue.Data)
+					}
+					progress--
+				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
 					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
@@ -778,6 +868,9 @@ func (context *BlobFetchParsingContext) Parse(reader enc.WireView, ignoreCritica
 
 	if !handled_Name && err == nil {
 		value.Name = nil
+	}
+	if !handled_Data && err == nil {
+		// sequence - skip
 	}
 
 	if err != nil {

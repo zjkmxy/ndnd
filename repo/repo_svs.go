@@ -8,6 +8,7 @@ import (
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/ndn/svs_ps"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 )
@@ -149,30 +150,52 @@ func (r *RepoSvs) processIncomingPub(w enc.Wire) {
 		return
 	}
 
-	if cmd.BlobFetch != nil {
-		r.processBlobFetch(cmd.BlobFetch)
+	if cmd.BlobFetch != nil && cmd.BlobFetch.Name != nil {
+		r.processBlobFetch(cmd.BlobFetch.Name.Name)
+	} else if cmd.BlobFetch != nil && len(cmd.BlobFetch.Data) > 0 {
+		r.processBlobStore(cmd.BlobFetch.Data)
 	}
 }
 
 // processBlobFetch processes a BlobFetch command.
-func (r *RepoSvs) processBlobFetch(cmd *tlv.BlobFetch) {
-	if cmd.Name == nil {
-		log.Warn(r, "Received BlobFetch with missing Name")
-		return
-	}
-	if !r.cmd.Group.Name.IsPrefix(cmd.Name.Name) {
-		log.Warn(r, "Ignoring BlobFetch outside group", "name", cmd.Name.Name)
+func (r *RepoSvs) processBlobFetch(name enc.Name) {
+	if !r.cmd.Group.Name.IsPrefix(name) {
+		log.Warn(r, "Ignoring BlobFetch outside group", "name", name)
 		return
 	}
 
 	// TODO: retry fetching if failed, even across restarts
 	// TODO: do not fetch blobs that are too large
 	// TODO: do not fetch blobs that are already stored (though this shouldn't happen)
-	r.client.Consume(cmd.Name.Name, func(status ndn.ConsumeState) {
+	r.client.Consume(name, func(status ndn.ConsumeState) {
 		if status.Error() != nil {
-			log.Warn(r, "BlobFetch error", "err", status.Error(), "name", cmd.Name.Name)
+			log.Warn(r, "BlobFetch error", "err", status.Error(), "name", name)
 			return
 		}
-		log.Info(r, "BlobFetch success", "name", cmd.Name.Name)
+		log.Info(r, "BlobFetch success", "name", name)
 	})
+}
+
+// processBlobStore directly stores data from the BlobFetch command.
+func (r *RepoSvs) processBlobStore(data [][]byte) {
+	for _, w := range data {
+		data, _, err := spec.Spec{}.ReadData(enc.NewBufferView(w))
+		if err != nil {
+			log.Warn(r, "BlobFetch store failed to parse data", "err", err)
+			continue
+		}
+		name := data.Name()
+
+		if !r.cmd.Group.Name.IsPrefix(name) {
+			log.Warn(r, "Ignoring BlobFetch store outside group", "name", name)
+			continue
+		}
+
+		if err := r.client.Store().Put(name, w); err != nil {
+			log.Warn(r, "BlobFetch store failed to store data", "err", err)
+			continue
+		}
+
+		log.Debug(r, "BlobFetch store success", "name", name)
+	}
 }

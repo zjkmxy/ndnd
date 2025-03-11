@@ -43,4 +43,6 @@ type HistorySnapshotConfig struct {
 type BlobFetch struct {
 	//+field:struct:spec.NameContainer
 	Name *spec.NameContainer `tlv:"0x1B8"`
+	//+field:sequence:[]byte:binary:[]byte
+	Data [][]byte `tlv:"0x1BA"`
 }
