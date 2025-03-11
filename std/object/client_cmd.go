@@ -40,7 +40,7 @@ func (c *Client) AttachCommandHandler(
 
 				signer := c.SuggestSigner(resName)
 				if signer == nil {
-					err = fmt.Errorf("no signer found for command")
+					err = fmt.Errorf("no signer found for command: %s", resName)
 					log.Error(c, err.Error())
 					return err
 				}
@@ -66,7 +66,7 @@ func (c *Client) DetachCommandHandler(name enc.Name) error {
 func (c *Client) ExpressCommand(name enc.Name, cmd enc.Wire, callback func(enc.Wire, error)) {
 	signer := c.SuggestSigner(name)
 	if signer == nil {
-		callback(nil, fmt.Errorf("no signer found for command"))
+		callback(nil, fmt.Errorf("no signer found for command: %s", name))
 		return
 	}
 
