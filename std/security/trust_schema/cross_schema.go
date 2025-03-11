@@ -54,6 +54,7 @@ func SignCrossSchema(args SignCrossSchemaArgs) (enc.Wire, error) {
 		SigNotBefore: optional.Some(args.NotBefore),
 		SigNotAfter:  optional.Some(args.NotAfter),
 		FinalBlockID: optional.Some(segComp),
+		Freshness:    optional.Some(time.Second * 4),
 	}
 	cs, err := spec.Spec{}.MakeData(segName, cfg, args.Content.Encode(), args.Signer)
 	if err != nil {
