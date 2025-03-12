@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
+	"time"
 
 	dv_cmd "github.com/named-data/ndnd/dv/cmd"
 	dv_config "github.com/named-data/ndnd/dv/config"
@@ -59,6 +60,9 @@ func daemon(_ *cobra.Command, args []string) {
 	// yanfd does not block on start
 	yanfd := fw_cmd.NewYaNFD(config.Fw)
 	yanfd.Start()
+
+	// Give time for YanFD to start
+	time.Sleep(1 * time.Second)
 
 	// dve blocks on start, so run it in a goroutine
 	dve, err := dv_cmd.NewDvExecutor(config.Dv)
