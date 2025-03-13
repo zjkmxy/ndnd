@@ -253,7 +253,7 @@ func (c *Client) RequestCert(args RequestCertArgs) (*RequestCertResult, error) {
 
 	// ======  Step 3: NEW ==============
 	// Use the longest possible validity period
-	expiry := time.Now().Add(time.Second * time.Duration(profile.MaxValidPeriod))
+	expiry := time.Now().Add(time.Second * time.Duration(profile.MaxValidPeriod-300))
 	newRes, err := c.New(args.Challenge, expiry)
 	if err != nil {
 		return nil, err
