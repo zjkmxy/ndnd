@@ -69,7 +69,7 @@ type Client interface {
 	// [EXPERIMENTAL] DetachCommandHandler removes a signed command handler.
 	DetachCommandHandler(name enc.Name) error
 	// [EXPERIMENTAL] ExpressCommand sends a signed command to a given name.
-	ExpressCommand(name enc.Name, cmd enc.Wire, callback func(enc.Wire, error))
+	ExpressCommand(dest enc.Name, name enc.Name, cmd enc.Wire, callback func(enc.Wire, error))
 }
 
 // ProduceArgs are the arguments for the produce API.

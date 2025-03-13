@@ -63,7 +63,7 @@ func (c *Client) DetachCommandHandler(name enc.Name) error {
 	return c.engine.DetachHandler(name)
 }
 
-func (c *Client) ExpressCommand(name enc.Name, cmd enc.Wire, callback func(enc.Wire, error)) {
+func (c *Client) ExpressCommand(dest enc.Name, name enc.Name, cmd enc.Wire, callback func(enc.Wire, error)) {
 	signer := c.SuggestSigner(name)
 	if signer == nil {
 		callback(nil, fmt.Errorf("no signer found for command: %s", name))
@@ -78,7 +78,7 @@ func (c *Client) ExpressCommand(name enc.Name, cmd enc.Wire, callback func(enc.W
 	}
 
 	c.ExpressR(ndn.ExpressRArgs{
-		Name: name,
+		Name: dest,
 		Config: &ndn.InterestConfig{
 			CanBePrefix: false,
 			MustBeFresh: true,

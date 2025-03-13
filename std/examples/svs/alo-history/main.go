@@ -159,6 +159,7 @@ func main() {
 	// does not respond to the command.
 	client.ExpressCommand(
 		repoName.Append(enc.NewKeywordComponent("cmd")),
+		name.Append(enc.NewKeywordComponent("repo")),
 		(&spec_repo.RepoCmd{
 			SyncJoin: &spec_repo.SyncJoin{
 				Protocol: &spec.NameContainer{Name: spec_repo.SyncProtocolSvsV3},
