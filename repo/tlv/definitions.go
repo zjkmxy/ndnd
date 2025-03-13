@@ -31,6 +31,8 @@ type SyncJoin struct {
 	Protocol *spec.NameContainer `tlv:"0x191"`
 	//+field:struct:spec.NameContainer
 	Group *spec.NameContainer `tlv:"0x193"`
+	//+field:struct:spec.NameContainer
+	MulticastPrefix *spec.NameContainer `tlv:"0x194"`
 	//+field:struct:HistorySnapshotConfig
 	HistorySnapshot *HistorySnapshotConfig `tlv:"0x1A4"`
 }

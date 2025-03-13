@@ -52,6 +52,13 @@ func (r *RepoSvs) Start() (err error) {
 		}
 	}
 
+	// As of writing this, this is no way to get multicast without specifying
+	// a prefix (fw strategy is implemented only for prefixes)
+	var multicastPrefix enc.Name = nil
+	if r.cmd.MulticastPrefix != nil {
+		multicastPrefix = r.cmd.MulticastPrefix.Name
+	}
+
 	// Start SVS ALO
 	r.svsalo, err = ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
 		Name:         enc.Name{enc.NewKeywordComponent("repo")}, // unused
@@ -63,7 +70,8 @@ func (r *RepoSvs) Start() (err error) {
 			PeriodicTimeout:   365 * 24 * time.Hour, // basically never
 			Passive:           true,
 		},
-		Snapshot: snapshot,
+		Snapshot:        snapshot,
+		MulticastPrefix: multicastPrefix,
 	})
 	if err != nil {
 		return err

@@ -341,12 +341,14 @@ type SyncJoinEncoder struct {
 
 	Protocol_encoder        spec.NameContainerEncoder
 	Group_encoder           spec.NameContainerEncoder
+	MulticastPrefix_encoder spec.NameContainerEncoder
 	HistorySnapshot_encoder HistorySnapshotConfigEncoder
 }
 
 type SyncJoinParsingContext struct {
 	Protocol_context        spec.NameContainerParsingContext
 	Group_context           spec.NameContainerParsingContext
+	MulticastPrefix_context spec.NameContainerParsingContext
 	HistorySnapshot_context HistorySnapshotConfigParsingContext
 }
 
@@ -356,6 +358,9 @@ func (encoder *SyncJoinEncoder) Init(value *SyncJoin) {
 	}
 	if value.Group != nil {
 		encoder.Group_encoder.Init(value.Group)
+	}
+	if value.MulticastPrefix != nil {
+		encoder.MulticastPrefix_encoder.Init(value.MulticastPrefix)
 	}
 	if value.HistorySnapshot != nil {
 		encoder.HistorySnapshot_encoder.Init(value.HistorySnapshot)
@@ -372,6 +377,11 @@ func (encoder *SyncJoinEncoder) Init(value *SyncJoin) {
 		l += uint(enc.TLNum(encoder.Group_encoder.Length).EncodingLength())
 		l += encoder.Group_encoder.Length
 	}
+	if value.MulticastPrefix != nil {
+		l += 3
+		l += uint(enc.TLNum(encoder.MulticastPrefix_encoder.Length).EncodingLength())
+		l += encoder.MulticastPrefix_encoder.Length
+	}
 	if value.HistorySnapshot != nil {
 		l += 3
 		l += uint(enc.TLNum(encoder.HistorySnapshot_encoder.Length).EncodingLength())
@@ -384,6 +394,7 @@ func (encoder *SyncJoinEncoder) Init(value *SyncJoin) {
 func (context *SyncJoinParsingContext) Init() {
 	context.Protocol_context.Init()
 	context.Group_context.Init()
+	context.MulticastPrefix_context.Init()
 	context.HistorySnapshot_context.Init()
 }
 
@@ -409,6 +420,16 @@ func (encoder *SyncJoinEncoder) EncodeInto(value *SyncJoin, buf []byte) {
 		if encoder.Group_encoder.Length > 0 {
 			encoder.Group_encoder.EncodeInto(value.Group, buf[pos:])
 			pos += encoder.Group_encoder.Length
+		}
+	}
+	if value.MulticastPrefix != nil {
+		buf[pos] = 253
+		binary.BigEndian.PutUint16(buf[pos+1:], uint16(404))
+		pos += 3
+		pos += uint(enc.TLNum(encoder.MulticastPrefix_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.MulticastPrefix_encoder.Length > 0 {
+			encoder.MulticastPrefix_encoder.EncodeInto(value.MulticastPrefix, buf[pos:])
+			pos += encoder.MulticastPrefix_encoder.Length
 		}
 	}
 	if value.HistorySnapshot != nil {
@@ -437,6 +458,7 @@ func (context *SyncJoinParsingContext) Parse(reader enc.WireView, ignoreCritical
 
 	var handled_Protocol bool = false
 	var handled_Group bool = false
+	var handled_MulticastPrefix bool = false
 	var handled_HistorySnapshot bool = false
 
 	progress := -1
@@ -476,6 +498,12 @@ func (context *SyncJoinParsingContext) Parse(reader enc.WireView, ignoreCritical
 					handled_Group = true
 					value.Group, err = context.Group_context.Parse(reader.Delegate(int(l)), ignoreCritical)
 				}
+			case 404:
+				if true {
+					handled = true
+					handled_MulticastPrefix = true
+					value.MulticastPrefix, err = context.MulticastPrefix_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
 			case 420:
 				if true {
 					handled = true
@@ -505,6 +533,9 @@ func (context *SyncJoinParsingContext) Parse(reader enc.WireView, ignoreCritical
 	}
 	if !handled_Group && err == nil {
 		value.Group = nil
+	}
+	if !handled_MulticastPrefix && err == nil {
+		value.MulticastPrefix = nil
 	}
 	if !handled_HistorySnapshot && err == nil {
 		value.HistorySnapshot = nil
