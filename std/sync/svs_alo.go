@@ -98,10 +98,10 @@ func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 	}
 
 	// Initialize the underlying SVS instance
-	if opts.Svs.BootTime == 0 {
+	if s.opts.Svs.BootTime == 0 {
 		// This is actually done by the SVS instance itself, but we need
 		// it to tell the SyncDataName to SVS ...
-		opts.Svs.BootTime = uint64(time.Now().Unix())
+		s.opts.Svs.BootTime = uint64(time.Now().Unix())
 	}
 	s.opts.Svs.GroupPrefix = s.GroupPrefix().Append(enc.NewKeywordComponent("svs"))
 	s.opts.Svs.SyncDataName = s.DataPrefix().Append(enc.NewKeywordComponent("svs"))
