@@ -52,6 +52,12 @@ type SvSyncOpts struct {
 	// Callback for SVSync updates
 	OnUpdate func(SvSyncUpdate)
 
+	// Name of this instance for security
+	// This name will be used directly for the Sync Data name;
+	// only a version component will be appended.
+	// If not provided, the GroupPrefix will be used instead.
+	SyncDataName enc.Name
+
 	// Initial state vector from persistence
 	InitialState *spec_svs.StateVector
 	// Boot time from persistence
@@ -110,6 +116,9 @@ func NewSvSync(opts SvSyncOpts) *SvSync {
 	}
 	if opts.SuppressionPeriod == 0 {
 		opts.SuppressionPeriod = 200 * time.Millisecond
+	}
+	if len(opts.SyncDataName) == 0 {
+		opts.SyncDataName = opts.GroupPrefix
 	}
 
 	return &SvSync{
@@ -447,7 +456,7 @@ func (s *SvSync) encodeSyncData() enc.Wire {
 	svWire := (&spec_svs.SvsData{StateVector: sv}).Encode()
 
 	// SVS v3 Sync Data
-	name := s.prefix
+	name := s.o.SyncDataName.WithVersion(enc.VersionUnixMicro)
 
 	// Sign Sync Data
 	signer := s.o.Client.SuggestSigner(name)

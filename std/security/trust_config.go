@@ -27,6 +27,14 @@ type TrustConfig struct {
 	// certCache is the certificate memcache.
 	// Everything in here is validated, fresh and passes the schema.
 	certCache *CertCache
+
+	// UseDataNameFwHint enables using the data name as the forwarding hint.
+	// This flag is useful depending on application naming structure.
+	//
+	// When a Data is being verified, every certificate in the chain
+	// will be fetched by attaching the original Data name as the
+	// forwarding hint to the Interest.
+	UseDataNameFwHint bool
 }
 
 // NewTrustConfig creates a new TrustConfig.
@@ -94,6 +102,9 @@ type TrustConfigValidateArgs struct {
 	// OverrideName is an override for the data name (advanced usage).
 	OverrideName enc.Name
 
+	// origDataName is the original data name being verified.
+	origDataName enc.Name
+
 	// cert is the certificate to use for validation.
 	// The caller is responsible for checking the expiry of the cert.
 	cert ndn.Data
@@ -121,6 +132,11 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 	if len(args.DataSigCov) == 0 {
 		args.Callback(false, fmt.Errorf("data sig covered is nil"))
 		return
+	}
+
+	if args.origDataName == nil {
+		// Always use original name here, not the override name
+		args.origDataName = args.Data.Name()
 	}
 
 	// Prevent infinite recursion for signer loops
@@ -254,6 +270,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 			Fetch:        args.Fetch,
 			Callback:     args.Callback,
 			OverrideName: nil,
+			origDataName: args.origDataName,
 
 			cert:        nil,
 			certSigCov:  nil,
@@ -286,10 +303,17 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		return
 	}
 
+	// Attach forwarding hint if needed
+	var fwHint []enc.Name = nil
+	if tc.UseDataNameFwHint {
+		fwHint = []enc.Name{args.origDataName}
+	}
+
 	// Cert not found, attempt to fetch from network
 	args.Fetch(keyLocator, &ndn.InterestConfig{
-		CanBePrefix: true,
-		MustBeFresh: true,
+		CanBePrefix:    true,
+		MustBeFresh:    true,
+		ForwardingHint: fwHint,
 	}, func(res ndn.ExpressCallbackArgs) {
 		if res.Error == nil && res.Result != ndn.InterestResultData {
 			res.Error = fmt.Errorf("failed to fetch certificate (%s) with result: %s", keyLocator, res.Result)

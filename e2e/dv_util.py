@@ -37,8 +37,8 @@ def is_converged(nodes: list[Node], network=DEFAULT_NETWORK, use_nfdc=False) -> 
         else:
             routes = node.cmd('ndnd fw route-list')
         for other in nodes:
-            if f'{network}/{other.name}/32=DV' not in routes:
-                info(f'Routing not converged on {node.name}\n')
+            if f'{network}/{other.name}' not in routes:
+                info(f'Routing not converged on {node.name} for {other.name}\n')
                 converged = False
                 break # break out of inner loop
         if not converged:

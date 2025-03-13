@@ -91,6 +91,9 @@ func NewRouter(config *config.Config, engine ndn.Engine) (*Router, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// Attach data name as forwarding hint to cert Interests
+		trust.UseDataNameFwHint = true
 	}
 
 	// Create the DV router
@@ -240,7 +243,6 @@ func (dv *Router) register() (err error) {
 	pfxs := []enc.Name{
 		dv.config.AdvertisementSyncPrefix(),
 		dv.config.AdvertisementDataPrefix(),
-		dv.config.RouterGenericPrefix(),
 		dv.pfxSvs.SyncPrefix(),
 		dv.pfxSvs.DataPrefix(),
 		dv.config.MgmtPrefix(),

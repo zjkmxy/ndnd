@@ -124,11 +124,6 @@ func (dv *Router) updateFib() {
 		// Get FIB entry to reach this router
 		fes := dv.rib.GetFibEntries(dv.neighbors, hash)
 
-		// Add entry to the router's generic prefix (e.g. to fetch certificates)
-		groute := router.Name().
-			Append(enc.NewKeywordComponent("DV"))
-		register(groute, fes, 0)
-
 		// Add entry for the router's prefix sync group prefix
 		proute := dv.config.PrefixTableGroupPrefix().
 			Append(router.Name()...)

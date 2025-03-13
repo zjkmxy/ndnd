@@ -2,6 +2,7 @@ package sync
 
 import (
 	gosync "sync"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
@@ -97,7 +98,14 @@ func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 	}
 
 	// Initialize the underlying SVS instance
+	if opts.Svs.BootTime == 0 {
+		// This is actually done by the SVS instance itself, but we need
+		// it to tell the SyncDataName to SVS ...
+		opts.Svs.BootTime = uint64(time.Now().Unix())
+	}
 	s.opts.Svs.GroupPrefix = s.opts.Svs.GroupPrefix.
+		Append(enc.NewKeywordComponent("svs"))
+	s.opts.Svs.SyncDataName = s.DataPrefix().
 		Append(enc.NewKeywordComponent("svs"))
 	s.svs = NewSvSync(s.opts.Svs)
 
@@ -130,11 +138,6 @@ func (s *SvsALO) String() string {
 	return "svs-alo"
 }
 
-// BootTime returns the boot time of the instance.
-func (s *SvsALO) BootTime() uint64 {
-	return s.svs.GetBootTime()
-}
-
 // GroupPrefix is the group prefix for this instance.
 func (s *SvsALO) GroupPrefix() enc.Name {
 	return s.group
@@ -150,6 +153,11 @@ func (s *SvsALO) DataPrefix() enc.Name {
 	return s.GroupPrefix().
 		Append(s.opts.Name...).
 		Append(enc.NewTimestampComponent(s.BootTime()))
+}
+
+// BootTime returns the boot time of the instance.
+func (s *SvsALO) BootTime() uint64 {
+	return s.opts.Svs.BootTime
 }
 
 // Start starts the SvsALO instance.

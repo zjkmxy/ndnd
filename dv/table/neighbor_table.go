@@ -142,16 +142,6 @@ func (ns *NeighborState) localRoute() enc.Name {
 		Append(enc.NewKeywordComponent("DV"))
 }
 
-// We register the cert route for neighbors explicitly because the
-// generic route is managed by the FIB update, so we don't want conflicts.
-// We need the certs for advertisement verification, so this needs to
-// happen before the FIB update.
-func (ns *NeighborState) certRoute() enc.Name {
-	return ns.Name.
-		Append(enc.NewKeywordComponent("DV")).
-		Append(enc.NewGenericComponent("KEY"))
-}
-
 // Register route to this neighbor
 func (ns *NeighborState) routeRegister(faceId uint64) {
 	ns.faceId = faceId
@@ -172,8 +162,6 @@ func (ns *NeighborState) routeRegister(faceId uint64) {
 
 	// For fetching advertisements from neighbor
 	register(ns.localRoute())
-	// For fetching certificates from neighbor
-	register(ns.certRoute())
 	// Passive advertisement sync to neighbor
 	register(ns.nt.config.AdvertisementSyncPassivePrefix())
 	// For prefix table sync group
@@ -202,7 +190,6 @@ func (ns *NeighborState) routeUnregister() {
 
 	// Always remove local data routes to neighbor
 	unregister(ns.localRoute())
-	unregister(ns.certRoute())
 
 	// If there are multiple neighbors on this face, we do not
 	// want to unregister the global routes to the face.

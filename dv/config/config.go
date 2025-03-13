@@ -54,8 +54,6 @@ type Config struct {
 	advSyncPassivePfxN enc.Name
 	// Advertisement Data Prefix
 	advDataPfxN enc.Name
-	// Universal router data prefix
-	routerGenericPfxN enc.Name
 	// Prefix Table Sync Prefix
 	pfxSyncGroupPfxN enc.Name
 	// NLSR readvertise prefix
@@ -152,10 +150,6 @@ func (c *Config) Parse() (err error) {
 		Append(enc.NewKeywordComponent("DV")).
 		Append(enc.NewKeywordComponent("ADV"))
 
-	// Generic router prefix for serving certificates etc.
-	c.routerGenericPfxN = c.routerNameN.
-		Append(enc.NewKeywordComponent("DV"))
-
 	// Prefix table sync prefix
 	c.pfxSyncGroupPfxN = c.networkNameN.
 		Append(enc.NewKeywordComponent("DV")).
@@ -190,10 +184,6 @@ func (c *Config) AdvertisementSyncPassivePrefix() enc.Name {
 
 func (c *Config) AdvertisementDataPrefix() enc.Name {
 	return c.advDataPfxN
-}
-
-func (c *Config) RouterGenericPrefix() enc.Name {
-	return c.routerGenericPfxN
 }
 
 func (c *Config) PrefixTableGroupPrefix() enc.Name {
