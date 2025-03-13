@@ -36,8 +36,8 @@ func (c *Client) WithdrawPrefix(name enc.Name, onError func(error)) {
 
 func (c *Client) announcePrefix_(args ndn.Announcement) {
 	announceMutex.Lock()
-	defer announceMutex.Unlock()
 	time.Sleep(1 * time.Millisecond) // thanks NFD
+	announceMutex.Unlock()
 
 	origin := optional.None[uint64]()
 	if args.Expose {
@@ -61,8 +61,8 @@ func (c *Client) announcePrefix_(args ndn.Announcement) {
 
 func (c *Client) withdrawPrefix_(args ndn.Announcement, onError func(error)) {
 	announceMutex.Lock()
-	defer announceMutex.Unlock()
 	time.Sleep(1 * time.Millisecond) // thanks NFD
+	announceMutex.Unlock()
 
 	origin := optional.None[uint64]()
 	if args.Expose {
