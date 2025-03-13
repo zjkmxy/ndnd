@@ -103,10 +103,8 @@ func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 		// it to tell the SyncDataName to SVS ...
 		opts.Svs.BootTime = uint64(time.Now().Unix())
 	}
-	s.opts.Svs.GroupPrefix = s.opts.Svs.GroupPrefix.
-		Append(enc.NewKeywordComponent("svs"))
-	s.opts.Svs.SyncDataName = s.DataPrefix().
-		Append(enc.NewKeywordComponent("svs"))
+	s.opts.Svs.GroupPrefix = s.GroupPrefix().Append(enc.NewKeywordComponent("svs"))
+	s.opts.Svs.SyncDataName = s.DataPrefix().Append(enc.NewKeywordComponent("svs"))
 	s.svs = NewSvSync(s.opts.Svs)
 
 	// Initialize the state vector with our own state.
