@@ -1,12 +1,17 @@
 package object
 
 import (
+	"sync"
+	"time"
+
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/mgmt_2022"
 	"github.com/named-data/ndnd/std/types/optional"
 )
+
+var announceMutex sync.Mutex
 
 func (c *Client) AnnouncePrefix(args ndn.Announcement) {
 	hash := args.Name.TlvStr()
@@ -30,6 +35,10 @@ func (c *Client) WithdrawPrefix(name enc.Name, onError func(error)) {
 }
 
 func (c *Client) announcePrefix_(args ndn.Announcement) {
+	announceMutex.Lock()
+	defer announceMutex.Unlock()
+	time.Sleep(1 * time.Millisecond) // thanks NFD
+
 	origin := optional.None[uint64]()
 	if args.Expose {
 		origin = optional.Some(uint64(mgmt_2022.RouteOriginClient))
@@ -51,6 +60,10 @@ func (c *Client) announcePrefix_(args ndn.Announcement) {
 }
 
 func (c *Client) withdrawPrefix_(args ndn.Announcement, onError func(error)) {
+	announceMutex.Lock()
+	defer announceMutex.Unlock()
+	time.Sleep(1 * time.Millisecond) // thanks NFD
+
 	origin := optional.None[uint64]()
 	if args.Expose {
 		origin = optional.Some(uint64(mgmt_2022.RouteOriginClient))

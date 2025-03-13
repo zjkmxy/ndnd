@@ -112,6 +112,16 @@ func (r *RepoSvs) Start() (err error) {
 		OnError: nil, // TODO
 	})
 
+	// If multicast prefix is specified, we need to announce sync prefix separately
+	if multicastPrefix != nil {
+		r.client.AnnouncePrefix(ndn.Announcement{
+			Name:    r.svsalo.SyncPrefix(),
+			Cost:    1000,
+			Expose:  true,
+			OnError: nil, // TODO
+		})
+	}
+
 	// Start SVS ALO
 	if err = r.svsalo.Start(); err != nil {
 		return err
@@ -128,6 +138,11 @@ func (r *RepoSvs) Stop() (err error) {
 
 	// Withdraw group prefix.
 	r.client.WithdrawPrefix(r.svsalo.GroupPrefix(), nil)
+
+	// Withdraw multicast prefix.
+	if r.cmd.MulticastPrefix != nil {
+		r.client.WithdrawPrefix(r.cmd.MulticastPrefix.Name, nil)
+	}
 
 	// Stop SVS ALO
 	if err = r.svsalo.Stop(); err != nil {
