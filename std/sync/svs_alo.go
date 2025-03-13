@@ -56,6 +56,9 @@ type SvsAloOpts struct {
 	// MaxPipelineSize is the number of objects to fetch
 	// concurrently for a single publisher (default 10)
 	MaxPipelineSize uint64
+
+	// MulticastPrefix is a prefix to prepend to Sync Interests
+	MulticastPrefix enc.Name
 }
 
 // NewSvsALO creates a new SvsALO instance.
@@ -97,14 +100,23 @@ func NewSvsALO(opts SvsAloOpts) (*SvsALO, error) {
 		}
 	}
 
-	// Initialize the underlying SVS instance
+	// Configure SVS options
 	if s.opts.Svs.BootTime == 0 {
 		// This is actually done by the SVS instance itself, but we need
 		// it to tell the SyncDataName to SVS ...
 		s.opts.Svs.BootTime = uint64(time.Now().Unix())
 	}
+
+	// Svs.GroupPrefix is actually the Sync prefix
 	s.opts.Svs.GroupPrefix = s.GroupPrefix().Append(enc.NewKeywordComponent("svs"))
+	if s.opts.MulticastPrefix != nil {
+		s.opts.Svs.GroupPrefix = s.opts.MulticastPrefix.Append(s.opts.Svs.GroupPrefix...)
+	}
+
+	// SyncDataName is the name of the SVS data (for security)
 	s.opts.Svs.SyncDataName = s.DataPrefix().Append(enc.NewKeywordComponent("svs"))
+
+	// Initialize the underlying SVS instance
 	s.svs = NewSvSync(s.opts.Svs)
 
 	// Initialize the state vector with our own state.
