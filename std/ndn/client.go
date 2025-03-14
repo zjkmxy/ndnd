@@ -159,6 +159,8 @@ type ValidateExtArgs struct {
 	OverrideName enc.Name
 	// Next Hop ID to use for fetching certificates.
 	CertNextHop optional.Optional[uint64]
+	// UseDataNameFwHint overrides trust config option.
+	UseDataNameFwHint optional.Optional[bool]
 }
 
 // Announcement are the arguments for the announce prefix API.

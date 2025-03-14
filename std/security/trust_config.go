@@ -10,6 +10,7 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/security/trust_schema"
+	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/named-data/ndnd/std/utils"
 )
 
@@ -97,6 +98,8 @@ type TrustConfigValidateArgs struct {
 	// Fetch is the fetch function to use for fetching certificates.
 	// The fetcher MUST check the store for the certificate before fetching.
 	Fetch func(enc.Name, *ndn.InterestConfig, ndn.ExpressCallbackFunc)
+	// UseDataNameFwHint overrides trust config option.
+	UseDataNameFwHint optional.Optional[bool]
 	// Callback is the callback to call when validation is done.
 	Callback func(bool, error)
 	// OverrideName is an override for the data name (advanced usage).
@@ -305,7 +308,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 
 	// Attach forwarding hint if needed
 	var fwHint []enc.Name = nil
-	if tc.UseDataNameFwHint {
+	if args.UseDataNameFwHint.GetOr(tc.UseDataNameFwHint) {
 		fwHint = []enc.Name{args.origDataName}
 	}
 
