@@ -170,6 +170,11 @@ func (s *SvsALO) BootTime() uint64 {
 	return s.opts.Svs.BootTime
 }
 
+// SeqNo returns the current sequence number of the instance.
+func (s *SvsALO) SeqNo() uint64 {
+	return s.svs.GetSeqNo(s.opts.Name)
+}
+
 // Start starts the SvsALO instance.
 func (s *SvsALO) Start() error {
 	if err := s.svs.Start(); err != nil {
