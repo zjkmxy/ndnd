@@ -7,7 +7,7 @@ require (
 	github.com/goccy/go-yaml v1.17.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/mattn/go-sqlite3 v1.14.28
-	github.com/quic-go/quic-go v0.43.0 // No upgrade
+	github.com/quic-go/quic-go v0.51.0
 	github.com/quic-go/webtransport-go v0.8.0
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
@@ -35,3 +35,5 @@ require (
 	golang.org/x/text v0.24.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/quic-go/webtransport-go v0.8.0 => github.com/zjkmxy/webtransport-go-patch v0.8.1
