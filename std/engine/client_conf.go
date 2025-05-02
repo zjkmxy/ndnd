@@ -3,8 +3,8 @@ package engine
 import (
 	"bufio"
 	"os"
-	"strings"
 	"runtime"
+	"strings"
 )
 
 type ClientConfig struct {
