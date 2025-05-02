@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"strings"
+	"runtime"
 )
 
 type ClientConfig struct {
@@ -12,8 +13,12 @@ type ClientConfig struct {
 
 func GetClientConfig() ClientConfig {
 	// Default configuration
+	transportUri := "unix:///run/nfd/nfd.sock"
+	if runtime.GOOS == "darwin" {
+		transportUri = "unix:///var/run/nfd/nfd.sock"
+	}
 	config := ClientConfig{
-		TransportUri: "unix:///run/nfd/nfd.sock",
+		TransportUri: transportUri,
 	}
 
 	// Order of increasing priority
