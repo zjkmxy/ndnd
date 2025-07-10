@@ -41,17 +41,22 @@ func sname(n string) enc.Name {
 }
 
 // Helper to sign a certificate
-func signCert(signer ndn.Signer, wire enc.Wire) (enc.Wire, ndn.Data) {
+type SignCertOptions struct {
+	NotBefore time.Time
+	NotAfter  time.Time
+}
+
+func signCert(signer ndn.Signer, wire enc.Wire, opts SignCertOptions) (enc.Wire, ndn.Data, enc.Wire) {
 	data, _, _ := spec.Spec{}.ReadData(enc.NewWireView(wire))
 	cert, _ := sec.SignCert(sec.SignCertArgs{
 		Signer:    signer,
 		Data:      data,
 		IssuerId:  enc.NewGenericComponent("ndn"),
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Hour),
+		NotBefore: opts.NotBefore,
+		NotAfter:  opts.NotAfter,
 	})
-	certData, _, _ := spec.Spec{}.ReadData(enc.NewWireView(cert))
-	return cert, certData
+	certData, sigCovered, _ := spec.Spec{}.ReadData(enc.NewWireView(cert))
+	return cert, certData, sigCovered
 }
 
 // Current test items
@@ -82,6 +87,22 @@ func validateSyncWithCross(name string, signer ndn.Signer, crossSchema enc.Wire)
 		Fetch:      fetchFun,
 		Callback: func(valid bool, err error) {
 			tcTestT.Log("Validation", name, valid, err)
+			ch <- valid
+			close(ch)
+		},
+	})
+	return <-ch
+}
+
+// Helper to validate certificates
+func validateCerts(certData ndn.Data, certDataSigCov enc.Wire) bool {
+	ch := make(chan bool)
+	go tcTestTrustConfig.Validate(sec.TrustConfigValidateArgs{
+		Data:       certData,
+		DataSigCov: certDataSigCov,
+		Fetch:      fetchFun,
+		Callback: func(valid bool, err error) {
+			tcTestT.Log("Validation", valid, err)
 			ch <- valid
 			close(ch)
 		},
@@ -132,23 +153,26 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 	tcTestT = t
 	network := tcTestNetwork
 	keychain := tcTestKeyChain
-
+	opts := SignCertOptions{
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour),
+	}
 	// ------------- Keys and certs -------------
 	// Root key
 	rootSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	rootCertWire, rootCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(rootSigner)))
+	rootCertWire, rootCertData, _ := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(rootSigner)), opts)
 	network[rootCertData.Name().String()] = rootCertWire
 	keychain.InsertCert(rootCertWire.Join())
 
 	// Second root key
 	root2Signer, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	root2CertWire, root2CertData := signCert(root2Signer, tu.NoErr(signer.MarshalSecret(root2Signer)))
+	root2CertWire, root2CertData, _ := signCert(root2Signer, tu.NoErr(signer.MarshalSecret(root2Signer)), opts)
 	network[root2CertData.Name().String()] = root2CertWire
 	keychain.InsertCert(root2CertWire.Join())
 
 	// Alice key (us)
 	aliceSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
-	aliceCertWire, aliceCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(aliceSigner)))
+	aliceCertWire, aliceCertData, _ := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(aliceSigner)), opts)
 	network[aliceCertData.Name().String()] = aliceCertWire
 	keychain.InsertCert(aliceCertWire.Join())
 	keychain.InsertKey(aliceSigner)
@@ -159,20 +183,20 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 
 	// Alice admin key
 	aliceAdminSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/admin/alice")))
-	aliceAdminCertWire, aliceAdminCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(aliceAdminSigner)))
+	aliceAdminCertWire, aliceAdminCertData, _ := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(aliceAdminSigner)), opts)
 	network[aliceAdminCertData.Name().String()] = aliceAdminCertWire
 	keychain.InsertCert(aliceAdminCertWire.Join())
 	keychain.InsertKey(aliceAdminSigner)
 
 	// Bob key
 	bobSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/bob")))
-	bobCertWire, bobCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(bobSigner)))
+	bobCertWire, bobCertData, _ := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(bobSigner)), opts)
 	network[bobCertData.Name().String()] = bobCertWire
 	// Bob is not present in the keychain
 
 	// Cathy key (also us)
 	cathySigner, _ := signer.KeygenEcc(sec.MakeKeyName(sname("/test/cathy")), elliptic.P384())
-	cathyCertWire, cathyCertData := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(cathySigner)))
+	cathyCertWire, cathyCertData, _ := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(cathySigner)), opts)
 	network[cathyCertData.Name().String()] = cathyCertWire
 	keychain.InsertCert(cathyCertWire.Join())
 	keychain.InsertKey(cathySigner)
@@ -183,7 +207,7 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 
 	// Fred's key is signed with the second root
 	fredSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/fred")))
-	fredCertBytes, fredCertData := signCert(root2Signer, tu.NoErr(signer.MarshalSecret(fredSigner)))
+	fredCertBytes, fredCertData, _ := signCert(root2Signer, tu.NoErr(signer.MarshalSecret(fredSigner)), opts)
 	network[fredCertData.Name().String()] = fredCertBytes
 	// Fred is not present in the keychain
 	// -----------------------------------
@@ -191,32 +215,32 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 	// ------------- Mallory -------------
 	// Mallory root key 1 (different key name from real root)
 	malloryRootSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test")))
-	malloryRootCertWire, malloryRootCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(malloryRootSigner)))
+	malloryRootCertWire, malloryRootCertData, _ := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(malloryRootSigner)), opts)
 	network[malloryRootCertData.Name().String()] = malloryRootCertWire
 
 	// Mallory root key 2 (same key name as real root)
 	malloryRoot2Signer, _ := signer.KeygenEd25519(rootSigner.KeyName())
-	malloryRoot2CertWire, malloryRoot2CertData := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(malloryRoot2Signer)))
+	malloryRoot2CertWire, malloryRoot2CertData, _ := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(malloryRoot2Signer)), opts)
 	network[malloryRoot2CertData.Name().String()] = malloryRoot2CertWire
 
 	// Mallory key (mallory root 1)
 	mallorySigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/mallory")))
-	malloryCertWire, malloryCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(mallorySigner)))
+	malloryCertWire, malloryCertData, _ := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(mallorySigner)), opts)
 	network[malloryCertData.Name().String()] = malloryCertWire
 
 	// Mallory key (mallory root 2)
 	mallory2Signer, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/mallory")))
-	mallory2CertWire, mallory2CertData := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(mallory2Signer)))
+	mallory2CertWire, mallory2CertData, _ := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(mallory2Signer)), opts)
 	network[mallory2CertData.Name().String()] = mallory2CertWire
 
 	// Mallory Alice key (mallory root 1)
 	mAliceSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
-	mAliceCertWire, mAliceCertData := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(mAliceSigner)))
+	mAliceCertWire, mAliceCertData, _ := signCert(malloryRootSigner, tu.NoErr(signer.MarshalSecret(mAliceSigner)), opts)
 	network[mAliceCertData.Name().String()] = mAliceCertWire
 
 	// Mallory Alice key (mallory root 2)
 	mAlice2Signer, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/alice")))
-	mAlice2CertWire, mAlice2CertData := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(mAlice2Signer)))
+	mAlice2CertWire, mAlice2CertData, _ := signCert(malloryRoot2Signer, tu.NoErr(signer.MarshalSecret(mAlice2Signer)), opts)
 	network[mAlice2CertData.Name().String()] = mAlice2CertWire
 	// -----------------------------------
 
@@ -440,6 +464,17 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 
 	// This cross schema should not be accepted
 	require.False(t, validateSyncWithCross("/test/alice/app/test/bob/data1", bobSigner, bobMCross))
+
+	// ------------- Eve (certifcates only) -------------
+	expiredOpts := SignCertOptions{
+		NotBefore: time.Now().Add(-2 * time.Hour), // 2 hours ago
+		NotAfter:  time.Now().Add(-1 * time.Hour), // 1 hour ago
+	}
+	eveSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/eve")))
+	_, eveExpiredCertData, exeExpiredSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), expiredOpts)
+	_, eveCertData, exeSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), opts)
+	require.True(t, validateCerts(eveCertData, exeSigCov))
+	require.False(t, validateCerts(eveExpiredCertData, exeExpiredSigCov))
 }
 
 func TestTrustConfigLvs(t *testing.T) {
