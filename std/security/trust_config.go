@@ -159,6 +159,14 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		return
 	}
 
+	// Bail if the data is a cert and is not fresh
+	if t, ok := args.Data.ContentType().Get(); ok && t == ndn.ContentTypeKey {
+		if CertIsExpired(args.Data) {
+			args.Callback(false, fmt.Errorf("certificate is expired: %s", args.Data.Name()))
+			return
+		}
+	}
+
 	// Get the key locator
 	keyLocator := signature.KeyName()
 	if len(keyLocator) == 0 {
