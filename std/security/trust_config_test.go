@@ -15,6 +15,7 @@ import (
 	"github.com/named-data/ndnd/std/security/keychain"
 	"github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/security/trust_schema"
+	"github.com/named-data/ndnd/std/types/optional"
 	tu "github.com/named-data/ndnd/std/utils/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -66,17 +67,19 @@ var tcTestNetwork map[string]enc.Wire = make(map[string]enc.Wire)
 var tcTestKeyChain ndn.KeyChain = nil
 var tcTestFetchCount int = 0
 
-// Helper to validate a packet synchronously
-func validateSync(name string, signer ndn.Signer) bool {
-	return validateSyncWithCross(name, signer, nil)
+type ValidateSyncOptions struct {
+	name           string
+	signer         ndn.Signer
+	crossSchema    enc.Wire
+	ignoreValidity bool
 }
 
-// Helper to validate with cross schema
-func validateSyncWithCross(name string, signer ndn.Signer, crossSchema enc.Wire) bool {
+// Helper to validate a packet synchronously
+func validateSync(opts ValidateSyncOptions) bool {
 	content := enc.Wire{[]byte{0x01, 0x02, 0x03}}
-	dataW, err := spec.Spec{}.MakeData(sname(name), &ndn.DataConfig{
-		CrossSchema: crossSchema,
-	}, content, signer)
+	dataW, err := spec.Spec{}.MakeData(sname(opts.name), &ndn.DataConfig{
+		CrossSchema: opts.crossSchema,
+	}, content, opts.signer)
 	require.NoError(tcTestT, err)
 	data, sigCov, err := spec.Spec{}.ReadData(enc.NewWireView(dataW.Wire))
 	require.NoError(tcTestT, err)
@@ -86,16 +89,17 @@ func validateSyncWithCross(name string, signer ndn.Signer, crossSchema enc.Wire)
 		DataSigCov: sigCov,
 		Fetch:      fetchFun,
 		Callback: func(valid bool, err error) {
-			tcTestT.Log("Validation", name, valid, err)
+			tcTestT.Log("Validation", opts.name, valid, err)
 			ch <- valid
 			close(ch)
 		},
+		IgnoreValidity: optional.Some(opts.ignoreValidity),
 	})
 	return <-ch
 }
 
 // Helper to validate certificates
-func validateCerts(certData ndn.Data, certDataSigCov enc.Wire) bool {
+func validateCerts(certData ndn.Data, certDataSigCov enc.Wire, ignoreValidity bool) bool {
 	ch := make(chan bool)
 	go tcTestTrustConfig.Validate(sec.TrustConfigValidateArgs{
 		Data:       certData,
@@ -106,6 +110,7 @@ func validateCerts(certData ndn.Data, certDataSigCov enc.Wire) bool {
 			ch <- valid
 			close(ch)
 		},
+		IgnoreValidity: optional.Some(ignoreValidity),
 	})
 	return <-ch
 }
@@ -265,13 +270,25 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 
 	// Signing with correct keys
 	tcTestFetchCount = 0
-	require.True(t, validateSync("/test/alice/data1", aliceSigner))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data1",
+		signer: aliceSigner,
+	}))
 	require.Equal(t, 0, tcTestFetchCount) // have all certificates
-	require.True(t, validateSync("/test/bob/data1", bobSigner))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:   "/test/bob/data1",
+		signer: bobSigner,
+	}))
 	require.Equal(t, 1, tcTestFetchCount) // fetch bob's certificate
-	require.True(t, validateSync("/test/bob/data2", bobSigner))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:   "/test/bob/data2",
+		signer: bobSigner,
+	}))
 	require.Equal(t, 1, tcTestFetchCount) // cert in cache
-	require.True(t, validateSync("/test/cathy/data1", cathySigner))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:   "/test/cathy/data1",
+		signer: cathySigner,
+	}))
 	require.Equal(t, 1, tcTestFetchCount) // have all certificates
 
 	// Make sure that bob's cert was inserted into the store
@@ -280,61 +297,130 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 	}
 
 	// Signing with admin key
-	require.True(t, validateSync("/test/admin/alice/data1", aliceAdminSigner))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:   "/test/admin/alice/data1",
+		signer: aliceAdminSigner,
+	}))
 
 	// Invalid signer (different key)
-	require.False(t, validateSync("/test/alice/data1", aliceInvalidSigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data1",
+		signer: aliceInvalidSigner,
+	}))
 
 	// Sign with cert that cannot be fetched
 	tcTestFetchCount = 0
-	require.False(t, validateSync("/test/david/data1", davidSigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/david/data1",
+		signer: davidSigner,
+	}))
 	require.Equal(t, 1, tcTestFetchCount) // fetch david's certificate
 
 	// Test multiple root certificates
 	tcTestFetchCount = 0
-	require.True(t, validateSync("/test/fred/data1", fredSigner))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:   "/test/fred/data1",
+		signer: fredSigner,
+	}))
 	require.Equal(t, 1, tcTestFetchCount) // fetch fred's certificate
 
 	// Sign with incorrect key
-	require.False(t, validateSync("/test/alice/data1", bobSigner))
-	require.False(t, validateSync("/test/alice/data1", aliceAdminSigner))
-	require.False(t, validateSync("/test/admin/alice/data1", aliceSigner))
-	require.False(t, validateSync("/test/bob/data1", aliceSigner))
-	require.False(t, validateSync("/test/admin/bob/data1", aliceAdminSigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data1",
+		signer: bobSigner,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data1",
+		signer: aliceAdminSigner,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/admin/alice/data1",
+		signer: aliceSigner,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/bob/data1",
+		signer: aliceSigner,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/admin/bob/data1",
+		signer: aliceAdminSigner,
+	}))
 
 	// Sign with incorrect naming
-	require.False(t, validateSync("/test/alice/data1/extra", aliceSigner))
-	require.False(t, validateSync("/test/bob", bobSigner))
-	require.False(t, validateSync("/hello/alice/data1", aliceSigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data1/extra",
+		signer: aliceSigner,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/bob",
+		signer: bobSigner,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/hello/alice/data1",
+		signer: aliceSigner,
+	}))
 
 	// Sign with root certificate
-	require.False(t, validateSync("/test/alice/data1", rootSigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data1",
+		signer: rootSigner,
+	}))
 
 	// Sign with mallory's malicious keys (root 1)
 	tcTestFetchCount = 0
-	require.False(t, validateSync("/test/alice/data3", mAliceSigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data3",
+		signer: mAliceSigner,
+	}))
 	require.Equal(t, 2, tcTestFetchCount) // fetch 2x mallory certs
-	require.False(t, validateSync("/test/alice/data4", mAliceSigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data4",
+		signer: mAliceSigner,
+	}))
 	require.Equal(t, 4, tcTestFetchCount) // invalid cert not in store
-	require.False(t, validateSync("/test/alice/data3", malloryRootSigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data3",
+		signer: malloryRootSigner,
+	}))
 	require.Equal(t, 5, tcTestFetchCount) // fetch 1x mallory cert
-	require.False(t, validateSync("/test/alice/data/extra", mallorySigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data/extra",
+		signer: mallorySigner,
+	}))
 	require.Equal(t, 6, tcTestFetchCount) // don't bother fetching mallory root because of schema miss
-	require.False(t, validateSync("/test/mallory/data4", mallorySigner))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/mallory/data4",
+		signer: mallorySigner,
+	}))
 	require.Equal(t, 8, tcTestFetchCount) // schema hit, fetch 2x mallory certs
 
 	// Sign with mallory's malicious keys (root 2)
 	// In this case the root certificate name is the same, so that cert should not be fetched
 	tcTestFetchCount = 0
-	require.False(t, validateSync("/test/alice/data3", mAlice2Signer))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data3",
+		signer: mAlice2Signer,
+	}))
 	require.Equal(t, 1, tcTestFetchCount) // fetch mallory's alice cert
-	require.False(t, validateSync("/test/alice/data4", mAlice2Signer))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data4",
+		signer: mAlice2Signer,
+	}))
 	require.Equal(t, 2, tcTestFetchCount) // invalid cert not in store
-	require.False(t, validateSync("/test/alice/data3", malloryRoot2Signer))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data3",
+		signer: malloryRoot2Signer,
+	}))
 	require.Equal(t, 2, tcTestFetchCount) // nothing fetched, root cert is in store
-	require.False(t, validateSync("/test/alice/data/extra", mallory2Signer))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/data/extra",
+		signer: mallory2Signer,
+	}))
 	require.Equal(t, 3, tcTestFetchCount) // (same as root 1)
-	require.False(t, validateSync("/test/mallory/data4", mallory2Signer))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/mallory/data4",
+		signer: mallory2Signer,
+	}))
 	require.Equal(t, 4, tcTestFetchCount) // (same as root 1, except no mallory root fetch)
 
 	// ========================================================================
@@ -356,17 +442,48 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 	require.NoError(t, err)
 
 	// Bob signs a data under alice namespace
-	require.False(t, validateSyncWithCross("/test/alice/app/test/bob/data1", bobSigner, nil))
-	require.True(t, validateSyncWithCross("/test/alice/app/test/bob/data1", bobSigner, abInvite))
-	require.True(t, validateSyncWithCross("/test/alice/app/test/bob/data2", bobSigner, abInvite))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:   "/test/alice/app/test/bob/data1",
+		signer: bobSigner,
+	}))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data1",
+		signer:      bobSigner,
+		crossSchema: abInvite,
+	}))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data2",
+		signer:      bobSigner,
+		crossSchema: abInvite,
+	}))
 
-	require.False(t, validateSyncWithCross("/test/alice/app/test/alice/data1", bobSigner, abInvite))
-	require.False(t, validateSyncWithCross("/test/alice/ndn/test/bob/data1", bobSigner, abInvite))
-	require.False(t, validateSyncWithCross("/test/alice/app/test/bob/data1/extra", bobSigner, abInvite))
-	require.False(t, validateSyncWithCross("/test/alice/data1", bobSigner, abInvite))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/alice/data1",
+		signer:      bobSigner,
+		crossSchema: abInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/ndn/test/bob/data1",
+		signer:      bobSigner,
+		crossSchema: abInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data1/extra",
+		signer:      bobSigner,
+		crossSchema: abInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/data1",
+		signer:      bobSigner,
+		crossSchema: abInvite,
+	}))
 
 	// Ignore the cross schema if already in the namespace
-	require.True(t, validateSyncWithCross("/test/bob/data1", bobSigner, abInvite))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/bob/data1",
+		signer:      bobSigner,
+		crossSchema: abInvite,
+	}))
 
 	// More complex cross schema
 	acInvite, err := trust_schema.SignCrossSchema(trust_schema.SignCrossSchemaArgs{
@@ -399,30 +516,82 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 	require.NoError(t, err)
 
 	// Cathy signs a data under alice namespace
-	require.True(t, validateSyncWithCross("/test/alice/app/test/cathy/data1", cathySigner, acInvite))
-	require.False(t, validateSyncWithCross("/test/alice/app/test/cathy/data1", cathySigner, abInvite))
-	require.False(t, validateSyncWithCross("/test/alice/app/test/cathy/data1", bobSigner, abInvite))
-	require.False(t, validateSyncWithCross("/test/alice/app/test/cathy/data1", bobSigner, acInvite))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/cathy/data1",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/cathy/data1",
+		signer:      cathySigner,
+		crossSchema: abInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/cathy/data1",
+		signer:      bobSigner,
+		crossSchema: abInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/cathy/data1",
+		signer:      bobSigner,
+		crossSchema: acInvite,
+	}))
 
 	// Cathy is allowed a second namespace
-	require.True(t, validateSyncWithCross("/test/alice/app/test/cathy-2/data1", cathySigner, acInvite))
-	require.False(t, validateSyncWithCross("/test/alice/app/test/cathy-3/data1", cathySigner, acInvite))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/cathy-2/data1",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/cathy-3/data1",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
 
 	// Cathy is allowed to publish in alice-bob namespace for a specific data
-	require.True(t, validateSyncWithCross("/test/alice/app/test/bob/data-5", cathySigner, acInvite))
-	require.False(t, validateSyncWithCross("/test/alice/app/test/bob/data-6", cathySigner, acInvite))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data-5",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data-6",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
 
 	// Rules can have different key locators
-	require.False(t, validateSyncWithCross("/test/alice/app/test/bob/data-7", cathySigner, acInvite))
-	require.True(t, validateSyncWithCross("/test/alice/app/test/bob/data-7", bobSigner, acInvite))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data-7",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data-7",
+		signer:      bobSigner,
+		crossSchema: acInvite,
+	}))
 
 	// Alice allowed cathy to publish in david's namespace
 	// But Alice is not allowed to publish in david's namespace
-	require.False(t, validateSyncWithCross("/test/david/app/test/cathy/data1", cathySigner, acInvite))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/david/app/test/cathy/data1",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
 
 	// Impossible namespaces
-	require.False(t, validateSyncWithCross("/hello", cathySigner, acInvite))
-	require.False(t, validateSyncWithCross("/hello/data1", cathySigner, acInvite))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/hello",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/hello/data1",
+		signer:      cathySigner,
+		crossSchema: acInvite,
+	}))
 
 	// Schema with a blanket prefix rule
 	apInvite, err := trust_schema.SignCrossSchema(trust_schema.SignCrossSchemaArgs{
@@ -439,13 +608,37 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 	require.NoError(t, err)
 
 	// Anyone can form their own sub-namespace within alice's app namespace
-	require.True(t, validateSyncWithCross("/test/alice/app/test/bob/data1", bobSigner, apInvite))
-	require.True(t, validateSyncWithCross("/test/alice/app/test/cathy/data1", cathySigner, apInvite))
-	require.False(t, validateSyncWithCross("/test/alice/app/test/cathy/data1", bobSigner, apInvite))
-	require.False(t, validateSyncWithCross("/test/david/app/test/bob/data1", bobSigner, apInvite))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data1",
+		signer:      bobSigner,
+		crossSchema: apInvite,
+	}))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/cathy/data1",
+		signer:      cathySigner,
+		crossSchema: apInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/cathy/data1",
+		signer:      bobSigner,
+		crossSchema: apInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/david/app/test/bob/data1",
+		signer:      bobSigner,
+		crossSchema: apInvite,
+	}))
 
-	require.True(t, validateSyncWithCross("/test/alice/data1", aliceSigner, apInvite))
-	require.False(t, validateSyncWithCross("/test/alice/data1", bobSigner, apInvite))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/data1",
+		signer:      aliceSigner,
+		crossSchema: apInvite,
+	}))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/data1",
+		signer:      bobSigner,
+		crossSchema: apInvite,
+	}))
 
 	// Malicious cross schema created by bob for bob
 	bobMCross, err := trust_schema.SignCrossSchema(trust_schema.SignCrossSchemaArgs{
@@ -463,7 +656,11 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 	require.NoError(t, err)
 
 	// This cross schema should not be accepted
-	require.False(t, validateSyncWithCross("/test/alice/app/test/bob/data1", bobSigner, bobMCross))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:        "/test/alice/app/test/bob/data1",
+		signer:      bobSigner,
+		crossSchema: bobMCross,
+	}))
 
 	// ------------- Eve (certificates only) -------------
 	expiredOpts := SignCertOptions{
@@ -471,10 +668,21 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 		NotAfter:  time.Now().Add(-1 * time.Hour), // 1 hour ago
 	}
 	eveSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/eve")))
-	_, eveExpiredCertData, eveExpiredSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), expiredOpts)
-	_, eveCertData, eveSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), opts)
-	require.True(t, validateCerts(eveCertData, eveSigCov))
-	require.False(t, validateCerts(eveExpiredCertData, eveExpiredSigCov))
+	tcTestT.Log(eveSigner.KeyLocator().String())
+	eveCertWire, eveCertData, eveSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), expiredOpts)
+	network[eveCertData.Name().String()] = eveCertWire
+	require.False(t, validateCerts(eveCertData, eveSigCov, false))
+	require.True(t, validateCerts(eveCertData, eveSigCov, true))
+	require.False(t, validateSync(ValidateSyncOptions{
+		name:           "/test/eve/data1",
+		signer:         eveSigner,
+		ignoreValidity: false,
+	}))
+	require.True(t, validateSync(ValidateSyncOptions{
+		name:           "/test/eve/data2",
+		signer:         eveSigner,
+		ignoreValidity: true,
+	}))
 }
 
 func TestTrustConfigLvs(t *testing.T) {

@@ -161,6 +161,8 @@ type ValidateExtArgs struct {
 	CertNextHop optional.Optional[uint64]
 	// UseDataNameFwHint overrides trust config option.
 	UseDataNameFwHint optional.Optional[bool]
+	// IgnoreValidity ignores validity period in the validation chain.
+	IgnoreValidity optional.Optional[bool]
 }
 
 // Announcement are the arguments for the announce prefix API.
