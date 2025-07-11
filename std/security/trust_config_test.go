@@ -465,16 +465,16 @@ func testTrustConfig(t *testing.T, schema ndn.TrustSchema) {
 	// This cross schema should not be accepted
 	require.False(t, validateSyncWithCross("/test/alice/app/test/bob/data1", bobSigner, bobMCross))
 
-	// ------------- Eve (certifcates only) -------------
+	// ------------- Eve (certificates only) -------------
 	expiredOpts := SignCertOptions{
 		NotBefore: time.Now().Add(-2 * time.Hour), // 2 hours ago
 		NotAfter:  time.Now().Add(-1 * time.Hour), // 1 hour ago
 	}
 	eveSigner, _ := signer.KeygenEd25519(sec.MakeKeyName(sname("/test/eve")))
-	_, eveExpiredCertData, exeExpiredSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), expiredOpts)
-	_, eveCertData, exeSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), opts)
-	require.True(t, validateCerts(eveCertData, exeSigCov))
-	require.False(t, validateCerts(eveExpiredCertData, exeExpiredSigCov))
+	_, eveExpiredCertData, eveExpiredSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), expiredOpts)
+	_, eveCertData, eveSigCov := signCert(rootSigner, tu.NoErr(signer.MarshalSecret(eveSigner)), opts)
+	require.True(t, validateCerts(eveCertData, eveSigCov))
+	require.False(t, validateCerts(eveExpiredCertData, eveExpiredSigCov))
 }
 
 func TestTrustConfigLvs(t *testing.T) {
