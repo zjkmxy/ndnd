@@ -104,7 +104,8 @@ type TrustConfigValidateArgs struct {
 	Callback func(bool, error)
 	// OverrideName is an override for the data name (advanced usage).
 	OverrideName enc.Name
-
+	// ignore ValidityPeriod in the valication chain
+	IgnoreValidity optional.Optional[bool]
 	// origDataName is the original data name being verified.
 	origDataName enc.Name
 
@@ -161,7 +162,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 
 	// Bail if the data is a cert and is not fresh
 	if t, ok := args.Data.ContentType().Get(); ok && t == ndn.ContentTypeKey {
-		if CertIsExpired(args.Data) {
+		if !args.IgnoreValidity.GetOr(false) && CertIsExpired(args.Data) {
 			args.Callback(false, fmt.Errorf("certificate is expired: %s", args.Data.Name()))
 			return
 		}
@@ -215,9 +216,10 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 						args.Callback(valid, fmt.Errorf("cross schema: %w", err))
 					}
 				},
-				OverrideName: args.OverrideName,
-				cert:         args.cert,
-				depth:        args.depth,
+				OverrideName:   args.OverrideName,
+				IgnoreValidity: args.IgnoreValidity,
+				cert:           args.cert,
+				depth:          args.depth,
 			})
 			return
 		} else {
@@ -278,10 +280,11 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 			Data:       args.cert,
 			DataSigCov: args.certSigCov,
 
-			Fetch:        args.Fetch,
-			Callback:     args.Callback,
-			OverrideName: nil,
-			origDataName: args.origDataName,
+			Fetch:          args.Fetch,
+			Callback:       args.Callback,
+			OverrideName:   nil,
+			IgnoreValidity: args.IgnoreValidity,
+			origDataName:   args.origDataName,
 
 			cert:        nil,
 			certSigCov:  nil,
@@ -342,7 +345,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 		}
 
 		// Bail if the fetched cert is not fresh
-		if CertIsExpired(res.Data) {
+		if !args.IgnoreValidity.GetOr(false) && CertIsExpired(res.Data) {
 			args.Callback(false, fmt.Errorf("certificate is expired: %s", res.Data.Name()))
 			return
 		}
@@ -375,7 +378,7 @@ func (tc *TrustConfig) validateCrossSchema(args TrustConfigValidateArgs) {
 	}
 
 	// Check validity period of the cross schema
-	if CertIsExpired(crossData) {
+	if !args.IgnoreValidity.GetOr(false) && CertIsExpired(crossData) {
 		args.Callback(false, fmt.Errorf("cross schema is expired: %s", crossData.Name()))
 		return
 	}
@@ -403,9 +406,10 @@ func (tc *TrustConfig) validateCrossSchema(args TrustConfigValidateArgs) {
 		Data:       crossData,
 		DataSigCov: crossDataSigCov,
 
-		Fetch:        args.Fetch,
-		Callback:     args.Callback,
-		OverrideName: dataName, // original data
+		Fetch:          args.Fetch,
+		Callback:       args.Callback,
+		OverrideName:   dataName, // original data
+		IgnoreValidity: args.IgnoreValidity,
 
 		depth: args.depth,
 	})
