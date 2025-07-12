@@ -209,7 +209,7 @@ func (s *SnapshotNodeHistory) handleIndex(node enc.Name, boot uint64, known uint
 			s.Client.ConsumeExt(ndn.ConsumeExtArgs{
 				Name:           snapName,
 				IgnoreValidity: s.IgnoreValidity,
-				Callback: func(cstate ndn.ConsumeState) { snapC <- cstate },
+				Callback:       func(cstate ndn.ConsumeState) { snapC <- cstate },
 			})
 
 			scstate := <-snapC
