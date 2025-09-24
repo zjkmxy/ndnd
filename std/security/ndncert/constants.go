@@ -10,6 +10,9 @@ import (
 const KwEmail = "email"
 const KwPin = "pin"
 const KwCode = "code"
+const KwDns = "dns"
+const KwDomain = "domain"
+const KwConfirmation = "confirmation"
 
 // Challenge Errors
 var ErrChallengeBefore = errors.New("challenge before request")
