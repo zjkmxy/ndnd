@@ -46,5 +46,3 @@ require (
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/quic-go/webtransport-go v0.8.0 => github.com/zjkmxy/webtransport-go-patch v0.8.1
