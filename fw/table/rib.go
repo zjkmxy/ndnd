@@ -70,6 +70,7 @@ func (r *RibEntry) fillTreeToPrefixEnc(name enc.Name) *RibEntry {
 	}
 	return entry
 }
+
 // (AI GENERATED DESCRIPTION): Finds an exact match for the supplied name in the RIB by performing a longest‑prefix lookup and returning the matching RibEntry if its length equals the name’s length, otherwise nil.
 func (r *RibEntry) findExactMatchEntryEnc(name enc.Name) *RibEntry {
 	match := r.findLongestPrefixEntryEnc(name)

@@ -201,6 +201,7 @@ func (bpe *basePitEntry) CanBePrefix() bool {
 func (bpe *basePitEntry) MustBeFresh() bool {
 	return bpe.mustBeFresh
 }
+
 // (AI GENERATED DESCRIPTION): Returns the forwarding hint stored in the base PIT entry.
 func (bpe *basePitEntry) ForwardingHintNew() enc.Name {
 	return bpe.forwardingHintNew
