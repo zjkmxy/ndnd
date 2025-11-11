@@ -16,6 +16,7 @@ import (
 
 type ToolKeychain struct{}
 
+// (AI GENERATED DESCRIPTION): Registers the keychain‑management subcommands (key-list, key-import, key-export) and groups them under the “keychain” command group in the CLI.
 func (t *ToolKeychain) configure(cmd *cobra.Command) {
 	cmd.AddGroup(&cobra.Group{
 		ID:    "keychain",
@@ -57,6 +58,7 @@ and the default key of the identity will be exported.`,
 	})
 }
 
+// (AI GENERATED DESCRIPTION): Lists all identities and their keys in the keychain at the given path, printing each identity name followed by the names of its keys.
 func (*ToolKeychain) List(_ *cobra.Command, args []string) {
 	kc, err := keychain.NewKeyChain(args[0], storage.NewMemoryStore())
 	if err != nil {
@@ -73,6 +75,7 @@ func (*ToolKeychain) List(_ *cobra.Command, args []string) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Imports keychain entries from standard input into the keychain named by the first argument, storing them in a memory-based keychain.
 func (*ToolKeychain) Import(_ *cobra.Command, args []string) {
 	kc, err := keychain.NewKeyChain(args[0], storage.NewMemoryStore())
 	if err != nil {
@@ -96,6 +99,7 @@ func (*ToolKeychain) Import(_ *cobra.Command, args []string) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Exports a specified key (or an identity’s default key) from a keychain, PEM‑encodes its secret key, and writes it to standard output.
 func (*ToolKeychain) Export(_ *cobra.Command, args []string) {
 	name, err := enc.NameFromStr(args[1])
 	if err != nil {

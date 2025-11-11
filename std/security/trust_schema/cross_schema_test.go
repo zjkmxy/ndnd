@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// (AI GENERATED DESCRIPTION): TestSignCrossSchema verifies that a cross‑schema Data packet can be signed with a given signer, including a validity window, and that the resulting packet’s name, content, and signature validity periods can be correctly parsed and validated.
 func TestSignCrossSchema(t *testing.T) {
 	tu.SetT(t)
 

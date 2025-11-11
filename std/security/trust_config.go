@@ -76,6 +76,7 @@ func NewTrustConfig(keyChain ndn.KeyChain, schema ndn.TrustSchema, roots []enc.N
 	}, nil
 }
 
+// (AI GENERATED DESCRIPTION): Returns the constant string `"trust-config"` for a `TrustConfig` value, enabling string formatting via the `fmt.Stringer` interface.
 func (tc *TrustConfig) String() string {
 	return "trust-config"
 }
@@ -364,6 +365,7 @@ func (tc *TrustConfig) Validate(args TrustConfigValidateArgs) {
 	})
 }
 
+// (AI GENERATED DESCRIPTION): Validates the cross‑schema signed Data packet by parsing its embedded schema, checking its validity period, ensuring it authorizes the original certificate, and recursively validating the cross‑schema’s signature against the trust configuration.
 func (tc *TrustConfig) validateCrossSchema(args TrustConfigValidateArgs) {
 	crossWire := args.Data.CrossSchema()
 	if crossWire == nil {

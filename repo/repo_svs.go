@@ -20,6 +20,7 @@ type RepoSvs struct {
 	svsalo *ndn_sync.SvsALO
 }
 
+// (AI GENERATED DESCRIPTION): Creates a new `RepoSvs` instance initialized with the given configuration, NDN client, and SyncJoin command.
 func NewRepoSvs(config *Config, client ndn.Client, cmd *tlv.SyncJoin) *RepoSvs {
 	return &RepoSvs{
 		config: config,
@@ -29,10 +30,12 @@ func NewRepoSvs(config *Config, client ndn.Client, cmd *tlv.SyncJoin) *RepoSvs {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Generates a human‑readable string identifying the repo‑svs instance, displaying its associated group name.
 func (r *RepoSvs) String() string {
 	return fmt.Sprintf("repo-svs (%s)", r.cmd.Group.Name)
 }
 
+// (AI GENERATED DESCRIPTION): Initializes and starts the repository SVS ALO, configuring snapshots, multicast, prefix announcements, and publisher subscriptions.
 func (r *RepoSvs) Start() (err error) {
 	log.Info(r, "Starting SVS")
 
@@ -130,6 +133,7 @@ func (r *RepoSvs) Start() (err error) {
 	return nil
 }
 
+// (AI GENERATED DESCRIPTION): Stops the repository’s SVS service by withdrawing its group and optional multicast prefixes from the NDN client and stopping the underlying SVS ALO component.
 func (r *RepoSvs) Stop() (err error) {
 	log.Info(r, "Stopping SVS")
 	if r.svsalo == nil {
@@ -152,11 +156,13 @@ func (r *RepoSvs) Stop() (err error) {
 	return nil
 }
 
+// (AI GENERATED DESCRIPTION): Stores the supplied state as a data packet in the client store under the group name suffixed with the "alo-state" keyword component.
 func (r *RepoSvs) commitState(state enc.Wire) {
 	name := r.cmd.Group.Name.Append(enc.NewKeywordComponent("alo-state"))
 	r.client.Store().Put(name, state.Join())
 }
 
+// (AI GENERATED DESCRIPTION): Retrieves the repository group’s stored state wire by appending the “alo-state” component to its name; returns the wire wrapped in `enc.Wire` if present, otherwise returns `nil`.
 func (r *RepoSvs) readState() enc.Wire {
 	name := r.cmd.Group.Name.Append(enc.NewKeywordComponent("alo-state"))
 	if stateWire, _ := r.client.Store().Get(name, false); stateWire != nil {

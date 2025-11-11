@@ -40,10 +40,12 @@ type ChallengeDns struct {
 	expectedValue string
 }
 
+// (AI GENERATED DESCRIPTION): Returns the predefined DNS keyword `KwDns`, identifying this challenge type.
 func (*ChallengeDns) Name() string {
 	return KwDns
 }
 
+// (AI GENERATED DESCRIPTION): Handles the DNS challenge flow by validating configuration, requesting domain and record details, invoking callbacks for user confirmation, and returning the appropriate parameter map for each challenge status.
 func (c *ChallengeDns) Request(input ParamMap, status optional.Optional[string]) (ParamMap, error) {
 	// Validate challenge configuration
 	if c.DomainCallback == nil || c.ConfirmationCallback == nil {

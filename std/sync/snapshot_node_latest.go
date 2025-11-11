@@ -42,10 +42,12 @@ type SnapshotNodeLatest struct {
 	prevSeq uint64
 }
 
+// (AI GENERATED DESCRIPTION): Returns the string `"snapshot-node-latest"` as the textual representation of a SnapshotNodeLatest node.
 func (s *SnapshotNodeLatest) String() string {
 	return "snapshot-node-latest"
 }
 
+// (AI GENERATED DESCRIPTION): Returns the SnapshotNodeLatest instance itself as a Snapshot.
 func (s *SnapshotNodeLatest) Snapshot() Snapshot {
 	return s
 }

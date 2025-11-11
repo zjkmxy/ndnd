@@ -43,6 +43,7 @@ qEa4Xg1H5/+zKy2mdI82/AcbsQJslRxC32g0ZfmDPKs=
 
 var RSA_KEY_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/e%9A%F2%15%21%FF2%F1")
 
+// (AI GENERATED DESCRIPTION): Serializes a signer’s secret into a Data packet and verifies that the resulting packet has the expected ContentType, Name, and Content.
 func TestMarshalSecret(t *testing.T) {
 	tu.SetT(t)
 
@@ -61,6 +62,7 @@ func TestMarshalSecret(t *testing.T) {
 	require.Equal(t, secret, data.Content().Join())
 }
 
+// (AI GENERATED DESCRIPTION): Tests that `sig.UnmarshalSecret` correctly parses a raw RSA secret key and returns a signer with the expected signature type and key name.
 func TestUnmarshalSecret(t *testing.T) {
 	tu.SetT(t)
 

@@ -25,6 +25,7 @@ type svsDataState struct {
 	SnapBlock int
 }
 
+// (AI GENERATED DESCRIPTION): Builds the full name for a data object by appending the node identifier, boot‑timestamp, and sequence number to the group’s prefix and marking the resulting name as immutable.
 func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
 	return s.GroupPrefix().
 		Append(node...).
@@ -33,6 +34,7 @@ func (s *SvsALO) objectName(node enc.Name, boot uint64, seq uint64) enc.Name {
 		WithVersion(enc.VersionImmutable)
 }
 
+// (AI GENERATED DESCRIPTION): Publishes a new Data object with the supplied content, updates the SVS state vector and snapshot strategy, and returns the produced name and the instance’s serialized state.
 func (s *SvsALO) produceObject(content enc.Wire) (enc.Name, enc.Wire, error) {
 	// This instance owns the underlying SVS instance.
 	// So we can be sure that the sequence number does not

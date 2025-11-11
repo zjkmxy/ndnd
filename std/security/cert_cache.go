@@ -21,6 +21,7 @@ type certCacheEntry struct {
 	expiry time.Time
 }
 
+// (AI GENERATED DESCRIPTION): Creates and returns a new, empty CertCache instance.
 func NewCertCache() *CertCache {
 	return &CertCache{}
 }

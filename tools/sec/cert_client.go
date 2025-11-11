@@ -35,6 +35,7 @@ type CertClient struct {
 	challenge ndncert.Challenge
 }
 
+// (AI GENERATED DESCRIPTION): Creates a Cobra command for the NDNCERT certificate client, setting its usage, flags, and run logic.
 func CmdCertCli() *cobra.Command {
 	client := CertClient{}
 
@@ -62,10 +63,12 @@ the CA to obtain a new certificate.`,
 	return cmd
 }
 
+// (AI GENERATED DESCRIPTION): Returns the string representation of the CertClient, which is the constant "ndncert-cli".
 func (c *CertClient) String() string {
 	return "ndncert-cli"
 }
 
+// (AI GENERATED DESCRIPTION): Loads the CA certificate and optional private key, selects a challenge, and initiates the certificate client.
 func (c *CertClient) run(_ *cobra.Command, args []string) {
 	// Read CA certificate
 	caCertFile, err := os.ReadFile(args[0])
@@ -195,6 +198,7 @@ func (c *CertClient) chooseChallenge() ndncert.Challenge {
 	return nil
 }
 
+// (AI GENERATED DESCRIPTION): Obtains an NDN certificate from a CA by starting an NDN engine, configuring a signer (generating one if necessary), performing a DNS challenge when required, requesting the certificate, and writing the resulting PEM‑encoded certificate and optional key to stdout or to specified files.
 func (c *CertClient) client() {
 	// Start the engine
 	engine := engine.NewBasicEngine(engine.NewDefaultFace())
@@ -368,6 +372,7 @@ func (c *CertClient) client() {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Presents a numbered list of options to the user, reads either the option string or its numeric index, and returns the selected option’s zero‑based index, retrying until a valid choice is made.
 func (c *CertClient) chooseOpts(msg string, opts []string) int {
 	fmt.Fprintf(os.Stderr, "%s\n", msg)
 	for i, opt := range opts {
@@ -398,6 +403,7 @@ func (c *CertClient) chooseOpts(msg string, opts []string) int {
 	return c.chooseOpts(msg, opts)
 }
 
+// (AI GENERATED DESCRIPTION): Prints the details of a CA profile (info, name, maximum validity period, and probe keys) to standard error.
 func (c *CertClient) printCaProfile(profile *spec_ndncert.CaProfile) {
 	fmt.Fprintln(os.Stderr, "=============== CA Profile ================")
 	fmt.Fprintln(os.Stderr, profile.CaInfo)
@@ -408,6 +414,7 @@ func (c *CertClient) printCaProfile(profile *spec_ndncert.CaProfile) {
 	fmt.Fprintln(os.Stderr)
 }
 
+// (AI GENERATED DESCRIPTION): Prompts the user with the given message, reads a line of input into the supplied string pointer, and exits with an error if the entered value is empty.
 func (c *CertClient) scanln(msg string, val *string) {
 	fmt.Fprintf(os.Stderr, "%s: ", msg)
 	fmt.Scanln(val)

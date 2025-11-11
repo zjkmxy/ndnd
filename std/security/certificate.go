@@ -93,6 +93,7 @@ func SelfSign(args SignCertArgs) (wire enc.Wire, err error) {
 	return SignCert(args)
 }
 
+// (AI GENERATED DESCRIPTION): Returns true if the certificate’s signature is nil or its validity period does not include the current time.
 func CertIsExpired(cert ndn.Data) bool {
 	if cert.Signature() == nil {
 		return true

@@ -110,10 +110,12 @@ var TEST_MODEL_COMPLEX = []byte{
 	0x62, 0x67, 0x06, 0x23, 0x01, 0x06, 0x29, 0x01, 0x63,
 }
 
+// (AI GENERATED DESCRIPTION): Creates an enc.Name from the supplied string, panicking if the string is not a valid name.
 func sname(n string) enc.Name {
 	return tu.NoErr(enc.NameFromStr(n))
 }
 
+// (AI GENERATED DESCRIPTION): Tests that parsing a Trust Schema LVS model from binary data correctly produces the expected version, start ID, named pattern count, and the expected numbers of nodes and symbols.
 func TestParseModel(t *testing.T) {
 	tu.SetT(t)
 
@@ -128,6 +130,7 @@ func TestParseModel(t *testing.T) {
 	require.Equal(t, 6, len(m.Symbols))
 }
 
+// (AI GENERATED DESCRIPTION): TestModelSimpleMatch verifies that a trust schema correctly matches name prefixes against its defined rules, ensuring correct handling of valid, invalid, partial, and expansion‑mismatch scenarios.
 func TestModelSimpleMatch(t *testing.T) {
 	tu.SetT(t)
 
@@ -175,6 +178,7 @@ func TestModelSimpleMatch(t *testing.T) {
 	require.Equal(t, 0, len(ms))
 }
 
+// (AI GENERATED DESCRIPTION): Tests that complex trust‑schema rules correctly match Data names by asserting that the `MatchCollect` method returns the expected rule identifiers for a variety of name patterns and attribute constraints.
 func TestModelComplexMatch(t *testing.T) {
 	tu.SetT(t)
 
@@ -226,6 +230,7 @@ func TestModelComplexMatch(t *testing.T) {
 	require.Equal(t, 2, len(ms)) // r1, r3
 }
 
+// (AI GENERATED DESCRIPTION): Tests that the LvsSchema’s Check method correctly validates name relationships against the simple trust model.
 func TestModelSimpleCheck(t *testing.T) {
 	tu.SetT(t)
 
@@ -239,6 +244,7 @@ func TestModelSimpleCheck(t *testing.T) {
 	require.False(t, s.Check(sname("/a/blog/author/100001/KEY/1/000001/1"), sname("/a/blog/KEY/1/self/1")))
 }
 
+// (AI GENERATED DESCRIPTION): Tests the trust schema's `Check` method using a complex model, asserting that name pairs that should match are accepted and that those that should not match are rejected.
 func TestModelComplexCheck(t *testing.T) {
 	tu.SetT(t)
 

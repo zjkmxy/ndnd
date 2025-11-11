@@ -70,22 +70,27 @@ func NewKeyChainDir(path string, pubStore ndn.Store) (ndn.KeyChain, error) {
 	return kc, nil
 }
 
+// (AI GENERATED DESCRIPTION): Returns a string representation of the KeyChainDir, displaying the path to the keychain directory.
 func (kc *KeyChainDir) String() string {
 	return fmt.Sprintf("keychain-dir (%s)", kc.path)
 }
 
+// (AI GENERATED DESCRIPTION): Returns the underlying in‑memory store that backs the KeyChainDir.
 func (kc *KeyChainDir) Store() ndn.Store {
 	return kc.mem.Store()
 }
 
+// (AI GENERATED DESCRIPTION): Returns a slice of all identities currently stored in the key‑chain directory.
 func (kc *KeyChainDir) Identities() []ndn.KeyChainIdentity {
 	return kc.mem.Identities()
 }
 
+// (AI GENERATED DESCRIPTION): Retrieves and returns the identity that matches the specified name from the keychain directory’s in‑memory store.
 func (kc *KeyChainDir) IdentityByName(name enc.Name) ndn.KeyChainIdentity {
 	return kc.mem.IdentityByName(name)
 }
 
+// (AI GENERATED DESCRIPTION): Adds a signer to the in‑memory key chain and writes its secret key to disk in a file with the key extension.
 func (kc *KeyChainDir) InsertKey(signer ndn.Signer) error {
 	err := kc.mem.InsertKey(signer)
 	if err != nil {
@@ -100,6 +105,7 @@ func (kc *KeyChainDir) InsertKey(signer ndn.Signer) error {
 	return kc.writeFile(secret.Join(), EXT_KEY)
 }
 
+// (AI GENERATED DESCRIPTION): Inserts the given certificate (in wire format) into the in‑memory key chain and writes it to disk with the certificate file extension.
 func (kc *KeyChainDir) InsertCert(wire []byte) error {
 	err := kc.mem.InsertCert(wire)
 	if err != nil {
@@ -109,6 +115,7 @@ func (kc *KeyChainDir) InsertCert(wire []byte) error {
 	return kc.writeFile(wire, EXT_CERT)
 }
 
+// (AI GENERATED DESCRIPTION): Writes the given binary data to a PEM‑encoded file named after its SHA‑256 hash (plus the supplied extension) in the keychain directory, with permissions set to 0600.
 func (kc *KeyChainDir) writeFile(wire []byte, ext string) error {
 	hash := sha256.Sum256(wire)
 	filename := hex.EncodeToString(hash[:])
