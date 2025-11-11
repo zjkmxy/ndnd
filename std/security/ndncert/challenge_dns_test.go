@@ -7,6 +7,7 @@ import (
 	"github.com/named-data/ndnd/std/types/optional"
 )
 
+// (AI GENERATED DESCRIPTION): Ensures that the `ChallengeDns.Name()` method returns the expected string `"dns"`.
 func TestChallengeDns_Name(t *testing.T) {
 	challenge := &ndncert.ChallengeDns{}
 	if challenge.Name() != "dns" {
@@ -14,6 +15,7 @@ func TestChallengeDns_Name(t *testing.T) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): TestChallengeDns_InitialRequest verifies that ChallengeDns.Request correctly invokes the DomainCallback and returns the resulting domain as a parameter in the returned map.
 func TestChallengeDns_InitialRequest(t *testing.T) {
 	domainCalled := false
 	expectedDomain := "example.com"
@@ -42,6 +44,7 @@ func TestChallengeDns_InitialRequest(t *testing.T) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Verifies that `ChallengeDns.Request` returns an error when the domain callback supplies an invalid domain name.
 func TestChallengeDns_InvalidDomain(t *testing.T) {
 	challenge := &ndncert.ChallengeDns{
 		DomainCallback: func(status string) string {
@@ -58,6 +61,7 @@ func TestChallengeDns_InvalidDomain(t *testing.T) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Tests that a ChallengeDns instance correctly handles a “need‑record” status by invoking the confirmation callback with the expected record name, value, and status, and returns the callback’s result in the output parameters.
 func TestChallengeDns_NeedRecordStatus(t *testing.T) {
 	confirmationCalled := false
 	expectedRecordName := "_ndncert-challenge.example.com"
@@ -103,6 +107,7 @@ func TestChallengeDns_NeedRecordStatus(t *testing.T) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Tests that ChallengeDns.Request correctly passes a “wrong-record” status to the ConfirmationCallback and returns the callback’s result as the “confirmation” parameter.
 func TestChallengeDns_WrongRecordStatus(t *testing.T) {
 	challenge := &ndncert.ChallengeDns{
 		DomainCallback: func(status string) string {
@@ -132,6 +137,7 @@ func TestChallengeDns_WrongRecordStatus(t *testing.T) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Tests that the ChallengeDns.Request method returns a 'verify' parameter set to “now” when called with a status of “ready-for-validation”.
 func TestChallengeDns_ReadyForValidationStatus(t *testing.T) {
 	challenge := &ndncert.ChallengeDns{
 		DomainCallback: func(status string) string {
@@ -154,6 +160,7 @@ func TestChallengeDns_ReadyForValidationStatus(t *testing.T) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Tests that `ChallengeDns.Request` returns an error when invoked with an unknown status value.
 func TestChallengeDns_UnknownStatus(t *testing.T) {
 	challenge := &ndncert.ChallengeDns{
 		DomainCallback: func(status string) string {
@@ -172,6 +179,7 @@ func TestChallengeDns_UnknownStatus(t *testing.T) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Tests that `ChallengeDns.Request` returns an error when the domain or confirmation callbacks are not configured.
 func TestChallengeDns_NotConfigured(t *testing.T) {
 	// Test with missing domain callback
 	challenge := &ndncert.ChallengeDns{

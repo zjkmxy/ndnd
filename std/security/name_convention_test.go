@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// (AI GENERATED DESCRIPTION): Generates a key name from an identity name and verifies that the key name has the expected "/KEY" prefix and can be parsed back to the original identity.
 func TestKeyName(t *testing.T) {
 	tu.SetT(t)
 
@@ -23,6 +24,7 @@ func TestKeyName(t *testing.T) {
 	require.Equal(t, id, id2)
 }
 
+// (AI GENERATED DESCRIPTION): Extracts the identity component from a key name, verifying it matches the expected `…/identity/KEY/<kid>` pattern and returns an error otherwise.
 func TestGetIdentityFromKeyName(t *testing.T) {
 	tu.SetT(t)
 
@@ -40,6 +42,7 @@ func TestGetIdentityFromKeyName(t *testing.T) {
 	require.Error(t, err)
 }
 
+// (AI GENERATED DESCRIPTION): Creates a certificate name by appending the specified algorithm component and version number to a valid key name, returning an error if the key name is not properly formatted as a KEY name.
 func TestMakeCertName(t *testing.T) {
 	tu.SetT(t)
 
@@ -54,6 +57,7 @@ func TestMakeCertName(t *testing.T) {
 	require.Error(t, err)
 }
 
+// (AI GENERATED DESCRIPTION): Extracts the key name from a certificate name, verifying that the name follows the expected identity/KEY/kid structure and returns an error if it is malformed.
 func TestGetKeyNameFromCertName(t *testing.T) {
 	tu.SetT(t)
 

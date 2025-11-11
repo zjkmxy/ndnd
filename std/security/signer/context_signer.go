@@ -11,6 +11,7 @@ type ContextSigner struct {
 	KeyLocatorName enc.Name
 }
 
+// (AI GENERATED DESCRIPTION): Returns the key locator name stored in the ContextSigner.
 func (s *ContextSigner) KeyLocator() enc.Name {
 	return s.KeyLocatorName
 }

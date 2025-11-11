@@ -8,6 +8,7 @@ import (
 	"github.com/named-data/ndnd/std/log"
 )
 
+// (AI GENERATED DESCRIPTION): Parses a repository management command from the received wire and dispatches it to the sync‑join handler if present, otherwise logs a warning about an unknown command.
 func (r *Repo) onMgmtCmd(_ enc.Name, wire enc.Wire, reply func(enc.Wire) error) {
 	cmd, err := tlv.ParseRepoCmd(enc.NewWireView(wire), false)
 	if err != nil {
@@ -23,6 +24,7 @@ func (r *Repo) onMgmtCmd(_ enc.Name, wire enc.Wire, reply func(enc.Wire) error) 
 	log.Warn(r, "Unknown management command received")
 }
 
+// (AI GENERATED DESCRIPTION): Handles a `SyncJoin` command by starting an SVS session when the protocol is `SyncProtocolSvsV3`, or returning an error status if the protocol is unknown or the session fails to start.
 func (r *Repo) handleSyncJoin(cmd *tlv.SyncJoin, reply func(enc.Wire) error) {
 	res := tlv.RepoCmdRes{Status: 200}
 
@@ -40,6 +42,7 @@ func (r *Repo) handleSyncJoin(cmd *tlv.SyncJoin, reply func(enc.Wire) error) {
 	reply(res.Encode())
 }
 
+// (AI GENERATED DESCRIPTION): Starts a SyncJoin session for the specified group, initializing a new RepoSvs if one isn’t already active and storing it in the repository’s group session map.
 func (r *Repo) startSvs(cmd *tlv.SyncJoin) error {
 	if cmd.Group == nil || len(cmd.Group.Name) == 0 {
 		return fmt.Errorf("missing group name")

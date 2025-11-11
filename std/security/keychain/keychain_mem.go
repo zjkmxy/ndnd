@@ -23,18 +23,22 @@ func NewKeyChainMem(pubStore ndn.Store) ndn.KeyChain {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Returns the string identifier `"keychain-mem"` for the in‑memory keychain instance.
 func (kc *KeyChainMem) String() string {
 	return "keychain-mem"
 }
 
+// (AI GENERATED DESCRIPTION): Returns the in‑memory public‑key store associated with the KeyChainMem instance.
 func (kc *KeyChainMem) Store() ndn.Store {
 	return kc.pubStore
 }
 
+// (AI GENERATED DESCRIPTION): Returns a slice of all identities currently stored in the in‑memory key chain.
 func (kc *KeyChainMem) Identities() []ndn.KeyChainIdentity {
 	return kc.identities
 }
 
+// (AI GENERATED DESCRIPTION): Retrieves and returns the KeyChainIdentity from the in‑memory keychain that has the specified name, or nil if no matching identity exists.
 func (kc *KeyChainMem) IdentityByName(name enc.Name) ndn.KeyChainIdentity {
 	for _, id := range kc.identities {
 		if id.Name().Equal(name) {
@@ -44,6 +48,7 @@ func (kc *KeyChainMem) IdentityByName(name enc.Name) ndn.KeyChainIdentity {
 	return nil
 }
 
+// (AI GENERATED DESCRIPTION): Adds a signer key to the in‑memory key chain, creating its identity if needed and linking any existing certificates whose names are prefixed by the key name.
 func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	// Get key name
 	keyName := signer.KeyName()
@@ -81,6 +86,7 @@ func (kc *KeyChainMem) InsertKey(signer ndn.Signer) error {
 	return nil
 }
 
+// (AI GENERATED DESCRIPTION): Adds a certificate to the in‑memory key chain after validating its type, format, and expiration, ensuring it is not a duplicate, storing it in the public store, and updating all identities that reference it.
 func (kc *KeyChainMem) InsertCert(wire []byte) error {
 	data, _, err := spec.Spec{}.ReadData(enc.NewBufferView(wire))
 	if err != nil {

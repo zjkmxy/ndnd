@@ -25,6 +25,7 @@ type SignCrossSchemaArgs struct {
 	Store ndn.Store
 }
 
+// (AI GENERATED DESCRIPTION): Builds, signs, and optionally stores a single‑segment cross‑schema Data packet for the given name (which must end with a version), using the supplied validity period, content, and signer, and returns the packet’s wire encoding.
 func SignCrossSchema(args SignCrossSchemaArgs) (enc.Wire, error) {
 	// Check all parameters
 	if args.Signer == nil || args.Name == nil {
@@ -71,6 +72,7 @@ func SignCrossSchema(args SignCrossSchemaArgs) (enc.Wire, error) {
 	return cs.Wire, nil
 }
 
+// (AI GENERATED DESCRIPTION): **Matches a data name and certificate name against the CrossSchemaContent’s rules, returning true if any simple or prefix rule is satisfied.**
 func (cross *CrossSchemaContent) Match(dataName enc.Name, certName enc.Name) bool {
 	for _, rule := range cross.SimpleSchemaRules {
 		if rule.NamePrefix == nil || rule.KeyLocator == nil || rule.KeyLocator.Name == nil {

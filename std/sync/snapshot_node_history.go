@@ -55,10 +55,12 @@ type SnapshotNodeHistory struct {
 	prevSeq uint64
 }
 
+// (AI GENERATED DESCRIPTION): Returns the fixed string `"snapshot-node-history"` as the textual representation of a SnapshotNodeHistory value.
 func (s *SnapshotNodeHistory) String() string {
 	return "snapshot-node-history"
 }
 
+// (AI GENERATED DESCRIPTION): Returns the `SnapshotNodeHistory` instance as a `Snapshot`.
 func (s *SnapshotNodeHistory) Snapshot() Snapshot {
 	return s
 }
@@ -149,6 +151,7 @@ func (s *SnapshotNodeHistory) snapName(node enc.Name, boot uint64) enc.Name {
 		Append(enc.NewKeywordComponent("HIST"))
 }
 
+// (AI GENERATED DESCRIPTION): Constructs the name for a node’s history index by appending the node’s name, the boot‑time timestamp, and the keyword “HIDX” to the group prefix.
 func (s *SnapshotNodeHistory) idxName(node enc.Name, boot uint64) enc.Name {
 	return s.pss.groupPrefix.
 		Append(node...).
@@ -392,6 +395,7 @@ func (s *SnapshotNodeHistory) takeSnap(seqNo uint64) {
 	}
 }
 
+// (AI GENERATED DESCRIPTION): Retrieves the most recent locally stored snapshot history index for the node, parses its wire representation, and returns the index name and parsed HistoryIndex.
 func (s *SnapshotNodeHistory) getIndex() (enc.Name, *svs_ps.HistoryIndex, error) {
 	idxName := s.idxName(s.pss.nodePrefix, s.pss.bootTime)
 

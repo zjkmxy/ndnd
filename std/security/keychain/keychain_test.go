@@ -41,6 +41,7 @@ Z27QIGFgKR4LEuflvnSZZGFRKFxTUF5S2f/ZO/4B4NoxrF1ZOHD9NCWTkwI=
 var CERT_ROOT_NAME, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556")
 var KEY_ALICE_NAME, _ = enc.NameFromStr("/ndn/alice/KEY/X%DC%B6%FAg%29%A4%82")
 
+// (AI GENERATED DESCRIPTION): Creates and signs a test certificate with the supplied signer (using a test issuer ID and one‑year validity) and returns the signed certificate as a byte slice.
 func signCert(t *testing.T, signer ndn.Signer) []byte {
 	certData, _, _ := spec.Spec{}.ReadData(enc.NewWireView(
 		tu.NoErr(sig.MarshalSecret(signer))))
@@ -55,6 +56,7 @@ func signCert(t *testing.T, signer ndn.Signer) []byte {
 	return cert.Join()
 }
 
+// (AI GENERATED DESCRIPTION): Tests the in‑memory keychain by inserting identities, keys, and certificates, verifying identity lookup, default signer updates, certificate ordering, handling of invalid keys, and that certificates are correctly stored.
 func TestKeyChainMem(t *testing.T) {
 	tu.SetT(t)
 
@@ -134,6 +136,7 @@ func TestKeyChainMem(t *testing.T) {
 	require.Equal(t, certRoot, data)
 }
 
+// (AI GENERATED DESCRIPTION): Tests that KeyChainDir correctly loads a root certificate into the store and loads identities from key files, while ensuring that non‑certificate keys are not stored.
 func TestKeyChainDir(t *testing.T) {
 	tu.SetT(t)
 
